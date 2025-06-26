@@ -54,3 +54,9 @@ Enable fake login via dropdown for 3 test users and 2 admins in dev mode.
 - Process social messages selectively (ignore spam/unrelated)
 - Use Redis to cache token refresh & API limits
 - Implement full-text search for content filtering
+
+## Sequelize Model Specification
+
+- All Sequelize models must export a function that takes (sequelize, DataTypes) and returns the model.
+- Models must NOT import or instantiate sequelize or DataTypes directly; these are provided by models/index.js.
+- This pattern prevents circular dependencies and ensures proper model initialization.

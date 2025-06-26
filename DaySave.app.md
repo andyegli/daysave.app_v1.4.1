@@ -250,3 +250,8 @@ Create a production-ready web application called **DaySave.app** version 1.1.1 u
 - Validate data with `validator.js`.
 - Plan for mobile apps/browser extensions with "share to" functionality.
 - Add alerts/reminders for contacts/posts.
+
+### Sequelize Model Pattern
+- All models must export a function (sequelize, DataTypes) => Model.
+- Do not import sequelize or DataTypes directly in model files; use the arguments provided by models/index.js.
+- See AGENT.md for the full specification and rationale.

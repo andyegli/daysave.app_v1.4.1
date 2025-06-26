@@ -27,6 +27,7 @@
 - [x] Generate and run migrations for all models
 - [ ] Test and verify database schema in MySQL
 - [ ] Implement seeders (optional)
+- [x] Refactor all Sequelize models to use (sequelize, DataTypes) export pattern and update model initialization in models/index.js
 
 ## 3. Authentication & Security
 - [ ] Implement OAuth (Apple, Google, Microsoft)
@@ -104,6 +105,8 @@
 - [ ] Setup linting and formatting (npm run lint)
 - [ ] Write and maintain README and API documentation
 - [ ] Document code and keep files <500 lines
+- [ ] Always use the (sequelize, DataTypes) export pattern for all new and updated Sequelize models
+- [ ] If the model pattern changes, update AGENT.md and DaySave.app.md accordingly
 
 ---
 
