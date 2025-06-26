@@ -1,0 +1,59 @@
+const { v4: uuidv4 } = require('uuid');
+
+module.exports = (sequelize, DataTypes) => {
+  const File = sequelize.define('File', {
+    id: {
+      type: DataTypes.CHAR(36),
+      primaryKey: true,
+      defaultValue: () => uuidv4(),
+      allowNull: false
+    },
+    user_id: {
+      type: DataTypes.CHAR(36),
+      allowNull: false,
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    filename: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    file_path: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    metadata: {
+      type: DataTypes.JSON
+    },
+    transcription: {
+      type: DataTypes.TEXT
+    },
+    summary: {
+      type: DataTypes.TEXT
+    },
+    sentiment: {
+      type: DataTypes.JSON
+    },
+    auto_tags: {
+      type: DataTypes.JSON
+    },
+    user_tags: {
+      type: DataTypes.JSON
+    },
+    user_comments: {
+      type: DataTypes.TEXT
+    },
+    category: {
+      type: DataTypes.STRING
+    },
+    location: {
+      type: DataTypes.JSON
+    }
+  }, {
+    tableName: 'files',
+    timestamps: true
+  });
+  return File;
+}; 

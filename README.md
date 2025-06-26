@@ -139,6 +139,35 @@ docker build -t daysave-app .
 docker run -p 3000:3000 daysave-app
 ```
 
+## Deployment: Google App Engine & Cloud SQL
+
+1. **Set up Cloud SQL (MySQL) instance**
+   - Create a Cloud SQL instance in your Google Cloud project.
+   - Note the instance connection name (e.g., `your-project:region:instance`).
+   - Set root/user passwords and database name to match your .env.
+
+2. **Configure `app.yaml`**
+   - Edit `app.yaml` and set `cloud_sql_instances` to your instance connection name.
+   - Ensure `env_variables` match your DB credentials.
+
+3. **Enable Cloud SQL Admin API**
+   - In Google Cloud Console, enable the Cloud SQL Admin API.
+
+4. **Deploy to App Engine**
+   ```sh
+   gcloud app deploy
+   ```
+   - App will be available at `https://<your-project-id>.appspot.com`
+
+5. **Cloud SQL Connection**
+   - App Engine connects to Cloud SQL using the `cloud_sql_instances` setting in `app.yaml`.
+   - No need to run the Cloud SQL Proxy in App Engine standard environment.
+
+6. **Environment Variables**
+   - You can override or add more variables in `app.yaml` as needed.
+
+For more details, see [Google App Engine Node.js docs](https://cloud.google.com/appengine/docs/standard/nodejs/runtime) and [Cloud SQL docs](https://cloud.google.com/sql/docs/mysql/connect-app-engine).
+
 ## 📝 License
 
 MIT License - see LICENSE file for details

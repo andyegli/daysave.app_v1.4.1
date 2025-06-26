@@ -1,7 +1,7 @@
 # Prompt for Windsor: Refactored Production-Ready DaySave.app with File Uploads and Enhanced Features
 
 ## Overview
-Create a production-ready web application called **DaySave.app** version 1.1.1 using **Node.js**, **Express**, **EJS** (with **Bootstrap 5** via CDN), and **MySQL** with **Sequelize ORM** locally, and later deployed on **Google Cloud** (project ID: `daysave`) using a cost-effective, small-scale setup (e.g., App Engine F1 instance, Cloud SQL db-f1-micro). The app targets international, diverse social media consumers, supporting 100 concurrent users for the MVP with scalability for future growth. It allows users to register for a trial or subscribe to plans via Apple, Google, Microsoft, or username/password authentication (with 2FA), link social media accounts from 11 platforms (Facebook, YouTube, Instagram, TikTok, WeChat, Facebook Messenger, Telegram, Snapchat, Pinterest, Twitter/X, WhatsApp), submit URLs or upload files for processing (extracting metadata, transcription, summary, sentiment, tags, objects detected), and manage processed items with user-added tags, comments, and groups. The app includes a landing page, a futter with terms of trade, privacy policy, contact us page with a form, a contacts management system mirroring Apple iPhone contacts with relationships (e.g., father, mother, child, spouse, sibling, friend, colleague, partner, work), a CRUD page for contacts, sharing of processed content with contacts or groups, filter/search functionality, and an admin page feeaturing statustics, logs, security config settings. It supports multiple languages (English, German, French, Italian, Spanish) for UI, static content, and dynamic content, with RTL compatibility for future expansion. All database tables use UUIDs (GUIDs). The app features state-of-the-art security, input sanitization, device fingerprinting (including Screensize, locales, TOR, VPN detection), IP and country whitelisting/blacklisting, and login attempt blocking, with alerts/reminders via email and SMS (future push notification option).
+Create a production-ready web application called **DaySave.app** version 1.1.1 using **Node.js**, **Express**, **EJS** (with **Bootstrap 5** via CDN), and **MySQL** with **Sequelize ORM** locally, and later deployed on **Google Cloud** (project ID: `daysave`) using a cost-effective, small-scale setup (e.g., App Engine F1 instance, Cloud SQL db-f1-micro). The app targets international, diverse social media consumers, supporting 100 concurrent users for the MVP with scalability for future growth. It allows users to register for a trial or subscribe to plans via Apple, Google, Microsoft, or username/password authentication (with 2FA), link social media accounts from 11 platforms (Facebook, YouTube, Instagram, TikTok, WeChat, Facebook Messenger, Telegram, Snapchat, Pinterest, Twitter/X, WhatsApp), submit URLs or upload files for processing (extracting metadata, transcription, summary, sentiment, tags, objects detected), and manage processed items with user-added tags, comments, and groups. The app includes a landing page, a futter with terms of trade, privacy policy, contact us page with a form, a contacts management system mirroring Apple iPhone contacts with relationships (e.g., father, mother, child, spouse, sibling, friend, colleague, partner, work), a CRUD page for contacts, sharing of processed content with contacts or groups of contacts, filter/search functionality, and an admin page feeaturing statustics, logs, security config settings. The app must charefully log all changs in a audit log. The app also keeps track of the device the user typically login from. The app supports roles permissions such as guest, trual, subscriber, monitor, admin. It supports multiple languages (English, German, French, Italian, Spanish) for UI, static content, and dynamic content, with RTL compatibility for future expansion. All database tables use UUIDs (GUIDs). The app features state-of-the-art security, input sanitization, device fingerprinting (including Screensize, locales, TOR, VPN detection), IP and country whitelisting/blacklisting, and login attempt blocking, with alerts/reminders via email and SMS (future push notification option).
 
 ## Functional Requirements
 
@@ -25,26 +25,40 @@ Create a production-ready web application called **DaySave.app** version 1.1.1 u
 - **Contact Us**:
   - EJS page with a Bootstrap form to collect name, email, subject, and message.
   - Use Google reCAPTCHA to prevent spam.
-  - Store submissions in MySQL and send email notifications (SendGrid) in the user’s preferred language.
+  - Store submissions in MySQL and send email notifications (SendGrid) in the user's preferred language.
   - Success/error feedback using Bootstrap alerts.
 - **Contacts Management Page**:
-  - EJS page with a CRUD interface to add, edit, view, and delete contacts.
+  - EJS card style with toggle to list page with a CRUD interface to add, edit, view, and delete contacts.
   - Mirror Apple iPhone contacts schema (all fields: name, nickname, organization, job title, phones, emails, addresses, social profiles, instant messages, URLs, dates, notes) with support for multiples (e.g., multiple addresses, emails, phone numbers, notes, social accounts).
-  - Validate phones as `+CountryCode(AreaCode)Number[Extension][DTMF]` with country code lookup by name (e.g., “United States” → `+1`) using `libphonenumber-js`.
+  - Contacts can organised in groups and have relationships (e.g., father, mother, child, spouse, sibling, friend, colleague, partner, work)
+  - Validate phones as `+CountryCode(AreaCode)Number[Extension][DTMF]` with country code lookup by name (e.g., "United States" → `+1`) using `libphonenumber-js`.
   - Optional Google Maps API integration for address lookup/search.
   - Support contact groups (e.g., "Friends," "Work") and relationships (father, mother, child, spouse, sibling, friend, colleague, partner, work, custom ≤ 50 characters).
   - Display contacts in a Bootstrap tabular view with configurable fields (sortable, orderable) and a detail page for all fields, relationships graph button, and shared posts table.
   - Support vCard import/export (including relationships via custom fields).
   - Localized UI and form labels.
+- **Content Management Page**:
+  - EJS card style with toggle to list page with a CRUD interface to add, edit, view, and delete contacts.
+  - Cards have a Thumbnail on the left a tile on the top with comment unde rtitle and to the right of the thumnail. there are clickable tag associated with the centent item, the source and date added is also on the content card as wll as buttons.
+  - dooubble clicking the content card opens the edit content detail page
+  - Content can organised groups 
+  - content can be filered by date range, tags from tags, category from categories
+  - content can via a drop down by category, source,  date added asc, date added desc, 
+  - Display contacts in a Bootstrap tabular view with configurable fields (sortable, orderable) and a detail page for all fields, relationships graph button, and shared posts table.
+  - Support vCard import/export (including relationships via custom fields).
+  - Localized UI and form labels.
+  **Content Item Detail Page**
+  - has all content dails allow edit, delete, archive 
+  - has graph button to show related conent items
 - **DEV Mode User Logins**
   - when started in dev mode the login page features 3 test users 2 admins to coose from on a dropdown 
     allowing to login for testing without having to enter password every time
 - **Dashboard**:
   - EJS page displaying linked social accounts, submitted URLs/files, and processing status.
-  - Use Bootstrap cards for social accounts, a tabular view for contacts, and a card view for URLs/files.
+  - Use Bootstrap cards for content, a tabular view for contacts, and a card view for URLs/files.
   - Include forms to submit URLs/files, add tags/comments, assign groups, and share content.
   - Add filter dropdowns (platform, group, tags, date), search bar, and order-by dropdown.
-  - Selector and “select all” for bulk actions (add to group, archive, delete).
+  - Selector and "select all" for bulk actions (add to group, archive, delete).
   - Localized UI, labels, and messages.
 - **Profile Config Page**:
   - EJS page with a Bootstrap form to link/unlink social media accounts, select language, and manage subscription.
@@ -66,7 +80,7 @@ Create a production-ready web application called **DaySave.app** version 1.1.1 u
 ### 2. Authentication
 - **Registration Options**:
   - OAuth 2.0 login via Apple, Google, Microsoft.
-  - Username/password registration with email verification (Nodemailer) and 2FA (TOTP via `speakeasy`) in the user’s preferred language.
+  - Username/password registration with email verification (Nodemailer) and 2FA (TOTP via `speakeasy`) in the user's preferred language.
 - **Subscription Plans**:
   - Free trial (7 days, limited API calls).
   - Paid plans (Basic, Pro) via Stripe for Apple/Google/Microsoft in-app purchases or card payments.
@@ -79,7 +93,7 @@ Create a production-ready web application called **DaySave.app** version 1.1.1 u
   - Email verification and password reset with localized emails.
   - Track login attempts, block users/devices after configurable attempts (default: 5) for configurable duration (default: 24 hours) with auto-unlock toggle.
   - Device fingerprinting with `fingerprintjs2` (including VPN detection with `maxmind`).
-  - Store user’s source country (via `geoip-lite`) and fingerprint in MySQL.
+  - Store user's source country (via `geoip-lite`) and fingerprint in MySQL.
   - Localized error messages.
 
 ### 3. Social Media Integration
@@ -146,23 +160,31 @@ Create a production-ready web application called **DaySave.app** version 1.1.1 u
 
 ### 7. Database Schema
 - All tables use UUIDs (CHAR(36)) with `uuid` library.
-- **users**: id, username, email, password_hash, country, device_fingerprint, subscription_status, language, created_at.
+- **users**: id, username, email, password_hash, role_id, country, device_fingerprint, subscription_status, language, created_at.
+- **user_devices**: id, user_id, device_fingerprint, is_trusted, last_login_at.
+- **roles**: id, name, description.
+- **permissions**: id, name, description.
+- **role_permissions**: id, role_id, permission_id.
+- **audit_logs**: id, user_id, action, target_type, target_id, details, created_at.
 - **social_accounts**: id, user_id, platform, handle, access_token, refresh_token, created_at.
-- **urls**: id, user_id, social_account_id, url, metadata, transcription, summary, sentiment, auto_tags, user_tags, user_comments, category, location, created_at.
+- **content**: id, user_id, social_account_id, url, metadata, transcription, summary, sentiment, auto_tags, user_tags, user_comments, category, location, created_at.
 - **files**: id, user_id, filename, file_path, metadata, transcription, summary, sentiment, auto_tags, user_tags, user_comments, category, location, created_at.
 - **contacts**: id, user_id, all Apple fields with JSON for multiples, created_at.
 - **contact_groups**: id, user_id, name, created_at.
 - **contact_group_members**: id, contact_id, group_id, created_at.
-- **url_groups**: id, user_id, name, created_at.
-- **share_logs**: id, user_id, url_id/file_id, contact_id/group_id, share_method, language, created_at.
+- **content_groups**: id, user_id, name, created_at.
+- **content_group_members**: id, content_id, group_id, created_at.
+- **share_logs**: id, user_id, content_id/file_id, contact_id/group_id, share_method, language, created_at.
 - **login_attempts**: id, user_id, device_fingerprint, ip, attempt_count, last_attempt_at.
 - **contact_submissions**: id, name, email, subject, message, language, created_at.
 - **relationships**: id, user_id, contact_id_1, contact_id_2, relationship_type, created_at.
+- **contact_relations**: id, user_id, contact_id_1, contact_id_2, relation_type, created_at.
+- **content_relations**: id, user_id, content_id_1, content_id_2, relation_type, created_at.
 - **admin_settings**: id, user_id, login_attempts, lock_duration, auto_unlock, file_types, max_file_size, ip_whitelist, ip_blacklist, created_at.
 
 ### 8. Security and Input Sanitization
 - **Input Sanitization**: `express-validator`, `sanitize-html`, `libphonenumber-js`.
-- **Security Features**: HTTPS (Let’s Encrypt), Helmet, CSRF, AES-256 encryption, OWASP practices.
+- **Security Features**: HTTPS (Let's Encrypt), Helmet, CSRF, AES-256 encryption, OWASP practices.
 - **Login Blocking**: Configurable attempts/duration, auto-unlock, admin management.
 - **IP/VPN**: Whitelisting/blacklisting, fingerprinting with `maxmind`.
 
@@ -182,7 +204,7 @@ Create a production-ready web application called **DaySave.app** version 1.1.1 u
 ### 11. Deployment
 - **Platform**: Google Cloud App Engine (F1 instance).
 - **CI/CD**: GitHub Actions.
-- **SSL**: Let’s Encrypt.
+- **SSL**: Let's Encrypt.
 - **Scaling**: Auto-scaling, Redis caching.
 - **Backup**: Daily MySQL backups via Cloud SQL.
 
@@ -226,5 +248,5 @@ Create a production-ready web application called **DaySave.app** version 1.1.1 u
 - Use `.env` for secrets.
 - Monitor with Sentry/New Relic.
 - Validate data with `validator.js`.
-- Plan for mobile apps/browser extensions with “share to” functionality.
+- Plan for mobile apps/browser extensions with "share to" functionality.
 - Add alerts/reminders for contacts/posts.

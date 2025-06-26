@@ -1,0 +1,21 @@
+runtime: nodejs18
+instance_class: F1
+automatic_scaling:
+  target_cpu_utilization: 0.65
+  min_instances: 1
+  max_instances: 2
+env_variables:
+  DB_HOST: "127.0.0.1"
+  DB_USER: "${DB_USER}"
+  DB_PASSWORD: "${DB_PASSWORD}"
+  DB_NAME: "${DB_NAME}"
+  DB_PORT: "3306"
+  APP_PORT: "8080"
+  NODE_ENV: "production"
+  GCLOUD_PROJECT_ID: "${GCLOUD_PROJECT_ID}"
+  GCLOUD_REGION: "${GCLOUD_REGION}"
+  GCLOUD_SQL_INSTANCE: "${GCLOUD_SQL_INSTANCE}"
+  GCLOUD_SQL_CONNECTION_NAME: "${GCLOUD_SQL_CONNECTION_NAME}"
+beta_settings:
+  # This value is set from .env or your deployment environment
+  cloud_sql_instances: "${GCLOUD_SQL_CONNECTION_NAME}" 

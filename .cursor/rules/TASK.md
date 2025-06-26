@@ -1,21 +1,32 @@
 # DaySave.app – Project Task List
 
+## 0. Repository Setup
+- [x] Create GitHub repository (e.g., daysave-app)
+- [x] Push local code to GitHub repository
+- [x] Add GitHub Actions secrets (DOCKERHUB_USERNAME, DOCKERHUB_TOKEN, etc.)
+
 ## 1. Project Setup
 - [x] Initialize Node.js/Express app structure
 - [x] Setup EJS templating and Bootstrap 5 via CDN
 - [x] Configure Sequelize ORM and MySQL connection
 - [x] Setup .env and environment variable management
+- [x] Add Google Cloud SQL connection variables (GCLOUD_PROJECT_ID, GCLOUD_REGION, GCLOUD_SQL_INSTANCE, GCLOUD_SQL_CONNECTION_NAME)
+- [x] Set MYSQL_ROOT_PASSWORD in docker-compose.yml using DB_PASSWORD from .env
 - [x] Initialize Docker and Docker Compose
   - [x] Use meaningful container names: daysave-app (app), daysave-db (db)
   - [x] MySQL accessible on host port 3304
   - [x] Use APP_PORT and DB_PORT from .env for port mappings
 - [x] Setup GitHub Actions for CI/CD
-- [ ] Prepare Google Cloud App Engine and Cloud SQL deployment scripts
+- [x] Prepare Google Cloud App Engine and Cloud SQL deployment scripts
+  - [x] Update app.yaml to use GCLOUD_SQL_CONNECTION_NAME from .env
 
 ## 2. Database Design
-- [ ] Design Sequelize models for all entities (users, social_accounts, urls, files, contacts, groups, relationships, admin_settings, etc.)
-- [ ] Ensure all tables use UUIDs (CHAR(36))
-- [ ] Implement migrations and seeders
+- [x] Design Sequelize models for all entities (users, user_devices, roles, permissions, role_permissions, audit_logs, social_accounts, content, files, contacts, contact_groups, contact_group_members, content_groups, content_group_members, share_logs, login_attempts, contact_submissions, relationships, contact_relations, content_relations, admin_settings)
+- [x] Ensure all tables use UUIDs (CHAR(36))
+- [x] Setup Sequelize CLI and config to use environment variables
+- [x] Generate and run migrations for all models
+- [ ] Test and verify database schema in MySQL
+- [ ] Implement seeders (optional)
 
 ## 3. Authentication & Security
 - [ ] Implement OAuth (Apple, Google, Microsoft)
@@ -24,7 +35,7 @@
 - [ ] Setup JWT-based session management with refresh tokens
 - [ ] Hash passwords with bcrypt
 - [ ] Encrypt sensitive data with AES
-- [ ] Device fingerprinting (fingerprintjs2), geoip, VPN detection (maxmind)
+- [ ] Device fingerprinting (fingerprintjs2), geoip, VPN detection (maxmind), TOR detection
 - [ ] Implement rate limiting (express-rate-limit)
 - [ ] Admin-configurable security settings (login attempts, lock duration, file types, etc.)
 - [ ] Input validation and sanitization middleware (express-validator, sanitize-html, libphonenumber-js)

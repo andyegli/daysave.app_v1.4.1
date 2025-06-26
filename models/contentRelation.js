@@ -1,0 +1,44 @@
+const { v4: uuidv4 } = require('uuid');
+
+module.exports = (sequelize, DataTypes) => {
+  const ContentRelation = sequelize.define('ContentRelation', {
+    id: {
+      type: DataTypes.CHAR(36),
+      primaryKey: true,
+      defaultValue: () => uuidv4(),
+      allowNull: false
+    },
+    user_id: {
+      type: DataTypes.CHAR(36),
+      allowNull: false,
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    content_id_1: {
+      type: DataTypes.CHAR(36),
+      allowNull: false,
+      references: {
+        model: 'content',
+        key: 'id'
+      }
+    },
+    content_id_2: {
+      type: DataTypes.CHAR(36),
+      allowNull: false,
+      references: {
+        model: 'content',
+        key: 'id'
+      }
+    },
+    relation_type: {
+      type: DataTypes.STRING,
+      allowNull: false
+    }
+  }, {
+    tableName: 'content_relations',
+    timestamps: true
+  });
+  return ContentRelation;
+}; 

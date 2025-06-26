@@ -1,0 +1,247 @@
+@startuml
+entity users {
+  *id: CHAR(36) <<PK>>
+  username
+  email
+  password_hash
+  role_id: CHAR(36) <<FK roles>>
+  country
+  device_fingerprint
+  subscription_status
+  language
+  createdAt
+  updatedAt
+}
+entity user_devices {
+  *id: CHAR(36) <<PK>>
+  user_id: CHAR(36) <<FK users>>
+  device_fingerprint
+  is_trusted
+  last_login_at
+  createdAt
+  updatedAt
+}
+entity roles {
+  *id: CHAR(36) <<PK>>
+  name
+  description
+  createdAt
+  updatedAt
+}
+entity permissions {
+  *id: CHAR(36) <<PK>>
+  name
+  description
+  createdAt
+  updatedAt
+}
+entity role_permissions {
+  *id: CHAR(36) <<PK>>
+  role_id: CHAR(36) <<FK roles>>
+  permission_id: CHAR(36) <<FK permissions>>
+  createdAt
+  updatedAt
+}
+entity audit_logs {
+  *id: CHAR(36) <<PK>>
+  user_id: CHAR(36) <<FK users>>
+  action
+  target_type
+  target_id
+  details
+  createdAt
+  updatedAt
+}
+entity social_accounts {
+  *id: CHAR(36) <<PK>>
+  user_id: CHAR(36) <<FK users>>
+  platform
+  handle
+  access_token
+  refresh_token
+  createdAt
+  updatedAt
+}
+entity content {
+  *id: CHAR(36) <<PK>>
+  user_id: CHAR(36) <<FK users>>
+  social_account_id: CHAR(36) <<FK social_accounts>>
+  url
+  metadata
+  transcription
+  summary
+  sentiment
+  auto_tags
+  user_tags
+  user_comments
+  category
+  location
+  createdAt
+  updatedAt
+}
+entity files {
+  *id: CHAR(36) <<PK>>
+  user_id: CHAR(36) <<FK users>>
+  filename
+  file_path
+  metadata
+  transcription
+  summary
+  sentiment
+  auto_tags
+  user_tags
+  user_comments
+  category
+  location
+  createdAt
+  updatedAt
+}
+entity contacts {
+  *id: CHAR(36) <<PK>>
+  user_id: CHAR(36) <<FK users>>
+  name
+  nickname
+  organization
+  job_title
+  phones
+  emails
+  addresses
+  social_profiles
+  instant_messages
+  urls
+  dates
+  notes
+  createdAt
+  updatedAt
+}
+entity contact_groups {
+  *id: CHAR(36) <<PK>>
+  user_id: CHAR(36) <<FK users>>
+  name
+  createdAt
+  updatedAt
+}
+entity contact_group_members {
+  *id: CHAR(36) <<PK>>
+  contact_id: CHAR(36) <<FK contacts>>
+  group_id: CHAR(36) <<FK contact_groups>>
+  createdAt
+  updatedAt
+}
+entity content_groups {
+  *id: CHAR(36) <<PK>>
+  user_id: CHAR(36) <<FK users>>
+  name
+  createdAt
+  updatedAt
+}
+entity content_group_members {
+  *id: CHAR(36) <<PK>>
+  content_id: CHAR(36) <<FK content>>
+  group_id: CHAR(36) <<FK content_groups>>
+  createdAt
+  updatedAt
+}
+entity share_logs {
+  *id: CHAR(36) <<PK>>
+  user_id: CHAR(36) <<FK users>>
+  content_id: CHAR(36) <<FK content>>
+  file_id: CHAR(36) <<FK files>>
+  contact_id: CHAR(36) <<FK contacts>>
+  group_id
+  share_method
+  language
+  createdAt
+  updatedAt
+}
+entity login_attempts {
+  *id: CHAR(36) <<PK>>
+  user_id: CHAR(36) <<FK users>>
+  device_fingerprint
+  ip
+  attempt_count
+  last_attempt_at
+  createdAt
+  updatedAt
+}
+entity contact_submissions {
+  *id: CHAR(36) <<PK>>
+  name
+  email
+  subject
+  message
+  language
+  createdAt
+  updatedAt
+}
+entity relationships {
+  *id: CHAR(36) <<PK>>
+  user_id: CHAR(36) <<FK users>>
+  contact_id_1: CHAR(36) <<FK contacts>>
+  contact_id_2: CHAR(36) <<FK contacts>>
+  relationship_type
+  createdAt
+  updatedAt
+}
+entity contact_relations {
+  *id: CHAR(36) <<PK>>
+  user_id: CHAR(36) <<FK users>>
+  contact_id_1: CHAR(36) <<FK contacts>>
+  contact_id_2: CHAR(36) <<FK contacts>>
+  relation_type
+  createdAt
+  updatedAt
+}
+entity content_relations {
+  *id: CHAR(36) <<PK>>
+  user_id: CHAR(36) <<FK users>>
+  content_id_1: CHAR(36) <<FK content>>
+  content_id_2: CHAR(36) <<FK content>>
+  relation_type
+  createdAt
+  updatedAt
+}
+entity admin_settings {
+  *id: CHAR(36) <<PK>>
+  user_id: CHAR(36) <<FK users>>
+  login_attempts
+  lock_duration
+  auto_unlock
+  file_types
+  max_file_size
+  ip_whitelist
+  ip_blacklist
+  createdAt
+  updatedAt
+}
+
+users ||--o{ user_devices : has
+users ||--o{ social_accounts : has
+users ||--o{ content : has
+users ||--o{ files : has
+users ||--o{ contacts : has
+users ||--o{ contact_groups : has
+users ||--o{ content_groups : has
+users ||--o{ share_logs : has
+users ||--o{ login_attempts : has
+users ||--o{ relationships : has
+users ||--o{ contact_relations : has
+users ||--o{ content_relations : has
+users ||--o{ admin_settings : has
+roles ||--o{ users : has
+roles ||--o{ role_permissions : has
+permissions ||--o{ role_permissions : has
+role_permissions }o--|| roles : belongs_to
+role_permissions }o--|| permissions : belongs_to
+social_accounts ||--o{ content : has
+content ||--o{ content_group_members : has
+content_groups ||--o{ content_group_members : has
+contacts ||--o{ contact_group_members : has
+contact_groups ||--o{ contact_group_members : has
+contacts ||--o{ relationships : has
+contacts ||--o{ contact_relations : has
+content ||--o{ content_relations : has
+files ||--o{ share_logs : has
+contacts ||--o{ share_logs : has
+content ||--o{ share_logs : has
+@enduml 
