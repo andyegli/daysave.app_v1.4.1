@@ -1,0 +1,20 @@
+{
+  "name": "daysave_v1.4.1",
+  "version": "1.0.0",
+  "description": "<div align=\"center\">   <img src=\"public/images/daysave-logo.png\" alt=\"DaySave Logo\" width=\"120\" height=\"120\">   <h3>Organize, analyze, and share content from 11 social platforms</h3> </div>",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "mysql2": "^3.14.1",
+    "sequelize": "^6.37.7"
+  }
+}
