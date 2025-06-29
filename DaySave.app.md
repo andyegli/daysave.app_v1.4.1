@@ -160,6 +160,13 @@ Create a production-ready web application called **DaySave.app** version 1.1.1 u
 
 ### 7. Database Schema
 - All tables use UUIDs (CHAR(36)) with `uuid` library.
+- **Database Strategy**: Sequelize CLI Migrations (not automatic sync)
+- **Environment Variables**: Standardized on DB_USER_PASSWORD (not DB_PASSWORD)
+- **Migration Order**: 22 migrations in correct dependency order
+- **Tables Created**: 22 tables with proper foreign key relationships
+- **Status**: All migrations successfully applied and verified
+
+**Database Tables:**
 - **users**: id, username, email, password_hash, role_id, country, device_fingerprint, subscription_status, language, created_at.
 - **user_devices**: id, user_id, device_fingerprint, is_trusted, last_login_at.
 - **roles**: id, name, description.
@@ -181,6 +188,11 @@ Create a production-ready web application called **DaySave.app** version 1.1.1 u
 - **contact_relations**: id, user_id, contact_id_1, contact_id_2, relation_type, created_at.
 - **content_relations**: id, user_id, content_id_1, content_id_2, relation_type, created_at.
 - **admin_settings**: id, user_id, login_attempts, lock_duration, auto_unlock, file_types, max_file_size, ip_whitelist, ip_blacklist, created_at.
+
+**Migration Commands:**
+- `npx sequelize-cli db:migrate` – run database migrations
+- `npx sequelize-cli db:migrate:status` – check migration status
+- `npx sequelize-cli db:migrate:undo` – undo last migration
 
 ### 8. Security and Input Sanitization
 - **Input Sanitization**: `express-validator`, `sanitize-html`, `libphonenumber-js`.
@@ -255,3 +267,17 @@ Create a production-ready web application called **DaySave.app** version 1.1.1 u
 - All models must export a function (sequelize, DataTypes) => Model.
 - Do not import sequelize or DataTypes directly in model files; use the arguments provided by models/index.js.
 - See AGENT.md for the full specification and rationale.
+
+## Requirements & Features (2024-06-26)
+
+- Authentication: Apple, Google, Microsoft OAuth; email/password; 2FA for admin (optional for users, user-selectable); cost-effective email verification (SendGrid recommended).
+- User Management: Username non-editable; users disabled not deleted; self-service account closure; Free/Small/Medium/Large/Unlimited plans; Stripe & PayPal (Stripe setup needed); admin UI for CRUD/backup/restore.
+- Social Media: YouTube, Facebook, Instagram prioritized; tokens in .env preferred; automatic metadata extraction.
+- File/URL: Admin-configurable file types/size; local storage per user in dev, Google Cloud in prod; AI features (summary, sentiment, transcription, tagging) run automatically.
+- Contacts: CSV import at launch (sample in docs/README); custom fields; graph and count visualization of relationships.
+- Multilingual: English, German, Italian, French, Spanish (auto-translate for now); generate locales/*.json; mobile/tablet friendly.
+- UI/UX: Use provided color scheme; public landing page.
+- DevOps: Staging/prod best practices; manual DB backup at start; cost-effective monitoring/alerting (suggestions pending).
+- Testing: Unit > Integration > E2E; OpenAPI/Swagger docs; best practice linting/style.
+
+See AGENT.md for full specification and rationale.
