@@ -95,7 +95,37 @@ BCRYPT_ROUNDS=12
 SESSION_SECRET=your-session-secret-change-in-production
 ```
 
-### 3. Database Setup with Docker
+### 3. OAuth Provider Setup
+
+**Google OAuth Setup:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing one
+3. Enable Google+ API
+4. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client IDs"
+5. Set Application Type to "Web application"
+6. Add authorized redirect URIs:
+   - `http://localhost:3000/auth/google/callback` (development)
+   - `https://your-domain.com/auth/google/callback` (production)
+7. Copy Client ID and Client Secret to your .env file
+
+**Microsoft OAuth Setup:**
+1. Go to [Azure Portal](https://portal.azure.com/)
+2. Register a new application
+3. Set redirect URI to:
+   - `http://localhost:3000/auth/microsoft/callback` (development)
+   - `https://your-domain.com/auth/microsoft/callback` (production)
+4. Copy Application (client) ID and create a client secret
+5. Add to your .env file
+
+**Apple OAuth Setup:**
+1. Go to [Apple Developer Console](https://developer.apple.com/)
+2. Create an App ID with Sign In with Apple capability
+3. Create a Services ID for your domain
+4. Generate a private key and download the .p8 file
+5. Note your Team ID, Key ID, and Client ID
+6. Add all values to your .env file
+
+### 4. Database Setup with Docker
 
 **Option A: Using Docker (Recommended)**
 ```bash
@@ -125,7 +155,7 @@ npx sequelize-cli db:migrate
 npx sequelize-cli db:migrate:status
 ```
 
-### 4. Verify Database Setup
+### 5. Verify Database Setup
 ```bash
 # Check if all tables were created (22 tables total)
 docker-compose exec db mysql -u daysave -p daysave_v141 -e "SHOW TABLES;"
@@ -138,7 +168,7 @@ docker-compose exec db mysql -u daysave -p daysave_v141 -e "SHOW TABLES;"
 # - and 8 more tables...
 ```
 
-### 5. Start Development Server
+### 6. Start Development Server
 
 **With Docker:**
 ```bash

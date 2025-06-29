@@ -1,0 +1,4 @@
+- [x] Fix Sequelize model timestamps to match DB schema
+- [x] Add robust log directory creation and fallback logic
+- [x] All database integration tests passing (as of 2025-06-29)
+  - Logging now writes to /tmp if app log dirs are not writable 
