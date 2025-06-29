@@ -60,6 +60,32 @@ const authLogFormat = winston.format.combine(
   })
 );
 
+// Custom format for security logs
+const securityLogFormat = winston.format.combine(
+  winston.format.timestamp({
+    format: 'YYYY-MM-DD HH:mm:ss'
+  }),
+  winston.format.errors({ stack: true }),
+  winston.format.json(),
+  winston.format.printf(({ timestamp, level, message, ...meta }) => {
+    const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
+    return `${timestamp} [${level.toUpperCase()}]: ${message} ${metaStr}`;
+  })
+);
+
+// Custom format for validation logs
+const validationLogFormat = winston.format.combine(
+  winston.format.timestamp({
+    format: 'YYYY-MM-DD HH:mm:ss'
+  }),
+  winston.format.errors({ stack: true }),
+  winston.format.json(),
+  winston.format.printf(({ timestamp, level, message, ...meta }) => {
+    const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
+    return `${timestamp} [${level.toUpperCase()}]: ${message} ${metaStr}`;
+  })
+);
+
 // Create logger instances
 const authLogger = winston.createLogger({
   level: 'info',
@@ -83,9 +109,100 @@ const authLogger = winston.createLogger({
   ]
 });
 
+// Security logger
+const securityLogger = winston.createLogger({
+  level: 'info',
+  format: securityLogFormat,
+  transports: [
+    // Security-specific log file
+    new winston.transports.File({
+      filename: path.join(logBasePath, 'security.log'),
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+      tailable: true
+    }),
+    // Security error log file
+    new winston.transports.File({
+      filename: path.join(logBasePath, 'security-errors.log'),
+      level: 'error',
+      maxsize: 5242880, // 5MB
+      maxFiles: 3,
+      tailable: true
+    })
+  ]
+});
+
+// Validation logger
+const validationLogger = winston.createLogger({
+  level: 'info',
+  format: validationLogFormat,
+  transports: [
+    // Validation-specific log file
+    new winston.transports.File({
+      filename: path.join(logBasePath, 'validation.log'),
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+      tailable: true
+    }),
+    // Validation error log file
+    new winston.transports.File({
+      filename: path.join(logBasePath, 'validation-errors.log'),
+      level: 'error',
+      maxsize: 5242880, // 5MB
+      maxFiles: 3,
+      tailable: true
+    })
+  ]
+});
+
+// General error logger
+const errorLogger = winston.createLogger({
+  level: 'error',
+  format: winston.format.combine(
+    winston.format.timestamp({
+      format: 'YYYY-MM-DD HH:mm:ss'
+    }),
+    winston.format.errors({ stack: true }),
+    winston.format.json(),
+    winston.format.printf(({ timestamp, level, message, ...meta }) => {
+      const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
+      return `${timestamp} [${level.toUpperCase()}]: ${message} ${metaStr}`;
+    })
+  ),
+  transports: [
+    new winston.transports.File({
+      filename: path.join(logBasePath, 'errors.log'),
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+      tailable: true
+    })
+  ]
+});
+
 // Add console transport in development
 if (process.env.NODE_ENV !== 'production') {
   authLogger.add(new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.simple()
+    )
+  }));
+  
+  securityLogger.add(new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.simple()
+    )
+  }));
+  
+  validationLogger.add(new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.simple()
+    )
+  }));
+  
+  errorLogger.add(new winston.transports.Console({
     format: winston.format.combine(
       winston.format.colorize(),
       winston.format.simple()
@@ -148,11 +265,71 @@ const logOAuthError = (provider, step, error, details = {}) => {
   authLogger.error(`OAUTH_ERROR: ${provider.toUpperCase()} - ${step}`, logData);
 };
 
+// Helper functions for security logging
+const logSecurityEvent = (event, details = {}) => {
+  const logData = {
+    event,
+    timestamp: new Date().toISOString(),
+    ip: details.ip || 'unknown',
+    userAgent: details.userAgent || 'unknown',
+    ...details
+  };
+
+  securityLogger.info(`SECURITY_EVENT: ${event}`, logData);
+};
+
+const logSecurityError = (event, error, details = {}) => {
+  const logData = {
+    event,
+    error: error.message,
+    stack: error.stack,
+    timestamp: new Date().toISOString(),
+    ip: details.ip || 'unknown',
+    userAgent: details.userAgent || 'unknown',
+    ...details
+  };
+
+  securityLogger.error(`SECURITY_ERROR: ${event}`, logData);
+};
+
+// Helper functions for validation logging
+const logValidationError = (event, details = {}) => {
+  const logData = {
+    event,
+    timestamp: new Date().toISOString(),
+    ip: details.ip || 'unknown',
+    userAgent: details.userAgent || 'unknown',
+    ...details
+  };
+
+  validationLogger.error(`VALIDATION_ERROR: ${event}`, logData);
+};
+
+// General error logging
+const logError = (event, details = {}) => {
+  const logData = {
+    event,
+    timestamp: new Date().toISOString(),
+    ip: details.ip || 'unknown',
+    userAgent: details.userAgent || 'unknown',
+    ...details
+  };
+
+  errorLogger.error(`ERROR: ${event}`, logData);
+};
+
 module.exports = {
   authLogger,
+  securityLogger,
+  validationLogger,
+  errorLogger,
   logAuthEvent,
   logAuthError,
   logOAuthFlow,
   logOAuthError,
+  logSecurityEvent,
+  logSecurityError,
+  logValidationError,
+  logError,
   logBasePath
 }; 

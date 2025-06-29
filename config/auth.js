@@ -3,6 +3,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const MicrosoftStrategy = require('passport-microsoft').Strategy;
 const AppleStrategy = require('passport-apple').Strategy;
 const { User, SocialAccount } = require('../models');
+const { logOAuthFlow, logOAuthError, logAuthEvent, logAuthError } = require('./logger');
 
 // OAuth Configuration
 const oauthConfig = {
@@ -27,27 +28,51 @@ const oauthConfig = {
 
 // Passport serialization
 passport.serializeUser((user, done) => {
-  done(null, user.id);
+  try {
+    logAuthEvent('USER_SERIALIZE', { userId: user.id, username: user.username });
+    done(null, user.id);
+  } catch (error) {
+    logAuthError('USER_SERIALIZE', error, { userId: user.id });
+    done(error, null);
+  }
 });
 
 passport.deserializeUser(async (id, done) => {
   try {
+    logAuthEvent('USER_DESERIALIZE_START', { userId: id });
     const user = await User.findByPk(id);
+    if (user) {
+      logAuthEvent('USER_DESERIALIZE_SUCCESS', { userId: id, username: user.username });
+    } else {
+      logAuthEvent('USER_DESERIALIZE_NOT_FOUND', { userId: id });
+    }
     done(null, user);
   } catch (error) {
+    logAuthError('USER_DESERIALIZE', error, { userId: id });
     done(error, null);
   }
 });
 
 // Google OAuth Strategy
 passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshToken, profile, done) => {
+  const requestDetails = {
+    provider: 'google',
+    providerUserId: profile.id,
+    email: profile.emails?.[0]?.value,
+    displayName: profile.displayName
+  };
+
   try {
+    logOAuthFlow('google', 'CALLBACK_START', requestDetails);
+
     // Check if user exists
     let user = await User.findOne({
       where: { email: profile.emails[0].value }
     });
 
     if (!user) {
+      logOAuthFlow('google', 'USER_CREATION_START', requestDetails);
+      
       // Create new user
       user = await User.create({
         username: `google_${profile.id}`,
@@ -56,9 +81,26 @@ passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshT
         subscription_status: 'trial',
         language: 'en'
       });
+
+      logOAuthFlow('google', 'USER_CREATION_SUCCESS', {
+        ...requestDetails,
+        userId: user.id,
+        username: user.username
+      });
+    } else {
+      logOAuthFlow('google', 'USER_FOUND', {
+        ...requestDetails,
+        userId: user.id,
+        username: user.username
+      });
     }
 
     // Update or create social account record
+    logOAuthFlow('google', 'SOCIAL_ACCOUNT_UPDATE_START', {
+      ...requestDetails,
+      userId: user.id
+    });
+
     await SocialAccount.upsert({
       user_id: user.id,
       provider: 'google',
@@ -68,21 +110,44 @@ passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshT
       profile_data: JSON.stringify(profile._json)
     });
 
+    logOAuthFlow('google', 'SOCIAL_ACCOUNT_UPDATE_SUCCESS', {
+      ...requestDetails,
+      userId: user.id
+    });
+
+    logOAuthFlow('google', 'CALLBACK_SUCCESS', {
+      ...requestDetails,
+      userId: user.id,
+      username: user.username
+    });
+
     return done(null, user);
   } catch (error) {
+    logOAuthError('google', 'CALLBACK_ERROR', error, requestDetails);
     return done(error, null);
   }
 }));
 
 // Microsoft OAuth Strategy
 passport.use(new MicrosoftStrategy(oauthConfig.microsoft, async (accessToken, refreshToken, profile, done) => {
+  const requestDetails = {
+    provider: 'microsoft',
+    providerUserId: profile.id,
+    email: profile.emails?.[0]?.value,
+    displayName: profile.displayName
+  };
+
   try {
+    logOAuthFlow('microsoft', 'CALLBACK_START', requestDetails);
+
     // Check if user exists
     let user = await User.findOne({
       where: { email: profile.emails[0].value }
     });
 
     if (!user) {
+      logOAuthFlow('microsoft', 'USER_CREATION_START', requestDetails);
+      
       // Create new user
       user = await User.create({
         username: `microsoft_${profile.id}`,
@@ -91,9 +156,26 @@ passport.use(new MicrosoftStrategy(oauthConfig.microsoft, async (accessToken, re
         subscription_status: 'trial',
         language: 'en'
       });
+
+      logOAuthFlow('microsoft', 'USER_CREATION_SUCCESS', {
+        ...requestDetails,
+        userId: user.id,
+        username: user.username
+      });
+    } else {
+      logOAuthFlow('microsoft', 'USER_FOUND', {
+        ...requestDetails,
+        userId: user.id,
+        username: user.username
+      });
     }
 
     // Update or create social account record
+    logOAuthFlow('microsoft', 'SOCIAL_ACCOUNT_UPDATE_START', {
+      ...requestDetails,
+      userId: user.id
+    });
+
     await SocialAccount.upsert({
       user_id: user.id,
       provider: 'microsoft',
@@ -103,17 +185,38 @@ passport.use(new MicrosoftStrategy(oauthConfig.microsoft, async (accessToken, re
       profile_data: JSON.stringify(profile._json)
     });
 
+    logOAuthFlow('microsoft', 'SOCIAL_ACCOUNT_UPDATE_SUCCESS', {
+      ...requestDetails,
+      userId: user.id
+    });
+
+    logOAuthFlow('microsoft', 'CALLBACK_SUCCESS', {
+      ...requestDetails,
+      userId: user.id,
+      username: user.username
+    });
+
     return done(null, user);
   } catch (error) {
+    logOAuthError('microsoft', 'CALLBACK_ERROR', error, requestDetails);
     return done(error, null);
   }
 }));
 
 // Apple OAuth Strategy
 passport.use(new AppleStrategy(oauthConfig.apple, async (accessToken, refreshToken, idToken, profile, done) => {
+  // Apple doesn't always provide email, so we need to handle this
+  const email = profile.email || `apple_${profile.id}@privaterelay.appleid.com`;
+  
+  const requestDetails = {
+    provider: 'apple',
+    providerUserId: profile.id,
+    email: email,
+    displayName: profile.name?.firstName || 'Apple User'
+  };
+
   try {
-    // Apple doesn't always provide email, so we need to handle this
-    const email = profile.email || `apple_${profile.id}@privaterelay.appleid.com`;
+    logOAuthFlow('apple', 'CALLBACK_START', requestDetails);
     
     // Check if user exists
     let user = await User.findOne({
@@ -121,6 +224,8 @@ passport.use(new AppleStrategy(oauthConfig.apple, async (accessToken, refreshTok
     });
 
     if (!user) {
+      logOAuthFlow('apple', 'USER_CREATION_START', requestDetails);
+      
       // Create new user
       user = await User.create({
         username: `apple_${profile.id}`,
@@ -129,9 +234,26 @@ passport.use(new AppleStrategy(oauthConfig.apple, async (accessToken, refreshTok
         subscription_status: 'trial',
         language: 'en'
       });
+
+      logOAuthFlow('apple', 'USER_CREATION_SUCCESS', {
+        ...requestDetails,
+        userId: user.id,
+        username: user.username
+      });
+    } else {
+      logOAuthFlow('apple', 'USER_FOUND', {
+        ...requestDetails,
+        userId: user.id,
+        username: user.username
+      });
     }
 
     // Update or create social account record
+    logOAuthFlow('apple', 'SOCIAL_ACCOUNT_UPDATE_START', {
+      ...requestDetails,
+      userId: user.id
+    });
+
     await SocialAccount.upsert({
       user_id: user.id,
       provider: 'apple',
@@ -141,8 +263,20 @@ passport.use(new AppleStrategy(oauthConfig.apple, async (accessToken, refreshTok
       profile_data: JSON.stringify(profile)
     });
 
+    logOAuthFlow('apple', 'SOCIAL_ACCOUNT_UPDATE_SUCCESS', {
+      ...requestDetails,
+      userId: user.id
+    });
+
+    logOAuthFlow('apple', 'CALLBACK_SUCCESS', {
+      ...requestDetails,
+      userId: user.id,
+      username: user.username
+    });
+
     return done(null, user);
   } catch (error) {
+    logOAuthError('apple', 'CALLBACK_ERROR', error, requestDetails);
     return done(error, null);
   }
 }));
