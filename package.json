@@ -4,7 +4,8 @@
   "description": "<div align=\"center\">   <img src=\"public/images/daysave-logo.png\" alt=\"DaySave Logo\" width=\"120\" height=\"120\">   <h3>Organize, analyze, and share content from 11 social platforms</h3> </div>",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:db": "docker-compose exec app npx mocha tests/database.test.js --timeout 20000"
   },
   "keywords": [],
   "author": "",
@@ -15,10 +16,12 @@
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "mysql2": "^3.14.1",
-    "sequelize": "^6.37.7",
-    "uuid": "^11.1.0"
+    "sequelize": "^6.37.7"
   },
   "devDependencies": {
-    "sequelize-cli": "^6.6.3"
+    "chai": "^5.2.0",
+    "mocha": "^11.7.1",
+    "sequelize-cli": "^6.6.3",
+    "uuid": "^11.1.0"
   }
 }
