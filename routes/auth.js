@@ -367,7 +367,7 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
     });
     logAuthEvent('REGISTRATION_USER_CREATED', { userId: newUser.id, username, email });
     // Send confirmation email
-    const sendMail = require('../../utils/send-mail');
+    const sendMail = require('../utils/send-mail');
     await sendMail({
       to: email,
       subject: 'Confirm your DaySave account',
