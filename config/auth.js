@@ -2,7 +2,7 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const MicrosoftStrategy = require('passport-microsoft').Strategy;
 const AppleStrategy = require('passport-apple').Strategy;
-const { User, SocialAccount } = require('../models');
+const { User, SocialAccount, Role } = require('../models');
 const { logOAuthFlow, logOAuthError, logAuthEvent, logAuthError } = require('./logger');
 
 // OAuth Configuration
@@ -23,6 +23,21 @@ const oauthConfig = {
     keyID: process.env.APPLE_KEY_ID,
     privateKeyLocation: process.env.APPLE_PRIVATE_KEY_PATH,
     callbackURL: process.env.APPLE_CALLBACK_URL || '/auth/apple/callback'
+  }
+};
+
+// Helper function to get the default role
+const getDefaultRole = async () => {
+  try {
+    const role = await Role.findOne({ where: { name: 'user' } });
+    if (!role) {
+      logAuthError('DEFAULT_ROLE_NOT_FOUND', new Error('Default role "user" not found in database.'), {});
+      return null;
+    }
+    return role;
+  } catch (error) {
+    logAuthError('GET_DEFAULT_ROLE_ERROR', error, {});
+    throw error; // Rethrow to be caught by the strategy's catch block
   }
 };
 
@@ -73,13 +88,21 @@ passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshT
     if (!user) {
       logOAuthFlow('google', 'USER_CREATION_START', requestDetails);
       
+      const defaultRole = await getDefaultRole();
+      if (!defaultRole) {
+        const error = new Error('Default user role not configured.');
+        logOAuthError('google', 'USER_CREATION_FAILED', error, requestDetails);
+        return done(error, null);
+      }
+      
       // Create new user
       user = await User.create({
         username: `google_${profile.id}`,
         email: profile.emails[0].value,
         password_hash: 'oauth_user', // Placeholder for OAuth users
         subscription_status: 'trial',
-        language: 'en'
+        language: 'en',
+        role_id: defaultRole.id
       });
 
       logOAuthFlow('google', 'USER_CREATION_SUCCESS', {
@@ -103,6 +126,8 @@ passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshT
 
     await SocialAccount.upsert({
       user_id: user.id,
+      platform: 'google',
+      handle: profile.emails[0].value,
       provider: 'google',
       provider_user_id: profile.id,
       access_token: accessToken,
@@ -148,13 +173,21 @@ passport.use(new MicrosoftStrategy(oauthConfig.microsoft, async (accessToken, re
     if (!user) {
       logOAuthFlow('microsoft', 'USER_CREATION_START', requestDetails);
       
+      const defaultRole = await getDefaultRole();
+      if (!defaultRole) {
+        const error = new Error('Default user role not configured.');
+        logOAuthError('microsoft', 'USER_CREATION_FAILED', error, requestDetails);
+        return done(error, null);
+      }
+      
       // Create new user
       user = await User.create({
         username: `microsoft_${profile.id}`,
         email: profile.emails[0].value,
         password_hash: 'oauth_user', // Placeholder for OAuth users
         subscription_status: 'trial',
-        language: 'en'
+        language: 'en',
+        role_id: defaultRole.id
       });
 
       logOAuthFlow('microsoft', 'USER_CREATION_SUCCESS', {
@@ -178,6 +211,8 @@ passport.use(new MicrosoftStrategy(oauthConfig.microsoft, async (accessToken, re
 
     await SocialAccount.upsert({
       user_id: user.id,
+      platform: 'microsoft',
+      handle: profile.emails[0].value,
       provider: 'microsoft',
       provider_user_id: profile.id,
       access_token: accessToken,
@@ -226,13 +261,21 @@ passport.use(new AppleStrategy(oauthConfig.apple, async (accessToken, refreshTok
     if (!user) {
       logOAuthFlow('apple', 'USER_CREATION_START', requestDetails);
       
+      const defaultRole = await getDefaultRole();
+      if (!defaultRole) {
+        const error = new Error('Default user role not configured.');
+        logOAuthError('apple', 'USER_CREATION_FAILED', error, requestDetails);
+        return done(error, null);
+      }
+      
       // Create new user
       user = await User.create({
         username: `apple_${profile.id}`,
         email: email,
         password_hash: 'oauth_user', // Placeholder for OAuth users
         subscription_status: 'trial',
-        language: 'en'
+        language: 'en',
+        role_id: defaultRole.id
       });
 
       logOAuthFlow('apple', 'USER_CREATION_SUCCESS', {
@@ -256,6 +299,8 @@ passport.use(new AppleStrategy(oauthConfig.apple, async (accessToken, refreshTok
 
     await SocialAccount.upsert({
       user_id: user.id,
+      platform: 'apple',
+      handle: email,
       provider: 'apple',
       provider_user_id: profile.id,
       access_token: accessToken,

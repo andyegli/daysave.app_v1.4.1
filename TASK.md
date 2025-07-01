@@ -17,4 +17,9 @@
   - [x] Add rate limiting for authentication endpoints
   - [x] Add security headers with Helmet
   - [x] Add graceful shutdown handling
+- [x] Fix OAuth (Google) login flow
+  - [x] Ensure new users are assigned a default 'user' role
+  - [x] Seed the database with default roles ('admin', 'user')
+  - [x] Fix session management by using a database-backed session store
+  - [x] Resolve application startup race condition
 - [ ] Implement username/password registration with email verification 

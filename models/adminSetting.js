@@ -42,5 +42,10 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'admin_settings',
     timestamps: true
   });
+
+  AdminSetting.associate = (models) => {
+    AdminSetting.belongsTo(models.User, { foreignKey: 'user_id' });
+  };
+
   return AdminSetting;
 }; 

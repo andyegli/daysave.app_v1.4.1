@@ -25,14 +25,15 @@ module.exports = {
   validationErrorHandler: errorMiddleware.validationErrorHandler,
   
   // Security
-  createRateLimiter: securityMiddleware.createRateLimiter,
+  setupRateLimiter: securityMiddleware.setupRateLimiter,
   authRateLimiter: securityMiddleware.authRateLimiter,
   apiRateLimiter: securityMiddleware.apiRateLimiter,
-  corsOptions: securityMiddleware.corsOptions,
+  corsMiddleware: securityMiddleware.corsMiddleware,
   securityHeaders: securityMiddleware.securityHeaders,
+  securityMiddleware: securityMiddleware.securityMiddleware,
   requestLogger: securityMiddleware.requestLogger,
-  sanitizeInput: securityMiddleware.sanitizeInput,
   csrfProtection: securityMiddleware.csrfProtection,
+  sanitizeInput: securityMiddleware.sanitizeInput,
   
   // Validation
   handleValidationErrors: validationMiddleware.handleValidationErrors,

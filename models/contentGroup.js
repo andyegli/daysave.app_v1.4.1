@@ -24,5 +24,11 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'content_groups',
     timestamps: true
   });
+
+  ContentGroup.associate = (models) => {
+    ContentGroup.belongsTo(models.User, { foreignKey: 'user_id' });
+    ContentGroup.hasMany(models.ContentGroupMember, { foreignKey: 'group_id' });
+  };
+
   return ContentGroup;
 }; 

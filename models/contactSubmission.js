@@ -31,5 +31,10 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'contact_submissions',
     timestamps: true
   });
+
+  ContactSubmission.associate = (models) => {
+    ContactSubmission.belongsTo(models.User, { foreignKey: 'user_id', allowNull: true });
+  };
+
   return ContactSubmission;
 }; 

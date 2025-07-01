@@ -38,5 +38,13 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'share_logs',
     timestamps: true
   });
+
+  ShareLog.associate = (models) => {
+    ShareLog.belongsTo(models.User, { foreignKey: 'user_id' });
+    ShareLog.belongsTo(models.Content, { foreignKey: 'content_id' });
+    ShareLog.belongsTo(models.File, { foreignKey: 'file_id' });
+    ShareLog.belongsTo(models.Contact, { foreignKey: 'contact_id' });
+  };
+
   return ShareLog;
 }; 

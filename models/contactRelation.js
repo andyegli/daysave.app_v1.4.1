@@ -40,5 +40,12 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'contact_relations',
     timestamps: true
   });
+
+  ContactRelation.associate = (models) => {
+    ContactRelation.belongsTo(models.User, { foreignKey: 'user_id' });
+    ContactRelation.belongsTo(models.Contact, { as: 'Contact1', foreignKey: 'contact_id_1' });
+    ContactRelation.belongsTo(models.Contact, { as: 'Contact2', foreignKey: 'contact_id_2' });
+  };
+
   return ContactRelation;
 }; 

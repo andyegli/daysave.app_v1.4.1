@@ -30,5 +30,10 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'login_attempts',
     timestamps: true
   });
+
+  LoginAttempt.associate = (models) => {
+    LoginAttempt.belongsTo(models.User, { foreignKey: 'user_id' });
+  };
+
   return LoginAttempt;
 }; 

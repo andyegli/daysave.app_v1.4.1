@@ -57,5 +57,15 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'content',
     timestamps: true
   });
+
+  Content.associate = (models) => {
+    Content.belongsTo(models.User, { foreignKey: 'user_id' });
+    Content.belongsTo(models.SocialAccount, { foreignKey: 'social_account_id' });
+    Content.hasMany(models.ContentGroupMember, { foreignKey: 'content_id' });
+    Content.hasMany(models.ContentRelation, { as: 'Content1', foreignKey: 'content_id_1' });
+    Content.hasMany(models.ContentRelation, { as: 'Content2', foreignKey: 'content_id_2' });
+    Content.hasMany(models.ShareLog, { foreignKey: 'content_id' });
+  };
+
   return Content;
 }; 

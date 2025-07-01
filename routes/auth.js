@@ -55,12 +55,59 @@ router.get('/google/callback', (req, res, next) => {
   
   logOAuthFlow('google', 'CALLBACK_RECEIVED', {
     ...clientDetails,
-    query: req.query
+    query: req.query,
+    session: req.session
   });
   
-  passport.authenticate('google', { 
-    failureRedirect: '/auth/login?error=google_auth_failed',
-    successRedirect: '/dashboard'
+  passport.authenticate('google', (err, user, info) => {
+    logOAuthFlow('google', 'CALLBACK_PROCESSING', { 
+      ...clientDetails, 
+      userId: user ? user.id : 'No User', 
+      error: err ? err.message : 'No Error', 
+      info: info,
+      session: req.session
+    });
+
+    if (err) {
+      logOAuthError('google', 'AUTHENTICATION_ERROR', err, clientDetails);
+      return res.redirect('/auth/login?error=authentication_failed');
+    }
+    if (!user) {
+      logOAuthFlow('google', 'AUTHENTICATION_FAILED', { ...clientDetails, info: info });
+      return res.redirect('/auth/login?error=user_not_found');
+    }
+    req.login(user, (loginErr) => {
+      logOAuthFlow('google', 'REQ_LOGIN_CALLBACK', { 
+        ...clientDetails, 
+        userId: user.id,
+        loginErr: loginErr ? loginErr.message : 'No Error',
+        session: req.session,
+        isAuthenticated: req.isAuthenticated()
+      });
+
+      if (loginErr) {
+        logAuthError('LOGIN_ERROR', loginErr, { ...clientDetails, userId: user.id });
+        return res.redirect('/auth/login?error=login_failed');
+      }
+      
+      // Explicitly save the session before redirecting
+      req.session.save((saveErr) => {
+        logOAuthFlow('google', 'SESSION_SAVE_CALLBACK', { 
+          ...clientDetails, 
+          userId: user.id,
+          saveErr: saveErr ? saveErr.message : 'No Error',
+          session: req.session,
+          isAuthenticated: req.isAuthenticated()
+        });
+
+        if (saveErr) {
+          logAuthError('SESSION_SAVE_ERROR', saveErr, { ...clientDetails, userId: user.id });
+          return res.redirect('/auth/login?error=session_save_failed');
+        }
+        logAuthEvent('LOGIN_SUCCESS', { ...clientDetails, userId: user.id, username: user.username });
+        return res.redirect('/dashboard');
+      });
+    });
   })(req, res, next);
 });
 
@@ -89,9 +136,32 @@ router.get('/microsoft/callback', (req, res, next) => {
     query: req.query
   });
   
-  passport.authenticate('microsoft', {
-    failureRedirect: '/auth/login?error=microsoft_auth_failed',
-    successRedirect: '/dashboard'
+  passport.authenticate('microsoft', (err, user, info) => {
+    logOAuthFlow('microsoft', 'CALLBACK_PROCESSING', { ...clientDetails, userId: user ? user.id : null, error: err, info: info });
+
+    if (err) {
+      logOAuthError('microsoft', 'AUTHENTICATION_ERROR', err, clientDetails);
+      return res.redirect('/auth/login?error=authentication_failed');
+    }
+    if (!user) {
+      logOAuthFlow('microsoft', 'AUTHENTICATION_FAILED', { ...clientDetails, info: info });
+      return res.redirect('/auth/login?error=user_not_found');
+    }
+    req.login(user, (loginErr) => {
+      if (loginErr) {
+        logAuthError('LOGIN_ERROR', loginErr, { ...clientDetails, userId: user.id });
+        return res.redirect('/auth/login?error=login_failed');
+      }
+      // Explicitly save the session before redirecting
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          logAuthError('SESSION_SAVE_ERROR', saveErr, { ...clientDetails, userId: user.id });
+          return res.redirect('/auth/login?error=session_save_failed');
+        }
+        logAuthEvent('LOGIN_SUCCESS', { ...clientDetails, userId: user.id, username: user.username });
+        return res.redirect('/dashboard');
+      });
+    });
   })(req, res, next);
 });
 
@@ -120,9 +190,32 @@ router.get('/apple/callback', (req, res, next) => {
     query: req.query
   });
   
-  passport.authenticate('apple', {
-    failureRedirect: '/auth/login?error=apple_auth_failed',
-    successRedirect: '/dashboard'
+  passport.authenticate('apple', (err, user, info) => {
+    logOAuthFlow('apple', 'CALLBACK_PROCESSING', { ...clientDetails, userId: user ? user.id : null, error: err, info: info });
+
+    if (err) {
+      logOAuthError('apple', 'AUTHENTICATION_ERROR', err, clientDetails);
+      return res.redirect('/auth/login?error=authentication_failed');
+    }
+    if (!user) {
+      logOAuthFlow('apple', 'AUTHENTICATION_FAILED', { ...clientDetails, info: info });
+      return res.redirect('/auth/login?error=user_not_found');
+    }
+    req.login(user, (loginErr) => {
+      if (loginErr) {
+        logAuthError('LOGIN_ERROR', loginErr, { ...clientDetails, userId: user.id });
+        return res.redirect('/auth/login?error=login_failed');
+      }
+      // Explicitly save the session before redirecting
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          logAuthError('SESSION_SAVE_ERROR', saveErr, { ...clientDetails, userId: user.id });
+          return res.redirect('/auth/login?error=session_save_failed');
+        }
+        logAuthEvent('LOGIN_SUCCESS', { ...clientDetails, userId: user.id, username: user.username });
+        return res.redirect('/dashboard');
+      });
+    });
   })(req, res, next);
 });
 

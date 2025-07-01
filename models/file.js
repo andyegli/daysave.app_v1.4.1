@@ -55,5 +55,11 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'files',
     timestamps: true
   });
+
+  File.associate = (models) => {
+    File.belongsTo(models.User, { foreignKey: 'user_id' });
+    File.hasMany(models.ShareLog, { foreignKey: 'file_id' });
+  };
+
   return File;
 }; 

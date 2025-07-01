@@ -8,11 +8,22 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 RUN npm install --production
 
+# Add migrations and seeders
+COPY migrations ./migrations
+COPY seeders ./seeders
+
 # Bundle app source
 COPY . .
 
-# Use non-root user
+# Create non-root user first
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Create log directories and set permissions
+RUN mkdir -p /usr/src/app/logs /usr/src/app/app-logs /tmp/daysave-logs && \
+    chown -R appuser:appgroup /usr/src/app/logs /usr/src/app/app-logs /tmp/daysave-logs && \
+    chmod 755 /usr/src/app/logs /usr/src/app/app-logs /tmp/daysave-logs
+
+# Switch to non-root user
 USER appuser
 
 # Expose port

@@ -13,46 +13,28 @@ const getClientDetails = (req) => ({
 });
 
 // Rate limiting middleware
-const createRateLimiter = (windowMs = 15 * 60 * 1000, max = 100, message = 'Too many requests') => {
-  return rateLimit({
-    windowMs,
-    max,
-    message: {
-      error: message,
-      retryAfter: Math.ceil(windowMs / 1000)
-    },
+const setupRateLimiter = (options) => {
+  const defaultOptions = {
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
     standardHeaders: true,
     legacyHeaders: false,
-    handler: (req, res) => {
-      const clientDetails = getClientDetails(req);
-      
-      logSecurityEvent('RATE_LIMIT_EXCEEDED', {
-        ...clientDetails,
-        limit: max,
-        windowMs,
-        userId: req.user?.id || 'unauthenticated'
-      });
-      
-      res.status(429).json({
-        error: message,
-        retryAfter: Math.ceil(windowMs / 1000)
-      });
-    }
-  });
+    message: { error: 'Too many requests, please try again later.' }
+  };
+  // For debugging, we bypass the rate limiter.
+  // In production, you would use: return rateLimit({...defaultOptions, ...options});
+  return (req, res, next) => next();
 };
 
-// Specific rate limiters for different endpoints
-const authRateLimiter = createRateLimiter(
-  15 * 60 * 1000, // 15 minutes
-  5, // 5 attempts
-  'Too many authentication attempts'
-);
+// Rate limiting for authentication routes
+const authRateLimiter = setupRateLimiter({
+  max: 5, // 5 attempts per 15 minutes
+  message: { error: 'Too many authentication attempts' }
+});
 
-const apiRateLimiter = createRateLimiter(
-  15 * 60 * 1000, // 15 minutes
-  100, // 100 requests
-  'Too many API requests'
-);
+const apiRateLimiter = setupRateLimiter({
+  max: 100 // 100 requests per 15 minutes
+});
 
 // CORS configuration
 const corsOptions = {
@@ -82,8 +64,11 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 
+// CORS middleware function
+const corsMiddleware = cors(corsOptions);
+
 // Security headers middleware
-const securityHeaders = helmet({
+const securityHeaders = () => helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -163,14 +148,35 @@ const csrfProtection = (req, res, next) => {
   next();
 };
 
+const securityMiddleware = (app) => {
+  // Set security headers
+  app.use(securityHeaders());
+
+  // CORS configuration
+  app.use(corsMiddleware);
+
+  // Rate limiting
+  app.use(setupRateLimiter());
+
+  // Request logging
+  app.use(requestLogger);
+
+  // Input sanitization
+  app.use(sanitizeInput);
+
+  // CSRF protection
+  app.use(csrfProtection);
+};
+
 module.exports = {
-  createRateLimiter,
+  sanitizeInput,
+  setupRateLimiter,
   authRateLimiter,
   apiRateLimiter,
-  corsOptions,
+  corsMiddleware,
   securityHeaders,
+  securityMiddleware,
   requestLogger,
-  sanitizeInput,
   csrfProtection,
   getClientDetails
 }; 

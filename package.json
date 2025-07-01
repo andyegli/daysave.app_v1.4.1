@@ -20,21 +20,24 @@
     "express": "^5.1.0",
     "express-rate-limit": "^7.3.1",
     "express-session": "^1.18.1",
-    "express-validator": "^7.0.1",
-    "helmet": "^8.0.0",
+    "express-validator": "^7.1.0",
+    "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
     "mysql2": "^3.14.1",
     "passport": "^0.7.0",
     "passport-apple": "^2.0.2",
     "passport-google-oauth20": "^2.0.0",
-    "passport-microsoft": "^2.1.0",
-    "sequelize": "^6.37.7",
-    "winston": "^3.17.0"
+    "passport-microsoft": "^1.0.0",
+    "rotating-file-stream": "^3.2.3",
+    "sequelize": "^6.37.3",
+    "connect-session-sequelize": "^7.1.7",
+    "uuid": "^10.0.0",
+    "winston": "^3.13.1"
   },
   "devDependencies": {
     "chai": "^5.2.0",
     "mocha": "^11.7.1",
-    "sequelize-cli": "^6.6.3",
-    "uuid": "^11.1.0"
+    "sequelize-cli": "^6.6.3"
   }
 }

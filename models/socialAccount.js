@@ -34,5 +34,11 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'social_accounts',
     timestamps: true
   });
+
+  SocialAccount.associate = (models) => {
+    SocialAccount.belongsTo(models.User, { foreignKey: 'user_id' });
+    SocialAccount.hasMany(models.Content, { foreignKey: 'social_account_id' });
+  };
+
   return SocialAccount;
 }; 

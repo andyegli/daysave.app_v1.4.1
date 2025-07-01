@@ -2,7 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
-const sequelize = require('./models');
+const SequelizeStore = require('connect-session-sequelize')(session.Store);
+const db = require('./models');
 const { passport } = require('./config/auth');
 const { logAuthEvent, logAuthError, logBasePath } = require('./config/logger');
 
@@ -13,7 +14,7 @@ const {
   securityHeaders,
   requestLogger,
   sanitizeInput,
-  corsOptions
+  corsMiddleware
 } = require('./middleware');
 
 const app = express();
@@ -23,8 +24,8 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // Security middleware (apply first)
-app.use(securityHeaders);
-app.use(corsOptions);
+app.use(securityHeaders());
+app.use(corsMiddleware);
 
 // Request logging middleware
 app.use(requestLogger);
@@ -36,123 +37,159 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Input sanitization middleware
 app.use(sanitizeInput);
 
-// Session configuration (using memory store for development)
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'strict'
+// Define session model
+const Session = db.sequelize.define('Session', {
+  sid: {
+    type: db.Sequelize.STRING,
+    primaryKey: true
   },
-  name: 'daysave.sid' // Change default session name for security
-}));
-
-// Initialize Passport
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Serve static files with security headers
-app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: '1d', // Cache static files for 1 day
-  etag: true
-}));
-
-// Log application startup
-logAuthEvent('APPLICATION_STARTUP', {
-  nodeEnv: process.env.NODE_ENV,
-  port: process.env.PORT || 3000,
-  logBasePath: logBasePath,
-  timestamp: new Date().toISOString()
+  userId: db.Sequelize.STRING,
+  expires: db.Sequelize.DATE,
+  data: db.Sequelize.TEXT
 });
 
-// Routes
-app.use('/auth', require('./routes/auth'));
-
-// Basic route
-app.get('/', (req, res) => {
-  const clientDetails = {
-    ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
-    userAgent: req.headers['user-agent'] || 'unknown'
-  };
-  
-  logAuthEvent('HOME_PAGE_ACCESSED', {
-    ...clientDetails,
-    authenticated: req.isAuthenticated(),
-    userId: req.user?.id || null
-  });
-  
-  res.render('index', {
-    user: req.user,
-    authenticated: req.isAuthenticated()
-  });
+// Configure session store
+const sessionStore = new SequelizeStore({
+  db: db.sequelize,
+  table: 'Session',
+  extendDefaultFields: (defaults, session) => {
+    return {
+      data: defaults.data,
+      expires: defaults.expires,
+      userId: session.userId
+    };
+  },
+  checkExpirationInterval: 15 * 60 * 1000, // The interval at which to cleanup expired sessions in milliseconds.
+  expiration: 24 * 60 * 60 * 1000  // The maximum age (in milliseconds) of a valid session.
 });
 
-// Dashboard route (protected)
-app.get('/dashboard', (req, res) => {
-  const clientDetails = {
-    ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
-    userAgent: req.headers['user-agent'] || 'unknown'
-  };
-  
-  if (!req.isAuthenticated()) {
-    logAuthEvent('DASHBOARD_ACCESS_DENIED', {
+// Sync database models
+db.sequelize.sync().then(() => {
+  console.log('Database synced');
+
+  // Sync session store
+  return sessionStore.sync();
+}).then(() => {
+  console.log('Session store synced');
+
+  // Session configuration
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    store: sessionStore,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false, // Always false for local development; set to true in production with HTTPS
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax' // 'strict' can cause issues with some OAuth flows
+    },
+    name: 'daysave.sid' // Change default session name for security
+  }));
+
+  // Initialize Passport
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  // Serve static files with security headers
+  app.use(express.static(path.join(__dirname, 'public'), {
+    maxAge: '1d', // Cache static files for 1 day
+    etag: true
+  }));
+
+  // Log application startup
+  logAuthEvent('APPLICATION_STARTUP', {
+    nodeEnv: process.env.NODE_ENV,
+    port: process.env.PORT || 3000,
+    logBasePath: logBasePath,
+    timestamp: new Date().toISOString()
+  });
+
+  // Routes
+  app.use('/auth', require('./routes/auth'));
+
+  // Basic route
+  app.get('/', (req, res) => {
+    const clientDetails = {
+      ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown'
+    };
+    
+    logAuthEvent('HOME_PAGE_ACCESSED', {
       ...clientDetails,
-      redirectTo: '/auth/login'
+      authenticated: req.isAuthenticated(),
+      userId: req.user?.id || null
     });
-    return res.redirect('/auth/login');
-  }
-  
-  logAuthEvent('DASHBOARD_ACCESSED', {
-    ...clientDetails,
-    userId: req.user.id,
-    username: req.user.username
+    
+    res.render('index', {
+      user: req.user,
+      authenticated: req.isAuthenticated()
+    });
   });
-  
-  res.render('dashboard', {
-    user: req.user,
-    title: 'Dashboard - DaySave'
+
+  // Dashboard route (protected)
+  app.get('/dashboard', (req, res) => {
+    const clientDetails = {
+      ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown'
+    };
+    
+    if (!req.isAuthenticated()) {
+      logAuthEvent('DASHBOARD_ACCESS_DENIED', {
+        ...clientDetails,
+        redirectTo: '/auth/login'
+      });
+      return res.redirect('/auth/login');
+    }
+    
+    logAuthEvent('DASHBOARD_ACCESSED', {
+      ...clientDetails,
+      userId: req.user.id,
+      username: req.user.username
+    });
+    
+    res.render('dashboard', {
+      user: req.user,
+      title: 'Dashboard - DaySave'
+    });
   });
-});
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+  // Health check endpoint
+  app.get('/health', (req, res) => {
+    res.status(200).json({
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development'
+    });
   });
-});
 
-// 404 handler (must be before error handler)
-app.use(notFoundHandler);
+  // 404 handler (must be before error handler)
+  app.use(notFoundHandler);
 
-// Global error handler (must be last)
-app.use(errorHandler);
+  // Global error handler (must be last)
+  app.use(errorHandler);
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📁 Auth logs will be written to: ${logBasePath}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  // Start the server
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📁 Auth logs will be written to: ${logBasePath}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+
+}).catch(err => {
+  console.error('Failed to sync database or session store:', err);
+  process.exit(1);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received, shutting down gracefully');
-  app.close(() => {
-    console.log('✅ Server closed');
-    process.exit(0);
-  });
+  process.exit(0);
 });
 
 process.on('SIGINT', () => {
   console.log('🛑 SIGINT received, shutting down gracefully');
-  app.close(() => {
-    console.log('✅ Server closed');
-    process.exit(0);
-  });
+  process.exit(0);
 });

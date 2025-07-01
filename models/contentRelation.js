@@ -40,5 +40,12 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'content_relations',
     timestamps: true
   });
+
+  ContentRelation.associate = (models) => {
+    ContentRelation.belongsTo(models.User, { foreignKey: 'user_id' });
+    ContentRelation.belongsTo(models.Content, { as: 'Content1', foreignKey: 'content_id_1' });
+    ContentRelation.belongsTo(models.Content, { as: 'Content2', foreignKey: 'content_id_2' });
+  };
+
   return ContentRelation;
 }; 

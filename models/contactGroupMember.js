@@ -28,5 +28,11 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'contact_group_members',
     timestamps: true
   });
+
+  ContactGroupMember.associate = (models) => {
+    ContactGroupMember.belongsTo(models.Contact, { foreignKey: 'contact_id' });
+    ContactGroupMember.belongsTo(models.ContactGroup, { foreignKey: 'group_id' });
+  };
+
   return ContactGroupMember;
 }; 

@@ -33,5 +33,10 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'audit_logs',
     timestamps: true
   });
+
+  AuditLog.associate = (models) => {
+    AuditLog.belongsTo(models.User, { foreignKey: 'user_id' });
+  };
+
   return AuditLog;
 }; 

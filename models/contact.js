@@ -32,5 +32,16 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'contacts',
     timestamps: true
   });
+
+  Contact.associate = (models) => {
+    Contact.belongsTo(models.User, { foreignKey: 'user_id' });
+    Contact.hasMany(models.ContactGroupMember, { foreignKey: 'contact_id' });
+    Contact.hasMany(models.Relationship, { as: 'RelationshipContact1', foreignKey: 'contact_id_1' });
+    Contact.hasMany(models.Relationship, { as: 'RelationshipContact2', foreignKey: 'contact_id_2' });
+    Contact.hasMany(models.ContactRelation, { as: 'Contact1', foreignKey: 'contact_id_1' });
+    Contact.hasMany(models.ContactRelation, { as: 'Contact2', foreignKey: 'contact_id_2' });
+    Contact.hasMany(models.ShareLog, { foreignKey: 'contact_id' });
+  };
+
   return Contact;
 }; 
