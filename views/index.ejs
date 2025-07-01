@@ -10,7 +10,15 @@
 <body>
   <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <div class="container-fluid">
-      <a class="navbar-brand" href="#">DaySave.app</a>
+      <a class="navbar-brand" href="/">DaySave.app</a>
+      <div class="d-flex ms-auto">
+        <% if (user) { %>
+          <a href="/dashboard" class="btn btn-outline-primary me-2">Dashboard</a>
+          <a href="/auth/logout" class="btn btn-outline-danger">Logout</a>
+        <% } else { %>
+          <a href="/auth/login" class="btn btn-outline-primary">Login</a>
+        <% } %>
+      </div>
     </div>
   </nav>
   <div class="container mt-5">

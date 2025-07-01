@@ -154,6 +154,17 @@ db.sequelize.sync().then(() => {
     });
   });
 
+  // Profile route (protected)
+  app.get('/profile', (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.redirect('/auth/login');
+    }
+    res.render('profile', {
+      user: req.user,
+      title: 'Profile - DaySave'
+    });
+  });
+
   // Health check endpoint
   app.get('/health', (req, res) => {
     res.status(200).json({
@@ -168,7 +179,16 @@ db.sequelize.sync().then(() => {
   app.use(notFoundHandler);
 
   // Global error handler (must be last)
-  app.use(errorHandler);
+  app.use((err, req, res, next) => {
+    const status = err.status || err.statusCode || 500;
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    res.status(status);
+    res.render('error', {
+      title: 'Error',
+      message: isDevelopment ? err.message : 'Internal Server Error',
+      user: req.user || null
+    });
+  });
 
   // Start the server
   const PORT = process.env.PORT || 3000;

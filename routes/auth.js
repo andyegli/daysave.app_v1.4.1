@@ -29,7 +29,8 @@ router.get('/login', isNotAuthenticated, (req, res) => {
   
   res.render('auth/login', {
     title: 'Login - DaySave',
-    error: req.query.error
+    error: req.query.error,
+    user: req.user || null
   });
 });
 
