@@ -1,6 +1,7 @@
 'use strict';
 
 const { v4: uuidv4 } = require('uuid');
+const { QueryTypes } = require('sequelize');
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
@@ -22,7 +23,16 @@ module.exports = {
       }
     ];
 
-    await queryInterface.bulkInsert('roles', roles, {});
+    // Only insert roles that do not already exist
+    for (const role of roles) {
+      const [existing] = await queryInterface.sequelize.query(
+        `SELECT * FROM roles WHERE name = :name LIMIT 1`,
+        { replacements: { name: role.name }, type: QueryTypes.SELECT }
+      );
+      if (!existing) {
+        await queryInterface.bulkInsert('roles', [role], {});
+      }
+    }
   },
 
   down: async (queryInterface, Sequelize) => {

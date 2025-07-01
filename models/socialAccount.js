@@ -23,6 +23,14 @@ module.exports = (sequelize, DataTypes) => {
     handle: {
       type: DataTypes.STRING
     },
+    provider_user_id: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    profile_data: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
     access_token: {
       type: DataTypes.TEXT,
       allowNull: false

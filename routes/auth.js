@@ -74,13 +74,13 @@ router.get('/google/callback', (req, res, next) => {
       logOAuthError('google', 'AUTHENTICATION_ERROR', err, clientDetails);
       return res.redirect('/auth/login?error=authentication_failed');
     }
-    if (!user) {
-      logOAuthFlow('google', 'AUTHENTICATION_FAILED', { ...clientDetails, info: info });
-      return res.redirect('/auth/login?error=user_not_found');
-    }
     if (info && info.linkAccount && info.linkProfile) {
       req.session.linkProfile = info.linkProfile;
       return res.redirect('/auth/link-account');
+    }
+    if (!user) {
+      logOAuthFlow('google', 'AUTHENTICATION_FAILED', { ...clientDetails, info: info });
+      return res.redirect('/auth/login?error=user_not_found');
     }
     req.login(user, (loginErr) => {
       logOAuthFlow('google', 'REQ_LOGIN_CALLBACK', { 
@@ -149,6 +149,10 @@ router.get('/microsoft/callback', (req, res, next) => {
       logOAuthError('microsoft', 'AUTHENTICATION_ERROR', err, clientDetails);
       return res.redirect('/auth/login?error=authentication_failed');
     }
+    if (info && info.linkAccount && info.linkProfile) {
+      req.session.linkProfile = info.linkProfile;
+      return res.redirect('/auth/link-account');
+    }
     if (!user) {
       logOAuthFlow('microsoft', 'AUTHENTICATION_FAILED', { ...clientDetails, info: info });
       return res.redirect('/auth/login?error=user_not_found');
@@ -202,6 +206,10 @@ router.get('/apple/callback', (req, res, next) => {
     if (err) {
       logOAuthError('apple', 'AUTHENTICATION_ERROR', err, clientDetails);
       return res.redirect('/auth/login?error=authentication_failed');
+    }
+    if (info && info.linkAccount && info.linkProfile) {
+      req.session.linkProfile = info.linkProfile;
+      return res.redirect('/auth/link-account');
     }
     if (!user) {
       logOAuthFlow('apple', 'AUTHENTICATION_FAILED', { ...clientDetails, info: info });
@@ -508,6 +516,63 @@ router.post('/link-account', async (req, res) => {
   } catch (err) {
     req.session.linkProfile = null;
     return res.render('auth/login', { title: 'Login - DaySave', user: null, error: 'An error occurred while linking accounts.' });
+  }
+});
+
+// Username/password login
+router.post('/login', isNotAuthenticated, async (req, res, next) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.render('auth/login', {
+      title: 'Login - DaySave',
+      error: 'Please enter both username/email and password.',
+      user: null
+    });
+  }
+  try {
+    const user = await User.findOne({
+      where: {
+        [Sequelize.Op.or]: [
+          { username: username },
+          { email: username }
+        ]
+      }
+    });
+    if (!user) {
+      return res.render('auth/login', {
+        title: 'Login - DaySave',
+        error: 'Invalid username/email or password.',
+        user: null
+      });
+    }
+    if (!user.email_verified) {
+      return res.render('auth/login', {
+        title: 'Login - DaySave',
+        error: 'Please verify your email before logging in.',
+        user: null
+      });
+    }
+    const bcrypt = require('bcryptjs');
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) {
+      return res.render('auth/login', {
+        title: 'Login - DaySave',
+        error: 'Invalid username/email or password.',
+        user: null
+      });
+    }
+    req.login(user, (err) => {
+      if (err) {
+        return next(err);
+      }
+      return res.redirect('/dashboard');
+    });
+  } catch (err) {
+    return res.render('auth/login', {
+      title: 'Login - DaySave',
+      error: 'An error occurred. Please try again.',
+      user: null
+    });
   }
 });
 

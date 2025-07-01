@@ -120,6 +120,8 @@ db.sequelize.sync().then(() => {
   // Routes
   app.use('/auth', require('./routes/auth'));
   app.use('/admin', require('./routes/admin'));
+  const contactsRouter = require('./routes/contacts');
+  app.use('/contacts', contactsRouter);
 
   // Basic route
   app.get('/', (req, res) => {
@@ -161,6 +163,12 @@ db.sequelize.sync().then(() => {
       username: req.user.username
     });
     
+    if (req.user.Role && req.user.Role.name === 'admin') {
+      return res.render('admin-dashboard', {
+        user: req.user,
+        title: 'Admin Dashboard - DaySave'
+      });
+    }
     res.render('dashboard', {
       user: req.user,
       title: 'Dashboard - DaySave'

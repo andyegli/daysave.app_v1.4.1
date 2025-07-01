@@ -25,9 +25,38 @@ async function isAdmin(req, res, next) {
 // List users
 router.get('/users', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const users = await User.findAll({ include: [Role] });
-    logAuthEvent('ADMIN_USER_LIST', { adminId: req.user.id });
-    res.render('admin/user-list', { users, user: req.user, error: req.query.error, success: req.query.success });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const offset = (page - 1) * limit;
+    const where = search
+      ? {
+          [require('sequelize').Op.or]: [
+            { username: { [require('sequelize').Op.iLike]: `%${search}%` } },
+            { email: { [require('sequelize').Op.iLike]: `%${search}%` } }
+          ]
+        }
+      : {};
+    const { count, rows: users } = await User.findAndCountAll({
+      where,
+      include: [Role],
+      limit,
+      offset,
+      order: [['createdAt', 'DESC']]
+    });
+    const totalPages = Math.ceil(count / limit) || 1;
+    logAuthEvent('ADMIN_USER_LIST', { adminId: req.user.id, page, search });
+    res.render('admin/user-list', {
+      users,
+      user: req.user,
+      error: req.query.error || null,
+      success: req.query.success || null,
+      page,
+      totalPages,
+      search,
+      limit,
+      count
+    });
   } catch (err) {
     logAuthError('ADMIN_USER_LIST_ERROR', err, { adminId: req.user.id });
     res.status(500).render('error', { title: 'Error', message: 'Failed to load users.' });

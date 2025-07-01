@@ -153,6 +153,19 @@
                         <span>or</span>
                     </div>
 
+                    <!-- Username/Password Login Form -->
+                    <form action="/auth/login" method="POST" class="mb-3">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username or Email</label>
+                            <input type="text" class="form-control" id="username" name="username" required autocomplete="username">
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Login</button>
+                    </form>
+
                     <!-- Coming Soon -->
                     <div class="text-center">
                         <p class="text-muted mb-3">More options coming soon:</p>

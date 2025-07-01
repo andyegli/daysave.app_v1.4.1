@@ -34,3 +34,14 @@
 - [ ] Add error handling for admin routes
 - [x] Add pagination/search to user list
 - [ ] Style and polish admin UI 
+- [ ] Test procedure: Email confirmation and logging
+  1. Register a new user with a real email address.
+  2. Check the application logs for EMAIL_SEND_ATTEMPT, EMAIL_SEND_SUCCESS, or EMAIL_SEND_ERROR events.
+  3. Verify that a confirmation email is received (check inbox and spam).
+  4. Click the confirmation link to verify the account.
+  5. If email is not received, review logs for errors and check SMTP configuration in .env.
+- [ ] Fix OAuth account linking: update SocialAccount model and add migration for provider_user_id and profile_data fields 
+- [ ] Implement contact CRD (Create, Read, Delete) pages for users, including Bootstrap-styled EJS views and proper access control 
+- [x] Admins can see all contacts on /contacts, regular users see only their own
+- [x] Add 'Manage Contacts' link to admin dashboard
+- [ ] Ensure role is always available in req.user for all routes that need it 

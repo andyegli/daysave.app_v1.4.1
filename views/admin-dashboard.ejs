@@ -1,0 +1,51 @@
+<%- include('partials/header', { title: title, user: user }) %>
+<div class="container mt-4">
+  <h1 class="mb-4">Welcome, <%= user.first_name ? user.first_name : user.username %> (Admin)!</h1>
+  <div class="alert alert-info">You have administrator access.</div>
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body text-center">
+          <i class="fas fa-users-cog fa-3x text-danger mb-3"></i>
+          <h5 class="card-title">User Management</h5>
+          <p class="card-text">Manage all users in the system.</p>
+          <a href="/admin/users" class="btn btn-danger">Go to User Management</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body text-center">
+          <i class="fas fa-cogs fa-3x text-primary mb-3"></i>
+          <h5 class="card-title">Admin Settings</h5>
+          <p class="card-text">Configure system-wide settings.</p>
+          <a href="#" class="btn btn-primary disabled">Coming Soon</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body text-center">
+          <i class="fas fa-clipboard-list fa-3x text-success mb-3"></i>
+          <h5 class="card-title">Audit Logs</h5>
+          <p class="card-text">View system audit logs.</p>
+          <a href="#" class="btn btn-success disabled">Coming Soon</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body text-center">
+          <i class="fas fa-address-book fa-3x text-info mb-3"></i>
+          <h5 class="card-title">Manage Contacts</h5>
+          <p class="card-text">View and manage all user contacts.</p>
+          <a href="/contacts" class="btn btn-outline-primary w-100 mb-2"><i class="fa fa-address-book"></i> Manage Contacts</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="text-end">
+    <a href="/dashboard" class="btn btn-secondary">Switch to User Dashboard</a>
+  </div>
+</div>
+<%- include('partials/footer') %> 

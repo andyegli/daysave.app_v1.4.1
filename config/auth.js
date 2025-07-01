@@ -55,7 +55,7 @@ passport.serializeUser((user, done) => {
 passport.deserializeUser(async (id, done) => {
   try {
     logAuthEvent('USER_DESERIALIZE_START', { userId: id });
-    const user = await User.findByPk(id);
+    const user = await User.findByPk(id, { include: [Role] });
     if (user) {
       logAuthEvent('USER_DESERIALIZE_SUCCESS', { userId: id, username: user.username });
     } else {
