@@ -130,13 +130,77 @@ router.post('/:id', isAuthenticated, async (req, res) => {
 // Delete contact
 router.post('/:id/delete', isAuthenticated, async (req, res) => {
   try {
-    const contact = await Contact.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    let contact;
+    if (req.user.role && req.user.role.name === 'admin') {
+      contact = await Contact.findOne({ where: { id: req.params.id } });
+    } else {
+      contact = await Contact.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    }
     if (!contact) return res.redirect('/contacts?error=Contact not found');
     await contact.destroy();
     res.redirect('/contacts?success=Contact deleted');
   } catch (err) {
     res.redirect('/contacts?error=Failed to delete contact');
   }
+});
+
+// Server-side search endpoint
+router.get('/search', isAuthenticated, async (req, res) => {
+  const q = (req.query.q || '').trim().toLowerCase();
+  if (!q) return res.json([]);
+  const advanced = {};
+  // Parse advanced queries (e.g., email:john)
+  q.split(/\s+/).forEach(token => {
+    const match = token.match(/^(name|email|phone|address|note|social|owner):(.+)$/);
+    if (match) advanced[match[1]] = match[2];
+  });
+  let where = {};
+  let include = [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }];
+  if (!(req.user.role && req.user.role.name === 'admin')) {
+    where.user_id = req.user.id;
+  }
+  let contacts = await Contact.findAll({ where, include });
+  // Filter in JS for all fields (for simplicity)
+  const filterContact = contact => {
+    const owner = contact.User ? `${contact.User.first_name || ''} ${contact.User.last_name || ''} ${contact.User.username || ''} ${contact.User.email || ''}`.toLowerCase() : '';
+    const fields = [
+      contact.name,
+      JSON.stringify(contact.emails),
+      JSON.stringify(contact.phones),
+      JSON.stringify(contact.addresses),
+      JSON.stringify(contact.notes),
+      JSON.stringify(contact.social_profiles),
+      owner
+    ].join(' ').toLowerCase();
+    // Advanced field-specific
+    for (const key in advanced) {
+      if (key === 'owner' && !owner.includes(advanced[key].toLowerCase())) return false;
+      if (['name','email','phone','address','note','social'].includes(key)) {
+        if (!fields.includes(advanced[key].toLowerCase())) return false;
+      }
+    }
+    // General search
+    if (Object.keys(advanced).length === 0 && !fields.includes(q)) return false;
+    return true;
+  };
+  const filtered = contacts.filter(filterContact);
+  // Return only fields needed for the table
+  res.json(filtered.map(contact => ({
+    id: contact.id,
+    name: contact.name,
+    emails: contact.emails,
+    phones: contact.phones,
+    addresses: contact.addresses,
+    notes: contact.notes,
+    social_profiles: contact.social_profiles,
+    User: contact.User ? {
+      id: contact.User.id,
+      username: contact.User.username,
+      email: contact.User.email,
+      first_name: contact.User.first_name,
+      last_name: contact.User.last_name
+    } : null
+  })));
 });
 
 module.exports = router; 

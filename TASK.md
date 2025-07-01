@@ -55,3 +55,6 @@
 - Updated Google Maps JS API script tag to use loading=async for best-practice loading and to remove the warning 
 - Admin can now update any contact (edit and update routes fixed)
 - Contact owner is shown in the edit form for admins 
+- Admin can now delete any contact (not just their own); delete button is always shown for admin 
+- Added a live search field to the contact list view, filtering contacts as you type across all fields, for both users and admins 
+- All search enhancements implemented: server-side search, highlighting, advanced queries, hidden field search, and no-results message 
