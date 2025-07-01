@@ -236,3 +236,5 @@ process.on('SIGINT', () => {
   console.log('🛑 SIGINT received, shutting down gracefully');
   process.exit(0);
 });
+
+module.exports = app;

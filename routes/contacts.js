@@ -13,9 +13,9 @@ router.get('/', isAuthenticated, async (req, res) => {
     }
     let contacts;
     if (req.user.role && req.user.role.name === 'admin') {
-      contacts = await Contact.findAll({ order: [['first_name', 'ASC'], ['last_name', 'ASC']] });
+      contacts = await Contact.findAll({ order: [['name', 'ASC']] });
     } else {
-      contacts = await Contact.findAll({ where: { user_id: req.user.id }, order: [['first_name', 'ASC'], ['last_name', 'ASC']] });
+      contacts = await Contact.findAll({ where: { user_id: req.user.id }, order: [['name', 'ASC']] });
     }
     res.render('contacts/list', { user: req.user, contacts, error: null, success: req.query.success || null });
   } catch (err) {
@@ -30,12 +30,31 @@ router.get('/new', isAuthenticated, (req, res) => {
 
 // Create contact
 router.post('/', isAuthenticated, async (req, res) => {
-  const { first_name, last_name, email, phone } = req.body;
-  if (!first_name || !last_name) {
-    return res.render('contacts/form', { user: req.user, contact: req.body, formAction: '/contacts', method: 'POST', error: 'First and last name are required.', success: null });
+  const { name } = req.body;
+  // Parse emails, phones, addresses, notes, social_profiles as arrays of objects
+  const emails = Array.isArray(req.body.emails) ? req.body.emails : Object.values(req.body.emails || {});
+  const phones = Array.isArray(req.body.phones) ? req.body.phones : Object.values(req.body.phones || {});
+  const addresses = Array.isArray(req.body.addresses) ? req.body.addresses : Object.values(req.body.addresses || {});
+  const notes = Array.isArray(req.body.notes) ? req.body.notes : Object.values(req.body.notes || {});
+  const social_profiles = Array.isArray(req.body.social_profiles) ? req.body.social_profiles : Object.values(req.body.social_profiles || {});
+  const parsedEmails = emails.map(e => ({ label: e.label, value: e.value })).filter(e => e.value);
+  const parsedPhones = phones.map(p => ({ label: p.label, value: p.value })).filter(p => p.value);
+  const parsedAddresses = addresses.map(a => ({ label: a.label, value: a.value })).filter(a => a.value);
+  const parsedNotes = notes.map(n => ({ label: n.label, value: n.value })).filter(n => n.value);
+  const parsedSocials = social_profiles.map(s => ({ label: s.label, value: s.value })).filter(s => s.value);
+  if (!name) {
+    return res.render('contacts/form', { user: req.user, contact: req.body, formAction: '/contacts', method: 'POST', error: 'Name is required.', success: null });
   }
   try {
-    await Contact.create({ user_id: req.user.id, first_name, last_name, email, phone });
+    await Contact.create({
+      user_id: req.user.id,
+      name,
+      emails: parsedEmails,
+      phones: parsedPhones,
+      addresses: parsedAddresses,
+      notes: parsedNotes,
+      social_profiles: parsedSocials
+    });
     res.redirect('/contacts?success=Contact created');
   } catch (err) {
     res.render('contacts/form', { user: req.user, contact: req.body, formAction: '/contacts', method: 'POST', error: 'Failed to create contact.', success: null });
@@ -55,14 +74,26 @@ router.get('/:id/edit', isAuthenticated, async (req, res) => {
 
 // Update contact
 router.post('/:id', isAuthenticated, async (req, res) => {
-  const { first_name, last_name, email, phone } = req.body;
+  const { name } = req.body;
+  const emails = Array.isArray(req.body.emails) ? req.body.emails : Object.values(req.body.emails || {});
+  const phones = Array.isArray(req.body.phones) ? req.body.phones : Object.values(req.body.phones || {});
+  const addresses = Array.isArray(req.body.addresses) ? req.body.addresses : Object.values(req.body.addresses || {});
+  const notes = Array.isArray(req.body.notes) ? req.body.notes : Object.values(req.body.notes || {});
+  const social_profiles = Array.isArray(req.body.social_profiles) ? req.body.social_profiles : Object.values(req.body.social_profiles || {});
+  const parsedEmails = emails.map(e => ({ label: e.label, value: e.value })).filter(e => e.value);
+  const parsedPhones = phones.map(p => ({ label: p.label, value: p.value })).filter(p => p.value);
+  const parsedAddresses = addresses.map(a => ({ label: a.label, value: a.value })).filter(a => a.value);
+  const parsedNotes = notes.map(n => ({ label: n.label, value: n.value })).filter(n => n.value);
+  const parsedSocials = social_profiles.map(s => ({ label: s.label, value: s.value })).filter(s => s.value);
   try {
     const contact = await Contact.findOne({ where: { id: req.params.id, user_id: req.user.id } });
     if (!contact) return res.redirect('/contacts?error=Contact not found');
-    contact.first_name = first_name;
-    contact.last_name = last_name;
-    contact.email = email;
-    contact.phone = phone;
+    contact.name = name;
+    contact.emails = parsedEmails;
+    contact.phones = parsedPhones;
+    contact.addresses = parsedAddresses;
+    contact.notes = parsedNotes;
+    contact.social_profiles = parsedSocials;
     await contact.save();
     res.redirect('/contacts?success=Contact updated');
   } catch (err) {

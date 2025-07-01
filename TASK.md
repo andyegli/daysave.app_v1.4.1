@@ -47,3 +47,6 @@
 - [ ] Ensure role is always available in req.user for all routes that need it 
 - [x] Ensure user-friendly redirect to login for isAuthenticated middleware (HTML requests) 
 - [x] Add functional File Management and Content Management dashboard buttons, with placeholder routes/views 
+- [x] Ensure all dashboard buttons open real, existing pages (not placeholders or #) — files and content now have minimal real pages 
+- [x] Design and implement the user's social content management page with Bootstrap card view, using header/footer includes and ensuring mobile-friendliness. 
+- Enhanced contact form: Users can now add custom labels for emails, phones, addresses, and notes by selecting 'Other...' and entering a new label, in addition to social profiles. 
