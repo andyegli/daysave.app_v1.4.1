@@ -49,5 +49,6 @@ module.exports = {
   validateSettings: validationMiddleware.validateSettings,
   
   // Helper functions
-  getClientDetails: authMiddleware.getClientDetails
+  getClientDetails: authMiddleware.getClientDetails,
+  logAllHeaders: securityMiddleware.logAllHeaders
 }; 
