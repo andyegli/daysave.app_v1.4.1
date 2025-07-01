@@ -23,3 +23,14 @@
   - [x] Fix session management by using a database-backed session store
   - [x] Resolve application startup race condition
 - [x] Implement username/password registration with email verification 
+- [x] Scaffold admin user CRUD routes in routes/admin.js
+- [x] Scaffold user list and form EJS templates in views/admin/
+- [x] Create Bootstrap header/footer partials in views/partials/
+- [x] Register /admin route in app.js
+- [ ] Implement user CRUD logic (validation, create, update, delete, handle relations)
+- [x] Implement admin-only access control (role name check)
+- [x] Add admin link to dashboard for admins
+- [ ] Add logging for all admin actions
+- [ ] Add error handling for admin routes
+- [ ] Add pagination/search to user list
+- [ ] Style and polish admin UI 

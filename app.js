@@ -119,6 +119,7 @@ db.sequelize.sync().then(() => {
 
   // Routes
   app.use('/auth', require('./routes/auth'));
+  app.use('/admin', require('./routes/admin'));
 
   // Basic route
   app.get('/', (req, res) => {

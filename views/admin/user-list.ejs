@@ -1,0 +1,31 @@
+<%- include('../partials/header', { title: 'Admin - User Management' }) %>
+<div class="container mt-4">
+  <h1>User Management</h1>
+  <a href="/admin/users/new" class="btn btn-primary mb-3">Add User</a>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% users.forEach(function(u) { %>
+        <tr>
+          <td><%= u.username %></td>
+          <td><%= u.email %></td>
+          <td><%= u.Role ? u.Role.name : '' %></td>
+          <td>
+            <a href="/admin/users/<%= u.id %>/edit" class="btn btn-sm btn-warning">Edit</a>
+            <form action="/admin/users/<%= u.id %>/delete" method="POST" style="display:inline;">
+              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this user?')">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/footer') %> 
