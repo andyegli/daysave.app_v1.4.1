@@ -355,6 +355,14 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
     const bcrypt = require('bcryptjs');
     const token = require('crypto').randomBytes(32).toString('hex');
     const hashedPassword = await bcrypt.hash(password, 10);
+    // Determine if this is the first user
+    const userCount = await User.count();
+    let assignedRole;
+    if (userCount === 0) {
+      assignedRole = await Role.findOne({ where: { name: 'admin' } });
+    } else {
+      assignedRole = await Role.findOne({ where: { name: 'user' } });
+    }
     const newUser = await User.create({
       username,
       email,
@@ -363,7 +371,7 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
       email_verification_token: token,
       subscription_status: 'trial',
       language: 'en',
-      role_id: (await Role.findOne({ where: { name: 'user' } })).id
+      role_id: assignedRole.id
     });
     logAuthEvent('REGISTRATION_USER_CREATED', { userId: newUser.id, username, email });
     // Send confirmation email
