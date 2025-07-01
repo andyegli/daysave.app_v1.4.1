@@ -25,7 +25,12 @@ const isAuthenticated = (req, res, next) => {
     requestedUrl: req.originalUrl
   });
   
-  res.status(401).json({ error: 'Authentication required' });
+  // Redirect to login for browser requests, JSON for API/AJAX
+  if (req.accepts(['html', 'json']) === 'html') {
+    return res.redirect('/auth/login');
+  } else {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
 };
 
 // Middleware to check if user is not authenticated
