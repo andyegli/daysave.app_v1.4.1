@@ -107,7 +107,12 @@ router.post('/:id', isAuthenticated, async (req, res) => {
   const parsedNotes = notes.map(n => ({ label: n.label, value: n.value })).filter(n => n.value);
   const parsedSocials = social_profiles.map(s => ({ label: s.label, value: s.value })).filter(s => s.value);
   try {
-    const contact = await Contact.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    let contact;
+    if (req.user.role && req.user.role.name === 'admin') {
+      contact = await Contact.findOne({ where: { id: req.params.id }, include: [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }] });
+    } else {
+      contact = await Contact.findOne({ where: { id: req.params.id, user_id: req.user.id }, include: [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }] });
+    }
     if (!contact) return res.redirect('/contacts?error=Contact not found');
     contact.name = name;
     contact.emails = parsedEmails;

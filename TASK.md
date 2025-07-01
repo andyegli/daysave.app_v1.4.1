@@ -52,4 +52,6 @@
 - Enhanced contact form: Users can now add custom labels for emails, phones, addresses, and notes by selecting 'Other...' and entering a new label, in addition to social profiles. 
 - Show owner in contact list and allow admin to filter by owner with a dropdown (admin only)
 - Allow admin to edit any contact (edit function fixed for admin)
-- Google Maps JS API loading warning is informational; script is already loaded with async/defer 
+- Updated Google Maps JS API script tag to use loading=async for best-practice loading and to remove the warning 
+- Admin can now update any contact (edit and update routes fixed)
+- Contact owner is shown in the edit form for admins 

@@ -20,6 +20,12 @@
             <% if (success) { %>
               <div class="alert alert-success"><%= success %></div>
             <% } %>
+            <% if (user.role && user.role.name === 'admin' && contact.User) { %>
+              <div class="mb-3">
+                <label class="form-label">Owner</label>
+                <input type="text" class="form-control" value="<%= contact.User.first_name || contact.User.username %> (<%= contact.User.email %>)" readonly>
+              </div>
+            <% } %>
             <form method="POST" action="<%= formAction %>">
               <div class="mb-3">
                 <label for="name" class="form-label">Full Name <span class="text-danger">*</span></label>
