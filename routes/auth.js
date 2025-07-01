@@ -333,7 +333,9 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
       title: 'Register - DaySave',
       user: req.user || null,
       error: errors.join(' '),
-      success: null
+      success: null,
+      username,
+      email
     });
   }
   try {
@@ -345,7 +347,9 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
         title: 'Register - DaySave',
         user: req.user || null,
         error: 'Username or email already in use.',
-        success: null
+        success: null,
+        username,
+        email
       });
     }
     const bcrypt = require('bcryptjs');
@@ -382,7 +386,9 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
       title: 'Register - DaySave',
       user: req.user || null,
       error: 'An error occurred. Please try again.',
-      success: null
+      success: null,
+      username,
+      email
     });
   }
 });
