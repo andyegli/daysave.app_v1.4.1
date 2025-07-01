@@ -2,8 +2,7 @@ const express = require('express');
 const passport = require('passport');
 const router = express.Router();
 const { logAuthEvent, logAuthError, logOAuthFlow, logOAuthError } = require('../config/logger');
-const { User } = require('../models');
-const db = require('../config/db');
+const { User, Role, Sequelize } = require('../models');
 
 // Import middleware
 const {
@@ -333,7 +332,7 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
     });
   }
   try {
-    const existingUser = await User.findOne({ where: { [db.Sequelize.Op.or]: [{ username }, { email }] } });
+    const existingUser = await User.findOne({ where: { [Sequelize.Op.or]: [{ username }, { email }] } });
     if (existingUser) {
       return res.render('auth/register', {
         title: 'Register - DaySave',
@@ -353,7 +352,7 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
       email_verification_token: token,
       subscription_status: 'trial',
       language: 'en',
-      role_id: (await db.Role.findOne({ where: { name: 'user' } })).id
+      role_id: (await Role.findOne({ where: { name: 'user' } })).id
     });
     // Send confirmation email
     const sendMail = require('../../utils/send-mail');
