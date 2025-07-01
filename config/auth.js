@@ -102,7 +102,9 @@ passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshT
         password_hash: 'oauth_user', // Placeholder for OAuth users
         subscription_status: 'trial',
         language: 'en',
-        role_id: defaultRole.id
+        role_id: defaultRole.id,
+        first_name: profile.name?.givenName || null,
+        last_name: profile.name?.familyName || null
       });
 
       logOAuthFlow('google', 'USER_CREATION_SUCCESS', {
@@ -111,6 +113,13 @@ passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshT
         username: user.username
       });
     } else {
+      // Update first_name and last_name if changed
+      const updatedFields = {};
+      if (profile.name?.givenName && user.first_name !== profile.name.givenName) updatedFields.first_name = profile.name.givenName;
+      if (profile.name?.familyName && user.last_name !== profile.name.familyName) updatedFields.last_name = profile.name.familyName;
+      if (Object.keys(updatedFields).length > 0) {
+        await user.update(updatedFields);
+      }
       logOAuthFlow('google', 'USER_FOUND', {
         ...requestDetails,
         userId: user.id,
