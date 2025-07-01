@@ -46,3 +46,4 @@
 - [x] Add 'Manage Contacts' link to admin dashboard
 - [ ] Ensure role is always available in req.user for all routes that need it 
 - [x] Ensure user-friendly redirect to login for isAuthenticated middleware (HTML requests) 
+- [x] Add functional File Management and Content Management dashboard buttons, with placeholder routes/views 

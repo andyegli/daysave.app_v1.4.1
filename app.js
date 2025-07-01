@@ -122,6 +122,8 @@ db.sequelize.sync().then(() => {
   app.use('/admin', require('./routes/admin'));
   const contactsRouter = require('./routes/contacts');
   app.use('/contacts', contactsRouter);
+  app.use('/files', require('./routes/files'));
+  app.use('/content', require('./routes/content'));
 
   // Basic route
   app.get('/', (req, res) => {
