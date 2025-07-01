@@ -32,5 +32,5 @@
 - [x] Add admin link to dashboard for admins
 - [ ] Add logging for all admin actions
 - [ ] Add error handling for admin routes
-- [ ] Add pagination/search to user list
+- [x] Add pagination/search to user list
 - [ ] Style and polish admin UI 
