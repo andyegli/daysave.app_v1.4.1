@@ -107,11 +107,13 @@ passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshT
     } else {
       logOAuthFlow('google', 'USER_CREATION_START', requestDetails);
       
-      const defaultRole = await getDefaultRole();
-      if (!defaultRole) {
-        const error = new Error('Default user role not configured.');
-        logOAuthError('google', 'USER_CREATION_FAILED', error, requestDetails);
-        return done(error, null);
+      // Determine if this is the first user
+      const userCount = await User.count();
+      let assignedRole;
+      if (userCount === 0) {
+        assignedRole = await Role.findOne({ where: { name: 'admin' } });
+      } else {
+        assignedRole = await Role.findOne({ where: { name: 'user' } });
       }
       
       // Create new user
@@ -121,7 +123,7 @@ passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshT
         password_hash: 'oauth_user', // Placeholder for OAuth users
         subscription_status: 'trial',
         language: 'en',
-        role_id: defaultRole.id,
+        role_id: assignedRole.id,
         first_name: profile.name?.givenName || null,
         last_name: profile.name?.familyName || null
       });
@@ -188,11 +190,13 @@ passport.use(new MicrosoftStrategy(oauthConfig.microsoft, async (accessToken, re
     if (!user) {
       logOAuthFlow('microsoft', 'USER_CREATION_START', requestDetails);
       
-      const defaultRole = await getDefaultRole();
-      if (!defaultRole) {
-        const error = new Error('Default user role not configured.');
-        logOAuthError('microsoft', 'USER_CREATION_FAILED', error, requestDetails);
-        return done(error, null);
+      // Determine if this is the first user
+      const userCount = await User.count();
+      let assignedRole;
+      if (userCount === 0) {
+        assignedRole = await Role.findOne({ where: { name: 'admin' } });
+      } else {
+        assignedRole = await Role.findOne({ where: { name: 'user' } });
       }
       
       // Create new user
@@ -202,7 +206,7 @@ passport.use(new MicrosoftStrategy(oauthConfig.microsoft, async (accessToken, re
         password_hash: 'oauth_user', // Placeholder for OAuth users
         subscription_status: 'trial',
         language: 'en',
-        role_id: defaultRole.id
+        role_id: assignedRole.id
       });
 
       logOAuthFlow('microsoft', 'USER_CREATION_SUCCESS', {
@@ -276,11 +280,13 @@ passport.use(new AppleStrategy(oauthConfig.apple, async (accessToken, refreshTok
     if (!user) {
       logOAuthFlow('apple', 'USER_CREATION_START', requestDetails);
       
-      const defaultRole = await getDefaultRole();
-      if (!defaultRole) {
-        const error = new Error('Default user role not configured.');
-        logOAuthError('apple', 'USER_CREATION_FAILED', error, requestDetails);
-        return done(error, null);
+      // Determine if this is the first user
+      const userCount = await User.count();
+      let assignedRole;
+      if (userCount === 0) {
+        assignedRole = await Role.findOne({ where: { name: 'admin' } });
+      } else {
+        assignedRole = await Role.findOne({ where: { name: 'user' } });
       }
       
       // Create new user
@@ -290,7 +296,7 @@ passport.use(new AppleStrategy(oauthConfig.apple, async (accessToken, refreshTok
         password_hash: 'oauth_user', // Placeholder for OAuth users
         subscription_status: 'trial',
         language: 'en',
-        role_id: defaultRole.id
+        role_id: assignedRole.id
       });
 
       logOAuthFlow('apple', 'USER_CREATION_SUCCESS', {
