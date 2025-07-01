@@ -1,25 +1,41 @@
 const express = require('express');
 const router = express.Router();
-const { Contact, Role } = require('../models');
+const { Contact, Role, User } = require('../models');
 const { isAuthenticated } = require('../middleware');
 
 // List contacts
 router.get('/', isAuthenticated, async (req, res) => {
   try {
-    // Ensure role is available
     if (!req.user.role || !req.user.role.name) {
       const userRole = await Role.findByPk(req.user.role_id);
       req.user.role = userRole;
     }
-    let contacts;
+    let contacts, owners = [];
+    let ownerFilter = req.query.owner_id || '';
     if (req.user.role && req.user.role.name === 'admin') {
-      contacts = await Contact.findAll({ order: [['name', 'ASC']] });
+      // Get all owners (users who have contacts)
+      owners = await User.findAll({
+        include: [{ model: Contact, attributes: [] }],
+        attributes: ['id', 'username', 'email', 'first_name', 'last_name'],
+        group: ['User.id']
+      });
+      // Filter contacts by owner if filter is set
+      const where = ownerFilter ? { user_id: ownerFilter } : {};
+      contacts = await Contact.findAll({
+        where,
+        include: [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }],
+        order: [['name', 'ASC']]
+      });
     } else {
-      contacts = await Contact.findAll({ where: { user_id: req.user.id }, order: [['name', 'ASC']] });
+      contacts = await Contact.findAll({
+        where: { user_id: req.user.id },
+        include: [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }],
+        order: [['name', 'ASC']]
+      });
     }
-    res.render('contacts/list', { user: req.user, contacts, error: null, success: req.query.success || null });
+    res.render('contacts/list', { user: req.user, contacts, owners, ownerFilter, error: null, success: req.query.success || null });
   } catch (err) {
-    res.render('contacts/list', { user: req.user, contacts: [], error: 'Failed to load contacts.', success: null });
+    res.render('contacts/list', { user: req.user, contacts: [], owners: [], ownerFilter: '', error: 'Failed to load contacts.', success: null });
   }
 });
 
@@ -64,7 +80,12 @@ router.post('/', isAuthenticated, async (req, res) => {
 // Edit contact form
 router.get('/:id/edit', isAuthenticated, async (req, res) => {
   try {
-    const contact = await Contact.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    let contact;
+    if (req.user.role && req.user.role.name === 'admin') {
+      contact = await Contact.findOne({ where: { id: req.params.id }, include: [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }] });
+    } else {
+      contact = await Contact.findOne({ where: { id: req.params.id, user_id: req.user.id }, include: [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }] });
+    }
     if (!contact) return res.redirect('/contacts?error=Contact not found');
     res.render('contacts/form', { user: req.user, contact, formAction: `/contacts/${contact.id}`, method: 'POST', error: null, success: null });
   } catch (err) {

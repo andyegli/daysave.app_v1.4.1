@@ -50,3 +50,6 @@
 - [x] Ensure all dashboard buttons open real, existing pages (not placeholders or #) — files and content now have minimal real pages 
 - [x] Design and implement the user's social content management page with Bootstrap card view, using header/footer includes and ensuring mobile-friendliness. 
 - Enhanced contact form: Users can now add custom labels for emails, phones, addresses, and notes by selecting 'Other...' and entering a new label, in addition to social profiles. 
+- Show owner in contact list and allow admin to filter by owner with a dropdown (admin only)
+- Allow admin to edit any contact (edit function fixed for admin)
+- Google Maps JS API loading warning is informational; script is already loaded with async/defer 

@@ -37,6 +37,20 @@
       <h2 class="fw-bold">My Contacts</h2>
       <a href="/contacts/new" class="btn btn-success"><i class="fa fa-plus"></i> Add Contact</a>
     </div>
+    <% if (user.role && user.role.name === 'admin') { %>
+      <form method="get" class="mb-3 d-flex align-items-center" action="/contacts">
+        <label for="ownerFilter" class="me-2 mb-0">Filter by Owner:</label>
+        <select name="owner_id" id="ownerFilter" class="form-select form-select-sm me-2" style="max-width:220px;">
+          <option value="">All Owners</option>
+          <% owners.forEach(function(owner) { %>
+            <option value="<%= owner.id %>" <%= ownerFilter == owner.id ? 'selected' : '' %>>
+              <%= owner.first_name || owner.username %> (<%= owner.email %>)
+            </option>
+          <% }) %>
+        </select>
+        <button type="submit" class="btn btn-outline-primary btn-sm">Filter</button>
+      </form>
+    <% } %>
     <% if (error) { %>
       <div class="alert alert-danger mt-3"><%= error %></div>
     <% } %>
@@ -54,6 +68,7 @@
               <th>Email</th>
               <th>Phone</th>
               <th>Addresses</th>
+              <% if (user.role && user.role.name === 'admin') { %><th>Owner</th><% } %>
               <th class="contact-actions">Actions</th>
             </tr>
           </thead>
@@ -102,6 +117,15 @@
                     -
                   <% } %>
                 </td>
+                <% if (user.role && user.role.name === 'admin') { %>
+                  <td>
+                    <% if (contact.User) { %>
+                      <%= contact.User.first_name || contact.User.username %> (<%= contact.User.email %>)
+                    <% } else { %>
+                      -
+                    <% } %>
+                  </td>
+                <% } %>
                 <td>
                   <a href="/contacts/<%= contact.id %>/edit" class="btn btn-sm btn-outline-primary me-2"><i class="fa fa-edit"></i> Edit</a>
                   <form method="POST" action="/contacts/<%= contact.id %>/delete" class="d-inline" onsubmit="return confirm('Delete this contact?');">
