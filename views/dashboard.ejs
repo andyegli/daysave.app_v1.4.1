@@ -15,17 +15,12 @@
                 DaySave
             </a>
             <div class="navbar-nav ms-auto">
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user me-1"></i>
-                        <%= user.username %>
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="/profile"><i class="fas fa-cog me-2"></i>Profile</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                    </ul>
-                </div>
+                <% if (user) { %>
+                    <a href="/dashboard" class="btn btn-outline-light me-2">Dashboard</a>
+                    <a href="/auth/logout" class="btn btn-outline-danger">Logout</a>
+                <% } else { %>
+                    <a href="/auth/login" class="btn btn-outline-light">Login</a>
+                <% } %>
             </div>
         </div>
     </nav>

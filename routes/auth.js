@@ -2,6 +2,8 @@ const express = require('express');
 const passport = require('passport');
 const router = express.Router();
 const { logAuthEvent, logAuthError, logOAuthFlow, logOAuthError } = require('../config/logger');
+const { User } = require('../models');
+const db = require('../config/db');
 
 // Import middleware
 const {
@@ -302,6 +304,115 @@ router.get('/status', (req, res) => {
   });
   
   res.json(status);
+});
+
+// Registration page
+router.get('/register', isNotAuthenticated, (req, res) => {
+  res.render('auth/register', {
+    title: 'Register - DaySave',
+    user: req.user || null,
+    error: null,
+    success: null
+  });
+});
+
+// Registration handler
+router.post('/register', isNotAuthenticated, async (req, res) => {
+  const { username, email, password, confirmPassword } = req.body;
+  const errors = [];
+  if (!username || username.length < 3) errors.push('Username must be at least 3 characters.');
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errors.push('Invalid email address.');
+  if (!password || password.length < 8) errors.push('Password must be at least 8 characters.');
+  if (password !== confirmPassword) errors.push('Passwords do not match.');
+  if (errors.length) {
+    return res.render('auth/register', {
+      title: 'Register - DaySave',
+      user: req.user || null,
+      error: errors.join(' '),
+      success: null
+    });
+  }
+  try {
+    const existingUser = await User.findOne({ where: { [db.Sequelize.Op.or]: [{ username }, { email }] } });
+    if (existingUser) {
+      return res.render('auth/register', {
+        title: 'Register - DaySave',
+        user: req.user || null,
+        error: 'Username or email already in use.',
+        success: null
+      });
+    }
+    const bcrypt = require('bcryptjs');
+    const token = require('crypto').randomBytes(32).toString('hex');
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = await User.create({
+      username,
+      email,
+      password_hash: hashedPassword,
+      email_verified: false,
+      email_verification_token: token,
+      subscription_status: 'trial',
+      language: 'en',
+      role_id: (await db.Role.findOne({ where: { name: 'user' } })).id
+    });
+    // Send confirmation email
+    const sendMail = require('../../utils/send-mail');
+    await sendMail({
+      to: email,
+      subject: 'Confirm your DaySave account',
+      html: `<p>Hello ${username},</p><p>Thank you for registering at DaySave. Please confirm your email by clicking the link below:</p><p><a href="${process.env.BASE_URL || 'http://localhost:3000'}/auth/verify-email?token=${token}">Verify Email</a></p><p>If you did not register, you can ignore this email.</p>`
+    });
+    return res.render('auth/register', {
+      title: 'Register - DaySave',
+      user: req.user || null,
+      error: null,
+      success: 'Registration successful! Please check your email to confirm your account.'
+    });
+  } catch (err) {
+    return res.render('auth/register', {
+      title: 'Register - DaySave',
+      user: req.user || null,
+      error: 'An error occurred. Please try again.',
+      success: null
+    });
+  }
+});
+
+// Email verification route
+router.get('/verify-email', async (req, res) => {
+  const { token } = req.query;
+  if (!token) {
+    return res.render('auth/login', {
+      title: 'Login - DaySave',
+      user: req.user || null,
+      error: 'Invalid or missing verification token.'
+    });
+  }
+  try {
+    const user = await User.findOne({ where: { email_verification_token: token } });
+    if (!user) {
+      return res.render('auth/login', {
+        title: 'Login - DaySave',
+        user: req.user || null,
+        error: 'Invalid or expired verification token.'
+      });
+    }
+    user.email_verified = true;
+    user.email_verification_token = null;
+    await user.save();
+    return res.render('auth/login', {
+      title: 'Login - DaySave',
+      user: req.user || null,
+      error: null,
+      success: 'Your email has been verified! You can now log in.'
+    });
+  } catch (err) {
+    return res.render('auth/login', {
+      title: 'Login - DaySave',
+      user: req.user || null,
+      error: 'An error occurred during verification.'
+    });
+  }
 });
 
 module.exports = router; 
