@@ -1,5 +1,11 @@
 <%- include('../partials/header', { title: 'Admin - User Management' }) %>
 <div class="container mt-4">
+  <% if (error) { %>
+    <div class="alert alert-danger"><%= error %></div>
+  <% } %>
+  <% if (success) { %>
+    <div class="alert alert-success"><%= success %></div>
+  <% } %>
   <h1>User Management</h1>
   <a href="/admin/users/new" class="btn btn-primary mb-3">Add User</a>
   <table class="table table-striped">

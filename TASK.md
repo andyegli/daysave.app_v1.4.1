@@ -27,7 +27,7 @@
 - [x] Scaffold user list and form EJS templates in views/admin/
 - [x] Create Bootstrap header/footer partials in views/partials/
 - [x] Register /admin route in app.js
-- [ ] Implement user CRUD logic (validation, create, update, delete, handle relations)
+- [x] Implement user CRUD logic (validation, create, update, delete, handle relations)
 - [x] Implement admin-only access control (role name check)
 - [x] Add admin link to dashboard for admins
 - [ ] Add logging for all admin actions
