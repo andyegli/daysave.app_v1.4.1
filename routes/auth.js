@@ -2,7 +2,7 @@ const express = require('express');
 const passport = require('passport');
 const router = express.Router();
 const { logAuthEvent, logAuthError, logOAuthFlow, logOAuthError } = require('../config/logger');
-const { User, Role, Sequelize } = require('../models');
+const { User, Role, Sequelize, SocialAccount } = require('../models');
 
 // Import middleware
 const {
@@ -19,7 +19,7 @@ router.use(authRateLimiter);
 // Login page
 router.get('/login', isNotAuthenticated, (req, res) => {
   const clientDetails = {
-    ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+    ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
@@ -38,7 +38,7 @@ router.get('/login', isNotAuthenticated, (req, res) => {
 // Google OAuth routes
 router.get('/google', (req, res, next) => {
   const clientDetails = {
-    ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+    ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
@@ -51,7 +51,7 @@ router.get('/google', (req, res, next) => {
 
 router.get('/google/callback', (req, res, next) => {
   const clientDetails = {
-    ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+    ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
@@ -77,6 +77,10 @@ router.get('/google/callback', (req, res, next) => {
     if (!user) {
       logOAuthFlow('google', 'AUTHENTICATION_FAILED', { ...clientDetails, info: info });
       return res.redirect('/auth/login?error=user_not_found');
+    }
+    if (info && info.linkAccount && info.linkProfile) {
+      req.session.linkProfile = info.linkProfile;
+      return res.redirect('/auth/link-account');
     }
     req.login(user, (loginErr) => {
       logOAuthFlow('google', 'REQ_LOGIN_CALLBACK', { 
@@ -116,7 +120,7 @@ router.get('/google/callback', (req, res, next) => {
 // Microsoft OAuth routes
 router.get('/microsoft', (req, res, next) => {
   const clientDetails = {
-    ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+    ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
@@ -129,7 +133,7 @@ router.get('/microsoft', (req, res, next) => {
 
 router.get('/microsoft/callback', (req, res, next) => {
   const clientDetails = {
-    ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+    ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
@@ -170,7 +174,7 @@ router.get('/microsoft/callback', (req, res, next) => {
 // Apple OAuth routes
 router.get('/apple', (req, res, next) => {
   const clientDetails = {
-    ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+    ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
@@ -183,7 +187,7 @@ router.get('/apple', (req, res, next) => {
 
 router.get('/apple/callback', (req, res, next) => {
   const clientDetails = {
-    ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+    ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
@@ -224,7 +228,7 @@ router.get('/apple/callback', (req, res, next) => {
 // Logout
 router.get('/logout', isAuthenticated, (req, res) => {
   const clientDetails = {
-    ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+    ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   const userDetails = {
@@ -259,7 +263,7 @@ router.get('/logout', isAuthenticated, (req, res) => {
 // Get current user info (API endpoint)
 router.get('/me', isAuthenticated, (req, res) => {
   const clientDetails = {
-    ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+    ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
@@ -283,7 +287,7 @@ router.get('/me', isAuthenticated, (req, res) => {
 // Check authentication status
 router.get('/status', (req, res) => {
   const clientDetails = {
-    ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+    ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
@@ -324,6 +328,7 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
   if (!password || password.length < 8) errors.push('Password must be at least 8 characters.');
   if (password !== confirmPassword) errors.push('Passwords do not match.');
   if (errors.length) {
+    logAuthError('REGISTRATION_VALIDATION_ERROR', new Error(errors.join(' ')), { username, email });
     return res.render('auth/register', {
       title: 'Register - DaySave',
       user: req.user || null,
@@ -332,8 +337,10 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
     });
   }
   try {
+    logAuthEvent('REGISTRATION_ATTEMPT', { username, email });
     const existingUser = await User.findOne({ where: { [Sequelize.Op.or]: [{ username }, { email }] } });
     if (existingUser) {
+      logAuthError('REGISTRATION_DUPLICATE', new Error('Username or email already in use.'), { username, email });
       return res.render('auth/register', {
         title: 'Register - DaySave',
         user: req.user || null,
@@ -354,6 +361,7 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
       language: 'en',
       role_id: (await Role.findOne({ where: { name: 'user' } })).id
     });
+    logAuthEvent('REGISTRATION_USER_CREATED', { userId: newUser.id, username, email });
     // Send confirmation email
     const sendMail = require('../../utils/send-mail');
     await sendMail({
@@ -361,6 +369,7 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
       subject: 'Confirm your DaySave account',
       html: `<p>Hello ${username},</p><p>Thank you for registering at DaySave. Please confirm your email by clicking the link below:</p><p><a href="${process.env.BASE_URL || 'http://localhost:3000'}/auth/verify-email?token=${token}">Verify Email</a></p><p>If you did not register, you can ignore this email.</p>`
     });
+    logAuthEvent('REGISTRATION_EMAIL_SENT', { userId: newUser.id, email });
     return res.render('auth/register', {
       title: 'Register - DaySave',
       user: req.user || null,
@@ -368,6 +377,7 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
       success: 'Registration successful! Please check your email to confirm your account.'
     });
   } catch (err) {
+    logAuthError('REGISTRATION_ERROR', err, { username, email });
     return res.render('auth/register', {
       title: 'Register - DaySave',
       user: req.user || null,
@@ -411,6 +421,79 @@ router.get('/verify-email', async (req, res) => {
       user: req.user || null,
       error: 'An error occurred during verification.'
     });
+  }
+});
+
+// Helper: get provider display name
+function getProviderName(provider) {
+  if (provider === 'google') return 'Google';
+  if (provider === 'microsoft') return 'Microsoft';
+  if (provider === 'apple') return 'Apple';
+  return provider;
+}
+
+// Link account GET
+router.get('/link-account', (req, res) => {
+  const { linkProfile } = req.session;
+  if (!linkProfile) {
+    return res.redirect('/auth/login');
+  }
+  res.render('auth/link-account', {
+    email: linkProfile.email,
+    provider: linkProfile.provider,
+    providerName: getProviderName(linkProfile.provider),
+    token: linkProfile.token || '',
+    error: null
+  });
+});
+
+// Link account POST (require password confirmation)
+router.post('/link-account', async (req, res) => {
+  const { linkProfile } = req.session;
+  const { password } = req.body;
+  if (!linkProfile) {
+    return res.redirect('/auth/login');
+  }
+  try {
+    // Find user by email
+    const user = await User.findOne({ where: { email: linkProfile.email } });
+    if (!user) {
+      req.session.linkProfile = null;
+      return res.render('auth/login', { title: 'Login - DaySave', user: null, error: 'Account not found.' });
+    }
+    // Require password confirmation for security
+    const bcrypt = require('bcryptjs');
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) {
+      return res.render('auth/link-account', {
+        email: linkProfile.email,
+        provider: linkProfile.provider,
+        providerName: getProviderName(linkProfile.provider),
+        token: linkProfile.token || '',
+        error: 'Incorrect password. Please try again.'
+      });
+    }
+    // Link the provider
+    await user.createSocialAccount({
+      platform: linkProfile.provider,
+      handle: linkProfile.email,
+      provider: linkProfile.provider,
+      provider_user_id: linkProfile.providerUserId,
+      access_token: linkProfile.accessToken,
+      refresh_token: linkProfile.refreshToken,
+      profile_data: JSON.stringify(linkProfile.profileData)
+    });
+    req.session.linkProfile = null;
+    // Log the user in
+    req.login(user, (err) => {
+      if (err) {
+        return res.render('auth/login', { title: 'Login - DaySave', user: null, error: 'Login failed after linking.' });
+      }
+      return res.redirect('/dashboard');
+    });
+  } catch (err) {
+    req.session.linkProfile = null;
+    return res.render('auth/login', { title: 'Login - DaySave', user: null, error: 'An error occurred while linking accounts.' });
   }
 });
 

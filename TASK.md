@@ -22,4 +22,4 @@
   - [x] Seed the database with default roles ('admin', 'user')
   - [x] Fix session management by using a database-backed session store
   - [x] Resolve application startup race condition
-- [ ] Implement username/password registration with email verification 
+- [x] Implement username/password registration with email verification 

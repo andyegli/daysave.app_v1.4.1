@@ -5,7 +5,7 @@ const { logSecurityEvent } = require('../config/logger');
 
 // Helper function to get client details
 const getClientDetails = (req) => ({
-  ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+  ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
   userAgent: req.headers['user-agent'] || 'unknown',
   referer: req.headers.referer || 'unknown',
   url: req.originalUrl,
@@ -43,8 +43,8 @@ const corsOptions = {
       ? process.env.ALLOWED_ORIGINS.split(',')
       : ['http://localhost:3000', 'http://localhost:5000'];
     
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    // Allow requests with no origin (like mobile apps or curl requests) or with origin 'null'
+    if (!origin || origin === 'null') return callback(null, true);
     
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -62,6 +62,15 @@ const corsOptions = {
   },
   credentials: true,
   optionsSuccessStatus: 200
+};
+
+// Log all incoming request headers for debugging
+const logAllHeaders = (req, res, next) => {
+  console.log('--- Incoming Request Headers ---');
+  console.log(req.method, req.originalUrl);
+  console.log(req.headers);
+  console.log('---------------------------------');
+  next();
 };
 
 // CORS middleware function
@@ -178,5 +187,6 @@ module.exports = {
   securityMiddleware,
   requestLogger,
   csrfProtection,
-  getClientDetails
+  getClientDetails,
+  logAllHeaders
 }; 

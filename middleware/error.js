@@ -2,7 +2,7 @@ const { logError } = require('../config/logger');
 
 // Helper function to get client details
 const getClientDetails = (req) => ({
-  ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+  ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
   userAgent: req.headers['user-agent'] || 'unknown',
   referer: req.headers.referer || 'unknown',
   url: req.originalUrl,

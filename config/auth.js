@@ -81,11 +81,30 @@ passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshT
     logOAuthFlow('google', 'CALLBACK_START', requestDetails);
 
     // Check if user exists
-    let user = await User.findOne({
-      where: { email: profile.emails[0].value }
-    });
-
-    if (!user) {
+    let user = await User.findOne({ where: { email: profile.emails[0].value } });
+    if (user) {
+      // Check if provider is already linked
+      const existingSocial = await SocialAccount.findOne({ where: { user_id: user.id, platform: 'google' } });
+      if (!existingSocial) {
+        // Store profile in session and signal to link
+        return done(null, false, {
+          linkAccount: true,
+          linkProfile: {
+            email: profile.emails[0].value,
+            provider: 'google',
+            providerUserId: profile.id,
+            accessToken,
+            refreshToken,
+            profileData: profile._json
+          }
+        });
+      }
+      logOAuthFlow('google', 'USER_FOUND', {
+        ...requestDetails,
+        userId: user.id,
+        username: user.username
+      });
+    } else {
       logOAuthFlow('google', 'USER_CREATION_START', requestDetails);
       
       const defaultRole = await getDefaultRole();
@@ -108,19 +127,6 @@ passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshT
       });
 
       logOAuthFlow('google', 'USER_CREATION_SUCCESS', {
-        ...requestDetails,
-        userId: user.id,
-        username: user.username
-      });
-    } else {
-      // Update first_name and last_name if changed
-      const updatedFields = {};
-      if (profile.name?.givenName && user.first_name !== profile.name.givenName) updatedFields.first_name = profile.name.givenName;
-      if (profile.name?.familyName && user.last_name !== profile.name.familyName) updatedFields.last_name = profile.name.familyName;
-      if (Object.keys(updatedFields).length > 0) {
-        await user.update(updatedFields);
-      }
-      logOAuthFlow('google', 'USER_FOUND', {
         ...requestDetails,
         userId: user.id,
         username: user.username

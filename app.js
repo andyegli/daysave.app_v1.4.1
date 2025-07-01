@@ -25,6 +25,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 // Security middleware (apply first)
 app.use(securityHeaders());
+app.use(require('./middleware').logAllHeaders);
 app.use(corsMiddleware);
 
 // Request logging middleware
@@ -105,13 +106,24 @@ db.sequelize.sync().then(() => {
     timestamp: new Date().toISOString()
   });
 
+  // Log all users in development mode
+  if (process.env.NODE_ENV === 'development') {
+    const { User } = require('./models');
+    User.findAll({ attributes: ['username', 'email'] }).then(users => {
+      console.log('Registered users:');
+      users.forEach(u => console.log(`- ${u.username} <${u.email}>`));
+    }).catch(err => {
+      console.error('Error fetching users:', err);
+    });
+  }
+
   // Routes
   app.use('/auth', require('./routes/auth'));
 
   // Basic route
   app.get('/', (req, res) => {
     const clientDetails = {
-      ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+      ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
       userAgent: req.headers['user-agent'] || 'unknown'
     };
     
@@ -130,7 +142,7 @@ db.sequelize.sync().then(() => {
   // Dashboard route (protected)
   app.get('/dashboard', (req, res) => {
     const clientDetails = {
-      ip: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
+      ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
       userAgent: req.headers['user-agent'] || 'unknown'
     };
     
