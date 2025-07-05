@@ -1,47 +1,48 @@
-console.log('Contact list map script loaded');
+console.log('Contact maps script loaded');
 
 let mapAddress = null;
 
 document.addEventListener('DOMContentLoaded', function() {
   const contactList = document.querySelector('.contact-list');
-  if (!contactList) {
-    console.error('No .contact-list element found!');
-    return;
-  }
-  contactList.addEventListener('click', function(e) {
-    const btn = e.target.closest('.show-map');
-    if (btn) {
-      e.preventDefault();
-      mapAddress = btn.getAttribute('data-address');
-      var modal = new bootstrap.Modal(document.getElementById('mapModal'));
-      modal.show();
-      console.log('Pin clicked, address:', mapAddress);
-    }
-  });
-
-  document.getElementById('mapModal').addEventListener('shown.bs.modal', function () {
-    if (!mapAddress) return;
-    document.getElementById('map').innerHTML = '';
-    var map = new google.maps.Map(document.getElementById('map'), {
-      zoom: 15,
-      center: { lat: 0, lng: 0 }
-    });
-    var geocoder = new google.maps.Geocoder();
-    console.log('[Google Maps API] Geocoding address:', mapAddress);
-    geocoder.geocode({ address: mapAddress }, function(results, status) {
-      if (status === 'OK') {
-        console.log('[Google Maps API] Geocode result:', results[0]);
-        map.setCenter(results[0].geometry.location);
-        new google.maps.Marker({
-          map: map,
-          position: results[0].geometry.location
-        });
-      } else {
-        console.error('[Google Maps API] Geocode failed:', status, mapAddress);
-        alert('Geocode was not successful for the following reason: ' + status);
+  if (contactList) {
+    console.log('Contact list found, setting up map functionality');
+    contactList.addEventListener('click', function(e) {
+      const btn = e.target.closest('.show-map');
+      if (btn) {
+        e.preventDefault();
+        mapAddress = btn.getAttribute('data-address');
+        var modal = new bootstrap.Modal(document.getElementById('mapModal'));
+        modal.show();
+        console.log('Pin clicked, address:', mapAddress);
       }
     });
-  });
+
+    document.getElementById('mapModal').addEventListener('shown.bs.modal', function () {
+      if (!mapAddress) return;
+      document.getElementById('map').innerHTML = '';
+      var map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 15,
+        center: { lat: 0, lng: 0 }
+      });
+      var geocoder = new google.maps.Geocoder();
+      console.log('[Google Maps API] Geocoding address:', mapAddress);
+      geocoder.geocode({ address: mapAddress }, function(results, status) {
+        if (status === 'OK') {
+          console.log('[Google Maps API] Geocode result:', results[0]);
+          map.setCenter(results[0].geometry.location);
+          new google.maps.Marker({
+            map: map,
+            position: results[0].geometry.location
+          });
+        } else {
+          console.error('[Google Maps API] Geocode failed:', status, mapAddress);
+          alert('Geocode was not successful for the following reason: ' + status);
+        }
+      });
+    });
+  } else {
+    // No contact list found - this is expected on form pages
+  }
 });
 
 // Google Maps Places Autocomplete for contact address fields
@@ -294,23 +295,9 @@ class ContactMapsAutocomplete {
   }
 }
 
-// Global callback function for Google Maps API
-window.initContactMaps = function() {
-  console.log('ContactMapsAutocomplete: Google Maps API callback triggered');
-  if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-    console.log('ContactMapsAutocomplete: Google Maps API available via callback, initializing...');
-    window.contactMapsAutocomplete = new ContactMapsAutocomplete();
-  } else {
-    console.error('ContactMapsAutocomplete: Google Maps API callback triggered but API not available');
-  }
-};
-
 // Initialize when DOM is loaded (fallback)
 document.addEventListener('DOMContentLoaded', function() {
   console.log('ContactMapsAutocomplete: DOM loaded, checking Google Maps API availability...');
-  console.log('ContactMapsAutocomplete: google object:', typeof google);
-  console.log('ContactMapsAutocomplete: google.maps:', typeof google !== 'undefined' ? typeof google.maps : 'undefined');
-  console.log('ContactMapsAutocomplete: google.maps.places:', typeof google !== 'undefined' && google.maps ? typeof google.maps.places : 'undefined');
   
   // Check if Google Maps API is already available
   if (typeof google !== 'undefined' && google.maps && google.maps.places) {

@@ -28,7 +28,9 @@ class ContactAutocomplete {
     fieldTypes.forEach(type => {
       // Setup existing fields
       document.querySelectorAll(`input[name*="[${type}s]"][name*="[value]"]`).forEach(input => {
-        this.setupAutocomplete(input, type);
+        if (input) {
+          this.setupAutocomplete(input, type);
+        }
       });
 
       // Setup dynamically added fields
@@ -50,13 +52,24 @@ class ContactAutocomplete {
   setupLabelAutocomplete() {
     // Setup for label dropdowns (custom labels)
     document.querySelectorAll('select[name*="[label]"]').forEach(select => {
-      this.setupLabelAutocomplete(select);
+      if (select) {
+        this.setupLabelAutocompleteForSelect(select);
+      }
     });
   }
 
   setupAutocomplete(input, fieldType) {
-    if (input.dataset.autocompleteInitialized) return;
-    input.dataset.autocompleteInitialized = 'true';
+    if (!input) return;
+    
+    try {
+      if (input.dataset && input.dataset.autocompleteInitialized) return;
+      if (input.dataset) {
+        input.dataset.autocompleteInitialized = 'true';
+      }
+    } catch (error) {
+      console.warn('Could not access dataset for input element:', error);
+      return;
+    }
 
     // Create suggestion container
     const container = document.createElement('div');
@@ -137,9 +150,18 @@ class ContactAutocomplete {
     });
   }
 
-  setupLabelAutocomplete(select) {
-    if (select.dataset.labelAutocompleteInitialized) return;
-    select.dataset.labelAutocompleteInitialized = 'true';
+  setupLabelAutocompleteForSelect(select) {
+    if (!select) return;
+    
+    try {
+      if (select.dataset && select.dataset.labelAutocompleteInitialized) return;
+      if (select.dataset) {
+        select.dataset.labelAutocompleteInitialized = 'true';
+      }
+    } catch (error) {
+      console.warn('Could not access dataset for select element:', error);
+      return;
+    }
 
     select.addEventListener('focus', () => {
       const query = select.value.trim();
