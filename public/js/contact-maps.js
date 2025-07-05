@@ -42,4 +42,226 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   });
+});
+
+// Google Maps Places Autocomplete for contact address fields
+class ContactMapsAutocomplete {
+  constructor() {
+    this.autocompleteInstances = new Map();
+    this.init();
+  }
+
+  init() {
+    // Wait for Google Maps API to load
+    if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+      // If Google Maps API is not loaded yet, wait for it
+      window.addEventListener('load', () => {
+        this.setupAddressAutocomplete();
+      });
+    } else {
+      this.setupAddressAutocomplete();
+    }
+  }
+
+  setupAddressAutocomplete() {
+    // Setup existing address fields
+    this.initializeAddressFields();
+
+    // Setup dynamically added address fields
+    const addAddressBtn = document.getElementById('add-address');
+    if (addAddressBtn) {
+      addAddressBtn.addEventListener('click', () => {
+        // Wait for the new field to be added
+        setTimeout(() => {
+          this.initializeAddressFields();
+        }, 100);
+      });
+    }
+  }
+
+  initializeAddressFields() {
+    const addressInputs = document.querySelectorAll('input[name*="[addresses]"][name*="[value]"]');
+    
+    addressInputs.forEach(input => {
+      if (input.dataset.placesAutocompleteInitialized) return;
+      input.dataset.placesAutocompleteInitialized = 'true';
+      
+      this.setupPlacesAutocomplete(input);
+    });
+  }
+
+  setupPlacesAutocomplete(input) {
+    try {
+      // Create autocomplete instance
+      const autocomplete = new google.maps.places.Autocomplete(input, {
+        types: ['address'],
+        componentRestrictions: { country: [] }, // Allow all countries
+        fields: ['formatted_address', 'geometry', 'place_id', 'address_components']
+      });
+
+      // Store the instance for later use
+      this.autocompleteInstances.set(input, autocomplete);
+
+      // Handle place selection
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        
+        if (place.geometry) {
+          // Update the input with the formatted address
+          input.value = place.formatted_address;
+          
+          // Store additional place data for potential future use
+          input.dataset.placeId = place.place_id;
+          input.dataset.latitude = place.geometry.location.lat();
+          input.dataset.longitude = place.geometry.location.lng();
+          
+          // Trigger any existing change events
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+
+      // Handle input focus to show suggestions
+      input.addEventListener('focus', () => {
+        if (input.value.length > 0) {
+          // Trigger autocomplete suggestions
+          google.maps.event.trigger(autocomplete, 'focus');
+        }
+      });
+
+      // Handle keyboard navigation
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          // Prevent form submission if autocomplete is open
+          const autocompleteInstance = this.autocompleteInstances.get(input);
+          if (autocompleteInstance && autocompleteInstance.getPlace()) {
+            e.preventDefault();
+          }
+        }
+      });
+
+      console.log('Google Places autocomplete initialized for:', input);
+    } catch (error) {
+      console.error('Error setting up Google Places autocomplete:', error);
+      // Fallback to regular autocomplete if Google Places fails
+      this.setupFallbackAutocomplete(input);
+    }
+  }
+
+  setupFallbackAutocomplete(input) {
+    // If Google Places API is not available, use our custom autocomplete
+    console.log('Using fallback autocomplete for address field');
+    
+    // Create a simple autocomplete container
+    const container = document.createElement('div');
+    container.className = 'address-autocomplete-suggestions';
+    container.style.cssText = `
+      position: absolute;
+      background: white;
+      border: 1px solid #ddd;
+      border-top: none;
+      max-height: 150px;
+      overflow-y: auto;
+      z-index: 1000;
+      width: 100%;
+      display: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    `;
+    
+    // Position the container
+    const inputGroup = input.closest('.input-group');
+    if (inputGroup) {
+      inputGroup.style.position = 'relative';
+      inputGroup.appendChild(container);
+    }
+
+    // Simple address suggestions (can be enhanced with a backend endpoint)
+    const commonAddresses = [
+      '123 Main St, New York, NY, USA',
+      '456 Oak Ave, Los Angeles, CA, USA',
+      '789 Pine Rd, Chicago, IL, USA',
+      '321 Elm St, Houston, TX, USA',
+      '654 Maple Dr, Phoenix, AZ, USA'
+    ];
+
+    input.addEventListener('input', (e) => {
+      const query = e.target.value.trim().toLowerCase();
+      if (query.length < 2) {
+        container.style.display = 'none';
+        return;
+      }
+
+      // Filter suggestions
+      const suggestions = commonAddresses.filter(addr => 
+        addr.toLowerCase().includes(query)
+      );
+
+      // Display suggestions
+      container.innerHTML = '';
+      if (suggestions.length > 0) {
+        suggestions.forEach(suggestion => {
+          const item = document.createElement('div');
+          item.className = 'suggestion-item';
+          item.textContent = suggestion;
+          item.style.cssText = `
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+          `;
+          
+          item.addEventListener('click', () => {
+            input.value = suggestion;
+            container.style.display = 'none';
+          });
+          
+          container.appendChild(item);
+        });
+        container.style.display = 'block';
+      } else {
+        container.style.display = 'none';
+      }
+    });
+
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!container.contains(e.target) && e.target !== input) {
+        container.style.display = 'none';
+      }
+    });
+  }
+
+  // Method to get place data for a specific input
+  getPlaceData(input) {
+    const autocomplete = this.autocompleteInstances.get(input);
+    if (autocomplete) {
+      return autocomplete.getPlace();
+    }
+    return null;
+  }
+
+  // Method to clear autocomplete for a specific input
+  clearAutocomplete(input) {
+    const autocomplete = this.autocompleteInstances.get(input);
+    if (autocomplete) {
+      google.maps.event.clearInstanceListeners(autocomplete);
+      this.autocompleteInstances.delete(input);
+    }
+  }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  // Check if Google Maps API is available
+  if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+    window.contactMapsAutocomplete = new ContactMapsAutocomplete();
+  } else {
+    // Wait for Google Maps API to load
+    window.addEventListener('load', () => {
+      if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+        window.contactMapsAutocomplete = new ContactMapsAutocomplete();
+      } else {
+        console.warn('Google Maps Places API not available, using fallback autocomplete');
+        window.contactMapsAutocomplete = new ContactMapsAutocomplete();
+      }
+    });
+  }
 }); 

@@ -59,4 +59,5 @@
 - Added a live search field to the contact list view, filtering contacts as you type across all fields, for both users and admins 
 - All search enhancements implemented: server-side search, highlighting, advanced queries, hidden field search, and no-results message
 - Added autocomplete functionality to all contact form fields (name, email, phone, address, social, note) and custom labels ✅
-- Added autocomplete to the contact search field with suggestions from all field types ✅ 
+- Added autocomplete to the contact search field with suggestions from all field types ✅
+- Added Google Maps Places API autocomplete for address fields with fallback support ✅ 

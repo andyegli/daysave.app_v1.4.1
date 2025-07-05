@@ -133,8 +133,15 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Initialize autocomplete for the new address input
       const newAddressInput = row.querySelector('input[name*="[value]"]');
-      if (newAddressInput && window.contactAutocomplete) {
-        window.contactAutocomplete.setupAutocomplete(newAddressInput, 'address');
+      if (newAddressInput) {
+        // Setup Google Maps Places autocomplete
+        if (window.contactMapsAutocomplete) {
+          window.contactMapsAutocomplete.initializeAddressFields();
+        }
+        // Also setup regular autocomplete as fallback
+        if (window.contactAutocomplete) {
+          window.contactAutocomplete.setupAutocomplete(newAddressInput, 'address');
+        }
       }
     };
     addressesList.querySelectorAll('.remove-address').forEach(btn => {
