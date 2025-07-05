@@ -55,6 +55,12 @@ document.addEventListener('DOMContentLoaded', function() {
       emailsList.appendChild(row);
       row.querySelector('.remove-email').onclick = function() { row.remove(); };
       handleCustomLabel(row.querySelector('select'), 'email');
+      
+      // Initialize autocomplete for the new email input
+      const newEmailInput = row.querySelector('input[name*="[value]"]');
+      if (newEmailInput && window.contactAutocomplete) {
+        window.contactAutocomplete.setupAutocomplete(newEmailInput, 'email');
+      }
     };
     emailsList.querySelectorAll('.remove-email').forEach(btn => {
       btn.disabled = emailsList.querySelectorAll('.email-row').length <= 1 ? true : false;
@@ -87,6 +93,12 @@ document.addEventListener('DOMContentLoaded', function() {
       phonesList.appendChild(row);
       row.querySelector('.remove-phone').onclick = function() { row.remove(); };
       handleCustomLabel(row.querySelector('select'), 'phone');
+      
+      // Initialize autocomplete for the new phone input
+      const newPhoneInput = row.querySelector('input[name*="[value]"]');
+      if (newPhoneInput && window.contactAutocomplete) {
+        window.contactAutocomplete.setupAutocomplete(newPhoneInput, 'phone');
+      }
     };
     phonesList.querySelectorAll('.remove-phone').forEach(btn => {
       btn.disabled = phonesList.querySelectorAll('.phone-row').length <= 1 ? true : false;
@@ -118,6 +130,12 @@ document.addEventListener('DOMContentLoaded', function() {
       addressesList.appendChild(row);
       row.querySelector('.remove-address').onclick = function() { row.remove(); };
       handleCustomLabel(row.querySelector('select'), 'address');
+      
+      // Initialize autocomplete for the new address input
+      const newAddressInput = row.querySelector('input[name*="[value]"]');
+      if (newAddressInput && window.contactAutocomplete) {
+        window.contactAutocomplete.setupAutocomplete(newAddressInput, 'address');
+      }
     };
     addressesList.querySelectorAll('.remove-address').forEach(btn => {
       btn.disabled = addressesList.querySelectorAll('.address-row').length <= 1 ? true : false;
@@ -148,6 +166,12 @@ document.addEventListener('DOMContentLoaded', function() {
       notesList.appendChild(row);
       row.querySelector('.remove-note').onclick = function() { row.remove(); };
       handleCustomLabel(row.querySelector('select'), 'note');
+      
+      // Initialize autocomplete for the new note input
+      const newNoteInput = row.querySelector('input[name*="[value]"]');
+      if (newNoteInput && window.contactAutocomplete) {
+        window.contactAutocomplete.setupAutocomplete(newNoteInput, 'note');
+      }
     };
     notesList.querySelectorAll('.remove-note').forEach(btn => {
       btn.disabled = notesList.querySelectorAll('.note-row').length <= 1 ? true : false;
@@ -217,6 +241,12 @@ document.addEventListener('DOMContentLoaded', function() {
       const select = row.querySelector('select');
       handleCustomSocialLabel(select);
       row.querySelector('.remove-social').onclick = function() { row.remove(); };
+      
+      // Initialize autocomplete for the new social input
+      const newSocialInput = row.querySelector('input[name*="[value]"]');
+      if (newSocialInput && window.contactAutocomplete) {
+        window.contactAutocomplete.setupAutocomplete(newSocialInput, 'social');
+      }
     };
     socialsList.querySelectorAll('.remove-social').forEach(btn => {
       btn.disabled = socialsList.querySelectorAll('.social-row').length <= 1 ? true : false;

@@ -1,7 +1,7 @@
 # Prompt for Windsor: Refactored Production-Ready DaySave.app with File Uploads and Enhanced Features
 
 ## Overview
-Create a production-ready web application called **DaySave.app** version 1.1.1 using **Node.js**, **Express**, **EJS** (with **Bootstrap 5** via CDN), and **MySQL** with **Sequelize ORM** locally, and later deployed on **Google Cloud** (project ID: `daysave`) using a cost-effective, small-scale setup (e.g., App Engine F1 instance, Cloud SQL db-f1-micro). The app targets international, diverse social media consumers, supporting 100 concurrent users for the MVP with scalability for future growth. It allows users to register for a trial or subscribe to plans via Apple, Google, Microsoft, or username/password authentication (with 2FA), link social media accounts from 11 platforms (Facebook, YouTube, Instagram, TikTok, WeChat, Facebook Messenger, Telegram, Snapchat, Pinterest, Twitter/X, WhatsApp), submit URLs or upload files for processing (extracting metadata, transcription, summary, sentiment, tags, objects detected), and manage processed items with user-added tags, comments, and groups. The app includes a landing page, a futter with terms of trade, privacy policy, contact us page with a form, a contacts management system mirroring Apple iPhone contacts with relationships (e.g., father, mother, child, spouse, sibling, friend, colleague, partner, work), a CRUD page for contacts, sharing of processed content with contacts or groups of contacts, filter/search functionality, and an admin page feeaturing statustics, logs, security config settings. The app must charefully log all changs in a audit log. The app also keeps track of the device the user typically login from. The app supports roles permissions such as guest, trual, subscriber, monitor, admin. It supports multiple languages (English, German, French, Italian, Spanish) for UI, static content, and dynamic content, with RTL compatibility for future expansion. All database tables use UUIDs (GUIDs). The app features state-of-the-art security, input sanitization, device fingerprinting (including Screensize, locales, TOR, VPN detection), IP and country whitelisting/blacklisting, and login attempt blocking, with alerts/reminders via email and SMS (future push notification option).
+Create a production-ready web application called **DaySave.app** version 1.4.1 using **Node.js**, **Express**, **EJS** (with **Bootstrap 5** via CDN), and **MySQL** with **Sequelize ORM** locally, and later deployed on **Google Cloud** (project ID: `daysave`) using a cost-effective, small-scale setup (e.g., App Engine F1 instance, Cloud SQL db-f1-micro). The app targets international, diverse social media consumers, supporting 100 concurrent users for the MVP with scalability for future growth. It allows users to register for a trial or subscribe to plans via Apple, Google, Microsoft, or username/password authentication (with 2FA), link social media accounts from 11 platforms (Facebook, YouTube, Instagram, TikTok, WeChat, Facebook Messenger, Telegram, Snapchat, Pinterest, Twitter/X, WhatsApp), submit URLs or upload files for processing (extracting metadata, transcription, summary, sentiment, tags, objects detected), and manage processed items with user-added tags, comments, and groups. The app includes a landing page, a footer with terms of trade, privacy policy, contact us page with a form, a contacts management system mirroring Apple iPhone contacts with relationships (e.g., father, mother, child, spouse, sibling, friend, colleague, partner, work), a CRUD page for contacts with advanced features (dynamic forms, autocomplete, Google Maps integration, custom labels), sharing of processed content with contacts or groups of contacts, filter/search functionality with live search and autocomplete, and an admin page featuring statistics, logs, security config settings. The app must carefully log all changes in an audit log. The app also keeps track of the device the user typically logs in from. The app supports roles permissions such as guest, trial, subscriber, monitor, admin. It supports multiple languages (English, German, French, Italian, Spanish) for UI, static content, and dynamic content, with RTL compatibility for future expansion. All database tables use UUIDs (GUIDs). The app features state-of-the-art security, input sanitization, device fingerprinting (including Screensize, locales, TOR, VPN detection), IP and country whitelisting/blacklisting, login attempt blocking, and Content Security Policy (CSP), with alerts/reminders via email and SMS (future push notification option).
 
 ## Functional Requirements
 
@@ -136,19 +136,29 @@ Create a production-ready web application called **DaySave.app** version 1.1.1 u
   - Bootstrap dropdowns for platform, group, tags, date.
   - Search by date/time, location, tags, full text using MySQL full-text search.
   - Bulk actions (add to group, archive, delete).
+  - Advanced search with field-specific queries and autocomplete suggestions.
 
 ### 5. Contacts Management
 - **Schema** (Apple iPhone contacts):
   - All fields (name, nickname, organization, job title, phones, emails, addresses, social profiles, instant messages, URLs, dates, notes) with multiples.
   - Validate phones with `libphonenumber-js`, emails standard format.
+  - Support for custom labels for all field types (emails, phones, addresses, social profiles, notes).
 - **Relationships**:
   - Table `relationships` with contact_id_1, contact_id_2, relationship_type (father, mother, child, spouse, sibling, friend, colleague, partner, work, custom ≤ 50 characters).
   - UI to manage relationships with graph view button (server-side `vis.js`).
 - **CRUD API**:
   - Manage contacts, groups, relationships.
   - Localized responses.
+  - Advanced search endpoint with field-specific queries (e.g., `email:john@example.com`, `phone:+1234567890`).
+  - Autocomplete endpoint for all contact fields.
 - **UI**:
   - Bootstrap tabular view with configurable fields, detail page, graph view.
+  - Dynamic form fields with "+" buttons to add multiple emails, phones, addresses, social profiles, and notes.
+  - Google Maps integration for address fields with location pin and modal map display.
+  - Live search functionality with highlighting, advanced queries, and no-results message.
+  - Autocomplete for all input fields (name, email, phone, address, social, note, custom labels).
+  - Admin features: view contact owners, filter by owner, edit/delete any contact.
+  - Content Security Policy (CSP) compliant with external JavaScript files.
 
 ### 6. Multilingual Support
 - **Languages**: English, German, French, Italian, Spanish.
@@ -197,6 +207,7 @@ Create a production-ready web application called **DaySave.app** version 1.1.1 u
 ### 8. Security and Input Sanitization
 - **Input Sanitization**: `express-validator`, `sanitize-html`, `libphonenumber-js`.
 - **Security Features**: HTTPS (Let's Encrypt), Helmet, CSRF, AES-256 encryption, OWASP practices.
+- **Content Security Policy (CSP)**: Configured to allow Google Maps, Google Fonts, and external scripts while blocking inline scripts for security.
 - **Login Blocking**: Configurable attempts/duration, auto-unlock, admin management.
 - **IP/VPN**: Whitelisting/blacklisting, fingerprinting with `maxmind`.
 
@@ -212,6 +223,7 @@ Create a production-ready web application called **DaySave.app** version 1.1.1 u
 - **Caching**: Redis.
 - **Security**: `bcrypt`, `jsonwebtoken`, `crypto`, `helmet`, `csurf`, `fingerprintjs2`, `maxmind`, `speakeasy`.
 - **Logging**: Winston (sessions, API calls, shares, alerts).
+- **JavaScript**: External JS files for CSP compliance, autocomplete functionality, dynamic form handling.
 
 ### 11. Deployment
 - **Platform**: Google Cloud App Engine (F1 instance).
@@ -245,15 +257,37 @@ Create a production-ready web application called **DaySave.app** version 1.1.1 u
 - Link/unlink 11 social media accounts, process DMs/mentions.
 - Submit URLs/files, extract all specified metadata, manage with tags/comments/groups.
 - Manage contacts (CRUD), groups, relationships (with graph view), share with contacts/groups.
+- Advanced contact search with autocomplete, field-specific queries, and highlighting.
+- Dynamic contact forms with custom labels, Google Maps integration, and autocomplete for all fields.
+- Admin features: view contact owners, filter by owner, edit/delete any contact.
 - Filter/search URLs/files, bulk actions.
 - Admin configures security, file types/size, manages users/locks.
 - Supports English, German, French, Italian, Spanish with RTL compatibility.
-- Security features (sanitization, fingerprinting, IP management) functional.
+- Security features (sanitization, fingerprinting, IP management, CSP) functional.
 - All tables use UUIDs.
 - Deployed on `daysave.app`, handles 100 users, meets performance metrics.
 - Pages are accessible, SEO-optimized, styled with custom Bootstrap.
 
-### 15. Notes
+### 15. Latest Implemented Features (v1.4.1)
+- **Contact Management Enhancements**:
+  - Dynamic form fields with "+" buttons for adding multiple emails, phones, addresses, social profiles, and notes.
+  - Custom label support for all field types with "Other..." option and prompt for custom labels.
+  - Google Maps integration with location pins and modal map display for addresses.
+  - Advanced search functionality with server-side processing, highlighting, and field-specific queries.
+  - Live search with AJAX, highlighting matches, and no-results message.
+  - Autocomplete for all contact form fields (name, email, phone, address, social, note, custom labels).
+  - Admin features: view contact owners in list, filter contacts by owner, edit/delete any contact.
+- **Security Improvements**:
+  - Content Security Policy (CSP) implementation blocking inline scripts.
+  - External JavaScript files for CSP compliance.
+  - Google Maps and Google Fonts domains whitelisted in CSP.
+- **User Experience**:
+  - Responsive design with Bootstrap 5 styling.
+  - Keyboard navigation support for autocomplete (arrow keys, enter, escape).
+  - Debounced search to reduce server load.
+  - Mobile-friendly interface with proper touch targets.
+
+### 16. Notes
 - Use Twitter/X as WhatsApp/WeChat fallback.
 - Respect API rate limits with caching/retry logic.
 - Submit social media apps for review early.

@@ -203,4 +203,97 @@ router.get('/search', isAuthenticated, async (req, res) => {
   })));
 });
 
+// Autocomplete endpoint for all fields
+router.get('/autocomplete', isAuthenticated, async (req, res) => {
+  const field = req.query.field || '';
+  const query = (req.query.q || '').trim().toLowerCase();
+  
+  if (!field || !query) return res.json([]);
+  
+  let where = {};
+  if (!(req.user.role && req.user.role.name === 'admin')) {
+    where.user_id = req.user.id;
+  }
+  
+  try {
+    const contacts = await Contact.findAll({ where });
+    const suggestions = new Set();
+    
+    contacts.forEach(contact => {
+      switch (field) {
+        case 'name':
+          if (contact.name && contact.name.toLowerCase().includes(query)) {
+            suggestions.add(contact.name);
+          }
+          break;
+        case 'email':
+          if (contact.emails) {
+            contact.emails.forEach(email => {
+              if (email.value && email.value.toLowerCase().includes(query)) {
+                suggestions.add(email.value);
+              }
+            });
+          }
+          break;
+        case 'phone':
+          if (contact.phones) {
+            contact.phones.forEach(phone => {
+              if (phone.value && phone.value.toLowerCase().includes(query)) {
+                suggestions.add(phone.value);
+              }
+            });
+          }
+          break;
+        case 'address':
+          if (contact.addresses) {
+            contact.addresses.forEach(address => {
+              if (address.value && address.value.toLowerCase().includes(query)) {
+                suggestions.add(address.value);
+              }
+            });
+          }
+          break;
+        case 'social':
+          if (contact.social_profiles) {
+            contact.social_profiles.forEach(social => {
+              if (social.value && social.value.toLowerCase().includes(query)) {
+                suggestions.add(social.value);
+              }
+            });
+          }
+          break;
+        case 'note':
+          if (contact.notes) {
+            contact.notes.forEach(note => {
+              if (note.value && note.value.toLowerCase().includes(query)) {
+                suggestions.add(note.value);
+              }
+            });
+          }
+          break;
+        case 'label':
+          // Collect all custom labels from all fields
+          ['emails', 'phones', 'addresses', 'social_profiles', 'notes'].forEach(fieldType => {
+            if (contact[fieldType]) {
+              contact[fieldType].forEach(item => {
+                if (item.label && item.label.toLowerCase().includes(query) && 
+                    !['home', 'work', 'mobile', 'other', 'note', 'twitter', 'facebook', 'instagram', 'linkedin', 'tiktok'].includes(item.label)) {
+                  suggestions.add(item.label);
+                }
+              });
+            }
+          });
+          break;
+      }
+    });
+    
+    // Convert to array and limit results
+    const results = Array.from(suggestions).slice(0, 10);
+    res.json(results);
+  } catch (err) {
+    console.error('Autocomplete error:', err);
+    res.json([]);
+  }
+});
+
 module.exports = router; 
