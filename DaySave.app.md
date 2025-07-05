@@ -332,3 +332,14 @@ See AGENT.md for full specification and rationale.
 - If address autocomplete does not work, check the browser console for selector logs and errors.
 - Ensure the API key is valid and the required APIs are enabled.
 - For new field types, update the selector logic as needed.
+
+## Content Management UX
+
+### Advanced Filter Bar Features
+- Filter bar above content cards with:
+  - **Category filter:** Dropdown with all unique categories, clear button, and auto-submit on change.
+  - **Tag filter:** Text input with autocomplete (all unique tags), supports multiple tags (comma/space separated, OR logic, partial/case-insensitive match), clear button, and auto-submit on Enter or clear.
+  - **Date range filter:** From/To date pickers, clear buttons, and auto-submit on change.
+- All filters update the view instantly when changed (no need to click Filter button, but button is still available).
+- Each filter has a small clear/reset button to clear only that field and immediately update the view.
+- Filtering is robust, user-friendly, and works with large tag/category sets.

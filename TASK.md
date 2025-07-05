@@ -62,3 +62,15 @@
 - Added autocomplete to the contact search field with suggestions from all field types ✅
 - Added Google Maps Places API autocomplete for address fields with fallback support ✅
 - Fixed JavaScript errors in contact form: dataset access errors, Google Maps callback issues, and console noise ✅ 
+- [x] Replace category filter dropdown with tick list (checkboxes) in content management filter bar (Bootstrap, auto-submit, clear button)
+- [x] Add function to determine content source and display brand logos on content cards. Create utility function that detects social media platforms from URLs or social account data and returns appropriate Bootstrap icons with brand colors. Update content route to include SocialAccount data and process source info. Display small brand logos next to platform names in content cards.
+- [x] Replace category filter tick list with dropdown containing scrollable tick list (up to 10 entries, Bootstrap dropdown, auto-submit, clear button, dynamic text updates)
+- [x] Fix error template undefined variables (title, message, user) with proper fallback values and consistent error rendering across routes
+- [x] Debug and fix "Failed to load content" error in content management page (add error logging, check model associations, LEFT JOIN for SocialAccount, fix toJSON issue)
+- [x] Debug and fix filter functionality issues (category filter not working, tag/date clear buttons not working, add console logging for troubleshooting, remove help text for alignment, add category debugging)
+- [x] Completely refactor category filter implementation (replace complex dropdown with simple multi-select, remove all dropdown JavaScript, simplify clear button logic, add comprehensive debugging)
+- [x] Remove category filter and all related logic (frontend filter UI, backend filtering, form fields, display, JavaScript handlers)
+- [x] Fix clear buttons on remaining filters (tag and date filters) with proper event handling and add "Clear All" button for better UX
+- [x] Fix Content Security Policy violation by moving inline JavaScript to external file (content-filters.js)
+- [x] Add category and source filters as dropdown tick lists with max 10 items (backend filtering, frontend UI, JavaScript handlers)
+- [x] Fix missing category field in add/edit content forms with autocomplete from existing categories
