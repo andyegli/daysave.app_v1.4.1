@@ -137,3 +137,11 @@ Enable fake login via dropdown for 3 test users and 2 admins in dev mode.
 - Testing priority: 1. Unit tests, 2. Integration tests, 3. E2E tests.
 - API documentation: auto-generate with OpenAPI/Swagger.
 - Style/linting: follow best practice recommendations.
+
+## Autocomplete & Dynamic Field Troubleshooting
+
+- The contact form uses robust selector logic to ensure all address fields are found and initialized for Google Maps Places Autocomplete.
+- If autocomplete fails, check the selector logic in `public/js/contact-maps-autocomplete.js` and ensure the input naming convention matches.
+- Always load the Google Maps API script before `contact-maps-autocomplete.js`.
+- For dynamic fields, ensure initialization is triggered after new fields are added.
+- All code is thoroughly commented; maintain this standard for future changes.

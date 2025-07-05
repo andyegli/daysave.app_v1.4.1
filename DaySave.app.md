@@ -315,3 +315,20 @@ Create a production-ready web application called **DaySave.app** version 1.4.1 u
 - Testing: Unit > Integration > E2E; OpenAPI/Swagger docs; best practice linting/style.
 
 See AGENT.md for full specification and rationale.
+
+## Contact Form Dynamic Features & Google Maps Autocomplete
+
+- The contact form supports dynamic addition/removal of emails, phones, addresses, socials, and notes.
+- Each address field is automatically initialized with Google Maps Places Autocomplete, using robust selector logic to ensure all fields are found, regardless of naming or rendering order.
+- The autocomplete initialization is triggered on page load, window load, and after a short delay to ensure all fields are handled, even if rendered late.
+- If you change the address input naming convention, update the selector logic in `public/js/contact-maps-autocomplete.js`.
+- All code is thoroughly commented for maintainability.
+
+### Script Order & Initialization
+- Ensure that `contact-maps-autocomplete.js` is loaded after the Google Maps API script and before any dynamic field scripts.
+- The global callback `initContactMaps` is used for Google Maps API loading.
+
+### Troubleshooting
+- If address autocomplete does not work, check the browser console for selector logs and errors.
+- Ensure the API key is valid and the required APIs are enabled.
+- For new field types, update the selector logic as needed.

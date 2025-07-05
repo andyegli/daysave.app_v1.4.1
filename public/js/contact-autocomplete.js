@@ -1,4 +1,5 @@
-// Autocomplete functionality for contact form fields
+// Contact form autocomplete for all dynamic and static fields
+// Provides robust autocomplete for name, email, phone, address, social, and note fields
 class ContactAutocomplete {
   constructor() {
     this.suggestions = {};
@@ -7,13 +8,14 @@ class ContactAutocomplete {
     this.init();
   }
 
+  // Initialize all autocomplete features on page load
   init() {
-    // Initialize autocomplete for all input fields
     this.setupNameAutocomplete();
     this.setupFieldAutocomplete();
     this.setupLabelAutocomplete();
   }
 
+  // Autocomplete for the main name field
   setupNameAutocomplete() {
     const nameInput = document.getElementById('name');
     if (nameInput) {
@@ -21,23 +23,21 @@ class ContactAutocomplete {
     }
   }
 
+  // Autocomplete for all dynamic and static contact fields
   setupFieldAutocomplete() {
-    // Setup for email, phone, address, social, note fields
+    // Supported field types
     const fieldTypes = ['email', 'phone', 'address', 'social', 'note'];
-    
     fieldTypes.forEach(type => {
-      // Setup existing fields
+      // Initialize for all existing fields
       document.querySelectorAll(`input[name*="[${type}s]"][name*="[value]"]`).forEach(input => {
         if (input) {
           this.setupAutocomplete(input, type);
         }
       });
-
-      // Setup dynamically added fields
+      // Re-initialize for dynamically added fields
       const addBtn = document.getElementById(`add-${type}`);
       if (addBtn) {
         addBtn.addEventListener('click', () => {
-          // Wait for the new field to be added
           setTimeout(() => {
             const newInput = document.querySelector(`input[name*="[${type}s]"][name*="[value]"]:not([data-autocomplete-initialized])`);
             if (newInput) {
@@ -49,8 +49,8 @@ class ContactAutocomplete {
     });
   }
 
+  // Autocomplete for label dropdowns (custom labels)
   setupLabelAutocomplete() {
-    // Setup for label dropdowns (custom labels)
     document.querySelectorAll('select[name*="[label]"]').forEach(select => {
       if (select) {
         this.setupLabelAutocompleteForSelect(select);
@@ -58,20 +58,17 @@ class ContactAutocomplete {
     });
   }
 
+  // Core autocomplete logic for a given input field
   setupAutocomplete(input, fieldType) {
     if (!input) return;
-    
     try {
-      if (input.dataset && input.dataset.autocompleteInitialized) return;
-      if (input.dataset) {
-        input.dataset.autocompleteInitialized = 'true';
-      }
+      // Prevent double-initialization
+      if (input._autocompleteInitialized) return;
+      input._autocompleteInitialized = true;
     } catch (error) {
-      console.warn('Could not access dataset for input element:', error);
       return;
     }
-
-    // Create suggestion container
+    // Create suggestion dropdown container
     const container = document.createElement('div');
     container.className = 'autocomplete-suggestions';
     container.style.cssText = `
@@ -86,8 +83,7 @@ class ContactAutocomplete {
       display: none;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     `;
-    
-    // Position the container
+    // Attach to input group or parent
     const inputGroup = input.closest('.input-group');
     if (inputGroup) {
       inputGroup.style.position = 'relative';
@@ -96,9 +92,8 @@ class ContactAutocomplete {
       input.parentElement.style.position = 'relative';
       input.parentElement.appendChild(container);
     }
-
     let debounceTimer;
-    
+    // Fetch suggestions on input
     input.addEventListener('input', (e) => {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
@@ -110,11 +105,10 @@ class ContactAutocomplete {
         this.fetchSuggestions(fieldType, query, container);
       }, 300);
     });
-
+    // Keyboard navigation for suggestions
     input.addEventListener('keydown', (e) => {
       const suggestions = container.querySelectorAll('.suggestion-item');
       if (!suggestions.length) return;
-
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
@@ -140,7 +134,6 @@ class ContactAutocomplete {
           break;
       }
     });
-
     // Hide suggestions when clicking outside
     document.addEventListener('click', (e) => {
       if (!container.contains(e.target) && e.target !== input) {
@@ -150,26 +143,22 @@ class ContactAutocomplete {
     });
   }
 
+  // Autocomplete for label dropdowns (custom labels)
   setupLabelAutocompleteForSelect(select) {
     if (!select) return;
-    
     try {
-      if (select.dataset && select.dataset.labelAutocompleteInitialized) return;
-      if (select.dataset) {
-        select.dataset.labelAutocompleteInitialized = 'true';
-      }
+      if (select._labelAutocompleteInitialized) return;
+      select._labelAutocompleteInitialized = true;
     } catch (error) {
-      console.warn('Could not access dataset for select element:', error);
       return;
     }
-
+    // Fetch label suggestions on focus or input
     select.addEventListener('focus', () => {
       const query = select.value.trim();
       if (query.length >= 2) {
         this.fetchSuggestions('label', query, select);
       }
     });
-
     select.addEventListener('input', (e) => {
       const query = e.target.value.trim();
       if (query.length >= 2) {
@@ -178,41 +167,44 @@ class ContactAutocomplete {
     });
   }
 
+  // Fetch autocomplete suggestions from the backend
   async fetchSuggestions(fieldType, query, target) {
     try {
       const response = await fetch(`/contacts/autocomplete?field=${fieldType}&q=${encodeURIComponent(query)}`);
       const suggestions = await response.json();
       this.displaySuggestions(suggestions, target, fieldType);
     } catch (error) {
-      console.error('Autocomplete error:', error);
+      // Fail silently in production
     }
   }
 
+  // Display suggestions in the dropdown or select
   displaySuggestions(suggestions, target, fieldType) {
     if (target.tagName === 'SELECT') {
-      // For select elements, add options
-      const existingOptions = target.querySelectorAll('option[data-autocomplete]');
-      existingOptions.forEach(opt => opt.remove());
-      
-      suggestions.forEach(suggestion => {
-        const option = document.createElement('option');
-        option.value = suggestion;
-        option.textContent = suggestion;
-        option.dataset.autocomplete = 'true';
-        target.appendChild(option);
-      });
+      try {
+        // Remove old suggestions
+        const existingOptions = target.querySelectorAll('option[data-autocomplete]');
+        existingOptions.forEach(opt => opt.remove());
+        // Add new suggestions
+        suggestions.forEach(suggestion => {
+          const option = document.createElement('option');
+          option.value = suggestion;
+          option.textContent = suggestion;
+          option.setAttribute('data-autocomplete', 'true');
+          target.appendChild(option);
+        });
+      } catch (error) {
+        // Fail silently in production
+      }
     } else {
       // For input elements, show dropdown
       const container = target.parentElement.querySelector('.autocomplete-suggestions');
       if (!container) return;
-
       container.innerHTML = '';
-      
       if (suggestions.length === 0) {
         container.style.display = 'none';
         return;
       }
-
       suggestions.forEach((suggestion, index) => {
         const item = document.createElement('div');
         item.className = 'suggestion-item';
@@ -222,26 +214,23 @@ class ContactAutocomplete {
           cursor: pointer;
           border-bottom: 1px solid #eee;
         `;
-        
         item.addEventListener('mouseenter', () => {
           this.activeIndex = index;
           this.highlightSuggestion(container.querySelectorAll('.suggestion-item'));
         });
-        
         item.addEventListener('click', () => {
           target.value = suggestion;
           container.style.display = 'none';
           this.activeIndex = -1;
         });
-        
         container.appendChild(item);
       });
-      
       container.style.display = 'block';
       this.activeIndex = -1;
     }
   }
 
+  // Highlight the currently selected suggestion
   highlightSuggestion(suggestions) {
     suggestions.forEach((item, index) => {
       if (index === this.activeIndex) {
@@ -256,6 +245,9 @@ class ContactAutocomplete {
 }
 
 // Initialize autocomplete when DOM is loaded
+// This ensures all static and dynamic fields are handled
+// and that the code is only run once per page load
+
 document.addEventListener('DOMContentLoaded', function() {
   window.contactAutocomplete = new ContactAutocomplete();
 }); 

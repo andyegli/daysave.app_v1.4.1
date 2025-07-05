@@ -1,11 +1,12 @@
-console.log('Contact maps script loaded');
+// Contact maps script loaded
 
 let mapAddress = null;
 
 document.addEventListener('DOMContentLoaded', function() {
+  // Only setup contact list functionality if we're on a contact list page
   const contactList = document.querySelector('.contact-list');
   if (contactList) {
-    console.log('Contact list found, setting up map functionality');
+    // Contact list found, setting up map functionality
     contactList.addEventListener('click', function(e) {
       const btn = e.target.closest('.show-map');
       if (btn) {
@@ -40,8 +41,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
     });
-  } else {
-    // No contact list found - this is expected on form pages
   }
 });
 
@@ -98,11 +97,11 @@ class ContactMapsAutocomplete {
     }
     
     addressInputs.forEach((input, index) => {
-      if (input.dataset.placesAutocompleteInitialized) {
+      if (input._placesAutocompleteInitialized) {
         console.log('ContactMapsAutocomplete: Input', index, 'already initialized');
         return;
       }
-      input.dataset.placesAutocompleteInitialized = 'true';
+      input._placesAutocompleteInitialized = true;
       console.log('ContactMapsAutocomplete: Initializing input', index, 'with value:', input.value);
       
       this.setupPlacesAutocomplete(input);
@@ -148,9 +147,9 @@ class ContactMapsAutocomplete {
           input.value = place.formatted_address;
           
           // Store additional place data for potential future use
-          input.dataset.placeId = place.place_id;
-          input.dataset.latitude = place.geometry.location.lat();
-          input.dataset.longitude = place.geometry.location.lng();
+          input._placeId = place.place_id;
+          input._latitude = place.geometry.location.lat();
+          input._longitude = place.geometry.location.lng();
           
           console.log('ContactMapsAutocomplete: Place data stored:', {
             placeId: place.place_id,

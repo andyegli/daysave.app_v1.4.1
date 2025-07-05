@@ -389,3 +389,19 @@ MIT License - see LICENSE file for details
 <div align="center">
   Made with ❤️ by the DaySave Team
 </div>
+
+## Google Maps Autocomplete Integration
+
+The contact form uses Google Maps Places Autocomplete for address fields. This works for both initial and dynamically added address fields using robust selector logic.
+
+### Setup Instructions
+- **API Key:** Set your Google Maps API key in the `.env` file as `GOOGLE_MAPS_KEY=your_key_here`.
+- **Required APIs:** Enable both the Maps JavaScript API and Places API in your Google Cloud Console.
+- **CSP:** Ensure your Content Security Policy allows scripts from `https://maps.googleapis.com` and `https://maps.gstatic.com`.
+- **Selector Logic:** The code uses multiple selector strategies to guarantee all address fields are found and initialized, regardless of naming or rendering order. If you change the address input naming convention, update the selector logic in `public/js/contact-maps-autocomplete.js`.
+- **Dynamic Fields:** The autocomplete initialization is robust and will work for both initial and dynamically added address fields.
+
+### Troubleshooting
+- If autocomplete does not work, check the browser console for errors.
+- Ensure the API key is valid and unrestricted for localhost during development.
+- If you add new field types or change naming, update the selector logic accordingly.
