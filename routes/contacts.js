@@ -40,6 +40,13 @@ router.get('/', isAuthenticated, async (req, res) => {
   }
 });
 
+// Test Google Maps API
+router.get('/test-maps', isAuthenticated, (req, res) => {
+  res.render('test-maps', { 
+    mapsScriptUrl: getGoogleMapsScriptUrl()
+  });
+});
+
 // New contact form
 router.get('/new', isAuthenticated, (req, res) => {
   res.render('contacts/form', { 

@@ -52,18 +52,24 @@ class ContactMapsAutocomplete {
   }
 
   init() {
+    console.log('ContactMapsAutocomplete: Initializing...');
+    
     // Wait for Google Maps API to load
     if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+      console.log('ContactMapsAutocomplete: Google Maps API not loaded yet, waiting...');
       // If Google Maps API is not loaded yet, wait for it
       window.addEventListener('load', () => {
         this.setupAddressAutocomplete();
       });
     } else {
+      console.log('ContactMapsAutocomplete: Google Maps API already available');
       this.setupAddressAutocomplete();
     }
   }
 
   setupAddressAutocomplete() {
+    console.log('ContactMapsAutocomplete: Setting up address autocomplete...');
+    
     // Setup existing address fields
     this.initializeAddressFields();
 
@@ -81,10 +87,15 @@ class ContactMapsAutocomplete {
 
   initializeAddressFields() {
     const addressInputs = document.querySelectorAll('input[name*="[addresses]"][name*="[value]"]');
+    console.log('ContactMapsAutocomplete: Found', addressInputs.length, 'address inputs');
     
-    addressInputs.forEach(input => {
-      if (input.dataset.placesAutocompleteInitialized) return;
+    addressInputs.forEach((input, index) => {
+      if (input.dataset.placesAutocompleteInitialized) {
+        console.log('ContactMapsAutocomplete: Input', index, 'already initialized');
+        return;
+      }
       input.dataset.placesAutocompleteInitialized = 'true';
+      console.log('ContactMapsAutocomplete: Initializing input', index);
       
       this.setupPlacesAutocomplete(input);
     });
@@ -92,6 +103,21 @@ class ContactMapsAutocomplete {
 
   setupPlacesAutocomplete(input) {
     try {
+      console.log('ContactMapsAutocomplete: Setting up Places autocomplete for input:', input);
+      
+      // Check if Google Maps API is available
+      if (typeof google === 'undefined') {
+        console.error('ContactMapsAutocomplete: Google Maps API not available');
+        this.setupFallbackAutocomplete(input);
+        return;
+      }
+      
+      if (!google.maps || !google.maps.places) {
+        console.error('ContactMapsAutocomplete: Google Maps Places API not available');
+        this.setupFallbackAutocomplete(input);
+        return;
+      }
+
       // Create autocomplete instance
       const autocomplete = new google.maps.places.Autocomplete(input, {
         types: ['address'],
@@ -99,11 +125,14 @@ class ContactMapsAutocomplete {
         fields: ['formatted_address', 'geometry', 'place_id', 'address_components']
       });
 
+      console.log('ContactMapsAutocomplete: Autocomplete instance created successfully');
+
       // Store the instance for later use
       this.autocompleteInstances.set(input, autocomplete);
 
       // Handle place selection
       autocomplete.addListener('place_changed', () => {
+        console.log('ContactMapsAutocomplete: Place selected');
         const place = autocomplete.getPlace();
         
         if (place.geometry) {
@@ -115,13 +144,22 @@ class ContactMapsAutocomplete {
           input.dataset.latitude = place.geometry.location.lat();
           input.dataset.longitude = place.geometry.location.lng();
           
+          console.log('ContactMapsAutocomplete: Place data stored:', {
+            placeId: place.place_id,
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng()
+          });
+          
           // Trigger any existing change events
           input.dispatchEvent(new Event('input', { bubbles: true }));
+        } else {
+          console.warn('ContactMapsAutocomplete: Place has no geometry');
         }
       });
 
       // Handle input focus to show suggestions
       input.addEventListener('focus', () => {
+        console.log('ContactMapsAutocomplete: Input focused');
         if (input.value.length > 0) {
           // Trigger autocomplete suggestions
           google.maps.event.trigger(autocomplete, 'focus');
@@ -139,17 +177,16 @@ class ContactMapsAutocomplete {
         }
       });
 
-      console.log('Google Places autocomplete initialized for:', input);
+      console.log('ContactMapsAutocomplete: Places autocomplete initialized successfully for:', input);
     } catch (error) {
-      console.error('Error setting up Google Places autocomplete:', error);
+      console.error('ContactMapsAutocomplete: Error setting up Google Places autocomplete:', error);
       // Fallback to regular autocomplete if Google Places fails
       this.setupFallbackAutocomplete(input);
     }
   }
 
   setupFallbackAutocomplete(input) {
-    // If Google Places API is not available, use our custom autocomplete
-    console.log('Using fallback autocomplete for address field');
+    console.log('ContactMapsAutocomplete: Setting up fallback autocomplete for input:', input);
     
     // Create a simple autocomplete container
     const container = document.createElement('div');
@@ -227,6 +264,8 @@ class ContactMapsAutocomplete {
         container.style.display = 'none';
       }
     });
+    
+    console.log('ContactMapsAutocomplete: Fallback autocomplete setup complete');
   }
 
   // Method to get place data for a specific input
@@ -250,16 +289,21 @@ class ContactMapsAutocomplete {
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('ContactMapsAutocomplete: DOM loaded, checking Google Maps API availability...');
+  
   // Check if Google Maps API is available
   if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+    console.log('ContactMapsAutocomplete: Google Maps API available, initializing...');
     window.contactMapsAutocomplete = new ContactMapsAutocomplete();
   } else {
+    console.log('ContactMapsAutocomplete: Google Maps API not available yet, waiting...');
     // Wait for Google Maps API to load
     window.addEventListener('load', () => {
       if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+        console.log('ContactMapsAutocomplete: Google Maps API now available, initializing...');
         window.contactMapsAutocomplete = new ContactMapsAutocomplete();
       } else {
-        console.warn('Google Maps Places API not available, using fallback autocomplete');
+        console.warn('ContactMapsAutocomplete: Google Maps Places API not available, using fallback autocomplete');
         window.contactMapsAutocomplete = new ContactMapsAutocomplete();
       }
     });

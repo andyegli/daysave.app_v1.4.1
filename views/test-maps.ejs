@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Maps API Test - DaySave</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header">
+            <h3>Google Maps API Test</h3>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="test-address" class="form-label">Test Address Input:</label>
+              <input type="text" class="form-control" id="test-address" placeholder="Start typing an address...">
+            </div>
+            
+            <div class="alert alert-info">
+              <h5>Debug Information:</h5>
+              <div id="debug-info">
+                <p><strong>Google Maps API Status:</strong> <span id="api-status">Checking...</span></p>
+                <p><strong>Script URL:</strong> <span id="script-url"><%= mapsScriptUrl %></span></p>
+                <p><strong>API Key Configured:</strong> <span id="api-key-status">Checking...</span></p>
+                <p><strong>Console Logs:</strong></p>
+                <div id="console-logs" style="background: #f8f9fa; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px;"></div>
+              </div>
+            </div>
+            
+            <div class="alert alert-warning">
+              <h5>Troubleshooting Steps:</h5>
+              <ol>
+                <li>Check the browser console for errors (F12 → Console)</li>
+                <li>Verify your Google Maps API key is set in the environment</li>
+                <li>Ensure both Maps JavaScript API and Places API are enabled</li>
+                <li>Check API key restrictions and billing status</li>
+                <li>Verify the script URL is loading correctly</li>
+              </ol>
+            </div>
+            
+            <a href="/contacts/new" class="btn btn-primary">Back to Contact Form</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="<%= mapsScriptUrl %>" async defer></script>
+  <script>
+    // Capture console logs
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    
+    const logsDiv = document.getElementById('console-logs');
+    
+    function addLog(type, message) {
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> <span style="color: ${type === 'error' ? 'red' : type === 'warn' ? 'orange' : 'blue'};">[${type.toUpperCase()}]</span> ${message}`;
+      logsDiv.appendChild(logEntry);
+      logsDiv.scrollTop = logsDiv.scrollHeight;
+    }
+    
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      addLog('log', args.join(' '));
+    };
+    
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      addLog('error', args.join(' '));
+    };
+    
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      addLog('warn', args.join(' '));
+    };
+    
+    // Test Google Maps API
+    function testGoogleMapsAPI() {
+      const apiStatus = document.getElementById('api-status');
+      const apiKeyStatus = document.getElementById('api-key-status');
+      
+      // Check if Google Maps API is loaded
+      if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+        apiStatus.innerHTML = '<span style="color: green;">✅ Available</span>';
+        console.log('Google Maps API is available');
+        
+        // Test autocomplete
+        const testInput = document.getElementById('test-address');
+        try {
+          const autocomplete = new google.maps.places.Autocomplete(testInput, {
+            types: ['address']
+          });
+          console.log('Autocomplete created successfully');
+          
+          autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            console.log('Place selected:', place);
+          });
+        } catch (error) {
+          console.error('Error creating autocomplete:', error);
+        }
+      } else {
+        apiStatus.innerHTML = '<span style="color: red;">❌ Not Available</span>';
+        console.error('Google Maps API is not available');
+      }
+      
+      // Check API key
+      const scriptUrl = document.getElementById('script-url').textContent;
+      if (scriptUrl.includes('YOUR_GOOGLE_MAPS_API_KEY')) {
+        apiKeyStatus.innerHTML = '<span style="color: red;">❌ Not Configured</span>';
+        console.error('Google Maps API key not configured');
+      } else if (scriptUrl.includes('key=')) {
+        apiKeyStatus.innerHTML = '<span style="color: green;">✅ Configured</span>';
+        console.log('Google Maps API key appears to be configured');
+      } else {
+        apiKeyStatus.innerHTML = '<span style="color: orange;">⚠️ Unknown</span>';
+        console.warn('Could not determine API key status');
+      }
+    }
+    
+    // Run test when page loads
+    window.addEventListener('load', () => {
+      setTimeout(testGoogleMapsAPI, 1000); // Wait a bit for script to load
+    });
+    
+    // Also test immediately if already loaded
+    if (document.readyState === 'complete') {
+      setTimeout(testGoogleMapsAPI, 1000);
+    }
+  </script>
+</body>
+</html> 
