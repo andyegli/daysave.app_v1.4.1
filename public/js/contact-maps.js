@@ -89,13 +89,20 @@ class ContactMapsAutocomplete {
     const addressInputs = document.querySelectorAll('input[name*="[addresses]"][name*="[value]"]');
     console.log('ContactMapsAutocomplete: Found', addressInputs.length, 'address inputs');
     
+    if (addressInputs.length === 0) {
+      console.warn('ContactMapsAutocomplete: No address inputs found. Selector might be wrong.');
+      // Try alternative selector
+      const altInputs = document.querySelectorAll('input[placeholder="Address"]');
+      console.log('ContactMapsAutocomplete: Alternative selector found', altInputs.length, 'inputs');
+    }
+    
     addressInputs.forEach((input, index) => {
       if (input.dataset.placesAutocompleteInitialized) {
         console.log('ContactMapsAutocomplete: Input', index, 'already initialized');
         return;
       }
       input.dataset.placesAutocompleteInitialized = 'true';
-      console.log('ContactMapsAutocomplete: Initializing input', index);
+      console.log('ContactMapsAutocomplete: Initializing input', index, 'with value:', input.value);
       
       this.setupPlacesAutocomplete(input);
     });
@@ -287,25 +294,30 @@ class ContactMapsAutocomplete {
   }
 }
 
-// Initialize when DOM is loaded
+// Global callback function for Google Maps API
+window.initContactMaps = function() {
+  console.log('ContactMapsAutocomplete: Google Maps API callback triggered');
+  if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+    console.log('ContactMapsAutocomplete: Google Maps API available via callback, initializing...');
+    window.contactMapsAutocomplete = new ContactMapsAutocomplete();
+  } else {
+    console.error('ContactMapsAutocomplete: Google Maps API callback triggered but API not available');
+  }
+};
+
+// Initialize when DOM is loaded (fallback)
 document.addEventListener('DOMContentLoaded', function() {
   console.log('ContactMapsAutocomplete: DOM loaded, checking Google Maps API availability...');
+  console.log('ContactMapsAutocomplete: google object:', typeof google);
+  console.log('ContactMapsAutocomplete: google.maps:', typeof google !== 'undefined' ? typeof google.maps : 'undefined');
+  console.log('ContactMapsAutocomplete: google.maps.places:', typeof google !== 'undefined' && google.maps ? typeof google.maps.places : 'undefined');
   
-  // Check if Google Maps API is available
+  // Check if Google Maps API is already available
   if (typeof google !== 'undefined' && google.maps && google.maps.places) {
     console.log('ContactMapsAutocomplete: Google Maps API available, initializing...');
     window.contactMapsAutocomplete = new ContactMapsAutocomplete();
   } else {
-    console.log('ContactMapsAutocomplete: Google Maps API not available yet, waiting...');
-    // Wait for Google Maps API to load
-    window.addEventListener('load', () => {
-      if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-        console.log('ContactMapsAutocomplete: Google Maps API now available, initializing...');
-        window.contactMapsAutocomplete = new ContactMapsAutocomplete();
-      } else {
-        console.warn('ContactMapsAutocomplete: Google Maps Places API not available, using fallback autocomplete');
-        window.contactMapsAutocomplete = new ContactMapsAutocomplete();
-      }
-    });
+    console.log('ContactMapsAutocomplete: Google Maps API not available yet, waiting for callback...');
+    // The callback function will handle initialization when the API loads
   }
 }); 

@@ -19,7 +19,7 @@
 Add this line to your `.env` file:
 
 ```env
-GOOGLE_MAPS_API_KEY=your_actual_api_key_here
+GOOGLE_MAPS_KEY=your_actual_api_key_here
 ```
 
 Replace `your_actual_api_key_here` with the API key you copied.
@@ -34,7 +34,7 @@ Replace `your_actual_api_key_here` with the API key you copied.
 ## Step 4: Troubleshooting
 
 ### If you see "API Key Not Configured":
-- Check that your `.env` file has the correct variable name
+- Check that your `.env` file has the correct variable name (`GOOGLE_MAPS_KEY`)
 - Restart your application after adding the environment variable
 - Verify the API key is not empty
 

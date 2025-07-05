@@ -26,7 +26,7 @@ The DaySave.app contact management system includes Google Maps Places API autoco
 Add your Google Maps API key to your `.env` file:
 
 ```env
-GOOGLE_MAPS_API_KEY=your_actual_api_key_here
+GOOGLE_MAPS_KEY=your_actual_api_key_here
 ```
 
 ### 3. API Key Restrictions (Recommended)
