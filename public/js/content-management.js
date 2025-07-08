@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const data = {
         url: formData.get('url'),
         user_comments: formData.get('user_comments'),
-        category: formData.get('category'),
+
         user_tags: formData.get('user_tags') ? formData.get('user_tags').split(',').map(t => t.trim()).filter(Boolean) : [],
         group_ids: Array.from(form.querySelector('#contentGroups').selectedOptions).map(opt => opt.value)
       };
@@ -127,15 +127,12 @@ document.addEventListener('DOMContentLoaded', function() {
       var url = card.querySelector('.flex-shrink-0 a') ? card.querySelector('.flex-shrink-0 a').href : '';
       var commentEl = card.querySelector('.card-text');
       var comment = commentEl ? (commentEl.getAttribute('title') || commentEl.textContent.trim() || '') : '';
-      var categoryEl = card.querySelector('.text-muted.small');
-      var category = categoryEl ? categoryEl.textContent.trim() : '';
       var tags = Array.from(card.querySelectorAll('.tag-badge')).map(b => b.textContent.trim());
-      console.log('DEBUG: Setting edit modal fields:', {itemId, title, url, comment, category, tags});
+      console.log('DEBUG: Setting edit modal fields:', {itemId, title, url, comment, tags});
       document.getElementById('editContentId').value = itemId;
       document.getElementById('editContentTitle').value = title;
       document.getElementById('editContentUrl').value = url;
       document.getElementById('editContentComment').value = comment;
-      document.getElementById('editContentCategory').value = category;
       document.getElementById('editContentTags').value = tags.join(', ');
       // Groups: not handled in this simple version
     });
@@ -167,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const data = {
       title: form.title.value,
       user_comments: form.user_comments.value,
-      category: form.category.value,
+
       user_tags: form.user_tags.value.split(',').map(t => t.trim()).filter(Boolean),
       group_ids: Array.from(form.group_ids.selectedOptions).map(opt => opt.value)
     };
@@ -208,13 +205,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const commentEl = card.querySelector('.card-text');
         const comment = commentEl ? (commentEl.getAttribute('title') || commentEl.textContent.trim() || '') : '';
         const url = card.querySelector('.flex-shrink-0 a')?.getAttribute('href') || '';
-        const categoryEl = card.querySelector('.text-muted.small');
-        const category = categoryEl ? categoryEl.textContent.trim() : '';
         const tags = Array.from(card.querySelectorAll('.tag-badge')).map(b => b.textContent.trim());
         let html = `<div><strong>Title:</strong> ${title}</div>`;
         if (url) html += `<div><strong>URL:</strong> <a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a></div>`;
         if (comment) html += `<div><strong>Comment:</strong> ${comment}</div>`;
-        if (category) html += `<div><strong>Category:</strong> ${category}</div>`;
         if (tags.length) html += `<div><strong>Tags:</strong> ${tags.map(t => `<span class='badge bg-success mx-1'>${t}</span>`).join('')}</div>`;
         document.getElementById('viewContentModalBody').innerHTML = html;
       } catch (err) {

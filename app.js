@@ -101,7 +101,7 @@ db.sequelize.sync().then(() => {
   // Log application startup
   logAuthEvent('APPLICATION_STARTUP', {
     nodeEnv: process.env.NODE_ENV,
-    port: process.env.PORT || 3000,
+    port: process.env.APP_PORT || process.env.PORT || 3000,
     logBasePath: logBasePath,
     timestamp: new Date().toISOString()
   });
@@ -214,7 +214,7 @@ db.sequelize.sync().then(() => {
   });
 
   // Start the server
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.APP_PORT || process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📁 Auth logs will be written to: ${logBasePath}`);

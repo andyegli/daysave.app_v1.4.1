@@ -13,31 +13,8 @@ router.get('/', isAuthenticated, async (req, res) => {
     console.log('DEBUG: Available models:', Object.keys(models));
     console.log('DEBUG: SocialAccount model exists:', !!models.SocialAccount);
     console.log('DEBUG: Content model exists:', !!models.Content);
-    let { tag, from, to, category, source } = req.query;
+    let { tag, from, to } = req.query;
     const where = { user_id: req.user.id };
-    
-    // Support multi-category (array or single value)
-    let selectedCategories = [];
-    if (category) {
-      if (Array.isArray(category)) {
-        selectedCategories = category;
-      } else if (typeof category === 'string' && category.length > 0) {
-        selectedCategories = [category];
-      }
-    }
-    if (selectedCategories.length > 0) {
-      where.category = { [Op.or]: selectedCategories };
-    }
-    
-    // Support multi-source (array or single value)
-    let selectedSources = [];
-    if (source) {
-      if (Array.isArray(source)) {
-        selectedSources = source;
-      } else if (typeof source === 'string' && source.length > 0) {
-        selectedSources = [source];
-      }
-    }
     
     if (from) where.createdAt = { ...(where.createdAt || {}), [Op.gte]: new Date(from) };
     if (to) where.createdAt = { ...(where.createdAt || {}), [Op.lte]: new Date(to) };
@@ -130,18 +107,41 @@ router.get('/', isAuthenticated, async (req, res) => {
       return colorMap[platform] || '#6c757d';
     }
 
-    // Add source info to each content item
+    // Function to extract title from URL or metadata
+    function getContentTitle(item) {
+      // First try metadata title
+      if (item.metadata && item.metadata.title) {
+        return item.metadata.title;
+      }
+      
+      // Fallback: extract from URL
+      if (item.url) {
+        try {
+          const url = new URL(item.url);
+          const hostname = url.hostname.replace('www.', '');
+          const pathname = url.pathname.replace(/\/$/, '').split('/').pop();
+          if (pathname && pathname.length > 3) {
+            return `${hostname} - ${pathname.replace(/[-_]/g, ' ')}`;
+          }
+          return hostname;
+        } catch (e) {
+          return item.url;
+        }
+      }
+      
+      return 'Content Title';
+    }
+
+    // Add source info and title to each content item
     contentItems = contentItems.map(item => {
       item.sourceInfo = getContentSourceInfo(item.url, item.SocialAccount);
+      item.displayTitle = getContentTitle(item);
       return item;
     });
     
-    // Apply source filtering (after source info is added)
-    if (selectedSources.length > 0) {
-      contentItems = contentItems.filter(item => {
-        return selectedSources.includes(item.sourceInfo.source);
-      });
-    }
+
+    
+
     
     // Apply tag filtering
     if (tag) {
@@ -166,32 +166,28 @@ router.get('/', isAuthenticated, async (req, res) => {
     console.log(`DEBUG: Found ${contentItems.length} content items and ${contentGroups.length} groups for user ${req.user.id}`);
     if (contentItems.length > 0) {
       console.log('DEBUG: First content item:', JSON.stringify(contentItems[0], null, 2));
+      console.log('DEBUG: First content metadata:', contentItems[0].metadata);
+      console.log('DEBUG: First content URL:', contentItems[0].url);
     } else {
       console.log('DEBUG: No content items found');
     }
-    // Generate filter options from content data
-    const categories = Array.from(new Set(contentItems.map(i => i.category).filter(Boolean)));
-    const sources = Array.from(new Set(contentItems.map(i => i.sourceInfo.source).filter(Boolean)));
+
     
-    res.render('content/list', {
-      user: req.user,
-      title: 'Content Management - DaySave',
-      contentItems,
-      contentGroups,
-      pagination,
-      categories,
-      sources,
-      category: selectedCategories,
-      source: selectedSources,
-      tag,
-      from,
-      to,
-      debugInfo: {
-        userId: req.user.id,
-        contentCount: contentItems.length,
-        groupCount: contentGroups.length
-      }
-    });
+          res.render('content/list', {
+        user: req.user,
+        title: 'Content Management - DaySave',
+        contentItems,
+        contentGroups,
+        pagination,
+        tag,
+        from,
+        to,
+        debugInfo: {
+          userId: req.user.id,
+          contentCount: contentItems.length,
+          groupCount: contentGroups.length
+        }
+      });
   } catch (error) {
     console.error('ERROR in /content route:', error);
     console.error('ERROR stack:', error.stack);
@@ -208,7 +204,7 @@ router.post('/', isAuthenticated, async (req, res) => {
   console.log('DEBUG: Request body:', req.body);
   
   try {
-    const { url, user_comments, category, user_tags, group_ids } = req.body;
+    const { url, user_comments, user_tags, group_ids } = req.body;
     console.log('DEBUG: Creating content with URL:', url);
     console.log('DEBUG: Request body:', JSON.stringify(req.body, null, 2));
 
@@ -221,7 +217,6 @@ router.post('/', isAuthenticated, async (req, res) => {
       user_id: req.user.id,
       url,
       user_comments: user_comments || '',
-      category: category || '',
       user_tags: Array.isArray(user_tags) ? user_tags : []
     });
 
@@ -262,7 +257,7 @@ router.get('/manage', isAuthenticated, (req, res) => {
 // Update content
 router.put('/:id', isAuthenticated, async (req, res) => {
   try {
-    const { title, user_comments, category, user_tags, group_ids } = req.body;
+    const { title, user_comments, user_tags, group_ids } = req.body;
     const content = await Content.findOne({ where: { id: req.params.id, user_id: req.user.id } });
     if (!content) {
       return res.status(404).json({ error: 'Content not found.' });
@@ -270,7 +265,6 @@ router.put('/:id', isAuthenticated, async (req, res) => {
     // Update fields
     if (title !== undefined) content.title = title;
     if (user_comments !== undefined) content.user_comments = user_comments;
-    if (category !== undefined) content.category = category;
     if (user_tags !== undefined) content.user_tags = Array.isArray(user_tags) ? user_tags : [];
     await content.save();
     // Update group memberships if provided

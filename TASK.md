@@ -74,3 +74,24 @@
 - [x] Fix Content Security Policy violation by moving inline JavaScript to external file (content-filters.js)
 - [x] Add category and source filters as dropdown tick lists with max 10 items (backend filtering, frontend UI, JavaScript handlers)
 - [x] Fix missing category field in add/edit content forms with autocomplete from existing categories
+- [x] Fix content title display issue by adding title extraction from metadata and URL fallback
+- [x] Convert category filter to Bootstrap multiselect dropdown with checkboxes and dynamic text updates
+- [x] Debug CSP issues with external JavaScript files and add console logging for troubleshooting
+- [x] Add comprehensive debugging to content-filters.js with element detection and execution testing
+- [x] Fix Content Security Policy violations by removing all inline event handlers (onclick, onsubmit) and moving functionality to external JavaScript files
+- [x] Completely remove category and source filters from content management
+  - [x] Remove category and source filter UI elements from content list view
+  - [x] Remove Bootstrap Select CSS and JS dependencies
+  - [x] Remove category and source filter logic from JavaScript
+  - [x] Remove category and source filtering from backend routes
+  - [x] Remove category field from content creation and update operations
+  - [x] Clean up test files and debugging code
+  - [x] Keep only tag and date filters for simplified, working interface
+- [x] Remove all CoreUI references and use only Bootstrap with Bootstrap Select for multi-select functionality
+  - [x] Remove CoreUI CSS and JS from content list view
+  - [x] Remove CoreUI references from JavaScript files
+  - [x] Update CSP to remove CoreUI domains
+  - [x] Use Bootstrap Select for multi-select dropdowns with search and counter display
+  - [x] Add individual clear buttons to category and source filters for consistency with tag filter
+  - [x] Update clear button functionality to handle Bootstrap Select multi-select dropdowns
+  - [x] Add CSS styling to ensure consistent appearance across all filter types

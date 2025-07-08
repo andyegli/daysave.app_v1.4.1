@@ -50,8 +50,8 @@ document.addEventListener('DOMContentLoaded', function() {
         ${owner !== undefined ? `<td>${highlight(owner, query)}</td>` : ''}
         <td>
           <a href="/contacts/${contact.id}/edit" class="btn btn-sm btn-outline-primary me-2"><i class="fa fa-edit"></i> Edit</a>
-          <form method="POST" action="/contacts/${contact.id}/delete" class="d-inline" onsubmit="return confirm('Delete this contact?');">
-            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa fa-trash"></i> Delete</button>
+          <form method="POST" action="/contacts/${contact.id}/delete" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-outline-danger delete-contact-btn" data-contact-name="${contact.name || 'this contact'}"><i class="fa fa-trash"></i> Delete</button>
           </form>
         </td>
       `;
@@ -219,4 +219,24 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+
+  // Handle delete contact confirmations (for both static and dynamic content)
+  function setupDeleteConfirmations() {
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('delete-contact-btn')) {
+        e.preventDefault();
+        
+        const contactName = e.target.getAttribute('data-contact-name');
+        const confirmed = confirm(`Delete contact "${contactName}"?`);
+        
+        if (confirmed) {
+          // Submit the form
+          e.target.closest('form').submit();
+        }
+      }
+    });
+  }
+
+  // Setup delete confirmations
+  setupDeleteConfirmations();
 }); 

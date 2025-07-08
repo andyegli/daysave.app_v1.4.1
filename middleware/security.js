@@ -81,8 +81,8 @@ const securityHeaders = () => helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com"],
-      scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://maps.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com", "https://unpkg.com"],
+      scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://maps.googleapis.com", "https://code.jquery.com"],
       imgSrc: ["'self'", "data:", "https:", "https://maps.googleapis.com", "https://maps.gstatic.com"],
       connectSrc: ["'self'", "https://maps.googleapis.com", "https://maps.gstatic.com"],
       fontSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com"],

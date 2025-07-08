@@ -36,7 +36,13 @@
     "rotating-file-stream": "^3.2.3",
     "sequelize": "^6.37.3",
     "uuid": "^10.0.0",
-    "winston": "^3.13.1"
+    "fluent-ffmpeg": "^2.1.2",
+    "openai": "^4.20.1",
+    "axios": "^1.6.0",
+    "form-data": "^4.0.0",
+    "@google-cloud/vision": "^4.0.2",
+    "winston": "^3.13.1",
+    "roboflow": "^1.0.0"
   },
   "devDependencies": {
     "chai": "^5.2.0",
