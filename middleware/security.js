@@ -39,9 +39,9 @@ const apiRateLimiter = setupRateLimiter({
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS 
-      ? process.env.ALLOWED_ORIGINS.split(',')
-      : ['http://localhost:3000', 'http://localhost:5000'];
+      const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : [`http://localhost:${process.env.APP_PORT || process.env.PORT || 3000}`, 'http://localhost:5000'];
     
     // Allow requests with no origin (like mobile apps or curl requests) or with origin 'null'
     if (!origin || origin === 'null') return callback(null, true);

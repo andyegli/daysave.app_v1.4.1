@@ -87,6 +87,12 @@
   - [x] Remove category field from content creation and update operations
   - [x] Clean up test files and debugging code
   - [x] Keep only tag and date filters for simplified, working interface
+- [x] Fix APP_PORT usage across entire application
+  - [x] Update app.js to use APP_PORT with PORT fallback
+  - [x] Fix email verification URLs to use correct port
+  - [x] Update Google Maps setup script to use correct port
+  - [x] Fix CORS allowed origins to use correct port
+  - [x] Separate multimedia analyzer to use ANALYZER_PORT (3001) to avoid conflicts
 - [x] Remove all CoreUI references and use only Bootstrap with Bootstrap Select for multi-select functionality
   - [x] Remove CoreUI CSS and JS from content list view
   - [x] Remove CoreUI references from JavaScript files

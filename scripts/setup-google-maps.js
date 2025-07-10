@@ -78,7 +78,7 @@ async function setupGoogleMaps() {
   console.log('\n✅ Google Maps API key configured successfully!');
   console.log('\n📝 Next steps:');
   console.log('1. Restart your application to load the new environment variable');
-  console.log('2. Visit http://localhost:3000/contacts/test-maps to test the setup');
+  console.log(`2. Visit http://localhost:${process.env.APP_PORT || process.env.PORT || 3000}/contacts/test-maps to test the setup`);
   console.log('3. Try adding a contact with an address to see autocomplete in action');
   
   console.log('\n🔒 Security reminder:');

@@ -387,7 +387,7 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
     await sendMail({
       to: email,
       subject: 'Confirm your DaySave account',
-      html: `<p>Hello ${username},</p><p>Thank you for registering at DaySave. Please confirm your email by clicking the link below:</p><p><a href="${process.env.BASE_URL || 'http://localhost:3000'}/auth/verify-email?token=${token}">Verify Email</a></p><p>If you did not register, you can ignore this email.</p>`
+      html: `<p>Hello ${username},</p><p>Thank you for registering at DaySave. Please confirm your email by clicking the link below:</p><p><a href="${process.env.BASE_URL || `http://localhost:${process.env.APP_PORT || process.env.PORT || 3000}`}/auth/verify-email?token=${token}">Verify Email</a></p><p>If you did not register, you can ignore this email.</p>`
     });
     logAuthEvent('REGISTRATION_EMAIL_SENT', { userId: newUser.id, email });
     return res.render('auth/register', {
