@@ -271,6 +271,19 @@ class MultimediaAnalyzer {
    */
   async analyzeContent(url, options = {}) {
     const startTime = Date.now();
+    const { user_id, content_id } = options;
+    
+    // Enhanced logging for analysis start
+    if (user_id && content_id) {
+      const logger = require('../../config/logger');
+      logger.multimedia.start(user_id, content_id, url, {
+        transcription: options.transcription,
+        sentiment: options.sentiment,
+        summarization: options.enableSummarization,
+        thumbnails: options.thumbnails,
+        speakers: options.speaker_identification
+      });
+    }
     
     // Initialize results object
     let results = {
@@ -297,16 +310,23 @@ class MultimediaAnalyzer {
       thumbnails: true,
       ocr: true,
       speaker_identification: true,
-      enableObjectDetection: true,
-      enableTranscription: true,
       enableSummarization: true,
       enableSentimentAnalysis: true,
-      transcriptionProvider: 'auto',
       ...options
     };
 
     try {
-      // Extract basic metadata first
+      if (this.enableLogging) {
+        console.log('🎬 Processing multimedia URL for real transcription:', url);
+      }
+      
+      // Log progress
+      if (user_id && content_id) {
+        const logger = require('../../config/logger');
+        logger.multimedia.progress(user_id, content_id, 'url_validation', 10);
+      }
+
+      // Extract metadata from URL
       results.metadata = await this.extractUrlMetadata(url);
       results.platform = results.metadata.platform;
       
@@ -314,6 +334,15 @@ class MultimediaAnalyzer {
       if (this.isMultimediaUrl(url)) {
         if (this.enableLogging) {
           console.log('🎬 Processing multimedia URL for real transcription:', url);
+        }
+        
+        // Log progress
+        if (user_id && content_id) {
+          const logger = require('../../config/logger');
+          logger.multimedia.progress(user_id, content_id, 'multimedia_detected', 20, {
+            platform: results.platform,
+            isMultimedia: true
+          });
         }
         
         // Add platform-specific auto-tags
@@ -333,24 +362,63 @@ class MultimediaAnalyzer {
         // For YouTube URLs, attempt to get actual transcription
         if ((url.includes('youtube.com') || url.includes('youtu.be')) && analysisOptions.transcription) {
           try {
+            // Log transcription start
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.progress(user_id, content_id, 'transcription_start', 30, {
+                provider: 'youtube_yt-dlp'
+              });
+            }
+            
             // Try to get YouTube transcription via yt-dlp or similar
             const transcriptionResult = await this.getYouTubeTranscription(url);
             
             if (transcriptionResult && transcriptionResult.text) {
               results.transcription = transcriptionResult.text;
+              const wordCount = transcriptionResult.text.split(' ').length;
+              
+              // Log transcription success
+              if (user_id && content_id) {
+                const logger = require('../../config/logger');
+                logger.multimedia.transcription(user_id, content_id, 'youtube_yt-dlp', wordCount);
+                logger.multimedia.progress(user_id, content_id, 'transcription_complete', 50, {
+                  wordCount,
+                  transcriptionLength: transcriptionResult.text.length
+                });
+              }
               
               // Generate summary if transcription was successful
               if (analysisOptions.enableSummarization && results.transcription) {
+                if (user_id && content_id) {
+                  const logger = require('../../config/logger');
+                  logger.multimedia.progress(user_id, content_id, 'summary_generation', 60);
+                }
+                
                 results.summary = await this.generateSummary(results.transcription);
+                
+                if (results.summary && user_id && content_id) {
+                  const logger = require('../../config/logger');
+                  logger.multimedia.summary(user_id, content_id, results.summary.length, results.transcription.length);
+                }
               }
               
               // Perform sentiment analysis
               if (analysisOptions.enableSentimentAnalysis && results.transcription) {
+                if (user_id && content_id) {
+                  const logger = require('../../config/logger');
+                  logger.multimedia.progress(user_id, content_id, 'sentiment_analysis', 70);
+                }
+                
                 results.sentiment = await this.analyzeSentiment(results.transcription);
               }
               
               // Simulate speaker identification based on transcription
               if (analysisOptions.speaker_identification && results.transcription) {
+                if (user_id && content_id) {
+                  const logger = require('../../config/logger');
+                  logger.multimedia.progress(user_id, content_id, 'speaker_identification', 80);
+                }
+                
                 // Simple speaker estimation based on content patterns
                 const speakerCount = this.estimateSpeakerCount(results.transcription);
                 results.speakers = Array.from({ length: speakerCount }, (_, i) => ({
@@ -373,26 +441,67 @@ class MultimediaAnalyzer {
               if (this.enableLogging) {
                 console.log('⚠️ Transcription failed, using fallback message');
               }
+              
+              if (user_id && content_id) {
+                const logger = require('../../config/logger');
+                logger.multimedia.progress(user_id, content_id, 'transcription_fallback', 40, {
+                  reason: 'no_transcription_result'
+                });
+              }
             }
           } catch (transcriptionError) {
             console.error('❌ YouTube transcription failed:', transcriptionError);
             results.transcription = 'Transcription processing failed for this content.';
+            
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.error(user_id, content_id, transcriptionError, {
+                step: 'transcription',
+                url
+              });
+            }
           }
         } else {
           // For non-YouTube URLs or when transcription is disabled
           results.transcription = 'Transcription not available for this content type.';
+          
+          if (user_id && content_id) {
+            const logger = require('../../config/logger');
+            logger.multimedia.progress(user_id, content_id, 'transcription_skipped', 50, {
+              reason: 'non_youtube_url_or_disabled'
+            });
+          }
         }
         
         // Generate tags and category based on available data
+        if (user_id && content_id) {
+          const logger = require('../../config/logger');
+          logger.multimedia.progress(user_id, content_id, 'generating_metadata', 90);
+        }
+        
         results.tags = await this.generateTags(results);
         results.category = await this.generateCategory(results);
       } else {
         // For non-multimedia URLs, provide basic metadata only
         results.transcription = 'Content type does not support transcription.';
+        
+        if (user_id && content_id) {
+          const logger = require('../../config/logger');
+          logger.multimedia.progress(user_id, content_id, 'non_multimedia_detected', 100, {
+            isMultimedia: false,
+            reason: 'url_pattern_not_matched'
+          });
+        }
       }
       
       results.status = 'completed';
       results.processingTime = Date.now() - startTime;
+      
+      // Log successful completion
+      if (user_id && content_id) {
+        const logger = require('../../config/logger');
+        logger.multimedia.success(user_id, content_id, results);
+      }
       
       if (this.enableLogging) {
         console.log('✅ Content analysis completed:', {
@@ -409,6 +518,16 @@ class MultimediaAnalyzer {
       results.status = 'failed';
       results.transcription = 'Analysis failed for this content.';
       results.processingTime = Date.now() - startTime;
+      
+      // Log error
+      if (user_id && content_id) {
+        const logger = require('../../config/logger');
+        logger.multimedia.error(user_id, content_id, error, {
+          url,
+          processingTime: results.processingTime
+        });
+      }
+      
       throw error;
     }
   }
@@ -1478,6 +1597,7 @@ class MultimediaAnalyzer {
     const multimediaPatterns = [
       // Video platforms
       /youtube\.com\/watch/i,
+      /youtube\.com\/shorts/i,
       /youtu\.be\//i,
       /vimeo\.com\//i,
       /dailymotion\.com\//i,
@@ -1486,6 +1606,8 @@ class MultimediaAnalyzer {
       /instagram\.com\/p\//i,
       /instagram\.com\/reel\//i,
       /facebook\.com\/watch/i,
+      /facebook\.com\/share\/v\//i,
+      /facebook\.com\/share\/p\//i,
       /twitter\.com\/.*\/status/i,
       /x\.com\/.*\/status/i,
       

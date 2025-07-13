@@ -151,4 +151,247 @@ router.post('/users/:id/delete', isAuthenticated, isAdmin, async (req, res) => {
   }
 });
 
+// Admin logs viewer route
+router.get('/logs', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { 
+      channel = 'all', 
+      userId = '', 
+      level = 'all', 
+      limit = 100,
+      page = 1 
+    } = req.query;
+    
+    res.render('admin/logs', {
+      user: req.user,
+      title: 'System Logs - Admin',
+      filters: {
+        channel,
+        userId,
+        level,
+        limit: parseInt(limit),
+        page: parseInt(page)
+      }
+    });
+  } catch (error) {
+    console.error('Error loading admin logs page:', error);
+    res.status(500).render('error', { 
+      user: req.user, 
+      title: 'Error', 
+      message: 'Failed to load logs page' 
+    });
+  }
+});
+
+// API endpoint for fetching logs
+router.get('/api/logs', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const readline = require('readline');
+    
+    const { 
+      channel = 'all', 
+      userId = '', 
+      level = 'all', 
+      limit = 100,
+      page = 1,
+      search = ''
+    } = req.query;
+    
+    const logDir = path.join(__dirname, '..', 'logs');
+    let logFile = 'app.log';
+    
+    // Select appropriate log file based on channel
+    if (channel === 'multimedia') {
+      logFile = 'multimedia.log';
+    } else if (channel === 'error') {
+      logFile = 'error.log';
+    } else if (channel === 'user') {
+      logFile = 'user-activity.log';
+    }
+    
+    const logPath = path.join(logDir, logFile);
+    
+    if (!fs.existsSync(logPath)) {
+      return res.json({
+        success: true,
+        logs: [],
+        total: 0,
+        page: parseInt(page),
+        totalPages: 0
+      });
+    }
+    
+    const logs = [];
+    const fileStream = fs.createReadStream(logPath);
+    const rl = readline.createInterface({
+      input: fileStream,
+      crlfDelay: Infinity
+    });
+    
+    for await (const line of rl) {
+      if (line.trim()) {
+        try {
+          const logEntry = JSON.parse(line);
+          
+          // Apply filters
+          let include = true;
+          
+          // Channel filter
+          if (channel !== 'all' && logEntry.channel !== channel) {
+            include = false;
+          }
+          
+          // User filter
+          if (userId && logEntry.userId !== userId) {
+            include = false;
+          }
+          
+          // Level filter
+          if (level !== 'all' && logEntry.level !== level) {
+            include = false;
+          }
+          
+          // Search filter
+          if (search && !JSON.stringify(logEntry).toLowerCase().includes(search.toLowerCase())) {
+            include = false;
+          }
+          
+          if (include) {
+            logs.push(logEntry);
+          }
+        } catch (parseError) {
+          // Skip invalid JSON lines
+          continue;
+        }
+      }
+    }
+    
+    // Sort by timestamp (newest first)
+    logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    // Pagination
+    const startIndex = (parseInt(page) - 1) * parseInt(limit);
+    const endIndex = startIndex + parseInt(limit);
+    const paginatedLogs = logs.slice(startIndex, endIndex);
+    
+    res.json({
+      success: true,
+      logs: paginatedLogs,
+      total: logs.length,
+      page: parseInt(page),
+      totalPages: Math.ceil(logs.length / parseInt(limit)),
+      filters: {
+        channel,
+        userId,
+        level,
+        search
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching logs:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch logs'
+    });
+  }
+});
+
+// API endpoint for live log streaming (Server-Sent Events)
+router.get('/api/logs/stream', isAuthenticated, isAdmin, (req, res) => {
+  const { channel = 'all', userId = '', level = 'all' } = req.query;
+  
+  // Set up SSE headers
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*'
+  });
+  
+  // Send initial connection message
+  res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() })}\n\n`);
+  
+  const fs = require('fs');
+  const path = require('path');
+  const { Tail } = require('tail');
+  
+  const logDir = path.join(__dirname, '..', 'logs');
+  let logFile = 'app.log';
+  
+  // Select appropriate log file based on channel
+  if (channel === 'multimedia') {
+    logFile = 'multimedia.log';
+  } else if (channel === 'error') {
+    logFile = 'error.log';
+  } else if (channel === 'user') {
+    logFile = 'user-activity.log';
+  }
+  
+  const logPath = path.join(logDir, logFile);
+  
+  let tail;
+  
+  try {
+    if (fs.existsSync(logPath)) {
+      tail = new Tail(logPath);
+      
+      tail.on('line', (line) => {
+        if (line.trim()) {
+          try {
+            const logEntry = JSON.parse(line);
+            
+            // Apply filters
+            let include = true;
+            
+            // Channel filter
+            if (channel !== 'all' && logEntry.channel !== channel) {
+              include = false;
+            }
+            
+            // User filter
+            if (userId && logEntry.userId !== userId) {
+              include = false;
+            }
+            
+            // Level filter
+            if (level !== 'all' && logEntry.level !== level) {
+              include = false;
+            }
+            
+            if (include) {
+              res.write(`data: ${JSON.stringify({ type: 'log', data: logEntry })}\n\n`);
+            }
+          } catch (parseError) {
+            // Skip invalid JSON lines
+          }
+        }
+      });
+      
+      tail.on('error', (error) => {
+        console.error('Tail error:', error);
+        res.write(`data: ${JSON.stringify({ type: 'error', message: 'Log monitoring error' })}\n\n`);
+      });
+    }
+  } catch (error) {
+    console.error('Error setting up log streaming:', error);
+    res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to start log streaming' })}\n\n`);
+  }
+  
+  // Handle client disconnect
+  req.on('close', () => {
+    if (tail) {
+      tail.unwatch();
+    }
+  });
+  
+  req.on('end', () => {
+    if (tail) {
+      tail.unwatch();
+    }
+  });
+});
+
 module.exports = router; 

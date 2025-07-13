@@ -61,6 +61,15 @@ function isMultimediaURL(url) {
  */
 async function triggerMultimediaAnalysis(content, user) {
   try {
+    // Enhanced logging for analysis start
+    logger.multimedia.start(user.id, content.id, content.url, {
+      transcription: true,
+      sentiment: true,
+      summarization: true,
+      thumbnails: true,
+      speakers: true
+    });
+
     console.log(`🎬 Starting background multimedia analysis for content ${content.id}`, {
       user_id: user.id,
       content_id: content.id,
@@ -75,7 +84,8 @@ async function triggerMultimediaAnalysis(content, user) {
       sentiment: true,
       thumbnails: true,
       ocr: true,
-      speaker_identification: true
+      speaker_identification: true,
+      enableSummarization: true
     });
 
     // Update content record with AI-generated results
@@ -94,6 +104,11 @@ async function triggerMultimediaAnalysis(content, user) {
     // Store transcription data directly in content record
     if (analysisResults.transcription && analysisResults.transcription.length > 0) {
       updateData.transcription = analysisResults.transcription;
+    }
+    
+    // Store summary data if available
+    if (analysisResults.summary && analysisResults.summary.length > 0) {
+      updateData.summary = analysisResults.summary;
     }
     
     // Store sentiment data
@@ -383,6 +398,9 @@ router.post('/', isAuthenticated, async (req, res) => {
       user_tags: Array.isArray(user_tags) ? user_tags : []
     });
 
+    // Log content creation
+    logger.user.contentAdd(req.user.id, content.id, url, isMultimediaURL(url) ? 'multimedia' : 'standard');
+
     console.log('DEBUG: Content created successfully:', content.id);
     console.log('DEBUG: Created content data:', JSON.stringify(content.toJSON(), null, 2));
 
@@ -546,6 +564,7 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
           description: content.metadata?.description || '',
           duration: 0,
           transcription: transcriptionText,
+          summary: content.summary || '',
           sentiment: sentiment,
           language: 'unknown',
           processing_time: null,

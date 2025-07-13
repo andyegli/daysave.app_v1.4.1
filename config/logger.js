@@ -3,333 +3,319 @@ const path = require('path');
 const fs = require('fs');
 
 // Ensure log directory exists
-const ensureLogDirectory = (logPath) => {
-  const logDir = path.dirname(logPath);
+const logDir = path.join(__dirname, '..', 'logs');
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
+
+// Custom format for structured logging
+const structuredFormat = winston.format.combine(
+  winston.format.timestamp(),
+  winston.format.errors({ stack: true }),
+  winston.format.json(),
+  winston.format.printf(({ timestamp, level, message, ...meta }) => {
+    const logEntry = {
+      timestamp,
+      level,
+      message,
+      ...meta
+    };
+    return JSON.stringify(logEntry);
+  })
+);
+
+// Console format for development
+const consoleFormat = winston.format.combine(
+  winston.format.colorize(),
+  winston.format.timestamp({ format: 'HH:mm:ss' }),
+  winston.format.printf(({ timestamp, level, message, userId, channel, contentId, ...meta }) => {
+    let logLine = `${timestamp} [${level}]`;
+    
+    // Add context information
+    if (userId) logLine += ` [User:${userId}]`;
+    if (channel) logLine += ` [${channel}]`;
+    if (contentId) logLine += ` [Content:${contentId}]`;
+    
+    logLine += ` ${message}`;
+    
+    // Add metadata if present
+    if (Object.keys(meta).length > 0) {
+      logLine += ` ${JSON.stringify(meta)}`;
+    }
+    
+    return logLine;
+  })
+);
+
+// Create logger instance
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  transports: [
+    // Console transport for development
+    new winston.transports.Console({
+      format: consoleFormat
+    }),
+    
+    // File transport for all logs
+    new winston.transports.File({
+      filename: path.join(logDir, 'app.log'),
+      format: structuredFormat,
+      maxsize: 10 * 1024 * 1024, // 10MB
+      maxFiles: 5
+    }),
+    
+    // Separate file for errors
+    new winston.transports.File({
+      filename: path.join(logDir, 'error.log'),
+      level: 'error',
+      format: structuredFormat,
+      maxsize: 10 * 1024 * 1024, // 10MB
+      maxFiles: 5
+    }),
+    
+    // Separate file for multimedia analysis logs
+    new winston.transports.File({
+      filename: path.join(logDir, 'multimedia.log'),
+      format: structuredFormat,
+      maxsize: 20 * 1024 * 1024, // 20MB
+      maxFiles: 10
+    }),
+    
+    // User activity logs
+    new winston.transports.File({
+      filename: path.join(logDir, 'user-activity.log'),
+      format: structuredFormat,
+      maxsize: 10 * 1024 * 1024, // 10MB
+      maxFiles: 5
+    })
+  ]
+});
+
+// Enhanced logging methods with context
+const enhancedLogger = {
+  // Standard logging methods
+  debug: (message, meta = {}) => logger.debug(message, meta),
+  info: (message, meta = {}) => logger.info(message, meta),
+  warn: (message, meta = {}) => logger.warn(message, meta),
+  error: (message, meta = {}) => logger.error(message, meta),
   
-  try {
-    if (!fs.existsSync(logDir)) {
-      console.log(`📁 Creating log directory: ${logDir}`);
-      fs.mkdirSync(logDir, { recursive: true, mode: 0o755 });
-    }
+  // Multimedia analysis logging
+  multimedia: {
+    start: (userId, contentId, url, options = {}) => {
+      logger.info('Multimedia analysis started', {
+        userId,
+        contentId,
+        url,
+        channel: 'multimedia',
+        action: 'analysis_start',
+        options,
+        timestamp: new Date().toISOString()
+      });
+    },
     
-    // Ensure directory is writable
-    try {
-      fs.accessSync(logDir, fs.constants.W_OK);
-    } catch (error) {
-      console.log(`🔧 Setting write permissions for: ${logDir}`);
-      fs.chmodSync(logDir, 0o755);
-    }
+    progress: (userId, contentId, step, progress = null, details = {}) => {
+      logger.info(`Analysis progress: ${step}`, {
+        userId,
+        contentId,
+        channel: 'multimedia',
+        action: 'analysis_progress',
+        step,
+        progress,
+        ...details,
+        timestamp: new Date().toISOString()
+      });
+    },
     
-    return true;
-  } catch (error) {
-    console.error(`❌ Error creating log directory: ${error.message}`);
-    return false;
+    success: (userId, contentId, results = {}) => {
+      logger.info('Multimedia analysis completed successfully', {
+        userId,
+        contentId,
+        channel: 'multimedia',
+        action: 'analysis_success',
+        transcriptionLength: results.transcription?.length || 0,
+        wordCount: results.transcription ? results.transcription.split(' ').length : 0,
+        summaryLength: results.summary?.length || 0,
+        sentiment: results.sentiment?.label || 'none',
+        speakerCount: results.speakers?.length || 0,
+        processingTime: results.processingTime || 0,
+        timestamp: new Date().toISOString()
+      });
+    },
+    
+    error: (userId, contentId, error, context = {}) => {
+      logger.error('Multimedia analysis failed', {
+        userId,
+        contentId,
+        channel: 'multimedia',
+        action: 'analysis_error',
+        error: error.message,
+        stack: error.stack,
+        ...context,
+        timestamp: new Date().toISOString()
+      });
+    },
+    
+    transcription: (userId, contentId, provider, wordCount, duration = null) => {
+      logger.info('Transcription completed', {
+        userId,
+        contentId,
+        channel: 'multimedia',
+        action: 'transcription',
+        provider,
+        wordCount,
+        duration,
+        timestamp: new Date().toISOString()
+      });
+    },
+    
+    summary: (userId, contentId, summaryLength, originalLength) => {
+      logger.info('Summary generated', {
+        userId,
+        contentId,
+        channel: 'multimedia',
+        action: 'summary',
+        summaryLength,
+        originalLength,
+        compressionRatio: originalLength > 0 ? (summaryLength / originalLength).toFixed(2) : 0,
+        timestamp: new Date().toISOString()
+      });
+    }
+  },
+  
+  // User activity logging
+  user: {
+    login: (userId, ip, userAgent = '') => {
+      logger.info('User logged in', {
+        userId,
+        channel: 'auth',
+        action: 'login',
+        ip,
+        userAgent,
+        timestamp: new Date().toISOString()
+      });
+    },
+    
+    logout: (userId, ip) => {
+      logger.info('User logged out', {
+        userId,
+        channel: 'auth',
+        action: 'logout',
+        ip,
+        timestamp: new Date().toISOString()
+      });
+    },
+    
+    contentAdd: (userId, contentId, url, contentType = 'unknown') => {
+      logger.info('Content added', {
+        userId,
+        contentId,
+        channel: 'content',
+        action: 'add',
+        url,
+        contentType,
+        timestamp: new Date().toISOString()
+      });
+    },
+    
+    contentEdit: (userId, contentId, changes = {}) => {
+      logger.info('Content edited', {
+        userId,
+        contentId,
+        channel: 'content',
+        action: 'edit',
+        changes: Object.keys(changes),
+        timestamp: new Date().toISOString()
+      });
+    },
+    
+    contentDelete: (userId, contentId) => {
+      logger.info('Content deleted', {
+        userId,
+        contentId,
+        channel: 'content',
+        action: 'delete',
+        timestamp: new Date().toISOString()
+      });
+    }
+  },
+  
+  // System logging
+  system: {
+    startup: (port, environment) => {
+      logger.info('Application started', {
+        channel: 'system',
+        action: 'startup',
+        port,
+        environment,
+        nodeVersion: process.version,
+        timestamp: new Date().toISOString()
+      });
+    },
+    
+    shutdown: (reason = 'unknown') => {
+      logger.info('Application shutting down', {
+        channel: 'system',
+        action: 'shutdown',
+        reason,
+        timestamp: new Date().toISOString()
+      });
+    },
+    
+    error: (error, context = {}) => {
+      logger.error('System error', {
+        channel: 'system',
+        action: 'error',
+        error: error.message,
+        stack: error.stack,
+        ...context,
+        timestamp: new Date().toISOString()
+      });
+    }
+  },
+  
+  // API logging
+  api: {
+    request: (method, url, userId = null, ip = '', statusCode = null, duration = null) => {
+      logger.info('API request', {
+        userId,
+        channel: 'api',
+        action: 'request',
+        method,
+        url,
+        ip,
+        statusCode,
+        duration,
+        timestamp: new Date().toISOString()
+      });
+    },
+    
+    error: (method, url, error, userId = null, ip = '') => {
+      logger.error('API error', {
+        userId,
+        channel: 'api',
+        action: 'error',
+        method,
+        url,
+        ip,
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+    }
   }
 };
 
-// Define log locations with fallbacks
-const logLocations = [
-  path.join(__dirname, '../logs'),
-  path.join(__dirname, '../app-logs'),
-  '/tmp/daysave-logs'
-];
-
-let logBasePath = null;
-for (const location of logLocations) {
-  if (ensureLogDirectory(path.join(location, 'auth.log'))) {
-    logBasePath = location;
-    break;
-  }
-}
-
-if (!logBasePath) {
-  console.error('❌ Could not create any log directory, using console only');
-  logBasePath = '/tmp';
-}
-
-// Custom format for authentication logs
-const authLogFormat = winston.format.combine(
-  winston.format.timestamp({
-    format: 'YYYY-MM-DD HH:mm:ss'
-  }),
-  winston.format.errors({ stack: true }),
-  winston.format.json(),
-  winston.format.printf(({ timestamp, level, message, ...meta }) => {
-    const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
-    return `${timestamp} [${level.toUpperCase()}]: ${message} ${metaStr}`;
-  })
-);
-
-// Custom format for security logs
-const securityLogFormat = winston.format.combine(
-  winston.format.timestamp({
-    format: 'YYYY-MM-DD HH:mm:ss'
-  }),
-  winston.format.errors({ stack: true }),
-  winston.format.json(),
-  winston.format.printf(({ timestamp, level, message, ...meta }) => {
-    const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
-    return `${timestamp} [${level.toUpperCase()}]: ${message} ${metaStr}`;
-  })
-);
-
-// Custom format for validation logs
-const validationLogFormat = winston.format.combine(
-  winston.format.timestamp({
-    format: 'YYYY-MM-DD HH:mm:ss'
-  }),
-  winston.format.errors({ stack: true }),
-  winston.format.json(),
-  winston.format.printf(({ timestamp, level, message, ...meta }) => {
-    const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
-    return `${timestamp} [${level.toUpperCase()}]: ${message} ${metaStr}`;
-  })
-);
-
-// Create logger instances
-const authLogger = winston.createLogger({
-  level: 'info',
-  format: authLogFormat,
-  transports: [
-    // Auth-specific log file
-    new winston.transports.File({
-      filename: path.join(logBasePath, 'auth.log'),
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-      tailable: true
-    }),
-    // Error log file
-    new winston.transports.File({
-      filename: path.join(logBasePath, 'auth-errors.log'),
-      level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 3,
-      tailable: true
-    })
-  ]
-});
-
-// Security logger
-const securityLogger = winston.createLogger({
-  level: 'info',
-  format: securityLogFormat,
-  transports: [
-    // Security-specific log file
-    new winston.transports.File({
-      filename: path.join(logBasePath, 'security.log'),
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-      tailable: true
-    }),
-    // Security error log file
-    new winston.transports.File({
-      filename: path.join(logBasePath, 'security-errors.log'),
-      level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 3,
-      tailable: true
-    })
-  ]
-});
-
-// Validation logger
-const validationLogger = winston.createLogger({
-  level: 'info',
-  format: validationLogFormat,
-  transports: [
-    // Validation-specific log file
-    new winston.transports.File({
-      filename: path.join(logBasePath, 'validation.log'),
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-      tailable: true
-    }),
-    // Validation error log file
-    new winston.transports.File({
-      filename: path.join(logBasePath, 'validation-errors.log'),
-      level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 3,
-      tailable: true
-    })
-  ]
-});
-
-// General error logger
-const errorLogger = winston.createLogger({
-  level: 'error',
-  format: winston.format.combine(
-    winston.format.timestamp({
-      format: 'YYYY-MM-DD HH:mm:ss'
-    }),
-    winston.format.errors({ stack: true }),
-    winston.format.json(),
-    winston.format.printf(({ timestamp, level, message, ...meta }) => {
-      const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
-      return `${timestamp} [${level.toUpperCase()}]: ${message} ${metaStr}`;
-    })
-  ),
-  transports: [
-    new winston.transports.File({
-      filename: path.join(logBasePath, 'errors.log'),
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-      tailable: true
-    })
-  ]
-});
-
-// Add console transport in development
-if (process.env.NODE_ENV !== 'production') {
-  authLogger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
-  }));
-  
-  securityLogger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
-  }));
-  
-  validationLogger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
-  }));
-  
-  errorLogger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
-  }));
-}
-
-// Helper functions for authentication logging
-const logAuthEvent = (event, details = {}) => {
-  const logData = {
-    event,
-    timestamp: new Date().toISOString(),
-    ip: details.ip || 'unknown',
-    userAgent: details.userAgent || 'unknown',
-    ...details
-  };
-
-  authLogger.info(`AUTH_EVENT: ${event}`, logData);
+// Legacy methods for backward compatibility
+enhancedLogger.logInfo = (message, context = {}) => {
+  enhancedLogger.info(message, context);
 };
 
-const logAuthError = (event, error, details = {}) => {
-  const logData = {
-    event,
-    error: error.message,
-    stack: error.stack,
-    timestamp: new Date().toISOString(),
-    ip: details.ip || 'unknown',
-    userAgent: details.userAgent || 'unknown',
-    ...details
-  };
-
-  authLogger.error(`AUTH_ERROR: ${event}`, logData);
+enhancedLogger.logError = (message, context = {}) => {
+  enhancedLogger.error(message, context);
 };
 
-const logOAuthFlow = (provider, step, details = {}) => {
-  const logData = {
-    provider,
-    step,
-    timestamp: new Date().toISOString(),
-    ip: details.ip || 'unknown',
-    userAgent: details.userAgent || 'unknown',
-    ...details
-  };
-
-  authLogger.info(`OAUTH_FLOW: ${provider.toUpperCase()} - ${step}`, logData);
+enhancedLogger.logWarning = (message, context = {}) => {
+  enhancedLogger.warn(message, context);
 };
 
-const logOAuthError = (provider, step, error, details = {}) => {
-  const logData = {
-    provider,
-    step,
-    error: error.message,
-    stack: error.stack,
-    timestamp: new Date().toISOString(),
-    ip: details.ip || 'unknown',
-    userAgent: details.userAgent || 'unknown',
-    ...details
-  };
-
-  authLogger.error(`OAUTH_ERROR: ${provider.toUpperCase()} - ${step}`, logData);
-};
-
-// Helper functions for security logging
-const logSecurityEvent = (event, details = {}) => {
-  const logData = {
-    event,
-    timestamp: new Date().toISOString(),
-    ip: details.ip || 'unknown',
-    userAgent: details.userAgent || 'unknown',
-    ...details
-  };
-
-  securityLogger.info(`SECURITY_EVENT: ${event}`, logData);
-};
-
-const logSecurityError = (event, error, details = {}) => {
-  const logData = {
-    event,
-    error: error.message,
-    stack: error.stack,
-    timestamp: new Date().toISOString(),
-    ip: details.ip || 'unknown',
-    userAgent: details.userAgent || 'unknown',
-    ...details
-  };
-
-  securityLogger.error(`SECURITY_ERROR: ${event}`, logData);
-};
-
-// Helper functions for validation logging
-const logValidationError = (event, details = {}) => {
-  const logData = {
-    event,
-    timestamp: new Date().toISOString(),
-    ip: details.ip || 'unknown',
-    userAgent: details.userAgent || 'unknown',
-    ...details
-  };
-
-  validationLogger.error(`VALIDATION_ERROR: ${event}`, logData);
-};
-
-// General error logging
-const logError = (event, details = {}) => {
-  const logData = {
-    event,
-    timestamp: new Date().toISOString(),
-    ip: details.ip || 'unknown',
-    userAgent: details.userAgent || 'unknown',
-    ...details
-  };
-
-  errorLogger.error(`ERROR: ${event}`, logData);
-};
-
-module.exports = {
-  authLogger,
-  securityLogger,
-  validationLogger,
-  errorLogger,
-  logAuthEvent,
-  logAuthError,
-  logOAuthFlow,
-  logOAuthError,
-  logSecurityEvent,
-  logSecurityError,
-  logValidationError,
-  logError,
-  logBasePath
-}; 
+module.exports = enhancedLogger; 

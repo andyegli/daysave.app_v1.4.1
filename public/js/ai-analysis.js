@@ -320,6 +320,20 @@ function renderAIAnalysisModal(result) {
     `;
   }
   
+  // Summary
+  if (analysis.summary && analysis.summary.length > 0) {
+    html += `
+      <div class="mb-4">
+        <h6 class="fw-bold">
+          <i class="bi bi-file-earmark-text me-2"></i>Content Summary
+        </h6>
+        <div class="border rounded p-3 bg-light">
+          <p class="mb-0 fst-italic">${analysis.summary}</p>
+        </div>
+      </div>
+    `;
+  }
+  
   // Transcription
   if (analysis.transcription && analysis.transcription.length > 0) {
     const wordCount = analysis.transcription.split(' ').length;
