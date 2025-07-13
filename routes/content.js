@@ -20,6 +20,7 @@ function isMultimediaURL(url) {
   const multimediaPatterns = [
     // Video platforms
     /youtube\.com\/watch/i,
+    /youtube\.com\/shorts/i,
     /youtu\.be\//i,
     /vimeo\.com\//i,
     /dailymotion\.com\//i,
@@ -29,6 +30,7 @@ function isMultimediaURL(url) {
     /instagram\.com\/reel\//i,
     /facebook\.com\/watch/i,
     /facebook\.com\/share\/v\//i,
+    /facebook\.com\/share\/p\//i,
     /twitter\.com\/.*\/status/i,
     /x\.com\/.*\/status/i,
     /linkedin\.com\/posts\//i,
