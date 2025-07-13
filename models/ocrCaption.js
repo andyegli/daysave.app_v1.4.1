@@ -362,10 +362,6 @@ module.exports = (sequelize, DataTypes) => {
       {
         name: 'idx_ocr_captions_frame',
         fields: ['frame_index']
-      },
-      {
-        name: 'idx_ocr_captions_search',
-        fields: ['search_vector']
       }
     ]
   });
