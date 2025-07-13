@@ -20,11 +20,17 @@
 ## 🚀 Features
 
 - **11 Social Platforms**: Facebook, YouTube, Instagram, TikTok, WeChat, Messenger, Telegram, Snapchat, Pinterest, Twitter/X, WhatsApp
-- **AI-Powered Analysis**: Content summarization, sentiment analysis, auto-tagging
+- **AI-Powered Multimedia Analysis**: 
+  - **Audio Transcription**: Google Cloud Speech-to-Text with speaker identification
+  - **Video Processing**: Automatic thumbnail generation and key moment detection
+  - **Sentiment Analysis**: Real-time emotion detection and scoring
+  - **OCR Text Extraction**: Text recognition from video frames and images
+  - **Speaker Recognition**: Voice print identification and confidence scoring
+  - **Content Summarization**: AI-generated summaries and auto-tagging
 - **Smart Contacts**: Apple iPhone-compatible contact management with relationships and groups
 - **Multilingual Support**: English, German, French, Italian, Spanish
 - **Enterprise Security**: 2FA, encryption, device fingerprinting
-- **Modern UI**: Bootstrap 5 with custom gradient styling
+- **Modern UI**: Bootstrap 5 with custom gradient styling and AI analysis visualizations
 
 ## 🛠 Setup Instructions
 
@@ -86,27 +92,54 @@ MICROSOFT_CLIENT_SECRET=your-microsoft-client-secret
 SENDGRID_API_KEY=your-sendgrid-api-key
 FROM_EMAIL=noreply@daysave.app
 
+# Google Cloud AI Configuration
+GOOGLE_CLOUD_PROJECT_ID=your-project-id
+GOOGLE_APPLICATION_CREDENTIALS=path/to/service-account-key.json
+GOOGLE_CLOUD_SPEECH_LANGUAGE=en-US
+GOOGLE_CLOUD_VISION_LANGUAGE=en
+
+# Multimedia Analysis Configuration
+ANALYZER_PORT=3001
+MULTIMEDIA_TEMP_DIR=./temp/multimedia
+THUMBNAIL_COUNT=5
+SPEAKER_CONFIDENCE_THRESHOLD=0.7
+
 # File Upload Configuration
 MAX_FILE_SIZE=10485760
-ALLOWED_FILE_TYPES=image/jpeg,image/png,image/gif,application/pdf,text/plain
+ALLOWED_FILE_TYPES=image/jpeg,image/png,image/gif,application/pdf,text/plain,video/mp4,audio/mpeg,audio/wav
 
 # Security Configuration
 BCRYPT_ROUNDS=12
 SESSION_SECRET=your-session-secret-change-in-production
 ```
 
-### 3. OAuth Provider Setup
+### 3. Google Cloud Setup
 
-**Google OAuth Setup:**
+**Google Cloud Console Configuration:**
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select existing one
-3. Enable Google+ API
-4. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client IDs"
-5. Set Application Type to "Web application"
-6. Add authorized redirect URIs:
+3. Enable the following APIs:
+   - Google+ API (for OAuth)
+   - Cloud Speech-to-Text API (for audio transcription)
+   - Cloud Vision API (for image/video analysis)
+   - Cloud Translation API (optional, for multilingual support)
+
+**Google OAuth Setup:**
+1. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client IDs"
+2. Set Application Type to "Web application"
+3. Add authorized redirect URIs:
    - `http://localhost:3000/auth/google/callback` (development)
    - `https://your-domain.com/auth/google/callback` (production)
-7. Copy Client ID and Client Secret to your .env file
+4. Copy Client ID and Client Secret to your .env file
+
+**Google Cloud AI Service Account:**
+1. Go to "IAM & Admin" → "Service Accounts"
+2. Create a new service account with the following roles:
+   - Cloud Speech Client
+   - Cloud Vision API Client
+   - Cloud Translation API Client (optional)
+3. Download the JSON key file
+4. Set `GOOGLE_APPLICATION_CREDENTIALS` in your .env file to the path of this JSON file
 
 **Microsoft OAuth Setup:**
 1. Go to [Azure Portal](https://portal.azure.com/)
@@ -135,10 +168,10 @@ docker-compose up -d
 # Wait for database to initialize (about 10-15 seconds)
 sleep 15
 
-# Run database migrations
+# Run database migrations (includes multimedia analysis tables)
 docker-compose exec app sh -c "DB_HOST=db DB_USER=daysave DB_USER_PASSWORD=your-password DB_NAME=daysave_v141 DB_PORT=3306 npx sequelize-cli db:migrate"
 
-# Check migration status
+# Check migration status (should show 26 migrations including multimedia tables)
 docker-compose exec app sh -c "DB_HOST=db DB_USER=daysave DB_USER_PASSWORD=your-password DB_NAME=daysave_v141 DB_PORT=3306 npx sequelize-cli db:migrate:status"
 ```
 
@@ -157,15 +190,15 @@ npx sequelize-cli db:migrate:status
 
 ### 5. Verify Database Setup
 ```bash
-# Check if all tables were created (22 tables total)
+# Check if all tables were created (26 tables total including multimedia analysis)
 docker-compose exec db mysql -u daysave -p daysave_v141 -e "SHOW TABLES;"
 
 # Expected output should include:
-# - users, roles, permissions, role_permissions
-# - user_devices, audit_logs, social_accounts
-# - content, files, contacts, contact_groups
-# - content_groups, share_logs, login_attempts
-# - and 8 more tables...
+# Core tables: users, roles, permissions, role_permissions
+# Content tables: content, files, contacts, contact_groups
+# Multimedia analysis tables: video_analysis, speakers, thumbnails, ocr_captions
+# System tables: user_devices, audit_logs, social_accounts, share_logs, login_attempts
+# - and 12 more tables...
 ```
 
 ### 6. Sample Data (Optional)
@@ -194,11 +227,16 @@ mysql -u daysave -p daysave_v141 < sample_nz_contacts_fixed.sql
 **With Docker:**
 ```bash
 # Application will be available at http://localhost:3000
+# Multimedia analyzer will run on port 3001
 docker-compose up -d
 ```
 
 **Without Docker:**
 ```bash
+# Start the main application
+node app.js
+
+# Or for development with auto-reload
 npm run dev
 ```
 
@@ -212,16 +250,24 @@ daysave_v1.4.1/
 ├── docker-compose.yml     # Docker configuration
 ├── Dockerfile            # Docker image definition
 ├── config/               # Configuration files
-│   └── config.js        # Sequelize database config
+│   ├── config.js        # Sequelize database config
+│   ├── auth.js          # Authentication configuration
+│   ├── logger.js        # Winston logging configuration
+│   └── maps.js          # Google Maps configuration
 ├── models/               # Sequelize models
 │   ├── index.js         # Model associations
 │   ├── user.js          # User model
 │   ├── role.js          # Role model
+│   ├── speaker.js       # Speaker voice print model
+│   ├── thumbnail.js     # Video thumbnail model
+│   ├── ocrCaption.js    # OCR text extraction model
 │   └── ...              # 20+ other models
 ├── migrations/           # Database migrations
 │   ├── 20250626150501-create-roles.js
 │   ├── 20250626150502-create-permissions.js
-│   └── ...              # 20+ migration files
+│   ├── 20250626150609-create-content.js
+│   ├── 20250626150610-create-files.js
+│   └── ...              # 26 migration files including multimedia tables
 ├── views/                # EJS templates
 │   ├── index.ejs        # Landing page
 │   ├── login.ejs        # Login page
@@ -235,11 +281,20 @@ daysave_v1.4.1/
 │   ├── images/          # Logo and images
 │   ├── css/             # Custom stylesheets
 │   └── js/              # Client-side JavaScript
+│       ├── ai-analysis.js       # AI analysis modal functionality
+│       ├── contact-maps.js      # Google Maps integration
+│       └── content-filters.js   # Content filtering
 ├── locales/             # Translation files
 │   ├── en.json          # English translations
 │   ├── de.json          # German translations
 │   └── ...
 ├── routes/               # Express routes
+│   ├── auth.js          # Authentication routes
+│   ├── content.js       # Content management with multimedia analysis
+│   ├── contacts.js      # Contact management
+│   ├── files.js         # File upload and management
+│   ├── multimedia.js    # Multimedia analysis API endpoints
+│   └── admin.js         # Admin panel routes
 ├── docs/                 # Documentation
 │   └── er-diagram.puml  # Database ER diagram
 └── logs/                # Application logs
@@ -249,9 +304,14 @@ daysave_v1.4.1/
 
 - **Approach**: Sequelize CLI Migrations (not automatic sync)
 - **Environment Variables**: Standardized on `DB_USER_PASSWORD` (not `DB_PASSWORD`)
-- **Migration Order**: 22 migrations in correct dependency order
-- **Tables Created**: 22 tables with proper foreign key relationships
+- **Migration Order**: 26 migrations in correct dependency order
+- **Tables Created**: 26 tables with proper foreign key relationships including multimedia analysis
 - **UUID Usage**: All primary keys and foreign keys use CHAR(36) UUIDs
+- **Multimedia Tables**: 
+  - `video_analysis` - Video metadata, processing statistics, quality assessment
+  - `speakers` - Voice print identification, recognition confidence, usage statistics
+  - `thumbnails` - Generated thumbnails, key moments, expiry tracking
+  - `ocr_captions` - Text extraction from video frames, confidence scoring
 
 **Database Commands:**
 ```bash
@@ -304,6 +364,36 @@ npx sequelize-cli db:migrate:undo:all
     --gradient-primary: linear-gradient(135deg, #2596be, #309b9c);
 }
 ```
+
+## 🎬 Multimedia Analysis Features
+
+### Automatic Content Processing
+When users submit multimedia URLs (YouTube, Vimeo, TikTok, etc.), DaySave automatically:
+
+1. **Audio Transcription**: Converts speech to text using Google Cloud Speech-to-Text
+2. **Speaker Identification**: Identifies and tracks unique speakers with confidence scoring
+3. **Sentiment Analysis**: Analyzes emotional tone and sentiment of content
+4. **Thumbnail Generation**: Creates key moment thumbnails for video content
+5. **OCR Text Extraction**: Extracts text from video frames and images
+6. **Content Summarization**: Generates AI-powered summaries and tags
+
+### Supported Platforms
+- **Video**: YouTube, Vimeo, TikTok, Instagram, Facebook
+- **Audio**: SoundCloud, Spotify, direct audio files
+- **Social**: Twitter, direct video/audio uploads
+- **File Types**: MP4, AVI, MOV, MP3, WAV, M4A
+
+### AI Analysis UI
+- **Visual Indicators**: Content cards show analysis status with icons
+- **Analysis Modal**: Detailed view with transcription, sentiment, thumbnails
+- **Real-time Updates**: Progressive enhancement with live status updates
+- **Mobile Responsive**: Bootstrap-based UI works on all devices
+
+### API Endpoints
+- `POST /multimedia/analyze` - Complete multimedia analysis
+- `POST /multimedia/transcribe` - Audio transcription with speaker ID
+- `POST /multimedia/thumbnails` - Thumbnail generation
+- `GET /content/:id/analysis` - Retrieve analysis results
 
 ## 🔧 Development Scripts
 

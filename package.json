@@ -1,9 +1,11 @@
 {
   "name": "daysave_v1.4.1",
   "version": "1.0.0",
-  "description": "<div align=\"center\">   <img src=\"public/images/daysave-logo.png\" alt=\"DaySave Logo\" width=\"120\" height=\"120\">   <h3>Organize, analyze, and share content from 11 social platforms</h3> </div>",
+  "description": "DaySave v1.4.1 - Organize, analyze, and share content from 11 social platforms with AI-powered multimedia analysis including audio transcription, speaker identification, sentiment analysis, thumbnail generation, and OCR text extraction",
   "main": "index.js",
   "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
     "test": "jest",
     "test:db": "docker-compose exec app npx mocha tests/database.test.js --timeout 20000"
   },
@@ -35,7 +37,7 @@
     "morgan": "^1.10.0",
     "multer": "^2.0.1",
     "mysql2": "^3.14.1",
-    "node-fetch": "^3.3.2",
+    "node-fetch": "^2.7.0",
     "nodemailer": "^7.0.4",
     "openai": "^4.20.1",
     "passport": "^0.7.0",
