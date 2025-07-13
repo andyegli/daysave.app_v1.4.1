@@ -4,6 +4,7 @@ const fs = require('fs');
 
 // Ensure log directory exists
 const logDir = path.join(__dirname, '..', 'logs');
+const logBasePath = logDir;
 if (!fs.existsSync(logDir)) {
   fs.mkdirSync(logDir, { recursive: true });
 }
@@ -318,4 +319,62 @@ enhancedLogger.logWarning = (message, context = {}) => {
   enhancedLogger.warn(message, context);
 };
 
-module.exports = enhancedLogger; 
+// Export specific functions for backward compatibility
+const logAuthEvent = (event, data = {}) => {
+  enhancedLogger.info(`AUTH_EVENT: ${event}`, {
+    channel: 'auth',
+    event,
+    ...data,
+    timestamp: new Date().toISOString()
+  });
+};
+
+const logAuthError = (event, error, data = {}) => {
+  enhancedLogger.error(`AUTH_ERROR: ${event}`, {
+    channel: 'auth',
+    event,
+    error: error.message || error,
+    stack: error.stack,
+    ...data,
+    timestamp: new Date().toISOString()
+  });
+};
+
+const logOAuthFlow = (event, data = {}) => {
+  enhancedLogger.info(`OAUTH_FLOW: ${event}`, {
+    channel: 'auth',
+    event,
+    ...data,
+    timestamp: new Date().toISOString()
+  });
+};
+
+const logOAuthError = (event, error, data = {}) => {
+  enhancedLogger.error(`OAUTH_ERROR: ${event}`, {
+    channel: 'auth',
+    event,
+    error: error.message || error,
+    stack: error.stack,
+    ...data,
+    timestamp: new Date().toISOString()
+  });
+};
+
+const logSecurityEvent = (event, data = {}) => {
+  enhancedLogger.info(`SECURITY_EVENT: ${event}`, {
+    channel: 'security',
+    event,
+    ...data,
+    timestamp: new Date().toISOString()
+  });
+};
+
+module.exports = {
+  ...enhancedLogger,
+  logAuthEvent,
+  logAuthError,
+  logOAuthFlow,
+  logOAuthError,
+  logSecurityEvent,
+  logBasePath
+}; 
