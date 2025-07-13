@@ -198,6 +198,13 @@
                       </div>
 
                       <div class="text-muted small"><%= item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '' %></div>
+                      
+                      <!-- AI Analysis Indicators -->
+                      <div class="mt-2">
+                        <div class="d-flex flex-wrap gap-1" id="ai-indicators-<%= item.id %>">
+                          <!-- Indicators will be populated by JavaScript -->
+                        </div>
+                      </div>
                     </div>
                     <div class="d-flex gap-2 mt-2">
                       <a href="#" class="btn btn-outline-primary btn-sm edit-content-btn" data-id="<%= item.id %>" data-bs-toggle="modal" data-bs-target="#editContentModal">
@@ -208,6 +215,9 @@
                       </button>
                       <button class="btn btn-outline-success btn-sm share-content-btn" data-id="<%= item.id %>">
                         <i class="bi bi-share"></i>
+                      </button>
+                      <button class="btn btn-outline-info btn-sm ai-analysis-btn" data-id="<%= item.id %>" data-bs-toggle="modal" data-bs-target="#aiAnalysisModal" title="View AI Analysis">
+                        <i class="bi bi-robot"></i>
                       </button>
                     </div>
                     <div class="mt-2">
@@ -364,6 +374,28 @@
     </div>
   </div>
 
+  <!-- AI Analysis Modal -->
+  <div class="modal fade" id="aiAnalysisModal" tabindex="-1" aria-labelledby="aiAnalysisModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="aiAnalysisModalLabel">
+            <i class="bi bi-robot me-2"></i>AI Analysis Results
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="aiAnalysisModalBody">
+          <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading AI analysis results...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Footer Include -->
   <%- include('../partials/footer') %>
   <!-- jQuery (required for Bootstrap Select) -->
@@ -375,5 +407,6 @@
   <!-- Custom JS for Content Management -->
   <script src="/js/content-management.js"></script>
   <script src="/js/content-filters.js"></script>
+  <script src="/js/ai-analysis.js"></script>
 </body>
 </html> 

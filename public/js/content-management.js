@@ -25,9 +25,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const alert = document.getElementById('addContentAlert');
         if (result.success) {
           alert.className = 'alert alert-success mt-2';
-          alert.textContent = 'Content added successfully!';
+          let message = 'Content added successfully!';
+          
+          // Check if multimedia analysis was triggered
+          if (result.multimedia_analysis && result.multimedia_analysis.status === 'started') {
+            message += ' AI analysis is running in the background and will update the content when complete.';
+          }
+          
+          alert.textContent = message;
           alert.classList.remove('d-none');
-          setTimeout(() => { window.location.reload(); }, 1000);
+          setTimeout(() => { window.location.reload(); }, 1500);
         } else {
           alert.className = 'alert alert-danger mt-2';
           alert.textContent = result.error || 'Failed to add content.';
