@@ -4,6 +4,13 @@ FROM node:18-alpine
 # Create app directory
 WORKDIR /usr/src/app
 
+# Install system dependencies including yt-dlp
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    ffmpeg \
+    && pip3 install --break-system-packages yt-dlp
+
 # Install app dependencies
 COPY package*.json ./
 RUN npm install --production
@@ -29,5 +36,5 @@ USER appuser
 # Expose port
 EXPOSE 3000
 
-# Start the app
+# Start the application
 CMD ["node", "app.js"] 

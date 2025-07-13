@@ -1051,9 +1051,6 @@ class MultimediaAnalyzer {
    */
   async getYouTubeTranscription(url) {
     try {
-      // For now, we'll simulate getting transcription from YouTube
-      // In a real implementation, this would use yt-dlp or YouTube API
-      
       // Extract video ID from URL
       const videoId = this.extractYouTubeVideoId(url);
       if (!videoId) {
@@ -1064,27 +1061,272 @@ class MultimediaAnalyzer {
         console.log('🎬 Attempting to get YouTube transcription for video:', videoId);
       }
       
-      // TODO: Implement actual YouTube transcription extraction
-      // This could use:
-      // 1. yt-dlp with --write-auto-sub or --write-sub
-      // 2. YouTube Data API v3 with captions endpoint
-      // 3. Third-party services like AssemblyAI for YouTube URLs
+      // Try to get transcription using yt-dlp
+      const transcriptionResult = await this.extractYouTubeTranscriptionWithYtDlp(url);
       
-      // For now, return a more realistic placeholder that indicates processing
-      const mockTranscription = `This is a YouTube video with ID: ${videoId}. The actual transcription would be extracted using yt-dlp or YouTube's API. This placeholder contains enough words to simulate a real transcription for testing purposes. The video content would typically include spoken dialogue, music, sound effects, and other audio elements that would be converted to text through speech recognition technology.`;
+      if (transcriptionResult && transcriptionResult.text && transcriptionResult.text.length > 50) {
+        if (this.enableLogging) {
+          console.log('✅ Successfully extracted YouTube transcription:', {
+            length: transcriptionResult.text.length,
+            wordCount: transcriptionResult.text.split(' ').length
+          });
+        }
+        return transcriptionResult;
+      }
       
-      return {
-        text: mockTranscription,
-        confidence: 0.85,
-        language: 'en',
-        source: 'youtube-placeholder'
-      };
+      // Fallback: Try to download and transcribe audio
+      if (this.enableLogging) {
+        console.log('🔄 No captions found, attempting audio transcription...');
+      }
+      
+      const audioTranscription = await this.downloadAndTranscribeYouTubeAudio(url);
+      
+      if (audioTranscription && audioTranscription.text) {
+        return audioTranscription;
+      }
+      
+      // Final fallback
+      throw new Error('No transcription method succeeded');
       
     } catch (error) {
       if (this.enableLogging) {
         console.error('❌ YouTube transcription failed:', error);
       }
-      throw error;
+      
+      // Return a more informative error message
+      return {
+        text: `Transcription extraction failed for this YouTube video. Error: ${error.message}`,
+        confidence: 0.0,
+        language: 'en',
+        source: 'error-fallback'
+      };
+    }
+  }
+
+  /**
+   * Extract YouTube transcription using yt-dlp captions
+   * 
+   * @param {string} url - YouTube URL
+   * @returns {Promise<Object>} Transcription result
+   */
+  async extractYouTubeTranscriptionWithYtDlp(url) {
+    return new Promise((resolve, reject) => {
+      const { exec } = require('child_process');
+      const fs = require('fs');
+      const path = require('path');
+      
+      try {
+        const timestamp = Date.now();
+        const outputDir = path.join(__dirname, '../../uploads');
+        const outputPath = path.join(outputDir, `captions_${timestamp}`);
+        
+        // Ensure uploads directory exists
+        if (!fs.existsSync(outputDir)) {
+          fs.mkdirSync(outputDir, { recursive: true });
+        }
+        
+        // Try to extract auto-generated captions first, then manual captions
+        const command = `yt-dlp --write-auto-sub --write-sub --sub-lang en --sub-format vtt --skip-download -o "${outputPath}" "${url}"`;
+        
+        if (this.enableLogging) {
+          console.log('🎬 Executing yt-dlp caption extraction:', command);
+        }
+        
+        exec(command, { maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+          try {
+            if (error) {
+              if (this.enableLogging) {
+                console.log('⚠️ yt-dlp caption extraction failed:', error.message);
+              }
+              reject(error);
+              return;
+            }
+            
+            // Look for generated caption files
+            const files = fs.readdirSync(outputDir).filter(file => 
+              file.startsWith(`captions_${timestamp}`) && file.endsWith('.vtt')
+            );
+            
+            if (files.length === 0) {
+              reject(new Error('No caption files found'));
+              return;
+            }
+            
+            // Read the first caption file found
+            const captionFile = path.join(outputDir, files[0]);
+            const captionContent = fs.readFileSync(captionFile, 'utf8');
+            
+            // Parse VTT content to extract text
+            const transcriptionText = this.parseVttToText(captionContent);
+            
+            // Clean up caption file
+            fs.unlinkSync(captionFile);
+            
+            if (transcriptionText && transcriptionText.length > 10) {
+              resolve({
+                text: transcriptionText,
+                confidence: 0.9,
+                language: 'en',
+                source: 'youtube-captions'
+              });
+            } else {
+              reject(new Error('No meaningful transcription extracted from captions'));
+            }
+            
+          } catch (parseError) {
+            if (this.enableLogging) {
+              console.error('❌ Error parsing caption file:', parseError);
+            }
+            reject(parseError);
+          }
+        });
+        
+      } catch (setupError) {
+        reject(setupError);
+      }
+    });
+  }
+
+  /**
+   * Download YouTube audio and transcribe it
+   * 
+   * @param {string} url - YouTube URL
+   * @returns {Promise<Object>} Transcription result
+   */
+  async downloadAndTranscribeYouTubeAudio(url) {
+    const { exec } = require('child_process');
+    const fs = require('fs');
+    const path = require('path');
+    
+    return new Promise((resolve, reject) => {
+      try {
+        const timestamp = Date.now();
+        const outputDir = path.join(__dirname, '../../uploads');
+        const outputPath = path.join(outputDir, `youtube_audio_${timestamp}.%(ext)s`);
+        
+        // Ensure uploads directory exists
+        if (!fs.existsSync(outputDir)) {
+          fs.mkdirSync(outputDir, { recursive: true });
+        }
+        
+        // Download audio only
+        const command = `yt-dlp -f "bestaudio[ext=m4a]/bestaudio/best" -o "${outputPath}" "${url}"`;
+        
+        if (this.enableLogging) {
+          console.log('🎵 Downloading YouTube audio for transcription:', command);
+        }
+        
+        exec(command, { maxBuffer: 50 * 1024 * 1024 }, async (error, stdout, stderr) => {
+          try {
+            if (error) {
+              if (this.enableLogging) {
+                console.log('❌ YouTube audio download failed:', error.message);
+              }
+              reject(error);
+              return;
+            }
+            
+            // Find the downloaded audio file
+            const files = fs.readdirSync(outputDir).filter(file => 
+              file.startsWith(`youtube_audio_${timestamp}`) && 
+              (file.endsWith('.m4a') || file.endsWith('.mp3') || file.endsWith('.wav'))
+            );
+            
+            if (files.length === 0) {
+              reject(new Error('No audio file downloaded'));
+              return;
+            }
+            
+            const audioFile = path.join(outputDir, files[0]);
+            
+            // Transcribe the audio file
+            let transcriptionText = '';
+            try {
+              if (this.openai) {
+                transcriptionText = await this.transcribeAudioOpenAI(audioFile);
+              } else if (this.speechClient) {
+                transcriptionText = await this.transcribeAudioGoogle(audioFile);
+              } else {
+                throw new Error('No transcription service available');
+              }
+            } catch (transcriptionError) {
+              if (this.enableLogging) {
+                console.error('❌ Audio transcription failed:', transcriptionError);
+              }
+              throw transcriptionError;
+            } finally {
+              // Clean up audio file
+              if (fs.existsSync(audioFile)) {
+                fs.unlinkSync(audioFile);
+              }
+            }
+            
+            if (transcriptionText && transcriptionText.length > 10) {
+              resolve({
+                text: transcriptionText,
+                confidence: 0.8,
+                language: 'en',
+                source: 'youtube-audio-transcription'
+              });
+            } else {
+              reject(new Error('No meaningful transcription from audio'));
+            }
+            
+          } catch (processError) {
+            reject(processError);
+          }
+        });
+        
+      } catch (setupError) {
+        reject(setupError);
+      }
+    });
+  }
+
+  /**
+   * Parse VTT caption content to extract plain text
+   * 
+   * @param {string} vttContent - VTT file content
+   * @returns {string} Plain text transcription
+   */
+  parseVttToText(vttContent) {
+    try {
+      // Split by lines and filter out VTT headers, timestamps, and metadata
+      const lines = vttContent.split('\n');
+      const textLines = [];
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        // Skip empty lines, VTT headers, and timestamp lines
+        if (!line || 
+            line.startsWith('WEBVTT') || 
+            line.startsWith('NOTE') ||
+            line.includes('-->') ||
+            /^\d+$/.test(line)) {
+          continue;
+        }
+        
+        // Remove VTT markup tags like <c>, <i>, etc.
+        const cleanLine = line.replace(/<[^>]*>/g, '').trim();
+        
+        if (cleanLine && cleanLine.length > 0) {
+          textLines.push(cleanLine);
+        }
+      }
+      
+      // Join all text lines and clean up
+      const fullText = textLines.join(' ')
+        .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+        .trim();
+      
+      return fullText;
+      
+    } catch (error) {
+      if (this.enableLogging) {
+        console.error('❌ Error parsing VTT content:', error);
+      }
+      return '';
     }
   }
 
