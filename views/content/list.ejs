@@ -51,6 +51,36 @@
       object-fit: cover;
     }
     
+    /* Transcription Summary Styles */
+    .transcription-summary {
+      border-left: 3px solid #0d6efd;
+      padding-left: 8px;
+      margin-left: 4px;
+    }
+    
+    .transcription-preview {
+      background-color: #f8f9fa !important;
+      border: 1px solid #e9ecef;
+      line-height: 1.4;
+    }
+    
+    .transcription-preview:hover {
+      background-color: #e9ecef !important;
+    }
+    
+    /* Brain icon styling */
+    .ai-analysis-btn .bi-brain {
+      font-size: 1rem;
+      color: #6f42c1;
+    }
+    
+    .ai-analysis-btn:hover .bi-brain {
+      color: #fff;
+    }
+    
+    .ai-analysis-btn.btn-info .bi-brain {
+      color: #fff;
+    }
 
   </style>
 </head>
@@ -169,6 +199,17 @@
                           <a href="#" class="show-full-comment" data-id="<%= item.id %>">Show more</a>
                         <% } %>
                       </p>
+                      
+                      <!-- Transcription Summary -->
+                      <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>" style="display: none;">
+                        <div class="d-flex align-items-center mb-1">
+                          <i class="bi bi-file-text me-1 text-primary"></i>
+                          <small class="fw-semibold text-primary">Transcription Summary</small>
+                        </div>
+                        <div class="transcription-preview bg-light p-2 rounded small" style="max-height: 60px; overflow-y: auto; font-size: 0.8rem;">
+                          <span class="transcription-text text-muted">Loading transcription...</span>
+                        </div>
+                      </div>
                     </div>
                     <!-- Tags -->
                     <div class="mt-auto d-flex flex-wrap gap-1">
@@ -217,7 +258,7 @@
                         <i class="bi bi-share"></i>
                       </button>
                       <button class="btn btn-outline-info btn-sm ai-analysis-btn" data-id="<%= item.id %>" data-bs-toggle="modal" data-bs-target="#aiAnalysisModal" title="View AI Analysis">
-                        <i class="bi bi-robot"></i>
+                        <i class="bi bi-brain"></i>
                       </button>
                     </div>
                     <div class="mt-2">
@@ -380,7 +421,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="aiAnalysisModalLabel">
-            <i class="bi bi-robot me-2"></i>AI Analysis Results
+            <i class="bi bi-brain me-2"></i>AI Analysis Results
           </h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>

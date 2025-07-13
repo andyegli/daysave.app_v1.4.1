@@ -59,7 +59,7 @@ async function loadAIIndicators(contentId) {
       const analysis = result.analysis;
       const indicators = [];
       
-      // Transcription indicator
+      // Transcription indicator and summary
       if (analysis.transcription && analysis.transcription.length > 0) {
         const wordCount = analysis.transcription.split(' ').length;
         indicators.push({
@@ -68,6 +68,9 @@ async function loadAIIndicators(contentId) {
           text: `${wordCount}w`,
           title: `Transcription: ${wordCount} words`
         });
+        
+        // Show transcription summary in content card
+        displayTranscriptionSummary(contentId, analysis.transcription, wordCount);
       }
       
       // Sentiment indicator
@@ -286,12 +289,25 @@ function renderAIAnalysisModal(result) {
   // Transcription
   if (analysis.transcription && analysis.transcription.length > 0) {
     const wordCount = analysis.transcription.split(' ').length;
+    const sentences = analysis.transcription.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const estimatedReadingTime = Math.ceil(wordCount / 200); // Average reading speed: 200 words/minute
+    
     html += `
       <div class="mb-4">
         <h6 class="fw-bold">
-          <i class="bi bi-file-text me-2"></i>Transcription (${wordCount} words)
+          <i class="bi bi-file-text me-2"></i>Full Transcription
         </h6>
-        <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <span class="badge bg-primary me-2">${wordCount} words</span>
+            <span class="badge bg-secondary me-2">${sentences.length} sentences</span>
+            <span class="badge bg-info">~${estimatedReadingTime} min read</span>
+          </div>
+          <button class="btn btn-sm btn-outline-primary" onclick="copyTranscriptionToClipboard()">
+            <i class="bi bi-clipboard me-1"></i>Copy
+          </button>
+        </div>
+        <div class="border rounded p-3 bg-light" style="max-height: 300px; overflow-y: auto; line-height: 1.6;" id="transcriptionContent">
           <p class="mb-0">${analysis.transcription}</p>
         </div>
       </div>
@@ -417,6 +433,39 @@ async function checkOngoingAnalysis() {
 }
 
 /**
+ * Display transcription summary in content card
+ * @param {string} contentId - Content ID
+ * @param {string} transcription - Full transcription text
+ * @param {number} wordCount - Number of words in transcription
+ */
+function displayTranscriptionSummary(contentId, transcription, wordCount) {
+  const summaryContainer = document.getElementById(`transcription-summary-${contentId}`);
+  if (!summaryContainer) return;
+  
+  // Show the summary container
+  summaryContainer.style.display = 'block';
+  
+  // Create summary text (first 100 characters)
+  const summaryText = transcription.length > 100 ? 
+    transcription.substring(0, 100) + '...' : 
+    transcription;
+  
+  // Update the summary content
+  const transcriptionTextElement = summaryContainer.querySelector('.transcription-text');
+  if (transcriptionTextElement) {
+    transcriptionTextElement.textContent = summaryText;
+    transcriptionTextElement.classList.remove('text-muted');
+    transcriptionTextElement.classList.add('text-dark');
+  }
+  
+  // Update the word count in the header
+  const headerElement = summaryContainer.querySelector('.fw-semibold');
+  if (headerElement) {
+    headerElement.textContent = `Transcription Summary (${wordCount} words)`;
+  }
+}
+
+/**
  * Utility Functions
  */
 
@@ -452,4 +501,69 @@ function getSentimentColor(sentiment) {
     'neutral': 'bg-secondary'
   };
   return colors[sentiment] || 'bg-secondary';
+}
+
+/**
+ * Copy transcription to clipboard
+ */
+function copyTranscriptionToClipboard() {
+  const transcriptionContent = document.getElementById('transcriptionContent');
+  if (!transcriptionContent) return;
+  
+  const text = transcriptionContent.textContent || transcriptionContent.innerText;
+  
+  if (navigator.clipboard && window.isSecureContext) {
+    // Use modern clipboard API
+    navigator.clipboard.writeText(text).then(() => {
+      showCopySuccess();
+    }).catch(err => {
+      console.error('Failed to copy transcription:', err);
+      fallbackCopyToClipboard(text);
+    });
+  } else {
+    // Fallback for older browsers
+    fallbackCopyToClipboard(text);
+  }
+}
+
+/**
+ * Fallback copy method for older browsers
+ */
+function fallbackCopyToClipboard(text) {
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.opacity = '0';
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  
+  try {
+    document.execCommand('copy');
+    showCopySuccess();
+  } catch (err) {
+    console.error('Failed to copy transcription:', err);
+    alert('Failed to copy transcription. Please select and copy manually.');
+  }
+  
+  document.body.removeChild(textArea);
+}
+
+/**
+ * Show copy success feedback
+ */
+function showCopySuccess() {
+  const copyButton = document.querySelector('.btn-outline-primary');
+  if (copyButton) {
+    const originalText = copyButton.innerHTML;
+    copyButton.innerHTML = '<i class="bi bi-check me-1"></i>Copied!';
+    copyButton.classList.remove('btn-outline-primary');
+    copyButton.classList.add('btn-success');
+    
+    setTimeout(() => {
+      copyButton.innerHTML = originalText;
+      copyButton.classList.remove('btn-success');
+      copyButton.classList.add('btn-outline-primary');
+    }, 2000);
+  }
 } 
