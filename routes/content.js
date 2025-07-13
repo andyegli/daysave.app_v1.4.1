@@ -88,6 +88,24 @@ async function triggerMultimediaAnalysis(content, user) {
       updateData.description = analysisResults.metadata.description;
     }
     
+    // Store transcription data directly in content record
+    if (analysisResults.transcription && analysisResults.transcription.length > 0) {
+      updateData.transcription = analysisResults.transcription;
+    }
+    
+    // Store sentiment data
+    if (analysisResults.sentiment) {
+      updateData.sentiment = analysisResults.sentiment;
+    }
+    
+    // Store metadata if available
+    if (analysisResults.metadata) {
+      updateData.metadata = {
+        ...(content.metadata || {}),
+        ...analysisResults.metadata
+      };
+    }
+    
     // Add AI-generated summary to user comments
     if (analysisResults.transcription || analysisResults.sentiment) {
       const aiSummary = [];
@@ -485,7 +503,65 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
       where: { content_id: contentId, user_id: userId }
     });
     
-    if (!analysis) {
+    // Check if we have transcription data directly in the content record
+    const hasContentTranscription = content.transcription && content.transcription.length > 0;
+    
+    // If no VideoAnalysis record but we have transcription in content, create a response from content data
+    if (!analysis && hasContentTranscription) {
+      // Parse transcription data from content
+      const transcriptionText = content.transcription;
+      const wordCount = transcriptionText.split(' ').length;
+      
+      // Try to extract speaker count from user_comments if available
+      let speakerCount = 0;
+      if (content.user_comments && content.user_comments.includes('Speakers:')) {
+        const speakerMatch = content.user_comments.match(/Speakers:\s*(\d+)/);
+        if (speakerMatch) {
+          speakerCount = parseInt(speakerMatch[1]);
+        }
+      }
+      
+      // Try to extract sentiment from user_comments if available
+      let sentiment = null;
+      if (content.user_comments && content.user_comments.includes('Sentiment:')) {
+        const sentimentMatch = content.user_comments.match(/Sentiment:\s*(\w+)\s*\((\d+)%\)/);
+        if (sentimentMatch) {
+          sentiment = {
+            label: sentimentMatch[1].toLowerCase(),
+            confidence: parseInt(sentimentMatch[2]) / 100
+          };
+        }
+      }
+      
+      return res.json({
+        success: true,
+        status: 'completed',
+        analysis: {
+          id: content.id,
+          title: content.metadata?.title || 'Content Analysis',
+          description: content.metadata?.description || '',
+          duration: 0,
+          transcription: transcriptionText,
+          sentiment: sentiment,
+          language: 'unknown',
+          processing_time: null,
+          quality_score: null,
+          created_at: content.createdAt
+        },
+        thumbnails: [],
+        speakers: speakerCount > 0 ? Array.from({ length: speakerCount }, (_, i) => ({
+          id: `speaker-${i + 1}`,
+          name: `Speaker ${i + 1}`,
+          confidence: 0.8,
+          gender: 'unknown',
+          language: 'unknown'
+        })) : [],
+        ocr_captions: []
+      });
+    }
+    
+    // If no analysis data at all
+    if (!analysis && !hasContentTranscription) {
       return res.json({
         success: true,
         status: 'not_analyzed',
@@ -493,7 +569,7 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
       });
     }
     
-    // Get related multimedia data
+    // Get related multimedia data for VideoAnalysis records
     const [thumbnails, speakers, ocrCaptions] = await Promise.all([
       Thumbnail.findAll({
         where: { user_id: userId, video_url: content.url },
