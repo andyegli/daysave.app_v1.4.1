@@ -139,16 +139,20 @@ async function loadAIIndicators(contentId) {
         indicatorContainer.appendChild(badge);
       });
       
-      // Show AI analysis button
+      // Show AI analysis button if we have indicators
       const aiButton = document.querySelector(`.ai-analysis-btn[data-id="${contentId}"]`);
       if (aiButton) {
-        aiButton.style.display = 'inline-block';
-        aiButton.classList.remove('btn-outline-info');
-        aiButton.classList.add('btn-info');
+        if (indicators.length > 0) {
+          aiButton.style.display = 'inline-block';
+          aiButton.classList.remove('btn-outline-info');
+          aiButton.classList.add('btn-info');
+        } else {
+          aiButton.style.display = 'none';
+        }
       }
       
-    } else if (result.status === 'not_analyzed') {
-      // Show "No analysis" indicator
+    } else {
+      // No analysis available (status is 'not_analyzed' or other)
       const noAnalysisBadge = document.createElement('span');
       noAnalysisBadge.className = 'badge bg-light text-dark';
       noAnalysisBadge.style.fontSize = '0.7rem';
@@ -164,6 +168,23 @@ async function loadAIIndicators(contentId) {
     
   } catch (error) {
     console.error('Error loading AI indicators:', error);
+    
+    // Show error indicator
+    const indicatorContainer = document.getElementById(`ai-indicators-${contentId}`);
+    if (indicatorContainer) {
+      indicatorContainer.innerHTML = '';
+      const errorBadge = document.createElement('span');
+      errorBadge.className = 'badge bg-light text-dark';
+      errorBadge.style.fontSize = '0.7rem';
+      errorBadge.textContent = 'No AI analysis';
+      indicatorContainer.appendChild(errorBadge);
+    }
+    
+    // Hide AI analysis button
+    const aiButton = document.querySelector(`.ai-analysis-btn[data-id="${contentId}"]`);
+    if (aiButton) {
+      aiButton.style.display = 'none';
+    }
   }
 }
 
