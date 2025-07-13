@@ -168,7 +168,28 @@ docker-compose exec db mysql -u daysave -p daysave_v141 -e "SHOW TABLES;"
 # - and 8 more tables...
 ```
 
-### 6. Start Development Server
+### 6. Sample Data (Optional)
+
+**Add Sample New Zealand Contacts:**
+The project includes realistic sample contact data for testing:
+
+```bash
+# Use the corrected sample data file
+mysql -u daysave -p daysave_v141 < sample_nz_contacts_fixed.sql
+
+# Or manually via MySQL client:
+# 1. First check available users: SELECT id, username, email FROM users LIMIT 5;
+# 2. Run the sample_nz_contacts_fixed.sql file
+```
+
+**Sample includes 10 New Zealand contacts with:**
+- Multiple phone numbers (mobile + work)
+- Multiple addresses (home, work, business)
+- Email addresses and social profiles
+- Realistic NZ locations (Auckland, Wellington, Christchurch, etc.)
+- Professional notes and context
+
+### 7. Start Development Server
 
 **With Docker:**
 ```bash
@@ -390,7 +411,15 @@ MIT License - see LICENSE file for details
   Made with ❤️ by the DaySave Team
 </div>
 
-## Google Maps Autocomplete Integration
+## 📊 Sample Data Files
+
+The project includes sample data for testing and development:
+
+- **`sample_nz_contacts_fixed.sql`** - 10 realistic New Zealand contacts with multiple phones/addresses
+- **`fix_contacts_user_id.sql`** - Helper queries to fix foreign key constraints
+- **`sample_nz_contacts.sql`** - Original sample data (requires manual user ID replacement)
+
+## 🗺️ Google Maps Autocomplete Integration
 
 The contact form uses Google Maps Places Autocomplete for address fields. This works for both initial and dynamically added address fields using robust selector logic.
 
@@ -405,3 +434,10 @@ The contact form uses Google Maps Places Autocomplete for address fields. This w
 - If autocomplete does not work, check the browser console for errors.
 - Ensure the API key is valid and unrestricted for localhost during development.
 - If you add new field types or change naming, update the selector logic accordingly.
+
+### Documentation
+See `docs/google_address_completion.md` for comprehensive technical implementation details, including:
+- Step-by-step code flow and architecture
+- File structure and integration points
+- Performance considerations and security best practices
+- Troubleshooting guide and optimization strategies

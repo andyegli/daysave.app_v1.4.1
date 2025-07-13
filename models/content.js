@@ -65,6 +65,11 @@ module.exports = (sequelize, DataTypes) => {
     Content.hasMany(models.ContentRelation, { as: 'Content1', foreignKey: 'content_id_1' });
     Content.hasMany(models.ContentRelation, { as: 'Content2', foreignKey: 'content_id_2' });
     Content.hasMany(models.ShareLog, { foreignKey: 'content_id' });
+    
+    // Multimedia analysis associations
+    Content.hasMany(models.Thumbnail, { foreignKey: 'content_id', as: 'thumbnails' });
+    Content.hasMany(models.OCRCaption, { foreignKey: 'content_id', as: 'ocrCaptions' });
+    Content.hasOne(models.VideoAnalysis, { foreignKey: 'content_id', as: 'videoAnalysis' });
   };
 
   return Content;

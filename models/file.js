@@ -59,6 +59,11 @@ module.exports = (sequelize, DataTypes) => {
   File.associate = (models) => {
     File.belongsTo(models.User, { foreignKey: 'user_id' });
     File.hasMany(models.ShareLog, { foreignKey: 'file_id' });
+    
+    // Multimedia analysis associations
+    File.hasMany(models.Thumbnail, { foreignKey: 'file_id', as: 'thumbnails' });
+    File.hasMany(models.OCRCaption, { foreignKey: 'file_id', as: 'ocrCaptions' });
+    File.hasOne(models.VideoAnalysis, { foreignKey: 'file_id', as: 'videoAnalysis' });
   };
 
   return File;
