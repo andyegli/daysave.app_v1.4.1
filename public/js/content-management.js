@@ -29,12 +29,23 @@ document.addEventListener('DOMContentLoaded', function() {
           
           // Check if multimedia analysis was triggered
           if (result.multimedia_analysis && result.multimedia_analysis.status === 'started') {
-            message += ' AI analysis is running in the background and will update the content when complete.';
+            message += ' AI analysis is running in the background and will update automatically when complete.';
+            
+            // Start monitoring the new content for analysis completion
+            if (result.content && result.content.id && typeof startMonitoringContentAnalysis === 'function') {
+              startMonitoringContentAnalysis(result.content.id);
+              console.log(`🎬 Started monitoring analysis for new content: ${result.content.id}`);
+            }
+            
+            // Reload page after a shorter delay to show the new content
+            setTimeout(() => { window.location.reload(); }, 1000);
+          } else {
+            // For non-multimedia content, reload immediately
+            setTimeout(() => { window.location.reload(); }, 1000);
           }
           
           alert.textContent = message;
           alert.classList.remove('d-none');
-          setTimeout(() => { window.location.reload(); }, 1500);
         } else {
           alert.className = 'alert alert-danger mt-2';
           alert.textContent = result.error || 'Failed to add content.';

@@ -21,8 +21,14 @@ document.addEventListener('DOMContentLoaded', function() {
   // Handle AI analysis modal
   setupAIAnalysisModal();
   
-  // Check for ongoing analysis every 10 seconds
-  setInterval(checkOngoingAnalysis, 10000);
+  // Check for ongoing analysis every 5 seconds (more responsive)
+  setInterval(checkOngoingAnalysis, 5000);
+  
+  // Track content items that are being analyzed
+  window.analyzingContent = new Set();
+  
+  // Listen for new content additions to start monitoring
+  setupContentAnalysisMonitoring();
 });
 
 /**
@@ -43,6 +49,7 @@ async function initializeAIIndicators() {
 /**
  * Load AI analysis indicators for a specific content item
  * @param {string} contentId - Content ID to load indicators for
+ * @returns {boolean} - True if indicators were updated/added
  */
 async function loadAIIndicators(contentId) {
   try {
@@ -151,6 +158,8 @@ async function loadAIIndicators(contentId) {
         }
       }
       
+      return true; // Indicators were successfully loaded
+      
     } else {
       // No analysis available (status is 'not_analyzed' or other)
       const noAnalysisBadge = document.createElement('span');
@@ -164,6 +173,8 @@ async function loadAIIndicators(contentId) {
       if (aiButton) {
         aiButton.style.display = 'none';
       }
+      
+      return false; // No analysis available
     }
     
   } catch (error) {
@@ -185,6 +196,8 @@ async function loadAIIndicators(contentId) {
     if (aiButton) {
       aiButton.style.display = 'none';
     }
+    
+    return false; // Error occurred
   }
 }
 
@@ -446,9 +459,31 @@ async function checkOngoingAnalysis() {
     const contentId = card.getAttribute('data-id');
     const indicatorContainer = document.getElementById(`ai-indicators-${contentId}`);
     
-    if (indicatorContainer && indicatorContainer.children.length === 0) {
-      // No indicators yet, check if analysis is complete
-      await loadAIIndicators(contentId);
+    if (!indicatorContainer) continue;
+    
+    // Check if this content is being analyzed or has no indicators yet
+    const hasNoIndicators = indicatorContainer.children.length === 0;
+    const isBeingAnalyzed = window.analyzingContent && window.analyzingContent.has(contentId);
+    
+    if (hasNoIndicators || isBeingAnalyzed) {
+      console.log(`🔄 Checking analysis status for content ${contentId}`);
+      
+      // Show loading indicator if being analyzed
+      if (isBeingAnalyzed && hasNoIndicators) {
+        showAnalysisLoadingIndicator(contentId);
+      }
+      
+      // Check if analysis is complete
+      const wasUpdated = await loadAIIndicators(contentId);
+      
+      // If analysis completed, remove from analyzing set and show success
+      if (wasUpdated && isBeingAnalyzed) {
+        window.analyzingContent.delete(contentId);
+        showAnalysisCompletedNotification(contentId);
+        
+        // Refresh the content card to show updated data
+        await refreshContentCard(contentId);
+      }
     }
   }
 }
@@ -587,4 +622,121 @@ function showCopySuccess() {
       copyButton.classList.add('btn-outline-primary');
     }, 2000);
   }
+}
+
+/**
+ * Setup content analysis monitoring for new content
+ */
+function setupContentAnalysisMonitoring() {
+  // Listen for form submissions that add new content
+  const addContentForm = document.getElementById('addContentForm');
+  if (addContentForm) {
+    addContentForm.addEventListener('submit', function(e) {
+      // When content is added, we'll get the content ID from the response
+      // and start monitoring it for analysis completion
+      console.log('🎬 New content being added, will monitor for analysis...');
+    });
+  }
+}
+
+/**
+ * Show loading indicator for content being analyzed
+ * @param {string} contentId - Content ID being analyzed
+ */
+function showAnalysisLoadingIndicator(contentId) {
+  const indicatorContainer = document.getElementById(`ai-indicators-${contentId}`);
+  if (!indicatorContainer) return;
+  
+  // Clear existing content and show loading spinner
+  indicatorContainer.innerHTML = '';
+  
+  const loadingBadge = document.createElement('span');
+  loadingBadge.className = 'badge bg-warning d-flex align-items-center';
+  loadingBadge.style.fontSize = '0.7rem';
+  loadingBadge.innerHTML = `
+    <div class="spinner-border spinner-border-sm me-1" role="status" style="width: 12px; height: 12px;">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    Analyzing...
+  `;
+  
+  indicatorContainer.appendChild(loadingBadge);
+}
+
+/**
+ * Show analysis completed notification
+ * @param {string} contentId - Content ID that completed analysis
+ */
+function showAnalysisCompletedNotification(contentId) {
+  console.log(`✅ Analysis completed for content ${contentId}`);
+  
+  // Create a temporary success notification
+  const toast = document.createElement('div');
+  toast.className = 'alert alert-success position-fixed';
+  toast.style.cssText = 'top: 80px; right: 20px; z-index: 9999; opacity: 0.95; max-width: 300px;';
+  toast.innerHTML = `
+    <div class="d-flex align-items-center">
+      <i class="bi bi-check-circle-fill me-2"></i>
+      <div>
+        <strong>Analysis Complete!</strong><br>
+        <small>Transcription and sentiment analysis ready</small>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.remove();
+  }, 5000);
+}
+
+/**
+ * Refresh content card to show updated analysis data
+ * @param {string} contentId - Content ID to refresh
+ */
+async function refreshContentCard(contentId) {
+  try {
+    console.log(`🔄 Refreshing content card ${contentId}`);
+    
+    // Find the content card
+    const contentCard = document.querySelector(`[data-id="${contentId}"]`);
+    if (!contentCard) {
+      console.log(`❌ Content card not found for ${contentId}`);
+      return;
+    }
+    
+    // Add a subtle animation to indicate refresh
+    contentCard.style.transition = 'transform 0.3s ease';
+    contentCard.style.transform = 'scale(1.02)';
+    
+    setTimeout(() => {
+      contentCard.style.transform = 'scale(1)';
+    }, 300);
+    
+    // The analysis indicators and transcription summary should already be updated
+    // by the loadAIIndicators call, but we can trigger a re-check to be sure
+    await loadAIIndicators(contentId);
+    
+    console.log(`✅ Content card ${contentId} refreshed`);
+    
+  } catch (error) {
+    console.error(`❌ Error refreshing content card ${contentId}:`, error);
+  }
+}
+
+/**
+ * Mark content as being analyzed (called when new content is added)
+ * @param {string} contentId - Content ID to monitor
+ */
+function startMonitoringContentAnalysis(contentId) {
+  if (!window.analyzingContent) {
+    window.analyzingContent = new Set();
+  }
+  
+  window.analyzingContent.add(contentId);
+  console.log(`🎬 Started monitoring analysis for content ${contentId}`);
+  
+  // Show immediate loading indicator
+  showAnalysisLoadingIndicator(contentId);
 } 
