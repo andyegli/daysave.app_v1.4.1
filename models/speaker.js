@@ -263,21 +263,9 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE'
     });
 
-    // Speaker can be associated with multiple Content records through transcription
-    Speaker.hasMany(models.Content, { 
-      foreignKey: 'speaker_id',
-      as: 'content',
-      onDelete: 'SET NULL',
-      onUpdate: 'CASCADE'
-    });
-
-    // Speaker can be associated with multiple File records through transcription
-    Speaker.hasMany(models.File, { 
-      foreignKey: 'speaker_id',
-      as: 'files',
-      onDelete: 'SET NULL',
-      onUpdate: 'CASCADE'
-    });
+    // Note: Speakers are associated with content through VideoAnalysis transcription data
+    // rather than direct foreign key relationships, since speaker identification
+    // happens at the analysis level and multiple speakers can be in one content item
   };
 
   /**

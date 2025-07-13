@@ -58,7 +58,7 @@ function isMultimediaURL(url) {
  */
 async function triggerMultimediaAnalysis(content, user) {
   try {
-    logger.info(`Starting background multimedia analysis for content ${content.id}`, {
+    console.log(`🎬 Starting background multimedia analysis for content ${content.id}`, {
       user_id: user.id,
       content_id: content.id,
       url: content.url
@@ -122,14 +122,14 @@ async function triggerMultimediaAnalysis(content, user) {
         where: { id: content.id, user_id: user.id }
       });
       
-      logger.info(`Content ${content.id} updated with AI analysis results`, {
+      console.log(`✅ Content ${content.id} updated with AI analysis results`, {
         user_id: user.id,
         content_id: content.id,
         updates: Object.keys(updateData)
       });
     }
     
-    logger.info(`Multimedia analysis completed for content ${content.id}`, {
+    console.log(`🎉 Multimedia analysis completed for content ${content.id}`, {
       user_id: user.id,
       content_id: content.id,
       transcription_length: analysisResults.transcription?.length || 0,
@@ -139,7 +139,7 @@ async function triggerMultimediaAnalysis(content, user) {
     });
     
   } catch (error) {
-    logger.error(`Multimedia analysis failed for content ${content.id}`, {
+    logger.logError(`Multimedia analysis failed for content ${content.id}`, {
       user_id: user.id,
       content_id: content.id,
       error: error.message,

@@ -18,10 +18,10 @@ COPY . .
 # Create non-root user first
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Create log directories and set permissions
-RUN mkdir -p /usr/src/app/logs /usr/src/app/app-logs /tmp/daysave-logs && \
-    chown -R appuser:appgroup /usr/src/app/logs /usr/src/app/app-logs /tmp/daysave-logs && \
-    chmod 755 /usr/src/app/logs /usr/src/app/app-logs /tmp/daysave-logs
+# Create log directories, uploads directory, and set permissions
+RUN mkdir -p /usr/src/app/logs /usr/src/app/app-logs /tmp/daysave-logs /usr/src/app/uploads /usr/src/app/temp && \
+    chown -R appuser:appgroup /usr/src/app/logs /usr/src/app/app-logs /tmp/daysave-logs /usr/src/app/uploads /usr/src/app/temp && \
+    chmod 755 /usr/src/app/logs /usr/src/app/app-logs /tmp/daysave-logs /usr/src/app/uploads /usr/src/app/temp
 
 # Switch to non-root user
 USER appuser
