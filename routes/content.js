@@ -107,31 +107,29 @@ async function triggerMultimediaAnalysis(content, user) {
       };
     }
     
-    // Add AI-generated summary to user comments
+    // Log AI analysis results for debugging (don't add to user_comments)
     if (analysisResults.transcription || analysisResults.sentiment) {
-      const aiSummary = [];
+      const logSummary = [];
       
       if (analysisResults.sentiment && analysisResults.sentiment.label) {
-        aiSummary.push(`Sentiment: ${analysisResults.sentiment.label} (${Math.round(analysisResults.sentiment.confidence * 100)}%)`);
+        logSummary.push(`Sentiment: ${analysisResults.sentiment.label} (${Math.round(analysisResults.sentiment.confidence * 100)}%)`);
       }
       
       if (analysisResults.transcription && analysisResults.transcription.length > 0) {
         const wordCount = analysisResults.transcription.split(' ').length;
-        aiSummary.push(`Transcription: ${wordCount} words`);
+        logSummary.push(`Transcription: ${wordCount} words`);
       }
       
       if (analysisResults.speakers && analysisResults.speakers.length > 0) {
-        aiSummary.push(`Speakers: ${analysisResults.speakers.length} identified`);
+        logSummary.push(`Speakers: ${analysisResults.speakers.length} identified`);
       }
       
       if (analysisResults.thumbnails && analysisResults.thumbnails.length > 0) {
-        aiSummary.push(`Thumbnails: ${analysisResults.thumbnails.length} generated`);
+        logSummary.push(`Thumbnails: ${analysisResults.thumbnails.length} generated`);
       }
       
-      if (aiSummary.length > 0) {
-        const existingComments = content.user_comments || '';
-        const aiResults = `\n\n--- AI Analysis Results ---\n${aiSummary.join('\n')}`;
-        updateData.user_comments = existingComments + aiResults;
+      if (logSummary.length > 0) {
+        console.log(`🎬 AI Analysis completed for content ${content.id}:`, logSummary.join(', '));
       }
     }
     
