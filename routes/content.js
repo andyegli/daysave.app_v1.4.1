@@ -3,6 +3,150 @@ const router = express.Router();
 const { isAuthenticated } = require('../middleware');
 const { Content, ContentGroup, ContentGroupMember } = require('../models');
 const { Op } = require('sequelize');
+const { MultimediaAnalyzer } = require('../services/multimedia');
+const logger = require('../config/logger');
+
+// Initialize multimedia analyzer
+const multimediaAnalyzer = new MultimediaAnalyzer();
+
+/**
+ * Detect if URL contains multimedia content that should be analyzed
+ * @param {string} url - URL to analyze
+ * @returns {boolean} - True if URL likely contains video/audio content
+ */
+function isMultimediaURL(url) {
+  if (!url || typeof url !== 'string') return false;
+  
+  const multimediaPatterns = [
+    // Video platforms
+    /youtube\.com\/watch/i,
+    /youtu\.be\//i,
+    /vimeo\.com\//i,
+    /dailymotion\.com\//i,
+    /twitch\.tv\//i,
+    /tiktok\.com\//i,
+    /instagram\.com\/p\//i,
+    /instagram\.com\/reel\//i,
+    /facebook\.com\/watch/i,
+    /twitter\.com\/.*\/status/i,
+    /x\.com\/.*\/status/i,
+    /linkedin\.com\/posts\//i,
+    
+    // Direct video/audio file extensions
+    /\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)(\?|$)/i,
+    /\.(mp3|wav|flac|aac|ogg|wma|m4a)(\?|$)/i,
+    
+    // Streaming platforms
+    /soundcloud\.com\//i,
+    /spotify\.com\//i,
+    /anchor\.fm\//i,
+    /podcasts\.apple\.com\//i,
+    
+    // Video hosting services
+    /wistia\.com\//i,
+    /brightcove\.com\//i,
+    /jwplayer\.com\//i
+  ];
+  
+  return multimediaPatterns.some(pattern => pattern.test(url));
+}
+
+/**
+ * Trigger multimedia analysis for content in background
+ * @param {Object} content - Content record
+ * @param {Object} user - User object
+ */
+async function triggerMultimediaAnalysis(content, user) {
+  try {
+    logger.info(`Starting background multimedia analysis for content ${content.id}`, {
+      user_id: user.id,
+      content_id: content.id,
+      url: content.url
+    });
+
+    // Run multimedia analysis in background
+    const analysisResults = await multimediaAnalyzer.analyzeContent(content.url, {
+      user_id: user.id,
+      content_id: content.id,
+      transcription: true,
+      sentiment: true,
+      thumbnails: true,
+      ocr: true,
+      speaker_identification: true
+    });
+
+    // Update content record with AI-generated results
+    const updateData = {};
+    
+    // Update title if we got one from analysis
+    if (analysisResults.metadata && analysisResults.metadata.title) {
+      updateData.title = analysisResults.metadata.title;
+    }
+    
+    // Update description if we got one from analysis
+    if (analysisResults.metadata && analysisResults.metadata.description) {
+      updateData.description = analysisResults.metadata.description;
+    }
+    
+    // Add AI-generated summary to user comments
+    if (analysisResults.transcription || analysisResults.sentiment) {
+      const aiSummary = [];
+      
+      if (analysisResults.sentiment && analysisResults.sentiment.label) {
+        aiSummary.push(`Sentiment: ${analysisResults.sentiment.label} (${Math.round(analysisResults.sentiment.confidence * 100)}%)`);
+      }
+      
+      if (analysisResults.transcription && analysisResults.transcription.length > 0) {
+        const wordCount = analysisResults.transcription.split(' ').length;
+        aiSummary.push(`Transcription: ${wordCount} words`);
+      }
+      
+      if (analysisResults.speakers && analysisResults.speakers.length > 0) {
+        aiSummary.push(`Speakers: ${analysisResults.speakers.length} identified`);
+      }
+      
+      if (analysisResults.thumbnails && analysisResults.thumbnails.length > 0) {
+        aiSummary.push(`Thumbnails: ${analysisResults.thumbnails.length} generated`);
+      }
+      
+      if (aiSummary.length > 0) {
+        const existingComments = content.user_comments || '';
+        const aiResults = `\n\n--- AI Analysis Results ---\n${aiSummary.join('\n')}`;
+        updateData.user_comments = existingComments + aiResults;
+      }
+    }
+    
+    // Update content record if we have data to update
+    if (Object.keys(updateData).length > 0) {
+      await Content.update(updateData, {
+        where: { id: content.id, user_id: user.id }
+      });
+      
+      logger.info(`Content ${content.id} updated with AI analysis results`, {
+        user_id: user.id,
+        content_id: content.id,
+        updates: Object.keys(updateData)
+      });
+    }
+    
+    logger.info(`Multimedia analysis completed for content ${content.id}`, {
+      user_id: user.id,
+      content_id: content.id,
+      transcription_length: analysisResults.transcription?.length || 0,
+      sentiment: analysisResults.sentiment?.label || 'none',
+      thumbnails_count: analysisResults.thumbnails?.length || 0,
+      speakers_count: analysisResults.speakers?.length || 0
+    });
+    
+  } catch (error) {
+    logger.error(`Multimedia analysis failed for content ${content.id}`, {
+      user_id: user.id,
+      content_id: content.id,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+}
 
 // Main content management page with real data and debugging
 router.get('/', isAuthenticated, async (req, res) => {
@@ -232,7 +376,28 @@ router.post('/', isAuthenticated, async (req, res) => {
       console.log('DEBUG: Group memberships created for content:', content.id);
     }
 
-    res.json({ success: true, content });
+    // Check if URL contains multimedia content and trigger analysis
+    if (isMultimediaURL(url)) {
+      console.log('DEBUG: Multimedia URL detected, triggering analysis for content:', content.id);
+      
+      // Trigger multimedia analysis in background (don't wait for it)
+      setImmediate(() => {
+        triggerMultimediaAnalysis(content, req.user);
+      });
+      
+      // Return success immediately - analysis will update content in background
+      res.json({ 
+        success: true, 
+        content,
+        multimedia_analysis: {
+          status: 'started',
+          message: 'Multimedia analysis has been started and will update content when complete'
+        }
+      });
+    } else {
+      console.log('DEBUG: Non-multimedia URL, skipping analysis for content:', content.id);
+      res.json({ success: true, content });
+    }
   } catch (error) {
     console.error('ERROR creating content:', error);
     res.status(500).json({ error: 'Failed to create content.' });
@@ -298,6 +463,99 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error('ERROR deleting content:', error);
     res.status(500).json({ error: 'Failed to delete content.' });
+  }
+});
+
+// Get multimedia analysis status for content
+router.get('/:id/analysis', isAuthenticated, async (req, res) => {
+  try {
+    const contentId = req.params.id;
+    const userId = req.user.id;
+    
+    // Verify user owns the content
+    const content = await Content.findOne({ where: { id: contentId, user_id: userId } });
+    if (!content) {
+      return res.status(404).json({ error: 'Content not found.' });
+    }
+    
+    // Get multimedia analysis results
+    const { VideoAnalysis, Speaker, Thumbnail, OCRCaption } = require('../models');
+    
+    const analysis = await VideoAnalysis.findOne({
+      where: { content_id: contentId, user_id: userId }
+    });
+    
+    if (!analysis) {
+      return res.json({
+        success: true,
+        status: 'not_analyzed',
+        message: 'No multimedia analysis found for this content'
+      });
+    }
+    
+    // Get related multimedia data
+    const [thumbnails, speakers, ocrCaptions] = await Promise.all([
+      Thumbnail.findAll({
+        where: { user_id: userId, video_url: content.url },
+        order: [['timestamp', 'ASC']],
+        limit: 10
+      }),
+      Speaker.findAll({
+        where: { user_id: userId },
+        order: [['confidence_score', 'DESC']],
+        limit: 5
+      }),
+      OCRCaption.findAll({
+        where: { user_id: userId, video_url: content.url },
+        order: [['timestamp_seconds', 'ASC']],
+        limit: 20
+      })
+    ]);
+    
+    res.json({
+      success: true,
+      status: 'completed',
+      analysis: {
+        id: analysis.id,
+        title: analysis.title,
+        description: analysis.description,
+        duration: analysis.duration,
+        transcription: analysis.transcription,
+        sentiment: {
+          score: analysis.sentiment_score,
+          label: analysis.sentiment_label,
+          confidence: analysis.sentiment_confidence
+        },
+        language: analysis.language_detected,
+        processing_time: analysis.processing_time,
+        quality_score: analysis.quality_score,
+        created_at: analysis.created_at
+      },
+      thumbnails: thumbnails.map(t => ({
+        id: t.id,
+        url: t.thumbnail_url,
+        timestamp: t.timestamp,
+        is_key_moment: t.is_key_moment,
+        confidence: t.confidence_score
+      })),
+      speakers: speakers.map(s => ({
+        id: s.id,
+        name: s.name,
+        confidence: s.confidence_score,
+        gender: s.gender,
+        language: s.language
+      })),
+      ocr_captions: ocrCaptions.map(o => ({
+        id: o.id,
+        text: o.text,
+        timestamp: o.timestamp_seconds,
+        confidence: o.confidence
+      }))
+    });
+    
+  } catch (error) {
+    console.error('ERROR getting content analysis:', error);
+    res.status(500).json({ error: 'Failed to get content analysis.' });
   }
 });
 
