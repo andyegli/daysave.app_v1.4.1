@@ -28,6 +28,7 @@ function isMultimediaURL(url) {
     /instagram\.com\/p\//i,
     /instagram\.com\/reel\//i,
     /facebook\.com\/watch/i,
+    /facebook\.com\/share\/v\//i,
     /twitter\.com\/.*\/status/i,
     /x\.com\/.*\/status/i,
     /linkedin\.com\/posts\//i,
