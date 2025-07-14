@@ -844,13 +844,12 @@ class MultimediaAnalyzer {
   }
 
   /**
-   * Analyze image content
-   * 
+   * Analyze image content with comprehensive fallback
    * @param {string} userId - User ID
    * @param {string} imagePath - Path to image file
    * @param {Object} results - Results object to populate
    * @param {Object} options - Analysis options
-   * @returns {Promise<Object>} Updated results
+   * @returns {Promise<Object>} Analysis results
    */
   async analyzeImage(userId, imagePath, results, options) {
     try {
@@ -858,9 +857,48 @@ class MultimediaAnalyzer {
         console.log('🖼️ Analyzing image content');
       }
 
-      // Object detection
+      // Object detection (with ChatGPT fallback)
       if (options.enableObjectDetection) {
         results.objects = await this.detectObjects(imagePath);
+        
+        if (this.enableLogging) {
+          console.log(`🔍 Found ${results.objects.length} objects using ${results.objects[0]?.provider || 'unknown'} provider`);
+        }
+      }
+
+      // OCR text extraction (with ChatGPT fallback)
+      if (options.enableOCRExtraction) {
+        results.ocrText = await this.extractImageText(userId, imagePath);
+        
+        if (results.ocrText && this.enableLogging) {
+          console.log(`📝 Extracted ${results.ocrText.length} characters of text`);
+        }
+      }
+
+      // Generate comprehensive image description using ChatGPT
+      if (this.openai) {
+        try {
+          const descriptionResult = await this.generateImageDescriptionFromPath(imagePath, {
+            objects: results.objects,
+            text: results.ocrText
+          });
+          
+          if (descriptionResult && descriptionResult.description) {
+            results.description = descriptionResult.description;
+            results.transcription = descriptionResult.description; // For consistency with other content types
+            
+            // Generate sentiment analysis from description
+            if (descriptionResult.description.length > 10) {
+              results.sentiment = await this.analyzeSentiment(descriptionResult.description);
+            }
+            
+            if (this.enableLogging) {
+              console.log(`📖 Generated image description (${results.description.length} chars)`);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Failed to generate image description:', error);
+        }
       }
 
       // Generate thumbnails
@@ -872,9 +910,46 @@ class MultimediaAnalyzer {
         );
       }
 
-      // OCR text extraction
-      if (options.enableOCRExtraction) {
-        results.ocrCaptions = await this.extractImageText(userId, imagePath);
+      // Generate tags based on all available information
+      if (this.openai) {
+        try {
+          results.tags = await this.generateTags({
+            objects: results.objects,
+            description: results.description,
+            ocrText: results.ocrText,
+            type: 'image'
+          });
+          
+          if (this.enableLogging) {
+            console.log(`🏷️ Generated ${results.tags?.length || 0} tags`);
+          }
+        } catch (error) {
+          console.error('❌ Failed to generate tags:', error);
+        }
+      }
+
+      // Generate category
+      if (this.openai) {
+        try {
+          results.category = await this.generateCategory({
+            objects: results.objects,
+            description: results.description,
+            ocrText: results.ocrText,
+            type: 'image'
+          });
+          
+          if (this.enableLogging) {
+            console.log(`📁 Generated category: ${results.category}`);
+          }
+        } catch (error) {
+          console.error('❌ Failed to generate category:', error);
+        }
+      }
+
+      // Ensure we have some basic analysis even if APIs fail
+      if (!results.description && !results.transcription) {
+        results.transcription = this.generateBasicImageDescription(imagePath, results.objects);
+        results.description = results.transcription;
       }
 
       return results;
@@ -882,6 +957,42 @@ class MultimediaAnalyzer {
       console.error('❌ Image analysis failed:', error);
       throw error;
     }
+  }
+
+  /**
+   * Generate basic image description as last resort
+   * @param {string} imagePath - Path to image file
+   * @param {Array} objects - Detected objects
+   * @returns {string} Basic description
+   */
+  generateBasicImageDescription(imagePath, objects = []) {
+    const path = require('path');
+    const filename = path.basename(imagePath);
+    const ext = path.extname(imagePath).toLowerCase();
+    
+    let description = `Image file: ${filename}`;
+    
+    // Add file type info
+    const fileTypes = {
+      '.jpg': 'JPEG image',
+      '.jpeg': 'JPEG image', 
+      '.png': 'PNG image',
+      '.gif': 'GIF image',
+      '.bmp': 'BMP image',
+      '.webp': 'WebP image'
+    };
+    
+    if (fileTypes[ext]) {
+      description += ` (${fileTypes[ext]})`;
+    }
+    
+    // Add object information if available
+    if (objects && objects.length > 0) {
+      const objectNames = objects.map(obj => obj.name).join(', ');
+      description += `. Detected objects: ${objectNames}`;
+    }
+    
+    return description;
   }
 
   /**
@@ -1022,35 +1133,287 @@ class MultimediaAnalyzer {
   }
 
   /**
-   * Detect objects in image using Google Vision API
-   * 
+   * Detect objects in image using Google Vision API or OpenAI Vision as fallback
    * @param {string} imagePath - Path to image file
    * @returns {Promise<Array>} Array of detected objects
    */
   async detectObjects(imagePath) {
     try {
-      if (!this.visionClient && !this.googleApiKey) {
+      // Try Google Vision API first
+      if (this.visionClient && this.googleApiKey) {
         if (this.enableLogging) {
-          console.log('⚠️ Google Vision not available, skipping object detection');
+          console.log('🔍 Detecting objects using Google Vision API');
         }
-        return [];
+
+        const [result] = await this.visionClient.objectLocalization(imagePath);
+        const objects = result.localizedObjectAnnotations || [];
+
+        return objects.map(object => ({
+          name: object.name,
+          confidence: object.score,
+          boundingBox: object.boundingPoly.normalizedVertices,
+          provider: 'google'
+        }));
+      }
+
+      // Fallback to OpenAI Vision
+      if (this.openai) {
+        if (this.enableLogging) {
+          console.log('🔍 Falling back to OpenAI Vision for object detection');
+        }
+        return await this.detectObjectsWithOpenAI(imagePath);
+      }
+
+      // No API available
+      if (this.enableLogging) {
+        console.log('⚠️ No vision API available, skipping object detection');
+      }
+      return [];
+
+    } catch (error) {
+      console.error('❌ Object detection failed:', error);
+      
+      // Try OpenAI fallback if Google Vision failed
+      if (this.openai && !error.message.includes('OpenAI')) {
+        if (this.enableLogging) {
+          console.log('🔄 Trying OpenAI Vision as fallback after Google Vision error');
+        }
+        try {
+          return await this.detectObjectsWithOpenAI(imagePath);
+        } catch (fallbackError) {
+          console.error('❌ OpenAI Vision fallback also failed:', fallbackError);
+        }
+      }
+      
+      return [];
+    }
+  }
+
+  /**
+   * Detect objects using OpenAI Vision API
+   * @param {string} imagePath - Path to image file
+   * @returns {Promise<Array>} Array of detected objects
+   */
+  async detectObjectsWithOpenAI(imagePath) {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      
+      // Read image file and convert to base64
+      const imageBuffer = fs.readFileSync(imagePath);
+      const base64Image = imageBuffer.toString('base64');
+      const mimeType = this.getMimeTypeFromPath(imagePath);
+      
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o-mini", // Use the vision-enabled model
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Analyze this image and identify all objects, people, animals, and things you can see. 
+                
+For each object, provide:
+- name: Clear, concise name
+- confidence: Your confidence level (0.0-1.0)
+- description: Brief description
+
+Return your response as a JSON array in this exact format:
+[
+  {"name": "object_name", "confidence": 0.95, "description": "brief description"},
+  {"name": "another_object", "confidence": 0.87, "description": "brief description"}
+]
+
+Only return the JSON array, no other text.`
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType};base64,${base64Image}`
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.3
+      });
+
+      const content = response.choices[0].message.content;
+      
+      try {
+        const objects = JSON.parse(content);
+        return objects.map(obj => ({
+          name: obj.name,
+          confidence: obj.confidence,
+          description: obj.description,
+          provider: 'openai'
+        }));
+      } catch (parseError) {
+        console.error('Error parsing OpenAI Vision response:', parseError);
+        
+        // Extract objects from natural language response as fallback
+        return this.parseObjectsFromText(content);
+      }
+      
+    } catch (error) {
+      console.error('❌ OpenAI Vision object detection failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Parse objects from natural language text as last resort
+   * @param {string} text - Natural language description
+   * @returns {Array} Array of detected objects
+   */
+  parseObjectsFromText(text) {
+    // Simple extraction of likely objects from text
+    const commonObjects = [
+      'person', 'people', 'man', 'woman', 'child', 'face', 'hand',
+      'car', 'vehicle', 'truck', 'bus', 'bicycle', 'motorcycle',
+      'building', 'house', 'tree', 'flower', 'plant', 'sky', 'cloud',
+      'table', 'chair', 'book', 'phone', 'computer', 'laptop',
+      'food', 'drink', 'bottle', 'glass', 'plate', 'cup',
+      'dog', 'cat', 'bird', 'animal', 'sign', 'text', 'logo'
+    ];
+    
+    const foundObjects = [];
+    const lowerText = text.toLowerCase();
+    
+    commonObjects.forEach(obj => {
+      if (lowerText.includes(obj)) {
+        foundObjects.push({
+          name: obj,
+          confidence: 0.7,
+          description: `Detected "${obj}" in image analysis`,
+          provider: 'openai_text'
+        });
+      }
+    });
+    
+    return foundObjects;
+  }
+
+  /**
+   * Get MIME type from file path
+   * @param {string} filePath - Path to file
+   * @returns {string} MIME type
+   */
+  getMimeTypeFromPath(filePath) {
+    const path = require('path');
+    const ext = path.extname(filePath).toLowerCase();
+    
+    const mimeTypes = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.bmp': 'image/bmp',
+      '.webp': 'image/webp'
+    };
+    
+    return mimeTypes[ext] || 'image/jpeg';
+  }
+
+  /**
+   * Extract text from image using OpenAI Vision as fallback
+   * @param {string} userId - User ID
+   * @param {string} imagePath - Path to image file
+   * @returns {Promise<string>} Extracted text
+   */
+  async extractImageText(userId, imagePath) {
+    try {
+      // Try Google Vision first (if available)
+      if (this.visionClient && this.googleApiKey) {
+        if (this.enableLogging) {
+          console.log('🔍 Extracting text using Google Vision OCR');
+        }
+        
+        const [result] = await this.visionClient.textDetection(imagePath);
+        const detections = result.textAnnotations;
+        
+        if (detections && detections.length > 0) {
+          return detections[0].description || '';
+        }
+      }
+
+      // Fallback to OpenAI Vision
+      if (this.openai) {
+        if (this.enableLogging) {
+          console.log('🔄 Falling back to OpenAI Vision for text extraction');
+        }
+        return await this.extractTextWithOpenAI(imagePath);
       }
 
       if (this.enableLogging) {
-        console.log('🔍 Detecting objects in image');
+        console.log('⚠️ No vision API available for text extraction');
       }
+      return '';
 
-      const [result] = await this.visionClient.objectLocalization(imagePath);
-      const objects = result.localizedObjectAnnotations || [];
-
-      return objects.map(object => ({
-        name: object.name,
-        confidence: object.score,
-        boundingBox: object.boundingPoly.normalizedVertices
-      }));
     } catch (error) {
-      console.error('❌ Object detection failed:', error);
-      return [];
+      console.error('❌ Text extraction failed:', error);
+      
+      // Try OpenAI fallback if Google Vision failed
+      if (this.openai && !error.message.includes('OpenAI')) {
+        try {
+          return await this.extractTextWithOpenAI(imagePath);
+        } catch (fallbackError) {
+          console.error('❌ OpenAI text extraction fallback failed:', fallbackError);
+        }
+      }
+      
+      return '';
+    }
+  }
+
+  /**
+   * Extract text using OpenAI Vision API
+   * @param {string} imagePath - Path to image file
+   * @returns {Promise<string>} Extracted text
+   */
+  async extractTextWithOpenAI(imagePath) {
+    try {
+      const fs = require('fs');
+      const imageBuffer = fs.readFileSync(imagePath);
+      const base64Image = imageBuffer.toString('base64');
+      const mimeType = this.getMimeTypeFromPath(imagePath);
+      
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Extract all text visible in this image. Include:
+- Signs, labels, and captions
+- Handwritten and printed text
+- Text in different languages
+- Numbers and symbols
+
+Return only the extracted text, preserving line breaks and formatting where possible. If no text is found, return an empty string.`
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType};base64,${base64Image}`
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.1
+      });
+
+      return response.choices[0].message.content || '';
+      
+    } catch (error) {
+      console.error('❌ OpenAI text extraction failed:', error);
+      throw error;
     }
   }
 
