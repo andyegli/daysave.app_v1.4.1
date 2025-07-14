@@ -120,6 +120,13 @@ Create a production-ready web application called **DaySave.app** version 1.4.1 u
   - **PUT /api/files/:id**: Update tags, comments, category.
   - **DELETE /api/files/:id**: Remove file and storage.
   - Secure with JWT and rate limiting (`express-rate-limit`).
+- **API Key Management for 3rd Party Access**:
+  - **User API Key Generation**: Users can generate, download, enable/disable API keys
+  - **Granular Permissions**: Route-specific access control with read/write privileges
+  - **Usage Analytics**: Comprehensive statistics, cost tracking, and performance metrics
+  - **Admin Oversight**: Administrator dashboard for key management and monitoring
+  - **Security Features**: Expiry dates, failed attempt monitoring, audit logging
+  - **Rate Limiting**: Per-key rate limits and IP restrictions
 - **Multimedia Analysis Integration**:
   - **Automatic Processing**: When multimedia URLs are submitted, automatic AI analysis runs in background
   - **Supported Platforms**: YouTube, Vimeo, TikTok, Instagram, Facebook, Twitter, SoundCloud, Spotify, direct video/audio files

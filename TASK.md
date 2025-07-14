@@ -285,5 +285,51 @@
   - [x] **Copy Functionality**: Copy buttons work for both transcriptions and image descriptions with appropriate messaging
   - [x] **Comprehensive Logging**: Full audit trail for image analysis pipeline with progress tracking
 
+## Next Priority Development Tasks (v1.4.1+)
+
+### **🔥 HIGH PRIORITY (Active Development)**
+- [ ] **OAuth UX Improvement**: Allow linking without password if user is already verified, or provide alternative secure flows for verified users
+- [ ] **File Upload System**: Implement file upload with Google Cloud Storage integration and admin-configurable limits for supported file types
+- [ ] **API Key Management System**: Comprehensive 3rd party API access management
+  - [ ] User-generated API keys with download capability
+  - [ ] Enable/disable functionality for users and administrators
+  - [ ] Granular route permissions with read/write privileges
+  - [ ] Usage statistics, cost tracking, and audit logging
+  - [ ] Admin dashboard for key oversight and management
+  - [ ] Expiry date configuration and automatic expiration
+  - [ ] Failed attempt monitoring and security alerts
+- [ ] **Subscription Management (Mock)**: Implement subscription plans with local database mock transactions (Free, Small, Medium, Large, Unlimited)
+
+### **⚡ MEDIUM PRIORITY (Enhanced Features)**
+- [ ] **JSDoc Documentation**: Complete comprehensive code documentation
+  - [ ] Function and class documentation with examples
+  - [ ] Parameter descriptions and return value documentation
+  - [ ] Type definitions and error handling documentation
+  - [ ] Auto-generated HTML documentation
+- [ ] **Security Enhancements**: Advanced security features
+  - [ ] API key rotation and request authentication
+  - [ ] Monitoring and anomaly detection
+  - [ ] Geographic monitoring and real-time alerts
+  - [ ] Request signing and timestamp validation
+- [ ] **Social Media Token Refresh**: Automatic token refresh for all 11 platforms with node-cron
+  - [ ] Benefits: Seamless user experience, background processing, reliability, data continuity
+  - [ ] Impact: No manual re-authentication, consistent content flow, reduced support tickets
+
+### **🔽 LOWER PRIORITY (Future Implementation)**
+- [ ] **Production Deployment**: Deploy to Google Cloud App Engine with Cloud SQL database
+- [ ] **Redis Caching**: Setup Redis for performance and token refresh management
+- [ ] **Email/SMS Alerts**: SendGrid email and Twilio SMS notifications (currently using Google Forms)
+- [ ] **Performance Optimization**: Query optimization, caching, and load testing
+- [ ] **Comprehensive Testing**: Integration tests, performance tests, user acceptance tests
+- [ ] **Business Intelligence**: Analytics dashboard, reporting, and metrics
+
+### **📱 MOBILE DEVELOPMENT (Future Phase)**
+- [ ] **iOS Mobile App Development**: React Native MVP for TestFlight demonstration
+  - [ ] Technology Stack: React Native for code sharing and faster development
+  - [ ] Core Features: Content management, AI analysis display, contact management, OAuth authentication
+  - [ ] Development Plan: 8-week timeline with progressive feature implementation
+  - [ ] Target: TestFlight beta testing with comprehensive user feedback
+  - [ ] Success Metrics: User engagement, feature usage, performance, crash rate
+
 ## Summary
 The multimedia analysis integration is fully functional and production-ready. Users can submit multimedia URLs (videos, audio, and images), get automatic AI analysis, view results in enhanced UI with visual indicators, and access detailed analysis via modal. Videos get transcriptions and summaries, images get AI-generated descriptions and summaries, treating both equally in the content management workflow. The AI Analysis Modal features scrollable content, inline editing of summaries, copy-to-clipboard functionality, and comprehensive user feedback. All data is properly stored and linked in the database. The complete workflow from URL submission to AI-enhanced content display and management works successfully for all multimedia types with 4 new database tables, comprehensive API endpoints, and real-time UI updates.
