@@ -139,7 +139,7 @@ router.post('/upload', [
     }
 
     const uploadResults = [];
-    const errors = [];
+    const uploadErrors = [];
 
     // Process each uploaded file
     for (const file of req.files) {
@@ -147,7 +147,7 @@ router.post('/upload', [
         // Validate file
         const validation = await FileUploadService.validateFile(file);
         if (!validation.isValid) {
-          errors.push({
+          uploadErrors.push({
             filename: file.originalname,
             errors: validation.errors
           });
@@ -210,7 +210,7 @@ router.post('/upload', [
 
       } catch (uploadError) {
         console.error('Individual file upload error:', uploadError);
-        errors.push({
+        uploadErrors.push({
           filename: file.originalname,
           errors: [uploadError.message]
         });
@@ -221,11 +221,11 @@ router.post('/upload', [
     const response = {
       success: uploadResults.length > 0,
       uploaded: uploadResults,
-      errors,
+      errors: uploadErrors,
       summary: {
         total: req.files.length,
         successful: uploadResults.length,
-        failed: errors.length
+        failed: uploadErrors.length
       }
     };
 
@@ -236,8 +236,8 @@ router.post('/upload', [
       if (response.success) {
         req.session.uploadSuccess = `Successfully uploaded ${uploadResults.length} file(s)`;
       }
-      if (errors.length > 0) {
-        req.session.uploadErrors = errors;
+      if (uploadErrors.length > 0) {
+        req.session.uploadErrors = uploadErrors;
       }
       res.redirect('/files');
     }

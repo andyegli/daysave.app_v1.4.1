@@ -181,6 +181,65 @@ function requireTesterPermission(req, res, next) {
   next();
 }
 
+/**
+ * Middleware to check if user is admin
+ * Used to restrict access to admin routes
+ */
+const isAdmin = (req, res, next) => {
+  const clientDetails = getClientDetails(req);
+  
+  if (!req.isAuthenticated()) {
+    logAuthEvent('ADMIN_CHECK_FAILED_NOT_AUTHENTICATED', {
+      ...clientDetails,
+      requestedUrl: req.originalUrl
+    });
+    if (req.accepts(['html', 'json']) === 'html') {
+      return res.redirect('/auth/login');
+    } else {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+  }
+
+  // Use the consistent Role property (capital R from Sequelize include)
+  const userRole = req.user.Role?.name;
+  
+  if (!userRole) {
+    logAuthEvent('ADMIN_CHECK_FAILED_NO_ROLE', {
+      ...clientDetails,
+      userId: req.user.id,
+      username: req.user.username
+    });
+    return res.status(403).json({ error: 'User role not found' });
+  }
+
+  if (userRole === 'admin') {
+    logAuthEvent('ADMIN_CHECK_SUCCESS', {
+      ...clientDetails,
+      userId: req.user.id,
+      username: req.user.username,
+      userRole
+    });
+    return next();
+  }
+
+  logAuthEvent('ADMIN_CHECK_FAILED_INSUFFICIENT_PERMISSIONS', {
+    ...clientDetails,
+    userId: req.user.id,
+    username: req.user.username,
+    userRole
+  });
+
+  if (req.accepts(['html', 'json']) === 'html') {
+    return res.status(403).render('error', {
+      user: req.user,
+      title: 'Access Denied',
+      message: 'You need admin privileges to access this page.'
+    });
+  } else {
+    return res.status(403).json({ error: 'Admin privileges required' });
+  }
+};
+
 module.exports = {
   isAuthenticated,
   isNotAuthenticated,
@@ -188,5 +247,6 @@ module.exports = {
   logAuthAttempt,
   getClientDetails,
   ensureRoleLoaded,
-  requireTesterPermission
+  requireTesterPermission,
+  isAdmin
 }; 
