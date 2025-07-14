@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { FileUploadService } = require('../services/fileUploadService');
+const FileUploadService = require('../services/fileUpload');
 const { File, User, ContentGroup, ContentGroupMember } = require('../models');
 const { isAuthenticated, isAdmin, checkUsageLimit, checkFileSizeLimit, updateUsage } = require('../middleware');
 const { body, param, query, validationResult } = require('express-validator');
