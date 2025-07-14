@@ -348,8 +348,16 @@ class FileUploadService {
 
         return url;
       } else {
-        // Return local file path
-        return filePath;
+        // Convert relative web path to absolute file system path for local files
+        if (filePath.startsWith('/uploads/')) {
+          const fileName = filePath.replace('/uploads/', '');
+          const uploadsDir = path.join(__dirname, '../uploads');
+          const absolutePath = path.join(uploadsDir, fileName);
+          return absolutePath;
+        } else {
+          // Return path as-is if it's already absolute
+          return filePath;
+        }
       }
     } catch (error) {
       console.error('Error getting file URL:', error);

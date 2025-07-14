@@ -461,6 +461,61 @@ class MultimediaAnalyzer {
               });
             }
           }
+        } else if (this.isLocalImageFile(url) && analysisOptions.transcription) {
+          // Handle local image file analysis - generate description instead of transcription
+          try {
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.progress(user_id, content_id, 'image_analysis_start', 30, {
+                provider: 'google_vision_ai'
+              });
+            }
+            
+            // Analyze the local image file directly
+            const imageAnalysisResult = await this.analyzeImage(user_id, url, results, {
+              enableObjectDetection: true,
+              enableImageDescription: true,
+              enableOCRExtraction: true
+            });
+            
+            if (imageAnalysisResult && imageAnalysisResult.description) {
+              // Use image description as "transcription" for images
+              results.transcription = imageAnalysisResult.description;
+              results.auto_tags.push('image', 'visual', 'photo');
+              
+              // Add image-specific metadata
+              results.metadata.imageAnalysis = {
+                objectsDetected: imageAnalysisResult.objects?.length || 0,
+                hasText: imageAnalysisResult.text?.length > 0,
+                confidence: imageAnalysisResult.confidence || 0,
+                analysis_provider: 'google_vision_ai'
+              };
+              
+              if (user_id && content_id) {
+                const logger = require('../../config/logger');
+                logger.multimedia.progress(user_id, content_id, 'image_analysis_complete', 70, {
+                  description_length: results.transcription.length,
+                  objects_detected: imageAnalysisResult.objects?.length || 0
+                });
+              }
+            } else {
+              results.transcription = 'Image analysis could not generate a description for this content.';
+              results.auto_tags.push('image', 'analysis_partial');
+            }
+            
+          } catch (error) {
+            console.error('❌ Image analysis failed:', error);
+            results.transcription = 'Image analysis failed for this content.';
+            results.auto_tags.push('unknown', 'image', 'analysis_error');
+            
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.error(user_id, content_id, error, {
+                step: 'image_analysis',
+                url
+              });
+            }
+          }
         } else if (this.isImageUrl(url) && analysisOptions.transcription) {
           // Handle image analysis - generate description instead of transcription
           try {
@@ -1737,6 +1792,11 @@ class MultimediaAnalyzer {
   isImageUrl(url) {
     if (!url || typeof url !== 'string') return false;
     
+    // If it's a local file path (absolute path), don't treat it as a URL
+    if (url.startsWith('/') && !url.startsWith('//')) {
+      return false; // Local file path, not a URL
+    }
+    
     const imagePatterns = [
       // Direct image file extensions
       /\.(jpg|jpeg|png|gif|bmp|webp|svg|tiff|tif)(\?|$)/i,
@@ -1760,6 +1820,24 @@ class MultimediaAnalyzer {
     ];
     
     return imagePatterns.some(pattern => pattern.test(url));
+  }
+
+  /**
+   * Check if a path is a local image file
+   * @param {string} path - The path to check
+   * @returns {boolean} True if it's a local image file path
+   */
+  isLocalImageFile(path) {
+    if (!path || typeof path !== 'string') return false;
+    
+    // Check if it's a local file path (absolute path starting with /)
+    if (path.startsWith('/') && !path.startsWith('//')) {
+      // Check if it has an image extension
+      const imageExtensions = /\.(jpg|jpeg|png|gif|bmp|webp|svg|tiff|tif)$/i;
+      return imageExtensions.test(path);
+    }
+    
+    return false;
   }
 
   /**
