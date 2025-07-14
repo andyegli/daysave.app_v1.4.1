@@ -320,19 +320,69 @@ function renderAIAnalysisModal(result) {
     `;
   }
   
-  // Summary
-  if (analysis.summary && analysis.summary.length > 0) {
-    html += `
-      <div class="mb-4">
-        <h6 class="fw-bold">
+  // Summary with Edit and Copy functionality
+  // Enhanced summary section with inline editing and copy-to-clipboard features
+  html += `
+    <div class="mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="fw-bold mb-0">
           <i class="bi bi-file-earmark-text me-2"></i>Content Summary
         </h6>
-        <div class="border rounded p-3 bg-light">
-          <p class="mb-0 fst-italic">${analysis.summary}</p>
+        <div class="btn-group" role="group">
+          <button class="btn btn-sm btn-outline-primary" onclick="copySummaryToClipboard()" title="Copy Summary">
+            <i class="bi bi-clipboard me-1"></i>Copy
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="editSummary('${result.analysis.id}')" title="Edit Summary">
+            <i class="bi bi-pencil me-1"></i>Edit
+          </button>
+        </div>
+      </div>
+  `;
+  
+  if (analysis.summary && analysis.summary.length > 0) {
+    html += `
+      <div class="border rounded p-3 bg-light" id="summaryContent">
+        <p class="mb-0 fst-italic" id="summaryText">${analysis.summary}</p>
+      </div>
+      <div class="d-none" id="summaryEditMode">
+        <textarea class="form-control mb-2" id="summaryEditArea" rows="4" placeholder="Enter summary...">${analysis.summary}</textarea>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-success" onclick="saveSummary('${result.analysis.id}')">
+            <i class="bi bi-check-lg me-1"></i>Save
+          </button>
+          <button class="btn btn-sm btn-secondary" onclick="cancelSummaryEdit()">
+            <i class="bi bi-x-lg me-1"></i>Cancel
+          </button>
+        </div>
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="border rounded p-3 bg-light-subtle" id="summaryContent">
+        <div class="text-center text-muted">
+          <i class="bi bi-info-circle me-2"></i>
+          <em>Summary not available</em>
+        </div>
+        <small class="text-muted d-block mt-2">
+          AI summarization may not be available for this content type, 
+          or the content may be too short to generate a meaningful summary.
+        </small>
+      </div>
+      <div class="d-none" id="summaryEditMode">
+        <textarea class="form-control mb-2" id="summaryEditArea" rows="4" placeholder="Enter summary..."></textarea>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-success" onclick="saveSummary('${result.analysis.id}')">
+            <i class="bi bi-check-lg me-1"></i>Save
+          </button>
+          <button class="btn btn-sm btn-secondary" onclick="cancelSummaryEdit()">
+            <i class="bi bi-x-lg me-1"></i>Cancel
+          </button>
         </div>
       </div>
     `;
   }
+  
+  html += `</div>`;
   
   // Transcription
   if (analysis.transcription && analysis.transcription.length > 0) {
@@ -728,9 +778,74 @@ async function refreshContentCard(contentId) {
       contentCard.style.transform = 'scale(1)';
     }, 300);
     
-    // The analysis indicators and transcription summary should already be updated
-    // by the loadAIIndicators call, but we can trigger a re-check to be sure
+    // Refresh the analysis indicators and transcription summary
     await loadAIIndicators(contentId);
+    
+    // Get updated content data from server
+    try {
+      const response = await fetch(`/content/${contentId}/analysis`);
+      const result = await response.json();
+      
+      if (result.success && result.status === 'completed' && result.analysis) {
+        const analysis = result.analysis;
+        
+        // Update title if it has changed
+        const titleElement = contentCard.querySelector('.card-title');
+        if (titleElement && analysis.title && analysis.title !== 'Content Analysis') {
+          titleElement.textContent = analysis.title;
+          titleElement.title = analysis.title;
+        }
+        
+        // Update thumbnail if available
+        const thumbnailContainer = contentCard.querySelector('.flex-shrink-0');
+        if (thumbnailContainer && analysis.metadata && analysis.metadata.thumbnail) {
+          const existingImage = thumbnailContainer.querySelector('img');
+          if (existingImage) {
+            existingImage.src = analysis.metadata.thumbnail;
+          } else {
+            // Replace icon with thumbnail
+            const link = thumbnailContainer.querySelector('a');
+            if (link) {
+              link.innerHTML = `<img src="${analysis.metadata.thumbnail}" class="img-fluid" alt="Thumbnail">`;
+            }
+          }
+        }
+        
+        // Update auto tags if available
+        const tagsContainer = contentCard.querySelector('.d-flex.flex-wrap.gap-1');
+        if (tagsContainer && analysis.auto_tags && analysis.auto_tags.length > 0) {
+          // Find existing auto tags and update them
+          const existingAutoTags = tagsContainer.querySelectorAll('.badge.bg-info');
+          
+          // Remove old auto tags
+          existingAutoTags.forEach(tag => tag.remove());
+          
+          // Add new auto tags
+          analysis.auto_tags.forEach(tag => {
+            const tagElement = document.createElement('span');
+            tagElement.className = 'badge bg-info';
+            tagElement.textContent = tag;
+            tagsContainer.appendChild(tagElement);
+          });
+        }
+        
+        // Update category display if available
+        if (analysis.category) {
+          // Add category badge if not exists
+          const categoryBadge = document.createElement('span');
+          categoryBadge.className = 'badge bg-warning';
+          categoryBadge.textContent = analysis.category;
+          const tagsContainer = contentCard.querySelector('.d-flex.flex-wrap.gap-1');
+          if (tagsContainer) {
+            tagsContainer.appendChild(categoryBadge);
+          }
+        }
+        
+        console.log(`✅ Content card ${contentId} refreshed with new data`);
+      }
+    } catch (error) {
+      console.error(`❌ Error fetching updated content data for ${contentId}:`, error);
+    }
     
     console.log(`✅ Content card ${contentId} refreshed`);
     
@@ -740,17 +855,195 @@ async function refreshContentCard(contentId) {
 }
 
 /**
- * Mark content as being analyzed (called when new content is added)
+ * Start monitoring content analysis progress
  * @param {string} contentId - Content ID to monitor
  */
 function startMonitoringContentAnalysis(contentId) {
-  if (!window.analyzingContent) {
-    window.analyzingContent = new Set();
+  // Check every 5 seconds
+  const interval = setInterval(async () => {
+    const status = await checkOngoingAnalysis();
+    if (status.completed.includes(contentId)) {
+      clearInterval(interval);
+      showAnalysisCompletedNotification(contentId);
+      await refreshContentCard(contentId);
+    }
+  }, 5000);
+}
+
+/**
+ * Summary Management Functions
+ * Enhanced functionality for AI-generated content summaries
+ */
+
+/**
+ * Copy summary content to clipboard
+ * Handles both modern clipboard API and fallback methods
+ * @returns {void}
+ */
+function copySummaryToClipboard() {
+  const summaryText = document.getElementById('summaryText');
+  if (!summaryText) {
+    alert('No summary available to copy');
+    return;
   }
   
-  window.analyzingContent.add(contentId);
-  console.log(`🎬 Started monitoring analysis for content ${contentId}`);
+  const text = summaryText.textContent || summaryText.innerText;
   
-  // Show immediate loading indicator
-  showAnalysisLoadingIndicator(contentId);
+  if (navigator.clipboard && window.isSecureContext) {
+    // Use modern clipboard API for secure contexts
+    navigator.clipboard.writeText(text).then(() => {
+      showCopySuccess('Summary copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy summary:', err);
+      fallbackCopyToClipboard(text);
+    });
+  } else {
+    // Fallback for older browsers or non-secure contexts
+    fallbackCopyToClipboard(text);
+  }
+}
+
+/**
+ * Enter edit mode for summary
+ * Switches from display mode to inline editing mode
+ * @param {string} contentId - Content ID being edited
+ * @returns {void}
+ */
+function editSummary(contentId) {
+  const summaryContent = document.getElementById('summaryContent');
+  const summaryEditMode = document.getElementById('summaryEditMode');
+  
+  if (summaryContent && summaryEditMode) {
+    // Switch to edit mode
+    summaryContent.classList.add('d-none');
+    summaryEditMode.classList.remove('d-none');
+    
+    // Focus on textarea and position cursor at end
+    const textarea = document.getElementById('summaryEditArea');
+    if (textarea) {
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }
+  }
+}
+
+/**
+ * Cancel summary edit mode
+ * Returns to display mode without saving changes
+ * @returns {void}
+ */
+function cancelSummaryEdit() {
+  const summaryContent = document.getElementById('summaryContent');
+  const summaryEditMode = document.getElementById('summaryEditMode');
+  
+  if (summaryContent && summaryEditMode) {
+    // Switch back to display mode
+    summaryContent.classList.remove('d-none');
+    summaryEditMode.classList.add('d-none');
+    
+    // Reset textarea to original value
+    const textarea = document.getElementById('summaryEditArea');
+    const originalText = document.getElementById('summaryText');
+    if (textarea && originalText) {
+      textarea.value = originalText.textContent || originalText.innerText || '';
+    }
+  }
+}
+
+/**
+ * Save summary changes to database
+ * Persists edited summary content and updates UI
+ * @param {string} contentId - Content ID to update
+ * @returns {Promise<void>}
+ */
+async function saveSummary(contentId) {
+  const textarea = document.getElementById('summaryEditArea');
+  if (!textarea) return;
+  
+  const newSummary = textarea.value.trim();
+  
+  try {
+    // Send PUT request to update content
+    const response = await fetch(`/content/${contentId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        summary: newSummary
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      // Update the display with new summary
+      const summaryText = document.getElementById('summaryText');
+      const summaryContent = document.getElementById('summaryContent');
+      
+      if (newSummary) {
+        // Update existing summary
+        summaryText.textContent = newSummary;
+        summaryContent.innerHTML = `<p class="mb-0 fst-italic" id="summaryText">${newSummary}</p>`;
+      } else {
+        // Show placeholder when summary is empty
+        summaryContent.innerHTML = `
+          <div class="text-center text-muted">
+            <i class="bi bi-info-circle me-2"></i>
+            <em>Summary not available</em>
+          </div>
+          <small class="text-muted d-block mt-2">
+            AI summarization may not be available for this content type, 
+            or the content may be too short to generate a meaningful summary.
+          </small>
+        `;
+      }
+      
+      // Exit edit mode
+      cancelSummaryEdit();
+      
+      // Show success feedback
+      showCopySuccess('Summary updated successfully!');
+      
+    } else {
+      throw new Error(result.error || 'Failed to update summary');
+    }
+    
+  } catch (error) {
+    console.error('Error updating summary:', error);
+    alert('Failed to update summary. Please try again.');
+  }
+}
+
+/**
+ * Enhanced copy success notification
+ * Shows a dismissible toast notification for user feedback
+ * @param {string} message - Message to display (default: 'Copied to clipboard!')
+ * @returns {void}
+ */
+function showCopySuccess(message = 'Copied to clipboard!') {
+  // Remove existing success message to prevent duplicates
+  const existing = document.querySelector('.copy-success-toast');
+  if (existing) {
+    existing.remove();
+  }
+  
+  // Create new success toast notification
+  const toast = document.createElement('div');
+  toast.className = 'copy-success-toast position-fixed top-0 end-0 m-3 alert alert-success alert-dismissible fade show';
+  toast.style.zIndex = '9999';
+  toast.innerHTML = `
+    <i class="bi bi-check-circle me-2"></i>
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  // Auto-remove toast after 3 seconds
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.remove();
+    }
+  }, 3000);
 } 

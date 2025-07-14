@@ -116,12 +116,27 @@ async function triggerMultimediaAnalysis(content, user) {
       updateData.sentiment = analysisResults.sentiment;
     }
     
-    // Store metadata if available
+    // Store auto tags if available
+    if (analysisResults.auto_tags && analysisResults.auto_tags.length > 0) {
+      updateData.auto_tags = analysisResults.auto_tags;
+    }
+    
+    // Store category if available
+    if (analysisResults.category) {
+      updateData.category = analysisResults.category;
+    }
+    
+    // Store metadata if available (including thumbnails)
     if (analysisResults.metadata) {
       updateData.metadata = {
         ...(content.metadata || {}),
         ...analysisResults.metadata
       };
+      
+      // Ensure thumbnail URL is accessible if available
+      if (analysisResults.metadata.thumbnail) {
+        updateData.metadata.thumbnail = analysisResults.metadata.thumbnail;
+      }
     }
     
     // Log AI analysis results for debugging (don't add to user_comments)
@@ -456,19 +471,60 @@ router.get('/manage', isAuthenticated, (req, res) => {
   res.render('content/manage', { user: req.user, contentItems });
 });
 
-// Update content
+/**
+ * Update content record
+ * PUT /content/:id
+ * 
+ * Updates existing content with new information including:
+ * - title: Content title
+ * - user_comments: User-provided comments
+ * - user_tags: User-defined tags array
+ * - summary: AI-generated or user-edited summary
+ * - group_ids: Content group memberships
+ * 
+ * @param {string} req.params.id - Content ID
+ * @param {Object} req.body - Update data
+ * @returns {Object} Updated content record
+ */
 router.put('/:id', isAuthenticated, async (req, res) => {
   try {
-    const { title, user_comments, user_tags, group_ids } = req.body;
+    const { title, user_comments, user_tags, summary, group_ids } = req.body;
     const content = await Content.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    
     if (!content) {
       return res.status(404).json({ error: 'Content not found.' });
     }
-    // Update fields
+    
+    // Store original values for audit logging
+    const originalValues = {
+      title: content.title,
+      user_comments: content.user_comments,
+      user_tags: content.user_tags,
+      summary: content.summary
+    };
+    
+    // Update fields with validation
     if (title !== undefined) content.title = title;
     if (user_comments !== undefined) content.user_comments = user_comments;
     if (user_tags !== undefined) content.user_tags = Array.isArray(user_tags) ? user_tags : [];
+    if (summary !== undefined) content.summary = summary; // Support for AI summary editing
+    
     await content.save();
+    
+    // Log content update activity
+    const updatedFields = [];
+    if (title !== undefined && title !== originalValues.title) updatedFields.push('title');
+    if (user_comments !== undefined && user_comments !== originalValues.user_comments) updatedFields.push('user_comments');
+    if (user_tags !== undefined && JSON.stringify(user_tags) !== JSON.stringify(originalValues.user_tags)) updatedFields.push('user_tags');
+    if (summary !== undefined && summary !== originalValues.summary) updatedFields.push('summary');
+    
+    if (updatedFields.length > 0) {
+      logger.user.contentUpdate(req.user.id, content.id, updatedFields, {
+        original: originalValues,
+        updated: { title, user_comments, user_tags, summary }
+      });
+    }
+    
     // Update group memberships if provided
     if (Array.isArray(group_ids)) {
       await ContentGroupMember.destroy({ where: { content_id: content.id } });
@@ -476,9 +532,20 @@ router.put('/:id', isAuthenticated, async (req, res) => {
       if (groupMemberships.length > 0) {
         await ContentGroupMember.bulkCreate(groupMemberships);
       }
+      
+      // Log group membership changes
+      logger.user.contentGroupUpdate(req.user.id, content.id, group_ids);
     }
+    
     res.json({ success: true, content });
+    
   } catch (error) {
+    console.error('Error updating content:', error);
+    logger.error('Content update failed', {
+      user_id: req.user.id,
+      content_id: req.params.id,
+      error: error.message
+    });
     res.status(500).json({ error: 'Failed to update content.' });
   }
 });
@@ -525,6 +592,36 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     // Check if we have transcription data directly in the content record
     const hasContentTranscription = content.transcription && content.transcription.length > 0;
     
+    // Function to get proper title (reuse from main route)
+    function getContentTitle(item) {
+      // First try metadata title
+      if (item.metadata && item.metadata.title) {
+        return item.metadata.title;
+      }
+      
+      // Then try content title field
+      if (item.title && item.title.trim()) {
+        return item.title;
+      }
+      
+      // Fallback: extract from URL
+      if (item.url) {
+        try {
+          const url = new URL(item.url);
+          const hostname = url.hostname.replace('www.', '');
+          const pathname = url.pathname.replace(/\/$/, '').split('/').pop();
+          if (pathname && pathname.length > 3) {
+            return `${hostname} - ${pathname.replace(/[-_]/g, ' ')}`;
+          }
+          return hostname;
+        } catch (e) {
+          return item.url;
+        }
+      }
+      
+      return 'Untitled Content';
+    }
+    
     // If no VideoAnalysis record but we have transcription in content, create a response from content data
     if (!analysis && hasContentTranscription) {
       // Parse transcription data from content
@@ -560,7 +657,7 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
         status: 'completed',
         analysis: {
           id: content.id,
-          title: content.metadata?.title || 'Content Analysis',
+          title: getContentTitle(content),
           description: content.metadata?.description || '',
           duration: 0,
           transcription: transcriptionText,
@@ -616,10 +713,11 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
       status: 'completed',
       analysis: {
         id: analysis.id,
-        title: analysis.title,
+        title: analysis.title || getContentTitle(content),
         description: analysis.description,
         duration: analysis.duration,
         transcription: analysis.transcription,
+        summary: analysis.summary || content.summary || '',
         sentiment: {
           score: analysis.sentiment_score,
           label: analysis.sentiment_label,
