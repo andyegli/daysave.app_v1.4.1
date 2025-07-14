@@ -1323,7 +1323,7 @@ class MultimediaAnalyzer {
   }
 
   /**
-   * Extract YouTube transcription using yt-dlp captions
+   * Extract YouTube captions using yt-dlp
    * 
    * @param {string} url - YouTube URL
    * @returns {Promise<Object>} Transcription result
@@ -1345,7 +1345,8 @@ class MultimediaAnalyzer {
         }
         
         // Try to extract auto-generated captions first, then manual captions
-        const command = `yt-dlp --write-auto-sub --write-sub --sub-lang en --sub-format vtt --skip-download -o "${outputPath}" "${url}"`;
+        // Add --no-check-certificates to fix SSL certificate issues
+        const command = `yt-dlp --no-check-certificates --write-auto-sub --write-sub --sub-lang en --sub-format vtt --skip-download -o "${outputPath}" "${url}"`;
         
         if (this.enableLogging) {
           console.log('🎬 Executing yt-dlp caption extraction:', command);
@@ -1429,7 +1430,8 @@ class MultimediaAnalyzer {
         }
         
         // Download audio only
-        const command = `yt-dlp -f "bestaudio[ext=m4a]/bestaudio/best" -o "${outputPath}" "${url}"`;
+        // Add --no-check-certificates to fix SSL certificate issues
+        const command = `yt-dlp --no-check-certificates -f "bestaudio[ext=m4a]/bestaudio/best" -o "${outputPath}" "${url}"`;
         
         if (this.enableLogging) {
           console.log('🎵 Downloading YouTube audio for transcription:', command);
