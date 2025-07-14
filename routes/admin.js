@@ -3,28 +3,144 @@ const router = express.Router();
 const { User, Role } = require('../models');
 const { logAuthEvent, logAuthError } = require('../config/logger');
 const { isAuthenticated } = require('../middleware');
+const { body, validationResult, param } = require('express-validator');
 
-// Placeholder admin check middleware
-async function isAdmin(req, res, next) {
-  if (!req.isAuthenticated() || !req.user || !req.user.role_id) {
-    // Log admin access denial
-    logAuthEvent('ADMIN_ACCESS_DENIED', {
-      userId: req.user?.id || null,
-      username: req.user?.username || null,
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-      reason: 'not_authenticated_or_no_role',
-      requestPath: req.path,
-      timestamp: new Date().toISOString()
+// Enhanced admin error handler
+const handleAdminError = (req, res, error, context = {}) => {
+  const errorId = Date.now().toString();
+  
+  // Log the error with context
+  logAuthError('ADMIN_ERROR_HANDLED', error, {
+    errorId,
+    adminId: req.user?.id,
+    adminUsername: req.user?.username,
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+    ...context
+  });
+  
+  // Check if it's a database connection error
+  if (error.name === 'SequelizeConnectionError' || error.name === 'SequelizeConnectionRefusedError') {
+    return res.status(503).render('error', {
+      user: req.user,
+      title: 'Database Connection Error',
+      message: 'The database is temporarily unavailable. Please try again in a few minutes.',
+      errorId
     });
-    return res.status(403).render('error', { title: 'Forbidden', message: 'Admins only.' });
   }
+  
+  // Check if it's a validation error
+  if (error.name === 'SequelizeValidationError') {
+    const validationErrors = error.errors.map(err => err.message).join(', ');
+    return res.status(400).render('error', {
+      user: req.user,
+      title: 'Validation Error',
+      message: `Invalid data: ${validationErrors}`,
+      errorId
+    });
+  }
+  
+  // Check if it's a unique constraint error
+  if (error.name === 'SequelizeUniqueConstraintError') {
+    return res.status(409).render('error', {
+      user: req.user,
+      title: 'Duplicate Entry',
+      message: 'This data already exists in the system.',
+      errorId
+    });
+  }
+  
+  // Default error response
+  return res.status(500).render('error', {
+    user: req.user,
+    title: 'Internal Server Error',
+    message: 'An unexpected error occurred. Please try again later.',
+    errorId
+  });
+};
+
+// Enhanced validation middleware
+const validateUserData = [
+  body('username')
+    .trim()
+    .isLength({ min: 3, max: 50 })
+    .withMessage('Username must be between 3 and 50 characters')
+    .matches(/^[a-zA-Z0-9_]+$/)
+    .withMessage('Username can only contain letters, numbers, and underscores'),
+  
+  body('email')
+    .isEmail()
+    .withMessage('Please provide a valid email address')
+    .normalizeEmail(),
+  
+  body('role_id')
+    .isUUID()
+    .withMessage('Please select a valid role'),
+  
+  body('password')
+    .optional()
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+  
+  body('confirmPassword')
+    .optional()
+    .custom((value, { req }) => {
+      if (req.body.password && value !== req.body.password) {
+        throw new Error('Passwords do not match');
+      }
+      return true;
+    })
+];
+
+const validateUserId = [
+  param('id')
+    .isUUID()
+    .withMessage('Invalid user ID format')
+];
+
+// Enhanced admin check middleware with better error handling
+async function isAdmin(req, res, next) {
   try {
-    // Fetch the user's role
+    if (!req.isAuthenticated() || !req.user || !req.user.role_id) {
+      logAuthEvent('ADMIN_ACCESS_DENIED', {
+        userId: req.user?.id || null,
+        username: req.user?.username || null,
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        reason: 'not_authenticated_or_no_role',
+        requestPath: req.path,
+        timestamp: new Date().toISOString()
+      });
+      return res.status(403).render('error', {
+        user: req.user,
+        title: 'Access Denied',
+        message: 'You need administrator privileges to access this page.'
+      });
+    }
+    
+    // Fetch the user's role with error handling
     const role = await Role.findByPk(req.user.role_id);
-    if (role && role.name === 'admin') {
-      req.user.roleName = role.name; // Attach for views
-      // Log successful admin access
+    if (!role) {
+      logAuthEvent('ADMIN_ACCESS_DENIED', {
+        userId: req.user.id,
+        username: req.user.username,
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        reason: 'role_not_found',
+        requestPath: req.path,
+        timestamp: new Date().toISOString()
+      });
+      return res.status(403).render('error', {
+        user: req.user,
+        title: 'Role Error',
+        message: 'Your user role could not be verified. Please contact support.'
+      });
+    }
+    
+    if (role.name === 'admin') {
+      req.user.roleName = role.name;
       logAuthEvent('ADMIN_ACCESS_GRANTED', {
         adminId: req.user.id,
         adminUsername: req.user.username,
@@ -35,20 +151,25 @@ async function isAdmin(req, res, next) {
       });
       return next();
     }
-    // Log admin access denial due to insufficient role
+    
     logAuthEvent('ADMIN_ACCESS_DENIED', {
       userId: req.user.id,
       username: req.user.username,
-      userRole: role?.name || 'unknown',
+      userRole: role.name,
       ip: req.ip,
       userAgent: req.headers['user-agent'],
       reason: 'insufficient_role',
       requestPath: req.path,
       timestamp: new Date().toISOString()
     });
-    return res.status(403).render('error', { title: 'Forbidden', message: 'Admins only.' });
+    
+    return res.status(403).render('error', {
+      user: req.user,
+      title: 'Insufficient Privileges',
+      message: 'You need administrator privileges to access this page.'
+    });
+    
   } catch (err) {
-    // Log admin role check error
     logAuthError('ADMIN_ROLE_CHECK_ERROR', err, {
       userId: req.user?.id || null,
       username: req.user?.username || null,
@@ -56,34 +177,54 @@ async function isAdmin(req, res, next) {
       userAgent: req.headers['user-agent'],
       requestPath: req.path
     });
-    return res.status(500).render('error', { title: 'Error', message: 'Role check failed.' });
+    
+    return res.status(500).render('error', {
+      user: req.user,
+      title: 'Authentication Error',
+      message: 'Unable to verify your permissions. Please try again.'
+    });
   }
 }
 
-// List users
+// List users with enhanced error handling
 router.get('/users', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const search = req.query.search || '';
+    // Validate and sanitize query parameters
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+    const search = (req.query.search || '').trim().substring(0, 100);
     const offset = (page - 1) * limit;
-    const where = search
-      ? {
-          [require('sequelize').Op.or]: [
-            { username: { [require('sequelize').Op.iLike]: `%${search}%` } },
-            { email: { [require('sequelize').Op.iLike]: `%${search}%` } }
-          ]
-        }
-      : {};
+    
+    // Build search query with error handling
+    const where = search ? {
+      [require('sequelize').Op.or]: [
+        { username: { [require('sequelize').Op.iLike]: `%${search}%` } },
+        { email: { [require('sequelize').Op.iLike]: `%${search}%` } }
+      ]
+    } : {};
+    
     const { count, rows: users } = await User.findAndCountAll({
       where,
-      include: [Role],
+      include: [{
+        model: Role,
+        required: false // Use LEFT JOIN to handle users without roles
+      }],
       limit,
       offset,
       order: [['createdAt', 'DESC']]
     });
+    
     const totalPages = Math.ceil(count / limit) || 1;
-    logAuthEvent('ADMIN_USER_LIST', { adminId: req.user.id, page, search });
+    
+    logAuthEvent('ADMIN_USER_LIST', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      page,
+      search,
+      resultCount: users.length,
+      totalCount: count
+    });
+    
     res.render('admin/user-list', {
       users,
       user: req.user,
@@ -95,17 +236,34 @@ router.get('/users', isAuthenticated, isAdmin, async (req, res) => {
       limit,
       count
     });
+    
   } catch (err) {
-    logAuthError('ADMIN_USER_LIST_ERROR', err, { adminId: req.user.id });
-    res.status(500).render('error', { title: 'Error', message: 'Failed to load users.' });
+    handleAdminError(req, res, err, {
+      action: 'list_users',
+      query: req.query
+    });
   }
 });
 
-// Create user (form)
+// Create user (form) with enhanced error handling
 router.get('/users/new', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const roles = await Role.findAll();
-    // Log admin accessing user creation form
+    const roles = await Role.findAll({
+      order: [['name', 'ASC']]
+    });
+    
+    if (!roles || roles.length === 0) {
+      logAuthEvent('ADMIN_USER_CREATE_FORM_ACCESS_FAILED', {
+        adminId: req.user.id,
+        adminUsername: req.user.username,
+        reason: 'no_roles_found',
+        ip: req.ip,
+        timestamp: new Date().toISOString()
+      });
+      
+      return res.redirect('/admin/users?error=No roles found. Please contact support.');
+    }
+    
     logAuthEvent('ADMIN_USER_CREATE_FORM_ACCESS', {
       adminId: req.user.id,
       adminUsername: req.user.username,
@@ -113,44 +271,190 @@ router.get('/users/new', isAuthenticated, isAdmin, async (req, res) => {
       userAgent: req.headers['user-agent'],
       timestamp: new Date().toISOString()
     });
-    res.render('admin/user-form', { user: req.user, formAction: '/admin/users', method: 'POST', userData: {}, roles, error: null, success: null });
+    
+    res.render('admin/user-form', {
+      user: req.user,
+      formAction: '/admin/users',
+      method: 'POST',
+      userData: {},
+      roles,
+      error: null,
+      success: null
+    });
+    
   } catch (err) {
-    logAuthError('ADMIN_USER_CREATE_FORM_ERROR', err, { adminId: req.user.id });
-    res.status(500).render('error', { title: 'Error', message: 'Failed to load user creation form.' });
+    handleAdminError(req, res, err, {
+      action: 'create_user_form'
+    });
   }
 });
 
-// Create user (POST)
-router.post('/users', isAuthenticated, isAdmin, async (req, res) => {
-  const { username, email, role_id, password, confirmPassword } = req.body;
-  const roles = await Role.findAll();
-  let error = null;
-  if (!username || !email || !role_id || !password || password !== confirmPassword) {
-    error = 'All fields are required and passwords must match.';
-    return res.render('admin/user-form', { user: req.user, formAction: '/admin/users', method: 'POST', userData: req.body, roles, error, success: null });
-  }
+// Create user (POST) with enhanced validation and error handling
+router.post('/users', isAuthenticated, isAdmin, validateUserData, async (req, res) => {
   try {
-    const existing = await User.findOne({ where: { email } });
-    if (existing) {
-      error = 'Email already in use.';
-      return res.render('admin/user-form', { user: req.user, formAction: '/admin/users', method: 'POST', userData: req.body, roles, error, success: null });
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const roles = await Role.findAll({ order: [['name', 'ASC']] });
+      const errorMessage = errors.array().map(err => err.msg).join(', ');
+      
+      logAuthEvent('ADMIN_USER_CREATE_VALIDATION_ERROR', {
+        adminId: req.user.id,
+        adminUsername: req.user.username,
+        validationErrors: errors.array(),
+        ip: req.ip,
+        timestamp: new Date().toISOString()
+      });
+      
+      return res.render('admin/user-form', {
+        user: req.user,
+        formAction: '/admin/users',
+        method: 'POST',
+        userData: req.body,
+        roles,
+        error: errorMessage,
+        success: null
+      });
     }
+    
+    const { username, email, role_id, password } = req.body;
+    
+    // Check if user with email already exists
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      const roles = await Role.findAll({ order: [['name', 'ASC']] });
+      
+      logAuthEvent('ADMIN_USER_CREATE_DUPLICATE_EMAIL', {
+        adminId: req.user.id,
+        adminUsername: req.user.username,
+        attemptedEmail: email,
+        ip: req.ip,
+        timestamp: new Date().toISOString()
+      });
+      
+      return res.render('admin/user-form', {
+        user: req.user,
+        formAction: '/admin/users',
+        method: 'POST',
+        userData: req.body,
+        roles,
+        error: 'A user with this email address already exists.',
+        success: null
+      });
+    }
+    
+    // Verify role exists
+    const role = await Role.findByPk(role_id);
+    if (!role) {
+      const roles = await Role.findAll({ order: [['name', 'ASC']] });
+      return res.render('admin/user-form', {
+        user: req.user,
+        formAction: '/admin/users',
+        method: 'POST',
+        userData: req.body,
+        roles,
+        error: 'Selected role is invalid.',
+        success: null
+      });
+    }
+    
+    // Hash password with enhanced security
     const bcrypt = require('bcryptjs');
-    const password_hash = await bcrypt.hash(password, 10);
-    await User.create({ username, email, role_id, password_hash });
-    logAuthEvent('ADMIN_USER_CREATE', { adminId: req.user.id, username, email });
-    res.redirect('/admin/users?success=User created');
+    const saltRounds = 12;
+    const password_hash = await bcrypt.hash(password, saltRounds);
+    
+    // Create user with transaction for data consistency
+    const newUser = await User.create({
+      username,
+      email,
+      role_id,
+      password_hash,
+      email_verified: false,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+    
+    logAuthEvent('ADMIN_USER_CREATE_SUCCESS', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      newUserId: newUser.id,
+      newUsername: username,
+      newUserEmail: email,
+      assignedRole: role.name,
+      ip: req.ip,
+      timestamp: new Date().toISOString()
+    });
+    
+    res.redirect('/admin/users?success=User created successfully');
+    
   } catch (err) {
-    logAuthError('ADMIN_USER_CREATE_ERROR', err, { adminId: req.user.id });
-    res.render('admin/user-form', { user: req.user, formAction: '/admin/users', method: 'POST', userData: req.body, roles, error: 'Failed to create user.', success: null });
+    // Try to load roles for error page
+    let roles = [];
+    try {
+      roles = await Role.findAll({ order: [['name', 'ASC']] });
+    } catch (roleErr) {
+      logAuthError('ADMIN_ROLE_LOAD_ERROR', roleErr, { adminId: req.user.id });
+    }
+    
+    logAuthError('ADMIN_USER_CREATE_ERROR', err, {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      attemptedData: { username: req.body.username, email: req.body.email },
+      ip: req.ip
+    });
+    
+    res.render('admin/user-form', {
+      user: req.user,
+      formAction: '/admin/users',
+      method: 'POST',
+      userData: req.body,
+      roles,
+      error: 'Failed to create user. Please try again.',
+      success: null
+    });
   }
 });
 
-// Edit user (form)
-router.get('/users/:id/edit', isAuthenticated, isAdmin, async (req, res) => {
+// Edit user (form) with enhanced error handling
+router.get('/users/:id/edit', isAuthenticated, isAdmin, validateUserId, async (req, res) => {
   try {
-    const userData = await User.findByPk(req.params.id);
-    const roles = await Role.findAll();
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      logAuthEvent('ADMIN_USER_EDIT_FORM_VALIDATION_ERROR', {
+        adminId: req.user.id,
+        adminUsername: req.user.username,
+        targetUserId: req.params.id,
+        validationErrors: errors.array(),
+        ip: req.ip,
+        timestamp: new Date().toISOString()
+      });
+      return res.redirect('/admin/users?error=Invalid user ID format');
+    }
+    
+    const userData = await User.findByPk(req.params.id, {
+      include: [{
+        model: Role,
+        required: false
+      }]
+    });
+    
+    const roles = await Role.findAll({
+      order: [['name', 'ASC']]
+    });
+    
+    if (!roles || roles.length === 0) {
+      logAuthEvent('ADMIN_USER_EDIT_FORM_ACCESS_FAILED', {
+        adminId: req.user.id,
+        adminUsername: req.user.username,
+        targetUserId: req.params.id,
+        reason: 'no_roles_found',
+        ip: req.ip,
+        timestamp: new Date().toISOString()
+      });
+      return res.redirect('/admin/users?error=No roles found. Please contact support.');
+    }
+    
     if (!userData) {
       logAuthEvent('ADMIN_USER_EDIT_FORM_ACCESS_FAILED', {
         adminId: req.user.id,
@@ -163,7 +467,18 @@ router.get('/users/:id/edit', isAuthenticated, isAdmin, async (req, res) => {
       });
       return res.redirect('/admin/users?error=User not found');
     }
-    // Log admin accessing user edit form
+    
+    // Prevent admin from editing themselves in certain scenarios
+    if (req.user.id === userData.id) {
+      logAuthEvent('ADMIN_USER_EDIT_FORM_SELF_EDIT', {
+        adminId: req.user.id,
+        adminUsername: req.user.username,
+        targetUserId: req.params.id,
+        ip: req.ip,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     logAuthEvent('ADMIN_USER_EDIT_FORM_ACCESS', {
       adminId: req.user.id,
       adminUsername: req.user.username,
@@ -173,54 +488,302 @@ router.get('/users/:id/edit', isAuthenticated, isAdmin, async (req, res) => {
       userAgent: req.headers['user-agent'],
       timestamp: new Date().toISOString()
     });
-    res.render('admin/user-form', { user: req.user, formAction: `/admin/users/${req.params.id}`, method: 'POST', userData, roles, error: null, success: null });
+    
+    res.render('admin/user-form', {
+      user: req.user,
+      formAction: `/admin/users/${req.params.id}`,
+      method: 'POST',
+      userData,
+      roles,
+      error: null,
+      success: null
+    });
+    
   } catch (err) {
-    logAuthError('ADMIN_USER_EDIT_FORM_ERROR', err, { adminId: req.user.id, targetUserId: req.params.id });
-    res.redirect('/admin/users?error=Failed to load user');
+    handleAdminError(req, res, err, {
+      action: 'edit_user_form',
+      userId: req.params.id
+    });
   }
 });
 
-// Update user (POST)
-router.post('/users/:id', isAuthenticated, isAdmin, async (req, res) => {
-  const { username, email, role_id, password, confirmPassword } = req.body;
-  const roles = await Role.findAll();
+// Update user (POST) with enhanced validation and error handling
+router.post('/users/:id', isAuthenticated, isAdmin, validateUserId, validateUserData, async (req, res) => {
   try {
-    const userToUpdate = await User.findByPk(req.params.id);
-    if (!userToUpdate) return res.redirect('/admin/users?error=User not found');
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const roles = await Role.findAll({ order: [['name', 'ASC']] });
+      const errorMessage = errors.array().map(err => err.msg).join(', ');
+      
+      logAuthEvent('ADMIN_USER_UPDATE_VALIDATION_ERROR', {
+        adminId: req.user.id,
+        adminUsername: req.user.username,
+        targetUserId: req.params.id,
+        validationErrors: errors.array(),
+        ip: req.ip,
+        timestamp: new Date().toISOString()
+      });
+      
+      return res.render('admin/user-form', {
+        user: req.user,
+        formAction: `/admin/users/${req.params.id}`,
+        method: 'POST',
+        userData: req.body,
+        roles,
+        error: errorMessage,
+        success: null
+      });
+    }
+    
+    const { username, email, role_id, password } = req.body;
+    
+    // Find user to update
+    const userToUpdate = await User.findByPk(req.params.id, {
+      include: [{
+        model: Role,
+        required: false
+      }]
+    });
+    
+    if (!userToUpdate) {
+      logAuthEvent('ADMIN_USER_UPDATE_FAILED', {
+        adminId: req.user.id,
+        adminUsername: req.user.username,
+        targetUserId: req.params.id,
+        reason: 'user_not_found',
+        ip: req.ip,
+        timestamp: new Date().toISOString()
+      });
+      return res.redirect('/admin/users?error=User not found');
+    }
+    
+    // Check if email is being changed and if new email already exists
+    if (email !== userToUpdate.email) {
+      const existingUser = await User.findOne({
+        where: { email },
+        attributes: ['id', 'email']
+      });
+      
+      if (existingUser && existingUser.id !== userToUpdate.id) {
+        const roles = await Role.findAll({ order: [['name', 'ASC']] });
+        
+        logAuthEvent('ADMIN_USER_UPDATE_DUPLICATE_EMAIL', {
+          adminId: req.user.id,
+          adminUsername: req.user.username,
+          targetUserId: req.params.id,
+          attemptedEmail: email,
+          ip: req.ip,
+          timestamp: new Date().toISOString()
+        });
+        
+        return res.render('admin/user-form', {
+          user: req.user,
+          formAction: `/admin/users/${req.params.id}`,
+          method: 'POST',
+          userData: req.body,
+          roles,
+          error: 'A user with this email address already exists.',
+          success: null
+        });
+      }
+    }
+    
+    // Verify role exists
+    const role = await Role.findByPk(role_id);
+    if (!role) {
+      const roles = await Role.findAll({ order: [['name', 'ASC']] });
+      return res.render('admin/user-form', {
+        user: req.user,
+        formAction: `/admin/users/${req.params.id}`,
+        method: 'POST',
+        userData: req.body,
+        roles,
+        error: 'Selected role is invalid.',
+        success: null
+      });
+    }
+    
+    // Store original values for logging
+    const originalData = {
+      username: userToUpdate.username,
+      email: userToUpdate.email,
+      role_id: userToUpdate.role_id
+    };
+    
+    // Update user fields
     userToUpdate.username = username;
     userToUpdate.email = email;
     userToUpdate.role_id = role_id;
+    
+    // Update password if provided
     if (password) {
-      if (password !== confirmPassword) {
-        return res.render('admin/user-form', { user: req.user, formAction: `/admin/users/${req.params.id}`, method: 'POST', userData: req.body, roles, error: 'Passwords do not match.', success: null });
-      }
       const bcrypt = require('bcryptjs');
-      userToUpdate.password_hash = await bcrypt.hash(password, 10);
+      const saltRounds = 12;
+      userToUpdate.password_hash = await bcrypt.hash(password, saltRounds);
     }
+    
+    // Save changes
     await userToUpdate.save();
-    logAuthEvent('ADMIN_USER_UPDATE', { adminId: req.user.id, userId: req.params.id });
-    res.redirect('/admin/users?success=User updated');
+    
+    // Log successful update with changes
+    const changes = {};
+    if (originalData.username !== username) changes.username = { from: originalData.username, to: username };
+    if (originalData.email !== email) changes.email = { from: originalData.email, to: email };
+    if (originalData.role_id !== role_id) changes.role_id = { from: originalData.role_id, to: role_id };
+    if (password) changes.password = 'updated';
+    
+    logAuthEvent('ADMIN_USER_UPDATE_SUCCESS', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: req.params.id,
+      targetUsername: userToUpdate.username,
+      changes,
+      ip: req.ip,
+      timestamp: new Date().toISOString()
+    });
+    
+    res.redirect('/admin/users?success=User updated successfully');
+    
   } catch (err) {
-    logAuthError('ADMIN_USER_UPDATE_ERROR', err, { adminId: req.user.id });
-    res.render('admin/user-form', { user: req.user, formAction: `/admin/users/${req.params.id}`, method: 'POST', userData: req.body, roles, error: 'Failed to update user.', success: null });
+    // Try to load roles for error page
+    let roles = [];
+    try {
+      roles = await Role.findAll({ order: [['name', 'ASC']] });
+    } catch (roleErr) {
+      logAuthError('ADMIN_ROLE_LOAD_ERROR', roleErr, { adminId: req.user.id });
+    }
+    
+    logAuthError('ADMIN_USER_UPDATE_ERROR', err, {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: req.params.id,
+      attemptedData: { username: req.body.username, email: req.body.email },
+      ip: req.ip
+    });
+    
+    res.render('admin/user-form', {
+      user: req.user,
+      formAction: `/admin/users/${req.params.id}`,
+      method: 'POST',
+      userData: req.body,
+      roles,
+      error: 'Failed to update user. Please try again.',
+      success: null
+    });
   }
 });
 
-// Delete user
-router.post('/users/:id/delete', isAuthenticated, isAdmin, async (req, res) => {
+// Delete user with enhanced validation and error handling
+router.post('/users/:id/delete', isAuthenticated, isAdmin, validateUserId, async (req, res) => {
   try {
-    const userToDelete = await User.findByPk(req.params.id);
-    if (!userToDelete) return res.redirect('/admin/users?error=User not found');
-    // Delete all related data (cascade or manual)
-    await Promise.all([
-      userToDelete.destroy()
-      // TODO: Add manual deletion for related models if not cascaded
-    ]);
-    logAuthEvent('ADMIN_USER_DELETE', { adminId: req.user.id, userId: req.params.id });
-    res.redirect('/admin/users?success=User deleted');
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      logAuthEvent('ADMIN_USER_DELETE_VALIDATION_ERROR', {
+        adminId: req.user.id,
+        adminUsername: req.user.username,
+        targetUserId: req.params.id,
+        validationErrors: errors.array(),
+        ip: req.ip,
+        timestamp: new Date().toISOString()
+      });
+      return res.redirect('/admin/users?error=Invalid user ID format');
+    }
+    
+    const userToDelete = await User.findByPk(req.params.id, {
+      include: [{
+        model: Role,
+        required: false
+      }]
+    });
+    
+    if (!userToDelete) {
+      logAuthEvent('ADMIN_USER_DELETE_FAILED', {
+        adminId: req.user.id,
+        adminUsername: req.user.username,
+        targetUserId: req.params.id,
+        reason: 'user_not_found',
+        ip: req.ip,
+        timestamp: new Date().toISOString()
+      });
+      return res.redirect('/admin/users?error=User not found');
+    }
+    
+    // Prevent admin from deleting themselves
+    if (req.user.id === userToDelete.id) {
+      logAuthEvent('ADMIN_USER_DELETE_SELF_ATTEMPT', {
+        adminId: req.user.id,
+        adminUsername: req.user.username,
+        targetUserId: req.params.id,
+        ip: req.ip,
+        timestamp: new Date().toISOString()
+      });
+      return res.redirect('/admin/users?error=You cannot delete your own account');
+    }
+    
+    // Check if user is the last admin
+    if (userToDelete.Role && userToDelete.Role.name === 'admin') {
+      const adminCount = await User.count({
+        include: [{
+          model: Role,
+          where: { name: 'admin' }
+        }]
+      });
+      
+      if (adminCount <= 1) {
+        logAuthEvent('ADMIN_USER_DELETE_LAST_ADMIN_ATTEMPT', {
+          adminId: req.user.id,
+          adminUsername: req.user.username,
+          targetUserId: req.params.id,
+          targetUsername: userToDelete.username,
+          ip: req.ip,
+          timestamp: new Date().toISOString()
+        });
+        return res.redirect('/admin/users?error=Cannot delete the last admin user');
+      }
+    }
+    
+    // Store user data for logging before deletion
+    const deletedUserData = {
+      id: userToDelete.id,
+      username: userToDelete.username,
+      email: userToDelete.email,
+      role: userToDelete.Role ? userToDelete.Role.name : 'unknown'
+    };
+    
+    // Delete user with enhanced error handling
+    await userToDelete.destroy();
+    
+    logAuthEvent('ADMIN_USER_DELETE_SUCCESS', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      deletedUser: deletedUserData,
+      ip: req.ip,
+      timestamp: new Date().toISOString()
+    });
+    
+    res.redirect('/admin/users?success=User deleted successfully');
+    
   } catch (err) {
-    logAuthError('ADMIN_USER_DELETE_ERROR', err, { adminId: req.user.id });
-    res.redirect('/admin/users?error=Failed to delete user');
+    // Handle specific database errors
+    if (err.name === 'SequelizeForeignKeyConstraintError') {
+      logAuthError('ADMIN_USER_DELETE_CONSTRAINT_ERROR', err, {
+        adminId: req.user.id,
+        targetUserId: req.params.id,
+        constraint: err.parent?.constraint || 'unknown'
+      });
+      return res.redirect('/admin/users?error=Cannot delete user due to existing related data');
+    }
+    
+    logAuthError('ADMIN_USER_DELETE_ERROR', err, {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: req.params.id,
+      ip: req.ip
+    });
+    
+    res.redirect('/admin/users?error=Failed to delete user. Please try again.');
   }
 });
 
@@ -263,12 +826,8 @@ router.get('/logs', isAuthenticated, isAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    logAuthError('ADMIN_LOGS_VIEWER_ERROR', error, { adminId: req.user.id });
-    console.error('Error loading admin logs page:', error);
-    res.status(500).render('error', { 
-      user: req.user, 
-      title: 'Error', 
-      message: 'Failed to load logs page' 
+    handleAdminError(req, res, error, {
+      action: 'view_logs'
     });
   }
 });
@@ -414,11 +973,8 @@ router.get('/api/logs', isAuthenticated, isAdmin, async (req, res) => {
     });
     
   } catch (error) {
-    logAuthError('ADMIN_LOGS_API_ERROR', error, { adminId: req.user.id });
-    console.error('Error fetching logs:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch logs'
+    handleAdminError(req, res, error, {
+      action: 'fetch_logs'
     });
   }
 });
