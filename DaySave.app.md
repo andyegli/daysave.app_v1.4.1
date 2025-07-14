@@ -390,6 +390,25 @@ See AGENT.md for full specification and rationale.
 - Ensure the API key is valid and the required APIs are enabled.
 - For new field types, update the selector logic as needed.
 
+## Recent Updates & Fixes (January 2025)
+
+### Content Management System Improvements
+- **Fixed Logger Errors**: Resolved critical logger method errors that were preventing content updates and tag management. Changed non-existent `logger.user.contentUpdate` and `logger.user.contentGroupUpdate` calls to use the correct `logger.user.contentEdit` method.
+- **Enhanced Summary Display**: Improved content card summary display from 1 line to 4+ lines (100px height) with better readability (line-height: 1.6, font-size: 0.85rem) and scrollable overflow for longer summaries.
+- **Removed UI Clutter**: Eliminated redundant "Transcription Summary" label to optimize space usage and improve visual hierarchy.
+
+### File Analysis & Image Description Integration  
+- **New File Analysis Endpoint**: Created `/files/:id/analysis` endpoint to retrieve analysis data for uploaded files, handling image descriptions and summaries with proper content type detection.
+- **Frontend Analysis Detection**: Updated JavaScript to automatically detect file vs content pages and use appropriate analysis endpoints (`/files/:id/analysis` vs `/content/:id/analysis`).
+- **Copy to Clipboard**: Added copy buttons for both summary and description in detail modal with proper styling and user feedback.
+- **Fixed Image Analysis Display**: Resolved missing image descriptions and summaries in both content cards and detail modals for uploaded files.
+
+### User Experience Enhancements
+- **Seamless File/Content Integration**: Frontend now handles both uploaded files and URL-based content uniformly with intelligent content type detection.
+- **Improved Modal Interactions**: Enhanced detail modals with copy functionality and better data presentation.
+- **Enhanced Error Handling**: Added proper error logging, improved user feedback, and better debugging capabilities.
+- **Consistent Behavior**: Ensured consistent analysis display behavior between file and content management systems.
+
 ## Content Management UX
 
 ### Advanced Filter Bar Features
