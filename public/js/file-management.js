@@ -322,6 +322,9 @@ class FileManager {
         credentials: 'same-origin' // Include cookies for authentication
       });
 
+      console.log('Upload response status:', response.status);
+      console.log('Upload response headers:', response.headers);
+
       // Handle different response types
       let result;
       
@@ -350,8 +353,18 @@ class FileManager {
       } else if (!response.ok) {
         // Other HTTP errors
         try {
-          result = await response.json();
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            result = await response.json();
+          } else {
+            result = {
+              success: false,
+              error: 'Upload failed',
+              message: `Server error: ${response.status} ${response.statusText}`
+            };
+          }
         } catch (jsonError) {
+          console.error('Error parsing error response:', jsonError);
           result = {
             success: false,
             error: 'Upload failed',
@@ -360,7 +373,27 @@ class FileManager {
         }
       } else {
         // Success response
-        result = await response.json();
+        try {
+          const contentType = response.headers.get('content-type');
+          console.log('Success response content-type:', contentType);
+          if (contentType && contentType.includes('application/json')) {
+            result = await response.json();
+            console.log('Upload result:', result);
+          } else {
+            // Non-JSON response (might be a redirect)
+            result = {
+              success: true,
+              message: 'Upload completed successfully'
+            };
+          }
+        } catch (jsonError) {
+          console.error('Error parsing success response:', jsonError);
+          // If JSON parsing fails but response was OK, assume success
+          result = {
+            success: true,
+            message: 'Upload completed successfully'
+          };
+        }
       }
 
       // Hide progress
@@ -378,10 +411,19 @@ class FileManager {
     } catch (error) {
       console.error('Upload error:', error);
       this.hideUploadProgress();
+      
+      // Check if this is a network error vs other error
+      let errorMessage = 'Network error - please check your connection';
+      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        errorMessage = 'Connection error - please check your internet connection and try again';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       this.showUploadResults({
         success: false,
         error: 'Upload failed',
-        message: error.message || 'Network error - please check your connection'
+        message: errorMessage
       });
     }
   }
