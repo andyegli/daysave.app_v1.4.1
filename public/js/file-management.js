@@ -599,4 +599,15 @@ function getFileCategory(mimeType) {
 let fileManager;
 document.addEventListener('DOMContentLoaded', () => {
   fileManager = new FileManager();
+  
+  // Add event listener for delete buttons
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.delete-file-btn')) {
+      e.preventDefault();
+      const btn = e.target.closest('.delete-file-btn');
+      const fileId = btn.dataset.fileId;
+      const filename = btn.dataset.filename;
+      deleteFile(fileId, filename);
+    }
+  });
 }); 

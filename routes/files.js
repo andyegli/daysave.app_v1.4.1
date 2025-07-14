@@ -44,20 +44,62 @@ async function triggerFileAnalysis(fileRecord, user) {
       mimetype: fileRecord.metadata?.mimetype
     });
 
-    // Determine file URL/path for analysis
-    const fileUrl = await FileUploadService.getFileUrl(fileRecord.file_path);
+    // Get the actual filesystem path for the uploaded file
+    const path = require('path');
+    let filePath;
     
-    // Run multimedia analysis
-    const analysisResults = await multimediaAnalyzer.analyzeContent(fileUrl, {
-      user_id: user.id,
-      file_id: fileRecord.id,
-      transcription: true,
-      sentiment: true,
-      thumbnails: true,
-      ocr: true,
-      speaker_identification: true,
-      enableSummarization: true
-    });
+    if (fileRecord.file_path.startsWith('gs://')) {
+      // For Google Cloud Storage files, we need to download them first
+      // This is a temporary solution - in production, you might want to stream directly
+      throw new Error('Google Cloud Storage files not yet supported for AI analysis');
+    } else {
+      // For local files, convert the stored path to absolute path
+      if (fileRecord.file_path.startsWith('/uploads/')) {
+        // Path is already relative to project root
+        filePath = path.join(__dirname, '..', fileRecord.file_path);
+      } else {
+        // Path might be absolute or relative
+        filePath = path.resolve(fileRecord.file_path);
+      }
+    }
+
+    // Verify file exists
+    const fs = require('fs');
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File not found at path: ${filePath}`);
+    }
+
+    // Use analyzeMultimedia for local files instead of analyzeContent
+    const analysisResults = await multimediaAnalyzer.analyzeMultimedia(
+      user.id,
+      filePath,
+      fileRecord.metadata?.mimetype,
+      {
+        enableObjectDetection: true,
+        enableTranscription: true,
+        enableVideoAnalysis: true,
+        enableSummarization: true,
+        enableSentimentAnalysis: true,
+        enableSpeakerDiarization: true,
+        enableVoicePrintRecognition: true,
+        enableThumbnailGeneration: true,
+        enableOCRExtraction: true,
+        transcriptionProvider: 'google',
+        objectDetectionMode: 'enhanced',
+        thumbnailOptions: {
+          imageSizes: [150, 300, 500],
+          thumbnailSize: 300,
+          keyMomentsCount: 5,
+          keyMomentsSize: 200
+        },
+        ocrOptions: {
+          frameInterval: 2,
+          maxFrames: 30,
+          confidenceThreshold: 0.5,
+          filterShortText: true
+        }
+      }
+    );
 
     // Update file record with AI analysis results
     const updateData = {};
@@ -78,8 +120,8 @@ async function triggerFileAnalysis(fileRecord, user) {
     }
     
     // Store auto-generated tags
-    if (analysisResults.auto_tags && analysisResults.auto_tags.length > 0) {
-      updateData.auto_tags = analysisResults.auto_tags;
+    if (analysisResults.tags && analysisResults.tags.length > 0) {
+      updateData.auto_tags = analysisResults.tags;
     }
     
     // Store category
@@ -338,8 +380,13 @@ router.post('/upload', [
         if (isMultimediaFile(file.mimetype)) {
           console.log(`🎬 Detected multimedia file, triggering analysis: ${file.originalname}`);
           // Run analysis in background (don't wait for it)
-          setImmediate(() => {
-            triggerFileAnalysis(fileRecord, req.user);
+          setImmediate(async () => {
+            try {
+              await triggerFileAnalysis(fileRecord, req.user);
+            } catch (analysisError) {
+              console.error(`❌ Background analysis failed for ${fileRecord.id}:`, analysisError);
+              // Don't let analysis errors affect the upload response
+            }
           });
         } else {
           console.log(`📄 Non-multimedia file, skipping analysis: ${file.originalname}`);
@@ -380,9 +427,19 @@ router.post('/upload', [
     }
   } catch (error) {
     console.error('Upload route error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Request details:', {
+      method: req.method,
+      url: req.url,
+      headers: req.headers,
+      files: req.files ? req.files.map(f => ({ name: f.originalname, size: f.size, mimetype: f.mimetype })) : 'none'
+    });
+    
+    // Return a detailed error response
     res.status(500).json({
       error: 'Upload failed',
-      message: 'An unexpected error occurred during upload'
+      message: error.message || 'An unexpected error occurred during upload',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });

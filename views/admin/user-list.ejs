@@ -422,7 +422,8 @@
               <th>User</th>
               <th>Email</th>
               <th>Role</th>
-              <th>Created</th>
+              <th>Subscription</th>
+              <th>Last Login</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -451,7 +452,13 @@
                       </div>
                       <div class="user-details">
                         <h6><%= u.username %></h6>
-                        <small>ID: <%= u.id.substring(0, 8) %>...</small>
+                        <small>
+                          <% if (u.first_name || u.last_name) { %>
+                            <%= (u.first_name || '') + ' ' + (u.last_name || '') %>
+                          <% } else { %>
+                            ID: <%= u.id.substring(0, 8) %>...
+                          <% } %>
+                        </small>
                       </div>
                     </div>
                   </td>
@@ -459,11 +466,19 @@
                     <div>
                       <%= u.email %>
                       <% if (u.email_verified) { %>
-                        <i class="fas fa-check-circle text-success ms-1" title="Verified"></i>
+                        <i class="fas fa-check-circle text-success ms-1" title="Email Verified"></i>
                       <% } else { %>
-                        <i class="fas fa-exclamation-circle text-warning ms-1" title="Not verified"></i>
+                        <i class="fas fa-exclamation-circle text-warning ms-1" title="Email Not Verified"></i>
                       <% } %>
                     </div>
+                    <% if (u.country) { %>
+                      <small class="text-muted d-block">
+                        <i class="fas fa-flag me-1"></i><%= u.country %>
+                        <% if (u.language && u.language !== 'en') { %>
+                          | <%= u.language.toUpperCase() %>
+                        <% } %>
+                      </small>
+                    <% } %>
                   </td>
                   <td>
                     <span class="role-badge <%= u.Role ? u.Role.name : 'user' %>">
@@ -471,20 +486,115 @@
                     </span>
                   </td>
                   <td>
+                    <% 
+                      let subscriptionStatus = u.subscription_status || 'free';
+                      let subscriptionClass = 'secondary';
+                      switch(subscriptionStatus) {
+                        case 'trial': subscriptionClass = 'warning'; break;
+                        case 'basic': subscriptionClass = 'info'; break;
+                        case 'pro': subscriptionClass = 'success'; break;
+                        case 'free': subscriptionClass = 'secondary'; break;
+                      }
+                    %>
+                    <span class="badge bg-<%= subscriptionClass %>">
+                      <%= subscriptionStatus.toUpperCase() %>
+                    </span>
+                    <% if (u.UserSubscriptions && u.UserSubscriptions.length > 0) { %>
+                      <% let sub = u.UserSubscriptions[0]; %>
+                      <small class="text-muted d-block">
+                        <% if (sub.status === 'active') { %>
+                          <i class="fas fa-check-circle text-success"></i> Active
+                        <% } else { %>
+                          <i class="fas fa-exclamation-circle text-warning"></i> <%= sub.status %>
+                        <% } %>
+                      </small>
+                    <% } %>
+                  </td>
+                  <td>
+                    <% if (u.UserDevices && u.UserDevices.length > 0 && u.UserDevices[0].last_login_at) { %>
+                      <small class="text-muted">
+                        <%= new Date(u.UserDevices[0].last_login_at).toLocaleDateString() %>
+                        <br>
+                        <span class="badge bg-light text-dark">
+                          <%= new Date(u.UserDevices[0].last_login_at).toLocaleTimeString() %>
+                        </span>
+                      </small>
+                    <% } else { %>
+                      <small class="text-muted">
+                        <i class="fas fa-times-circle text-muted"></i> Never
+                      </small>
+                    <% } %>
+                  </td>
+                  <td>
+                    <% if (u.email_verified) { %>
+                      <span class="badge bg-success">
+                        <i class="fas fa-check-circle"></i> Active
+                      </span>
+                    <% } else { %>
+                      <span class="badge bg-warning">
+                        <i class="fas fa-exclamation-circle"></i> Pending
+                      </span>
+                    <% } %>
+                    <br>
                     <small class="text-muted">
-                      <%= new Date(u.createdAt).toLocaleDateString() %>
+                      Since: <%= new Date(u.createdAt).toLocaleDateString() %>
                     </small>
                   </td>
                   <td>
-                    <span class="badge bg-success">Active</span>
-                  </td>
-                  <td>
                     <div class="action-buttons">
-                      <a href="/admin/users/<%= u.id %>/edit" class="action-btn edit">
+                      <!-- View Details Button -->
+                      <a href="/admin/users/<%= u.id %>/details" 
+                         class="btn btn-sm btn-outline-info me-1" 
+                         title="View user details and activity">
+                        <i class="fas fa-eye"></i>
+                      </a>
+                      
+                      <!-- Edit Button -->
+                      <a href="/admin/users/<%= u.id %>/edit" 
+                         class="btn btn-sm btn-outline-primary me-1" 
+                         title="Edit user information">
                         <i class="fas fa-edit"></i>
                       </a>
+                      
+                      <!-- Enable/Disable Button -->
+                      <form action="/admin/users/<%= u.id %>/toggle-status" method="POST" style="display:inline;">
+                        <button type="submit" 
+                                class="btn btn-sm <%= u.email_verified ? 'btn-outline-warning' : 'btn-outline-success' %> me-1" 
+                                title="<%= u.email_verified ? 'Disable user account' : 'Enable user account' %>"
+                                onclick="return confirm('Are you sure you want to <%= u.email_verified ? 'disable' : 'enable' %> this user?')">
+                          <i class="fas <%= u.email_verified ? 'fa-user-slash' : 'fa-user-check' %>"></i>
+                        </button>
+                      </form>
+                      
+                      <!-- Reset Password Button -->
+                      <form action="/admin/users/<%= u.id %>/reset-password" method="POST" style="display:inline;">
+                        <button type="submit" 
+                                class="btn btn-sm btn-outline-secondary me-1" 
+                                title="Reset user password"
+                                onclick="return confirm('Are you sure you want to reset the password for <%= u.username %>?')">
+                          <i class="fas fa-key"></i>
+                        </button>
+                      </form>
+                      
+                      <!-- Verify Email Button (if not verified) -->
+                      <% if (!u.email_verified) { %>
+                        <form action="/admin/users/<%= u.id %>/verify-email" method="POST" style="display:inline;">
+                          <button type="submit" 
+                                  class="btn btn-sm btn-outline-success me-1" 
+                                  title="Manually verify user email"
+                                  onclick="return confirm('Are you sure you want to verify the email for <%= u.username %>?')">
+                            <i class="fas fa-check"></i>
+                          </button>
+                        </form>
+                      <% } %>
+                      
+                      <!-- Delete Button -->
                       <form action="/admin/users/<%= u.id %>/delete" method="POST" style="display:inline;">
-                        <button type="submit" class="action-btn delete delete-user-btn" data-username="<%= u.username %>">
+                        <button type="submit" 
+                                class="btn btn-sm btn-outline-danger" 
+                                title="Delete user account permanently"
+                                data-username="<%= u.username %>"
+                                onclick="return confirm('Are you sure you want to DELETE user <%= u.username %>?\\n\\nThis action cannot be undone and will remove all user data.')">
                           <i class="fas fa-trash"></i>
                         </button>
                       </form>

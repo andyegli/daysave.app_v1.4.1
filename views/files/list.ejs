@@ -191,7 +191,7 @@
                     <i class="fas fa-edit"></i> Edit
                   </a></li>
                   <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item text-danger" href="#" onclick="deleteFile('<%= file.id %>', '<%= file.filename %>')">
+                  <li><a class="dropdown-item text-danger" href="#" class="delete-file-btn" data-file-id="<%= file.id %>" data-filename="<%= file.filename %>">
                     <i class="fas fa-trash"></i> Delete
                   </a></li>
                 </ul>

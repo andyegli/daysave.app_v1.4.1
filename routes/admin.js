@@ -121,10 +121,25 @@ router.get('/users', isAuthenticated, isAdmin, async (req, res) => {
     
     const { count, rows: users } = await User.findAndCountAll({
       where,
-      include: [{
-        model: Role,
-        required: false // Use LEFT JOIN to handle users without roles
-      }],
+      include: [
+        {
+          model: Role,
+          required: false // Use LEFT JOIN to handle users without roles
+        },
+        {
+          model: require('../models').UserDevice,
+          required: false,
+          limit: 1,
+          order: [['last_login_at', 'DESC']]
+        },
+        {
+          model: require('../models').UserSubscription,
+          as: 'UserSubscriptions',
+          required: false,
+          limit: 1,
+          order: [['created_at', 'DESC']]
+        }
+      ],
       limit,
       offset,
       order: [['createdAt', 'DESC']]
@@ -700,6 +715,210 @@ router.post('/users/:id/delete', isAuthenticated, isAdmin, validateUserId, async
     });
     
     res.redirect('/admin/users?error=Failed to delete user. Please try again.');
+  }
+});
+
+// Enable/Disable user account
+router.post('/users/:id/toggle-status', isAuthenticated, isAdmin, validateUserId, async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.redirect('/admin/users?error=Invalid user ID format');
+    }
+
+    const userToToggle = await User.findByPk(req.params.id, {
+      include: [{ model: Role, required: false }]
+    });
+
+    if (!userToToggle) {
+      return res.redirect('/admin/users?error=User not found');
+    }
+
+    // Prevent admin from disabling themselves
+    if (req.user.id === userToToggle.id) {
+      return res.redirect('/admin/users?error=You cannot disable your own account');
+    }
+
+    // Toggle the user's status (we'll use email_verified as a proxy for account status)
+    const newStatus = !userToToggle.email_verified;
+    await userToToggle.update({ email_verified: newStatus });
+
+    logAuthEvent('ADMIN_USER_STATUS_TOGGLE', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: req.params.id,
+      targetUsername: userToToggle.username,
+      newStatus: newStatus ? 'enabled' : 'disabled',
+      ip: req.ip,
+      timestamp: new Date().toISOString()
+    });
+
+    const statusText = newStatus ? 'enabled' : 'disabled';
+    res.redirect(`/admin/users?success=User ${userToToggle.username} has been ${statusText}`);
+
+  } catch (err) {
+    logAuthError('ADMIN_USER_STATUS_TOGGLE_ERROR', err, {
+      adminId: req.user.id,
+      targetUserId: req.params.id,
+      ip: req.ip
+    });
+    res.redirect('/admin/users?error=Failed to toggle user status');
+  }
+});
+
+// Reset user password
+router.post('/users/:id/reset-password', isAuthenticated, isAdmin, validateUserId, async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.redirect('/admin/users?error=Invalid user ID format');
+    }
+
+    const userToReset = await User.findByPk(req.params.id);
+    if (!userToReset) {
+      return res.redirect('/admin/users?error=User not found');
+    }
+
+    // Generate a temporary password
+    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+    const bcrypt = require('bcryptjs');
+    const saltRounds = 12;
+    const password_hash = await bcrypt.hash(tempPassword, saltRounds);
+
+    await userToReset.update({ password_hash });
+
+    logAuthEvent('ADMIN_USER_PASSWORD_RESET', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: req.params.id,
+      targetUsername: userToReset.username,
+      ip: req.ip,
+      timestamp: new Date().toISOString()
+    });
+
+    // In a real app, you'd send this via email
+    res.redirect(`/admin/users?success=Password reset for ${userToReset.username}. Temporary password: ${tempPassword}`);
+
+  } catch (err) {
+    logAuthError('ADMIN_USER_PASSWORD_RESET_ERROR', err, {
+      adminId: req.user.id,
+      targetUserId: req.params.id,
+      ip: req.ip
+    });
+    res.redirect('/admin/users?error=Failed to reset password');
+  }
+});
+
+// Verify user email manually
+router.post('/users/:id/verify-email', isAuthenticated, isAdmin, validateUserId, async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.redirect('/admin/users?error=Invalid user ID format');
+    }
+
+    const userToVerify = await User.findByPk(req.params.id);
+    if (!userToVerify) {
+      return res.redirect('/admin/users?error=User not found');
+    }
+
+    await userToVerify.update({ 
+      email_verified: true,
+      email_verification_token: null
+    });
+
+    logAuthEvent('ADMIN_USER_EMAIL_VERIFY', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: req.params.id,
+      targetUsername: userToVerify.username,
+      targetEmail: userToVerify.email,
+      ip: req.ip,
+      timestamp: new Date().toISOString()
+    });
+
+    res.redirect(`/admin/users?success=Email verified for ${userToVerify.username}`);
+
+  } catch (err) {
+    logAuthError('ADMIN_USER_EMAIL_VERIFY_ERROR', err, {
+      adminId: req.user.id,
+      targetUserId: req.params.id,
+      ip: req.ip
+    });
+    res.redirect('/admin/users?error=Failed to verify email');
+  }
+});
+
+// View user details
+router.get('/users/:id/details', isAuthenticated, isAdmin, validateUserId, async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.redirect('/admin/users?error=Invalid user ID format');
+    }
+
+    const userDetails = await User.findByPk(req.params.id, {
+      include: [
+        { model: Role, required: false },
+        { 
+          model: require('../models').UserDevice,
+          required: false,
+          order: [['last_login_at', 'DESC']],
+          limit: 5
+        },
+        {
+          model: require('../models').UserSubscription,
+          as: 'UserSubscriptions',
+          required: false,
+          limit: 1,
+          order: [['created_at', 'DESC']]
+        },
+        {
+          model: require('../models').SocialAccount,
+          required: false,
+          order: [['createdAt', 'DESC']]
+        },
+        {
+          model: require('../models').Content,
+          required: false,
+          limit: 10,
+          order: [['createdAt', 'DESC']]
+        },
+        {
+          model: require('../models').File,
+          required: false,
+          limit: 10,
+          order: [['createdAt', 'DESC']]
+        }
+      ]
+    });
+
+    if (!userDetails) {
+      return res.redirect('/admin/users?error=User not found');
+    }
+
+    logAuthEvent('ADMIN_USER_DETAILS_VIEW', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: req.params.id,
+      targetUsername: userDetails.username,
+      ip: req.ip,
+      timestamp: new Date().toISOString()
+    });
+
+    res.render('admin/user-details', {
+      user: req.user,
+      userDetails,
+      title: `User Details - ${userDetails.username}`
+    });
+
+  } catch (err) {
+    logAuthError('ADMIN_USER_DETAILS_VIEW_ERROR', err, {
+      adminId: req.user.id,
+      targetUserId: req.params.id,
+      ip: req.ip
+    });
+    res.redirect('/admin/users?error=Failed to load user details');
   }
 });
 

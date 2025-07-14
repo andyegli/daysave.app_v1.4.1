@@ -1,0 +1,408 @@
+<%- include('../partials/header', { title: title }) %>
+
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Breadcrumb -->
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="/admin/users">User Management</a></li>
+          <li class="breadcrumb-item active" aria-current="page"><%= userDetails.username %></li>
+        </ol>
+      </nav>
+
+      <!-- User Header -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <div class="user-avatar me-3" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                <%= userDetails.username.charAt(0).toUpperCase() %>
+              </div>
+              <div>
+                <h4 class="mb-0"><%= userDetails.username %></h4>
+                <p class="text-muted mb-0"><%= userDetails.email %></p>
+                <% if (userDetails.first_name || userDetails.last_name) { %>
+                  <small class="text-muted">
+                    <%= (userDetails.first_name || '') + ' ' + (userDetails.last_name || '') %>
+                  </small>
+                <% } %>
+              </div>
+            </div>
+            <div class="text-end">
+              <a href="/admin/users/<%= userDetails.id %>/edit" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit User
+              </a>
+              <a href="/admin/users" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Information Grid -->
+      <div class="row">
+        <!-- Basic Information -->
+        <div class="col-md-6">
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5><i class="fas fa-user me-2"></i>Basic Information</h5>
+            </div>
+            <div class="card-body">
+              <table class="table table-sm">
+                <tr>
+                  <td><strong>Username:</strong></td>
+                  <td><%= userDetails.username %></td>
+                </tr>
+                <tr>
+                  <td><strong>Email:</strong></td>
+                  <td>
+                    <%= userDetails.email %>
+                    <% if (userDetails.email_verified) { %>
+                      <span class="badge bg-success ms-2">Verified</span>
+                    <% } else { %>
+                      <span class="badge bg-warning ms-2">Not Verified</span>
+                    <% } %>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Role:</strong></td>
+                  <td>
+                    <span class="badge bg-primary">
+                      <%= userDetails.Role ? userDetails.Role.name : 'No Role' %>
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Full Name:</strong></td>
+                  <td>
+                    <% if (userDetails.first_name || userDetails.last_name) { %>
+                      <%= (userDetails.first_name || '') + ' ' + (userDetails.last_name || '') %>
+                    <% } else { %>
+                      <span class="text-muted">Not provided</span>
+                    <% } %>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Country:</strong></td>
+                  <td>
+                    <% if (userDetails.country) { %>
+                      <i class="fas fa-flag me-1"></i><%= userDetails.country %>
+                    <% } else { %>
+                      <span class="text-muted">Not provided</span>
+                    <% } %>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Language:</strong></td>
+                  <td>
+                    <% if (userDetails.language) { %>
+                      <%= userDetails.language.toUpperCase() %>
+                    <% } else { %>
+                      <span class="text-muted">Default (EN)</span>
+                    <% } %>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Created:</strong></td>
+                  <td><%= new Date(userDetails.createdAt).toLocaleString() %></td>
+                </tr>
+                <tr>
+                  <td><strong>Updated:</strong></td>
+                  <td><%= new Date(userDetails.updatedAt).toLocaleString() %></td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subscription Information -->
+        <div class="col-md-6">
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5><i class="fas fa-crown me-2"></i>Subscription Details</h5>
+            </div>
+            <div class="card-body">
+              <% if (userDetails.UserSubscriptions && userDetails.UserSubscriptions.length > 0) { %>
+                <% let sub = userDetails.UserSubscriptions[0]; %>
+                <table class="table table-sm">
+                  <tr>
+                    <td><strong>Status:</strong></td>
+                    <td>
+                      <span class="badge bg-<%= sub.status === 'active' ? 'success' : 'warning' %>">
+                        <%= sub.status.toUpperCase() %>
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>Billing Cycle:</strong></td>
+                    <td><%= sub.billing_cycle %></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Period:</strong></td>
+                    <td>
+                      <%= new Date(sub.current_period_start).toLocaleDateString() %> - 
+                      <%= new Date(sub.current_period_end).toLocaleDateString() %>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>Usage:</strong></td>
+                    <td>
+                      <div class="small">
+                        <div>Content: <%= sub.usage_content_items || 0 %></div>
+                        <div>Files: <%= sub.usage_file_uploads || 0 %></div>
+                        <div>Storage: <%= sub.usage_storage_mb || 0 %> MB</div>
+                        <div>Contacts: <%= sub.usage_contacts || 0 %></div>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              <% } else { %>
+                <p class="text-muted">No subscription information available</p>
+                <p><strong>Status:</strong> 
+                  <span class="badge bg-secondary">
+                    <%= userDetails.subscription_status || 'FREE' %>
+                  </span>
+                </p>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Login History -->
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5><i class="fas fa-history me-2"></i>Login History</h5>
+            </div>
+            <div class="card-body">
+              <% if (userDetails.UserDevices && userDetails.UserDevices.length > 0) { %>
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Last Login</th>
+                        <th>Device</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% userDetails.UserDevices.forEach(function(device) { %>
+                        <tr>
+                          <td>
+                            <% if (device.last_login_at) { %>
+                              <div><%= new Date(device.last_login_at).toLocaleDateString() %></div>
+                              <small class="text-muted"><%= new Date(device.last_login_at).toLocaleTimeString() %></small>
+                            <% } else { %>
+                              <span class="text-muted">Never</span>
+                            <% } %>
+                          </td>
+                          <td>
+                            <small class="text-muted">
+                              <%= device.device_fingerprint ? device.device_fingerprint.substring(0, 16) + '...' : 'Unknown' %>
+                            </small>
+                          </td>
+                          <td>
+                            <% if (device.is_trusted) { %>
+                              <span class="badge bg-success">Trusted</span>
+                            <% } else { %>
+                              <span class="badge bg-secondary">Standard</span>
+                            <% } %>
+                          </td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+              <% } else { %>
+                <p class="text-muted">No login history available</p>
+              <% } %>
+            </div>
+          </div>
+        </div>
+
+        <!-- Social Accounts -->
+        <div class="col-md-6">
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5><i class="fas fa-share-alt me-2"></i>Social Accounts</h5>
+            </div>
+            <div class="card-body">
+              <% if (userDetails.SocialAccounts && userDetails.SocialAccounts.length > 0) { %>
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Platform</th>
+                        <th>Handle</th>
+                        <th>Connected</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% userDetails.SocialAccounts.forEach(function(account) { %>
+                        <tr>
+                          <td>
+                            <span class="badge bg-info">
+                              <%= account.platform %>
+                            </span>
+                          </td>
+                          <td><%= account.handle || 'N/A' %></td>
+                          <td>
+                            <small class="text-muted">
+                              <%= new Date(account.createdAt).toLocaleDateString() %>
+                            </small>
+                          </td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+              <% } else { %>
+                <p class="text-muted">No social accounts connected</p>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content and Files -->
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5><i class="fas fa-newspaper me-2"></i>Recent Content</h5>
+            </div>
+            <div class="card-body">
+              <% if (userDetails.Contents && userDetails.Contents.length > 0) { %>
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>URL</th>
+                        <th>Created</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% userDetails.Contents.forEach(function(content) { %>
+                        <tr>
+                          <td>
+                            <a href="<%= content.url %>" target="_blank" class="text-truncate" style="max-width: 200px;">
+                              <%= content.url %>
+                            </a>
+                          </td>
+                          <td>
+                            <small class="text-muted">
+                              <%= new Date(content.createdAt).toLocaleDateString() %>
+                            </small>
+                          </td>
+                          <td>
+                            <% if (content.transcription) { %>
+                              <span class="badge bg-success">Processed</span>
+                            <% } else { %>
+                              <span class="badge bg-secondary">Pending</span>
+                            <% } %>
+                          </td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+              <% } else { %>
+                <p class="text-muted">No content items</p>
+              <% } %>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5><i class="fas fa-file me-2"></i>Recent Files</h5>
+            </div>
+            <div class="card-body">
+              <% if (userDetails.Files && userDetails.Files.length > 0) { %>
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Filename</th>
+                        <th>Size</th>
+                        <th>Uploaded</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% userDetails.Files.forEach(function(file) { %>
+                        <tr>
+                          <td>
+                            <div class="text-truncate" style="max-width: 150px;">
+                              <%= file.filename %>
+                            </div>
+                          </td>
+                          <td>
+                            <small class="text-muted">
+                              <% if (file.metadata && file.metadata.size) { %>
+                                <%= (file.metadata.size / 1024 / 1024).toFixed(2) %> MB
+                              <% } else { %>
+                                Unknown
+                              <% } %>
+                            </small>
+                          </td>
+                          <td>
+                            <small class="text-muted">
+                              <%= new Date(file.createdAt).toLocaleDateString() %>
+                            </small>
+                          </td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+              <% } else { %>
+                <p class="text-muted">No files uploaded</p>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+  .user-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 1.5rem;
+  }
+  
+  .card-header h5 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+  
+  .table-responsive {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  
+  .text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>
+
+<%- include('../partials/footer') %> 
