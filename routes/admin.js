@@ -1512,4 +1512,81 @@ router.get('/test-openai-api', async (req, res) => {
   }
 });
 
+// Admin test routes
+router.get('/tests', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    logAuthEvent('ADMIN_TEST_PAGE_ACCESS', { 
+      adminId: req.user.id, 
+      adminUsername: req.user.username 
+    });
+    
+    res.render('admin/tests', {
+      user: req.user,
+      title: 'Admin - System Tests',
+      testResults: null,
+      isRunning: false
+    });
+  } catch (error) {
+    handleAdminError(req, res, error, { action: 'VIEW_TESTS' });
+  }
+});
+
+router.post('/tests/run', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    logAuthEvent('ADMIN_TEST_RUN_START', { 
+      adminId: req.user.id, 
+      adminUsername: req.user.username 
+    });
+    
+    // Import and run the AI pipeline test
+    const AIPipelineTest = require('../tests/test-ai-pipeline');
+    const tester = new AIPipelineTest();
+    
+    // Capture console output
+    const originalConsoleLog = console.log;
+    let testOutput = [];
+    
+    console.log = (...args) => {
+      testOutput.push(args.join(' '));
+      originalConsoleLog(...args);
+    };
+    
+    try {
+      await tester.runAllTests();
+      
+      // Restore console.log
+      console.log = originalConsoleLog;
+      
+      logAuthEvent('ADMIN_TEST_RUN_SUCCESS', { 
+        adminId: req.user.id, 
+        adminUsername: req.user.username,
+        testResults: tester.testResults
+      });
+      
+      res.json({
+        success: true,
+        testResults: tester.testResults,
+        output: testOutput,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (testError) {
+      console.log = originalConsoleLog;
+      throw testError;
+    }
+    
+  } catch (error) {
+    logAuthError('ADMIN_TEST_RUN_ERROR', error, {
+      adminId: req.user.id,
+      adminUsername: req.user.username
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 module.exports = router; 
