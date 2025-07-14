@@ -2,6 +2,11 @@
 - [x] Add robust log directory creation and fallback logic
 - [x] All database integration tests passing (as of 2025-06-29)
   - Logging now writes to /tmp if app log dirs are not writable 
+- [x] Fix database TEXT column size limitations for large transcriptions
+  - [x] Created migration to expand TEXT columns to LONGTEXT in content, files, and ocr_captions tables
+  - [x] Updated models to use TEXT('long') for transcription, summary, and user_comments fields
+  - [x] Resolves issue with YouTube videos having transcriptions exceeding 65,535 character limit
+  - [x] Migration 20250714200000-expand-text-columns.js successfully applied
 - [x] Refactor middleware into separate modules following best practices
   - [x] Create middleware/auth.js for authentication middleware
   - [x] Create middleware/error.js for error handling middleware
