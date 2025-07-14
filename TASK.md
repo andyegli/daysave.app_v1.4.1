@@ -7,6 +7,10 @@
   - [x] Updated models to use TEXT('long') for transcription, summary, and user_comments fields
   - [x] Resolves issue with YouTube videos having transcriptions exceeding 65,535 character limit
   - [x] Migration 20250714200000-expand-text-columns.js successfully applied
+  - [x] Successfully reprocessed previously failed YouTube transcriptions:
+    - ✅ https://www.youtube.com/watch?v=kyphLGnSz6Q (232,886 chars, 45,858 words)
+    - ✅ https://www.youtube.com/watch?v=onVCfMKd0nY (38,823 chars, 7,498 words)
+    - 100% success rate, both videos now fully transcribed and stored in database
 - [x] Refactor middleware into separate modules following best practices
   - [x] Create middleware/auth.js for authentication middleware
   - [x] Create middleware/error.js for error handling middleware
