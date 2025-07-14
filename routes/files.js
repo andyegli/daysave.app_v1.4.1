@@ -465,6 +465,9 @@ router.put('/:id', isAuthenticated, async (req, res) => {
     if (req.body.tags !== undefined) {
       updates.user_tags = Array.isArray(req.body.tags) ? req.body.tags : req.body.tags.split(',').map(tag => tag.trim());
     }
+    if (req.body.summary !== undefined) {
+      updates.summary = req.body.summary;
+    }
 
     await file.update(updates);
 
@@ -645,6 +648,106 @@ router.get('/serve/:userId/:filename', async (req, res) => {
   } catch (error) {
     console.error('Error serving file:', error);
     res.status(500).json({ error: 'Failed to serve file' });
+  }
+});
+
+// Get file analysis results
+router.get('/:id/analysis', isAuthenticated, async (req, res) => {
+  try {
+    const fileId = req.params.id;
+    const userId = req.user.id;
+    
+    // Verify user owns the file
+    const file = await File.findOne({ where: { id: fileId, user_id: userId } });
+    if (!file) {
+      return res.status(404).json({ error: 'File not found.' });
+    }
+    
+    // Function to get proper title
+    function getFileTitle(fileRecord) {
+      // Try metadata title first
+      if (fileRecord.metadata && fileRecord.metadata.title) {
+        return fileRecord.metadata.title;
+      }
+      
+      // Use filename without extension
+      const nameWithoutExt = fileRecord.filename.replace(/\.[^/.]+$/, '');
+      return nameWithoutExt.replace(/[-_]/g, ' ');
+    }
+    
+    // Check if we have analysis data
+    const hasTranscription = file.transcription && file.transcription.length > 0;
+    const hasSummary = file.summary && file.summary.length > 0;
+    
+    if (!hasTranscription && !hasSummary) {
+      return res.json({
+        success: true,
+        status: 'not_analyzed',
+        message: 'No analysis data found for this file'
+      });
+    }
+    
+    // Parse sentiment data
+    let sentiment = null;
+    if (file.sentiment) {
+      try {
+        sentiment = typeof file.sentiment === 'string' ? JSON.parse(file.sentiment) : file.sentiment;
+      } catch (e) {
+        console.log('Could not parse sentiment from file.sentiment field:', e.message);
+        // Create a default sentiment
+        sentiment = {
+          label: 'neutral',
+          confidence: 0.5
+        };
+      }
+    } else {
+      // Create a default sentiment
+      sentiment = {
+        label: 'neutral',
+        confidence: 0.5
+      };
+    }
+    
+    // Determine content type from file metadata
+    const mimeType = file.metadata?.mimetype || '';
+    let contentType = 'file';
+    if (mimeType.startsWith('image/')) {
+      contentType = 'image';
+    } else if (mimeType.startsWith('video/')) {
+      contentType = 'video';
+    } else if (mimeType.startsWith('audio/')) {
+      contentType = 'audio';
+    }
+    
+    // Return analysis data
+    res.json({
+      success: true,
+      status: 'completed',
+      contentType: contentType,
+      analysis: {
+        id: file.id,
+        title: getFileTitle(file),
+        description: file.metadata?.description || '',
+        duration: file.metadata?.duration || 0,
+        transcription: file.transcription || '',
+        summary: file.summary || '',
+        sentiment: sentiment,
+        language: file.metadata?.language || 'unknown',
+        processing_time: file.metadata?.processing_time || null,
+        quality_score: file.metadata?.quality_score || null,
+        created_at: file.createdAt,
+        metadata: file.metadata || {}
+      },
+      thumbnails: [], // Files don't have separate thumbnail records
+      speakers: [], // Files don't have separate speaker records
+      ocr_captions: [], // Files don't have separate OCR records
+      auto_tags: file.auto_tags || [],
+      user_tags: file.user_tags || []
+    });
+    
+  } catch (error) {
+    console.error('ERROR getting file analysis:', error);
+    res.status(500).json({ error: 'Failed to get file analysis.' });
   }
 });
 

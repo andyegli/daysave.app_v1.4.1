@@ -53,7 +53,11 @@ async function initializeAIIndicators() {
  */
 async function loadAIIndicators(contentId) {
   try {
-    const response = await fetch(`/content/${contentId}/analysis`);
+    // Detect if this is a file or content item by checking the page context
+    const isFilePage = window.location.pathname.includes('/files');
+    const endpoint = isFilePage ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
+    
+    const response = await fetch(endpoint);
     const result = await response.json();
     
     const indicatorContainer = document.getElementById(`ai-indicators-${contentId}`);
@@ -70,18 +74,18 @@ async function loadAIIndicators(contentId) {
       if (analysis.transcription && analysis.transcription.length > 0) {
         const wordCount = analysis.transcription.split(' ').length;
         
-        // Detect content type from URL or analysis metadata
-        let contentType = 'video'; // default
-        const contentUrl = window.location.href; // We'll need to get the actual content URL
+        // Use contentType from response if available, otherwise detect from metadata
+        let contentType = result.contentType || 'video'; // default
         
         // Check if this is image analysis based on metadata or transcription content
-        if (analysis.metadata && analysis.metadata.imageAnalysis) {
+        if (contentType === 'image' || 
+            (analysis.metadata && analysis.metadata.imageAnalysis) ||
+            (analysis.transcription.toLowerCase().includes('image') || 
+             analysis.transcription.toLowerCase().includes('photo') ||
+             analysis.transcription.toLowerCase().includes('picture'))) {
           contentType = 'image';
-        } else if (analysis.transcription.toLowerCase().includes('image') || 
-                   analysis.transcription.toLowerCase().includes('photo') ||
-                   analysis.transcription.toLowerCase().includes('picture')) {
-          contentType = 'image';
-        } else if (analysis.metadata && analysis.metadata.fileCategory === 'audio') {
+        } else if (contentType === 'audio' || 
+                   (analysis.metadata && analysis.metadata.fileCategory === 'audio')) {
           contentType = 'audio';
         }
         
@@ -272,7 +276,11 @@ async function loadAIAnalysisModal(contentId) {
   `;
   
   try {
-    const response = await fetch(`/content/${contentId}/analysis`);
+    // Detect if this is a file or content item by checking the page context
+    const isFilePage = window.location.pathname.includes('/files');
+    const endpoint = isFilePage ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
+    
+    const response = await fetch(endpoint);
     const result = await response.json();
     
     if (result.success && result.status === 'completed') {
@@ -424,22 +432,22 @@ function renderAIAnalysisModal(result) {
     const sentences = analysis.transcription.split(/[.!?]+/).filter(s => s.trim().length > 0);
     const estimatedReadingTime = Math.ceil(wordCount / 200); // Average reading speed: 200 words/minute
     
-    // Detect content type for appropriate display
-    let contentType = 'video'; // default
+    // Use contentType from response if available, otherwise detect from metadata
+    let contentType = result.contentType || 'video'; // default
     let sectionTitle = 'Full Transcription';
     let sectionIcon = 'bi-file-text';
     
-    if (analysis.metadata && analysis.metadata.imageAnalysis) {
+    // Determine content type and appropriate display
+    if (contentType === 'image' || 
+        (analysis.metadata && analysis.metadata.imageAnalysis) ||
+        (analysis.transcription.toLowerCase().includes('image') || 
+         analysis.transcription.toLowerCase().includes('photo') ||
+         analysis.transcription.toLowerCase().includes('picture'))) {
       contentType = 'image';
       sectionTitle = 'AI Image Description';
       sectionIcon = 'bi-image';
-    } else if (analysis.transcription.toLowerCase().includes('image') || 
-               analysis.transcription.toLowerCase().includes('photo') ||
-               analysis.transcription.toLowerCase().includes('picture')) {
-      contentType = 'image';
-      sectionTitle = 'AI Image Description';
-      sectionIcon = 'bi-image';
-    } else if (analysis.metadata && analysis.metadata.fileCategory === 'audio') {
+    } else if (contentType === 'audio' || 
+               (analysis.metadata && analysis.metadata.fileCategory === 'audio')) {
       contentType = 'audio';
       sectionTitle = 'Audio Transcription';
       sectionIcon = 'bi-mic';
@@ -447,9 +455,14 @@ function renderAIAnalysisModal(result) {
     
     html += `
       <div class="mb-4">
-        <h6 class="fw-bold">
-          <i class="${sectionIcon} me-2"></i>${sectionTitle}
-        </h6>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold mb-0">
+            <i class="${sectionIcon} me-2"></i>${sectionTitle}
+          </h6>
+          <button class="btn btn-sm btn-outline-primary" onclick="copyTranscriptionToClipboard()">
+            <i class="bi bi-clipboard me-1"></i>Copy
+          </button>
+        </div>
         <div class="d-flex justify-content-between align-items-center mb-2">
           <div>
             <span class="badge bg-primary me-2">${wordCount} words</span>
@@ -457,9 +470,6 @@ function renderAIAnalysisModal(result) {
             <span class="badge bg-info">~${estimatedReadingTime} min read</span>
             ${contentType === 'image' ? '<span class="badge bg-warning ms-1">AI Generated</span>' : ''}
           </div>
-          <button class="btn btn-sm btn-outline-primary" onclick="copyTranscriptionToClipboard()">
-            <i class="bi bi-clipboard me-1"></i>Copy
-          </button>
         </div>
         <div class="border rounded p-3 bg-light" style="max-height: 300px; overflow-y: auto; line-height: 1.6;" id="transcriptionContent">
           <p class="mb-0">${analysis.transcription}</p>
@@ -1094,8 +1104,12 @@ async function saveSummary(contentId) {
   const newSummary = textarea.value.trim();
   
   try {
-    // Send PUT request to update content
-    const response = await fetch(`/content/${contentId}`, {
+    // Detect if this is a file or content item by checking the page context
+    const isFilePage = window.location.pathname.includes('/files');
+    const endpoint = isFilePage ? `/files/${contentId}` : `/content/${contentId}`;
+    
+    // Send PUT request to update content or file
+    const response = await fetch(endpoint, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
