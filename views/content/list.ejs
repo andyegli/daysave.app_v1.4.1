@@ -65,7 +65,10 @@
     .transcription-preview {
       background-color: #f8f9fa !important;
       border: 1px solid #e9ecef;
-      line-height: 1.4;
+      line-height: 1.6;
+      height: 100px;
+      overflow-y: auto;
+      font-size: 0.85rem;
     }
     
     .transcription-preview:hover {
@@ -207,7 +210,7 @@
                       <!-- Transcription Summary -->
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>" style="display: none;">
                         <div class="position-relative">
-                          <div class="transcription-preview bg-light p-2 rounded small" style="max-height: 120px; overflow-y: auto; font-size: 0.85rem; line-height: 1.5;">
+                          <div class="transcription-preview bg-light p-2 rounded small">
                             <span class="transcription-text text-muted">Loading transcription...</span>
                           </div>
                           <button class="btn btn-sm btn-outline-primary position-absolute top-0 end-0 mt-1 me-1 py-0 px-2" onclick="copyContentSummary('<%= item.id %>')" title="Copy Summary" style="z-index: 10;">
