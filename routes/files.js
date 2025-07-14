@@ -596,15 +596,10 @@ router.get('/api/stats', isAuthenticated, async (req, res) => {
 });
 
 // Secure file serving route - serves uploaded files with authentication
-router.get('/serve/:userId/:filename', async (req, res) => {
+router.get('/serve/:userId/:filename', isAuthenticated, async (req, res) => {
   try {
     const { userId, filename } = req.params;
-    const requestingUserId = req.user?.id;
-    
-    // Check if user is authenticated
-    if (!requestingUserId) {
-      return res.status(401).json({ error: 'Authentication required to access files' });
-    }
+    const requestingUserId = req.user.id;
     
     // Users can only access their own files (except admins)
     const isAdmin = req.user.Role && req.user.Role.name === 'admin';
