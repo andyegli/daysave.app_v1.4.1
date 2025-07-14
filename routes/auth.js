@@ -460,41 +460,204 @@ router.get('/link-account', (req, res) => {
   if (!linkProfile) {
     return res.redirect('/auth/login');
   }
+  
+  // Check if user is already logged in and owns this email
+  const isLoggedIn = req.isAuthenticated();
+  const isOwnEmail = isLoggedIn && req.user.email === linkProfile.email;
+  
   res.render('auth/link-account', {
     email: linkProfile.email,
     provider: linkProfile.provider,
     providerName: getProviderName(linkProfile.provider),
     token: linkProfile.token || '',
-    error: null
+    error: null,
+    isLoggedIn,
+    isOwnEmail,
+    user: req.user || null
   });
 });
 
-// Link account POST (require password confirmation)
+// Link account POST (enhanced with alternative verification methods)
 router.post('/link-account', async (req, res) => {
   const { linkProfile } = req.session;
-  const { password } = req.body;
+  const { password, verificationMethod } = req.body;
+  
   if (!linkProfile) {
     return res.redirect('/auth/login');
   }
+  
   try {
     // Find user by email
     const user = await User.findOne({ where: { email: linkProfile.email } });
     if (!user) {
       req.session.linkProfile = null;
-      return res.render('auth/login', { title: 'Login - DaySave', user: null, error: 'Account not found.' });
+      return res.render('auth/login', { 
+        title: 'Login - DaySave', 
+        user: null, 
+        error: 'Account not found.' 
+      });
     }
-    // Require password confirmation for security
-    const bcrypt = require('bcryptjs');
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) {
+    
+    // Check if user is already logged in and owns this email
+    const isLoggedIn = req.isAuthenticated();
+    const isOwnEmail = isLoggedIn && req.user.email === linkProfile.email;
+    
+    let verificationPassed = false;
+    
+    // Method 1: Already logged in with same email - no additional verification needed
+    if (isOwnEmail) {
+      verificationPassed = true;
+      logAuthEvent('OAUTH_LINK_AUTHENTICATED_USER', { 
+        userId: user.id, 
+        provider: linkProfile.provider,
+        email: linkProfile.email 
+      });
+    }
+    // Method 2: Email verification for verified users
+    else if (verificationMethod === 'email' && user.email_verified) {
+      // Generate and send email verification token
+      const crypto = require('crypto');
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      
+      // Store verification token in session with expiry
+      req.session.emailVerificationToken = verificationToken;
+      req.session.emailVerificationExpiry = Date.now() + 15 * 60 * 1000; // 15 minutes
+      
+      // Send verification email
+      const sendMail = require('../utils/send-mail');
+      await sendMail({
+        to: linkProfile.email,
+        subject: 'Link OAuth Account - DaySave',
+        html: `
+          <p>Hello,</p>
+          <p>You requested to link your ${getProviderName(linkProfile.provider)} account to your DaySave account.</p>
+          <p>Click the link below to complete the linking process:</p>
+          <p><a href="${process.env.BASE_URL || `http://localhost:${process.env.APP_PORT || 3000}`}/auth/verify-link?token=${verificationToken}">Link Account</a></p>
+          <p>This link will expire in 15 minutes.</p>
+          <p>If you did not request this, please ignore this email.</p>
+        `
+      });
+      
       return res.render('auth/link-account', {
         email: linkProfile.email,
         provider: linkProfile.provider,
         providerName: getProviderName(linkProfile.provider),
         token: linkProfile.token || '',
-        error: 'Incorrect password. Please try again.'
+        error: null,
+        isLoggedIn: false,
+        isOwnEmail: false,
+        user: null,
+        emailSent: true
       });
     }
+    // Method 3: Password verification (fallback)
+    else if (password) {
+      const bcrypt = require('bcryptjs');
+      const valid = await bcrypt.compare(password, user.password_hash);
+      if (!valid) {
+        return res.render('auth/link-account', {
+          email: linkProfile.email,
+          provider: linkProfile.provider,
+          providerName: getProviderName(linkProfile.provider),
+          token: linkProfile.token || '',
+          error: 'Incorrect password. Please try again.',
+          isLoggedIn: false,
+          isOwnEmail: false,
+          user: null
+        });
+      }
+      verificationPassed = true;
+      logAuthEvent('OAUTH_LINK_PASSWORD_VERIFIED', { 
+        userId: user.id, 
+        provider: linkProfile.provider,
+        email: linkProfile.email 
+      });
+    }
+    // No valid verification method provided
+    else {
+      return res.render('auth/link-account', {
+        email: linkProfile.email,
+        provider: linkProfile.provider,
+        providerName: getProviderName(linkProfile.provider),
+        token: linkProfile.token || '',
+        error: 'Please choose a verification method.',
+        isLoggedIn: false,
+        isOwnEmail: false,
+        user: null
+      });
+    }
+    
+    if (verificationPassed) {
+      // Link the provider
+      await user.createSocialAccount({
+        platform: linkProfile.provider,
+        handle: linkProfile.email,
+        provider: linkProfile.provider,
+        provider_user_id: linkProfile.providerUserId,
+        access_token: linkProfile.accessToken,
+        refresh_token: linkProfile.refreshToken,
+        profile_data: JSON.stringify(linkProfile.profileData)
+      });
+      
+      req.session.linkProfile = null;
+      
+      // Log the user in if not already logged in
+      if (!isLoggedIn) {
+        req.login(user, (err) => {
+          if (err) {
+            return res.render('auth/login', { 
+              title: 'Login - DaySave', 
+              user: null, 
+              error: 'Login failed after linking.' 
+            });
+          }
+          return res.redirect('/dashboard');
+        });
+      } else {
+        // Already logged in, just redirect to dashboard
+        return res.redirect('/dashboard');
+      }
+    }
+    
+  } catch (err) {
+    logAuthError('OAUTH_LINK_ERROR', err, { 
+      email: linkProfile.email, 
+      provider: linkProfile.provider 
+    });
+    req.session.linkProfile = null;
+    return res.render('auth/login', { 
+      title: 'Login - DaySave', 
+      user: null, 
+      error: 'An error occurred while linking accounts.' 
+    });
+  }
+});
+
+// Email verification route for account linking
+router.get('/verify-link', async (req, res) => {
+  const { token } = req.query;
+  const { linkProfile, emailVerificationToken, emailVerificationExpiry } = req.session;
+  
+  if (!token || !linkProfile || !emailVerificationToken || !emailVerificationExpiry) {
+    return res.redirect('/auth/login?error=invalid_verification_link');
+  }
+  
+  // Check if token is valid and not expired
+  if (token !== emailVerificationToken || Date.now() > emailVerificationExpiry) {
+    req.session.linkProfile = null;
+    req.session.emailVerificationToken = null;
+    req.session.emailVerificationExpiry = null;
+    return res.redirect('/auth/login?error=verification_link_expired');
+  }
+  
+  try {
+    // Find user by email
+    const user = await User.findOne({ where: { email: linkProfile.email } });
+    if (!user) {
+      req.session.linkProfile = null;
+      return res.redirect('/auth/login?error=account_not_found');
+    }
+    
     // Link the provider
     await user.createSocialAccount({
       platform: linkProfile.provider,
@@ -505,17 +668,33 @@ router.post('/link-account', async (req, res) => {
       refresh_token: linkProfile.refreshToken,
       profile_data: JSON.stringify(linkProfile.profileData)
     });
+    
+    // Clean up session
     req.session.linkProfile = null;
+    req.session.emailVerificationToken = null;
+    req.session.emailVerificationExpiry = null;
+    
+    logAuthEvent('OAUTH_LINK_EMAIL_VERIFIED', { 
+      userId: user.id, 
+      provider: linkProfile.provider,
+      email: linkProfile.email 
+    });
+    
     // Log the user in
     req.login(user, (err) => {
       if (err) {
-        return res.render('auth/login', { title: 'Login - DaySave', user: null, error: 'Login failed after linking.' });
+        return res.redirect('/auth/login?error=login_failed_after_linking');
       }
-      return res.redirect('/dashboard');
+      return res.redirect('/dashboard?success=account_linked');
     });
+    
   } catch (err) {
+    logAuthError('OAUTH_VERIFY_LINK_ERROR', err, { 
+      email: linkProfile.email, 
+      provider: linkProfile.provider 
+    });
     req.session.linkProfile = null;
-    return res.render('auth/login', { title: 'Login - DaySave', user: null, error: 'An error occurred while linking accounts.' });
+    return res.redirect('/auth/login?error=linking_failed');
   }
 });
 

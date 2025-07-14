@@ -123,6 +123,16 @@
                                 Microsoft authentication failed. Please try again.
                             <% } else if (error === 'apple_auth_failed') { %>
                                 Apple authentication failed. Please try again.
+                            <% } else if (error === 'invalid_verification_link') { %>
+                                Invalid or expired verification link. Please try again.
+                            <% } else if (error === 'verification_link_expired') { %>
+                                Verification link has expired. Please request a new one.
+                            <% } else if (error === 'account_not_found') { %>
+                                Account not found. Please check your email or register.
+                            <% } else if (error === 'login_failed_after_linking') { %>
+                                Account linking successful but login failed. Please try logging in again.
+                            <% } else if (error === 'linking_failed') { %>
+                                Account linking failed. Please try again or contact support.
                             <% } else { %>
                                 Authentication failed. Please try again.
                             <% } %>
