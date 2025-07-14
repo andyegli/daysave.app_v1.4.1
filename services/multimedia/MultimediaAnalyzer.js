@@ -1243,7 +1243,13 @@ Only return the JSON array, no other text.`
       const content = response.choices[0].message.content;
       
       try {
-        const objects = JSON.parse(content);
+        // Clean up markdown code blocks if present
+        let cleanContent = content;
+        if (content.includes('```json') || content.includes('```')) {
+          cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        }
+        
+        const objects = JSON.parse(cleanContent);
         return objects.map(obj => ({
           name: obj.name,
           confidence: obj.confidence,
