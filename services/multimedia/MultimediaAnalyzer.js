@@ -461,14 +461,114 @@ class MultimediaAnalyzer {
               });
             }
           }
+        } else if (this.isImageUrl(url) && analysisOptions.transcription) {
+          // Handle image analysis - generate description instead of transcription
+          try {
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.progress(user_id, content_id, 'image_analysis_start', 30, {
+                provider: 'google_vision_ai'
+              });
+            }
+            
+            // Download and analyze the image
+            const imageAnalysisResult = await this.analyzeImageFromUrl(url, {
+              user_id,
+              content_id,
+              enableObjectDetection: true,
+              enableImageDescription: true,
+              enableOCRExtraction: true
+            });
+            
+            if (imageAnalysisResult && imageAnalysisResult.description) {
+              // Use image description as "transcription" for images
+              results.transcription = imageAnalysisResult.description;
+              results.auto_tags.push('image', 'visual', 'photo');
+              
+              // Add image-specific metadata
+              results.metadata.imageAnalysis = {
+                objectsDetected: imageAnalysisResult.objects?.length || 0,
+                textDetected: imageAnalysisResult.hasText || false,
+                confidence: imageAnalysisResult.confidence || 0.8,
+                analysisProvider: 'Google Vision AI + OpenAI GPT-4'
+              };
+              
+              const wordCount = imageAnalysisResult.description.split(' ').length;
+              
+              if (user_id && content_id) {
+                const logger = require('../../config/logger');
+                logger.multimedia.transcription(user_id, content_id, 'image_description', wordCount);
+                logger.multimedia.progress(user_id, content_id, 'image_description_complete', 50, {
+                  wordCount,
+                  descriptionLength: imageAnalysisResult.description.length
+                });
+              }
+              
+              // Generate summary from image description
+              if (analysisOptions.enableSummarization && results.transcription) {
+                if (user_id && content_id) {
+                  const logger = require('../../config/logger');
+                  logger.multimedia.progress(user_id, content_id, 'summary_generation', 60);
+                }
+                
+                results.summary = await this.generateSummary(results.transcription);
+                
+                if (results.summary && user_id && content_id) {
+                  const logger = require('../../config/logger');
+                  logger.multimedia.summary(user_id, content_id, results.summary.length, results.transcription.length);
+                }
+              }
+              
+              // Perform sentiment analysis on image description
+              if (analysisOptions.enableSentimentAnalysis && results.transcription) {
+                if (user_id && content_id) {
+                  const logger = require('../../config/logger');
+                  logger.multimedia.progress(user_id, content_id, 'sentiment_analysis', 70);
+                }
+                
+                results.sentiment = await this.analyzeSentiment(results.transcription);
+              }
+              
+              if (this.enableLogging) {
+                console.log('✅ Image analysis completed:', {
+                  wordCount: results.transcription.split(' ').length,
+                  objectsDetected: imageAnalysisResult.objects?.length || 0,
+                  hasText: imageAnalysisResult.hasText || false
+                });
+              }
+            } else {
+              // Fallback if image analysis failed
+              results.transcription = 'Image description could not be generated for this content.';
+              results.auto_tags.push('image', 'analysis_failed');
+              
+              if (user_id && content_id) {
+                const logger = require('../../config/logger');
+                logger.multimedia.progress(user_id, content_id, 'image_analysis_fallback', 40, {
+                  reason: 'no_description_result'
+                });
+              }
+            }
+          } catch (imageError) {
+            console.error('❌ Image analysis failed:', imageError);
+            results.transcription = 'Image analysis failed for this content.';
+            results.auto_tags.push('image', 'analysis_error');
+            
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.error(user_id, content_id, imageError, {
+                step: 'image_analysis',
+                url
+              });
+            }
+          }
         } else {
-          // For non-YouTube URLs or when transcription is disabled
+          // For non-YouTube, non-image URLs or when transcription is disabled
           results.transcription = 'Transcription not available for this content type.';
           
           if (user_id && content_id) {
             const logger = require('../../config/logger');
             logger.multimedia.progress(user_id, content_id, 'transcription_skipped', 50, {
-              reason: 'non_youtube_url_or_disabled'
+              reason: 'non_youtube_non_image_url_or_disabled'
             });
           }
         }
@@ -1623,6 +1723,317 @@ class MultimediaAnalyzer {
     ];
     
     return multimediaPatterns.some(pattern => pattern.test(url));
+  }
+
+  /**
+   * Check if URL points to an image
+   * 
+   * @param {string} url - URL to check
+   * @returns {boolean} - True if URL likely points to an image
+   */
+  isImageUrl(url) {
+    if (!url || typeof url !== 'string') return false;
+    
+    const imagePatterns = [
+      // Direct image file extensions
+      /\.(jpg|jpeg|png|gif|bmp|webp|svg|tiff|tif)(\?|$)/i,
+      
+      // Image hosting and sharing platforms
+      /imgur\.com\//i,
+      /flickr\.com\//i,
+      /pinterest\.com\/pin\//i,
+      /unsplash\.com\//i,
+      /pixabay\.com\//i,
+      /pexels\.com\//i,
+      /shutterstock\.com\//i,
+      /gettyimages\.com\//i,
+      /istockphoto\.com\//i,
+      
+      // Social media image patterns
+      /instagram\.com\/p\//i,
+      /twitter\.com\/.*\/photo/i,
+      /x\.com\/.*\/photo/i,
+      /facebook\.com\/photo/i
+    ];
+    
+    return imagePatterns.some(pattern => pattern.test(url));
+  }
+
+  /**
+   * Analyze image from URL
+   * Downloads image and performs comprehensive analysis including description generation
+   * 
+   * @param {string} url - Image URL to analyze
+   * @param {Object} options - Analysis options
+   * @returns {Promise<Object>} - Image analysis results
+   */
+  async analyzeImageFromUrl(url, options = {}) {
+    try {
+      if (this.enableLogging) {
+        console.log('🖼️ Starting image analysis from URL:', url);
+      }
+      
+      // Download image to temporary file
+      const tempImagePath = await this.downloadImageFromUrl(url);
+      
+      let analysisResult = {
+        url,
+        description: '',
+        objects: [],
+        hasText: false,
+        confidence: 0,
+        metadata: {}
+      };
+      
+      try {
+        // Perform object detection and enhanced analysis
+        if (options.enableObjectDetection) {
+          const objectResults = await this.detectObjectsEnhanced(tempImagePath);
+          analysisResult.objects = objectResults.objects || [];
+          analysisResult.hasText = !!(objectResults.text && objectResults.text.length > 0);
+          analysisResult.metadata.objectAnalysis = objectResults;
+        }
+        
+        // Generate detailed image description
+        if (options.enableImageDescription) {
+          const descriptionResult = await this.generateImageDescriptionFromPath(
+            tempImagePath, 
+            analysisResult.metadata.objectAnalysis
+          );
+          analysisResult.description = descriptionResult.description;
+          analysisResult.confidence = descriptionResult.confidence;
+        }
+        
+        if (this.enableLogging) {
+          console.log('✅ Image analysis completed:', {
+            url,
+            descriptionLength: analysisResult.description.length,
+            objectsDetected: analysisResult.objects.length,
+            hasText: analysisResult.hasText
+          });
+        }
+        
+      } finally {
+        // Clean up temporary file
+        const fs = require('fs');
+        if (fs.existsSync(tempImagePath)) {
+          fs.unlinkSync(tempImagePath);
+        }
+      }
+      
+      return analysisResult;
+      
+    } catch (error) {
+      console.error('❌ Image analysis from URL failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Download image from URL to temporary file
+   * 
+   * @param {string} url - Image URL to download
+   * @returns {Promise<string>} - Path to downloaded image file
+   */
+  async downloadImageFromUrl(url) {
+    const https = require('https');
+    const http = require('http');
+    const fs = require('fs');
+    const path = require('path');
+    const { v4: uuidv4 } = require('uuid');
+    
+    return new Promise((resolve, reject) => {
+      const tempFileName = `temp_image_${uuidv4()}.jpg`;
+      const tempFilePath = path.join(this.config.tempDir, tempFileName);
+      
+      // Ensure temp directory exists
+      if (!fs.existsSync(this.config.tempDir)) {
+        fs.mkdirSync(this.config.tempDir, { recursive: true });
+      }
+      
+      const client = url.startsWith('https') ? https : http;
+      
+      const request = client.get(url, (response) => {
+        if (response.statusCode !== 200) {
+          reject(new Error(`Failed to download image: HTTP ${response.statusCode}`));
+          return;
+        }
+        
+        const fileStream = fs.createWriteStream(tempFilePath);
+        response.pipe(fileStream);
+        
+        fileStream.on('finish', () => {
+          fileStream.close();
+          resolve(tempFilePath);
+        });
+        
+        fileStream.on('error', (error) => {
+          fs.unlink(tempFilePath, () => {}); // Clean up on error
+          reject(error);
+        });
+      });
+      
+      request.on('error', (error) => {
+        reject(error);
+      });
+      
+      request.setTimeout(30000, () => {
+        request.abort();
+        reject(new Error('Image download timeout'));
+      });
+    });
+  }
+
+  /**
+   * Generate detailed image description from file path
+   * Uses the existing generateImageDescription logic adapted for the service
+   * 
+   * @param {string} imagePath - Path to image file
+   * @param {Object} objectResults - Object detection results
+   * @returns {Promise<Object>} - Image description result
+   */
+  async generateImageDescriptionFromPath(imagePath, objectResults) {
+    try {
+      if (!this.openai) {
+        return {
+          description: 'Image description generation not available (OpenAI API not configured).',
+          confidence: 0.5,
+          provider: 'Error'
+        };
+      }
+      
+      // Prepare context from object detection results
+      let context = '';
+      
+      if (objectResults && objectResults.objects && objectResults.objects.length > 0) {
+        const objectList = objectResults.objects
+          .map(obj => `${obj.name} (${(obj.confidence * 100).toFixed(1)}% confidence)`)
+          .join(', ');
+        context += `Detected objects: ${objectList}\n`;
+      }
+      
+      if (objectResults && objectResults.labels && objectResults.labels.length > 0) {
+        const labelList = objectResults.labels
+          .map(label => `${label.description} (${(label.confidence * 100).toFixed(1)}% confidence)`)
+          .join(', ');
+        context += `Detected labels: ${labelList}\n`;
+      }
+      
+      if (objectResults && objectResults.text) {
+        context += `Text found in image: "${objectResults.text}"\n`;
+      }
+      
+      // Create prompt for detailed description
+      const prompt = `Analyze this image and provide a detailed, natural description of what you see. 
+
+Context from AI analysis:
+${context}
+
+Please provide a comprehensive description that includes:
+1. What objects, people, or scenes are visible
+2. The setting, environment, or background
+3. Any text, signs, or written content
+4. The overall mood, style, or atmosphere
+5. Colors, lighting, and visual composition
+6. Any notable details or interesting elements
+
+Write the description in a natural, engaging way that someone would use to describe the image to another person. Be specific and descriptive, but avoid being overly technical.
+
+Respond with just the description, no additional formatting or labels.`;
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert image analyst. Provide detailed, natural descriptions of images based on AI analysis results.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      });
+
+      const description = response.choices[0].message.content.trim();
+      
+      return {
+        description: description,
+        confidence: objectResults ? 
+          (objectResults.objects?.reduce((sum, obj) => sum + obj.confidence, 0) / Math.max(objectResults.objects?.length || 1, 1)) : 0.8,
+        provider: 'AI Image Description (OpenAI GPT-4)',
+        analysisContext: {
+          objectsDetected: objectResults?.objects?.length || 0,
+          labelsDetected: objectResults?.labels?.length || 0,
+          textDetected: objectResults?.text ? true : false
+        }
+      };
+      
+    } catch (error) {
+      console.error('❌ Image description generation error:', error);
+      return {
+        description: 'Unable to generate detailed description due to an error.',
+        confidence: 0.5,
+        provider: 'Error',
+        analysisContext: {
+          objectsDetected: 0,
+          labelsDetected: 0,
+          textDetected: false
+        }
+      };
+    }
+  }
+
+  /**
+   * Enhanced object detection for images
+   * Uses Google Vision API to detect objects, labels, and text
+   * 
+   * @param {string} imagePath - Path to image file
+   * @returns {Promise<Object>} - Enhanced detection results
+   */
+  async detectObjectsEnhanced(imagePath) {
+    try {
+      if (!this.visionClient) {
+        // Fallback to basic object detection if Vision client not available
+        return await this.detectObjects(imagePath);
+      }
+
+      const [objectResult, labelResult, textResult] = await Promise.all([
+        this.visionClient.objectLocalization(imagePath),
+        this.visionClient.labelDetection(imagePath),
+        this.visionClient.textDetection(imagePath)
+      ]);
+
+      const objects = objectResult[0].localizedObjectAnnotations || [];
+      const labels = labelResult[0].labelAnnotations || [];
+      const textAnnotations = textResult[0].textAnnotations || [];
+
+      // Extract full text if available
+      const fullText = textAnnotations.length > 0 ? textAnnotations[0].description : '';
+
+      return {
+        objects: objects.map(obj => ({
+          name: obj.name,
+          confidence: obj.score,
+          boundingBox: obj.boundingPoly
+        })),
+        labels: labels.map(label => ({
+          description: label.description,
+          confidence: label.score
+        })),
+        text: fullText,
+        textAnnotations: textAnnotations.slice(1), // Skip the first one which is the full text
+        averageConfidence: objects.length > 0 ? 
+          objects.reduce((sum, obj) => sum + obj.score, 0) / objects.length : 0
+      };
+
+    } catch (error) {
+      console.error('❌ Enhanced object detection failed:', error);
+      // Fallback to basic detection
+      return await this.detectObjects(imagePath);
+    }
   }
 
   /**

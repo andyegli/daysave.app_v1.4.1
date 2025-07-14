@@ -66,18 +66,52 @@ async function loadAIIndicators(contentId) {
       const analysis = result.analysis;
       const indicators = [];
       
-      // Transcription indicator and summary
+      // Transcription/Description indicator and summary
       if (analysis.transcription && analysis.transcription.length > 0) {
         const wordCount = analysis.transcription.split(' ').length;
+        
+        // Detect content type from URL or analysis metadata
+        let contentType = 'video'; // default
+        const contentUrl = window.location.href; // We'll need to get the actual content URL
+        
+        // Check if this is image analysis based on metadata or transcription content
+        if (analysis.metadata && analysis.metadata.imageAnalysis) {
+          contentType = 'image';
+        } else if (analysis.transcription.toLowerCase().includes('image') || 
+                   analysis.transcription.toLowerCase().includes('photo') ||
+                   analysis.transcription.toLowerCase().includes('picture')) {
+          contentType = 'image';
+        } else if (analysis.metadata && analysis.metadata.fileCategory === 'audio') {
+          contentType = 'audio';
+        }
+        
+        // Set appropriate indicator based on content type
+        let indicatorIcon, indicatorTitle;
+        switch (contentType) {
+          case 'image':
+            indicatorIcon = 'bi-image';
+            indicatorTitle = `Image Description: ${wordCount} words`;
+            break;
+          case 'audio':
+            indicatorIcon = 'bi-mic';
+            indicatorTitle = `Audio Transcription: ${wordCount} words`;
+            break;
+          case 'video':
+          default:
+            indicatorIcon = 'bi-file-text';
+            indicatorTitle = `Video Transcription: ${wordCount} words`;
+            break;
+        }
+        
         indicators.push({
-          icon: 'bi-file-text',
+          icon: indicatorIcon,
           color: 'bg-primary',
           text: `${wordCount}w`,
-          title: `Transcription: ${wordCount} words`
+          title: indicatorTitle
         });
         
-        // Show transcription summary in content card
-        displayTranscriptionSummary(contentId, analysis.transcription, wordCount);
+        // Show transcription/description summary in content card
+        displayTranscriptionSummary(contentId, analysis.transcription, wordCount, contentType);
       }
       
       // Sentiment indicator
@@ -384,22 +418,44 @@ function renderAIAnalysisModal(result) {
   
   html += `</div>`;
   
-  // Transcription
+  // Transcription/Image Description
   if (analysis.transcription && analysis.transcription.length > 0) {
     const wordCount = analysis.transcription.split(' ').length;
     const sentences = analysis.transcription.split(/[.!?]+/).filter(s => s.trim().length > 0);
     const estimatedReadingTime = Math.ceil(wordCount / 200); // Average reading speed: 200 words/minute
     
+    // Detect content type for appropriate display
+    let contentType = 'video'; // default
+    let sectionTitle = 'Full Transcription';
+    let sectionIcon = 'bi-file-text';
+    
+    if (analysis.metadata && analysis.metadata.imageAnalysis) {
+      contentType = 'image';
+      sectionTitle = 'AI Image Description';
+      sectionIcon = 'bi-image';
+    } else if (analysis.transcription.toLowerCase().includes('image') || 
+               analysis.transcription.toLowerCase().includes('photo') ||
+               analysis.transcription.toLowerCase().includes('picture')) {
+      contentType = 'image';
+      sectionTitle = 'AI Image Description';
+      sectionIcon = 'bi-image';
+    } else if (analysis.metadata && analysis.metadata.fileCategory === 'audio') {
+      contentType = 'audio';
+      sectionTitle = 'Audio Transcription';
+      sectionIcon = 'bi-mic';
+    }
+    
     html += `
       <div class="mb-4">
         <h6 class="fw-bold">
-          <i class="bi bi-file-text me-2"></i>Full Transcription
+          <i class="${sectionIcon} me-2"></i>${sectionTitle}
         </h6>
         <div class="d-flex justify-content-between align-items-center mb-2">
           <div>
             <span class="badge bg-primary me-2">${wordCount} words</span>
-            <span class="badge bg-secondary me-2">${sentences.length} sentences</span>
+            <span class="badge bg-secondary me-2">${sentences.length} ${contentType === 'image' ? 'segments' : 'sentences'}</span>
             <span class="badge bg-info">~${estimatedReadingTime} min read</span>
+            ${contentType === 'image' ? '<span class="badge bg-warning ms-1">AI Generated</span>' : ''}
           </div>
           <button class="btn btn-sm btn-outline-primary" onclick="copyTranscriptionToClipboard()">
             <i class="bi bi-clipboard me-1"></i>Copy
@@ -554,20 +610,34 @@ async function checkOngoingAnalysis() {
 
 /**
  * Display transcription summary in content card
+ * Enhanced to handle both video transcriptions and image descriptions
  * @param {string} contentId - Content ID
- * @param {string} transcription - Full transcription text
- * @param {number} wordCount - Number of words in transcription
+ * @param {string} transcription - Full transcription text or image description
+ * @param {number} wordCount - Number of words in transcription/description
+ * @param {string} contentType - Type of content ('video', 'audio', 'image', or auto-detect)
  */
-function displayTranscriptionSummary(contentId, transcription, wordCount) {
+function displayTranscriptionSummary(contentId, transcription, wordCount, contentType = 'auto') {
   const summaryContainer = document.getElementById(`transcription-summary-${contentId}`);
   if (!summaryContainer) return;
+  
+  // Auto-detect content type if not specified
+  if (contentType === 'auto') {
+    if (transcription.includes('Image description') || transcription.includes('photo') || transcription.includes('picture')) {
+      contentType = 'image';
+    } else if (transcription.includes('Speaker') || transcription.includes('audio')) {
+      contentType = 'audio';
+    } else {
+      contentType = 'video';
+    }
+  }
   
   // Show the summary container
   summaryContainer.style.display = 'block';
   
-  // Create summary text (first 100 characters)
-  const summaryText = transcription.length > 100 ? 
-    transcription.substring(0, 100) + '...' : 
+  // Create summary text (first 120 characters for better image descriptions)
+  const maxLength = contentType === 'image' ? 120 : 100;
+  const summaryText = transcription.length > maxLength ? 
+    transcription.substring(0, maxLength) + '...' : 
     transcription;
   
   // Update the summary content
@@ -578,10 +648,31 @@ function displayTranscriptionSummary(contentId, transcription, wordCount) {
     transcriptionTextElement.classList.add('text-dark');
   }
   
-  // Update the word count in the header
+  // Update the header with appropriate content type
   const headerElement = summaryContainer.querySelector('.fw-semibold');
-  if (headerElement) {
-    headerElement.textContent = `Transcription Summary (${wordCount} words)`;
+  const iconElement = summaryContainer.querySelector('i');
+  
+  if (headerElement && iconElement) {
+    let headerText, iconClass;
+    
+    switch (contentType) {
+      case 'image':
+        headerText = `AI Image Description (${wordCount} words)`;
+        iconClass = 'bi-image me-1 text-primary';
+        break;
+      case 'audio':
+        headerText = `Audio Transcription (${wordCount} words)`;
+        iconClass = 'bi-mic me-1 text-primary';
+        break;
+      case 'video':
+      default:
+        headerText = `Video Transcription (${wordCount} words)`;
+        iconClass = 'bi-file-text me-1 text-primary';
+        break;
+    }
+    
+    headerElement.textContent = headerText;
+    iconElement.className = iconClass;
   }
 }
 
@@ -624,7 +715,8 @@ function getSentimentColor(sentiment) {
 }
 
 /**
- * Copy transcription to clipboard
+ * Copy transcription/description content to clipboard
+ * Handles both video transcriptions and image descriptions
  */
 function copyTranscriptionToClipboard() {
   const transcriptionContent = document.getElementById('transcriptionContent');
@@ -632,12 +724,22 @@ function copyTranscriptionToClipboard() {
   
   const text = transcriptionContent.textContent || transcriptionContent.innerText;
   
+  // Determine content type for appropriate success message
+  let contentType = 'content';
+  if (text.toLowerCase().includes('image') || text.toLowerCase().includes('photo') || text.toLowerCase().includes('picture')) {
+    contentType = 'image description';
+  } else if (text.toLowerCase().includes('speaker') || text.toLowerCase().includes('audio')) {
+    contentType = 'transcription';
+  } else {
+    contentType = 'transcription';
+  }
+  
   if (navigator.clipboard && window.isSecureContext) {
     // Use modern clipboard API
     navigator.clipboard.writeText(text).then(() => {
-      showCopySuccess();
+      showCopySuccess(`${contentType.charAt(0).toUpperCase() + contentType.slice(1)} copied to clipboard!`);
     }).catch(err => {
-      console.error('Failed to copy transcription:', err);
+      console.error(`Failed to copy ${contentType}:`, err);
       fallbackCopyToClipboard(text);
     });
   } else {

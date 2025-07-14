@@ -12,7 +12,7 @@ const multimediaAnalyzer = new MultimediaAnalyzer();
 /**
  * Detect if URL contains multimedia content that should be analyzed
  * @param {string} url - URL to analyze
- * @returns {boolean} - True if URL likely contains video/audio content
+ * @returns {boolean} - True if URL likely contains video/audio/image content
  */
 function isMultimediaURL(url) {
   if (!url || typeof url !== 'string') return false;
@@ -38,6 +38,20 @@ function isMultimediaURL(url) {
     // Direct video/audio file extensions
     /\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)(\?|$)/i,
     /\.(mp3|wav|flac|aac|ogg|wma|m4a)(\?|$)/i,
+    
+    // Direct image file extensions
+    /\.(jpg|jpeg|png|gif|bmp|webp|svg|tiff|tif)(\?|$)/i,
+    
+    // Image hosting and sharing platforms
+    /imgur\.com\//i,
+    /flickr\.com\//i,
+    /pinterest\.com\/pin\//i,
+    /unsplash\.com\//i,
+    /pixabay\.com\//i,
+    /pexels\.com\//i,
+    /shutterstock\.com\//i,
+    /gettyimages\.com\//i,
+    /istockphoto\.com\//i,
     
     // Streaming platforms
     /soundcloud\.com\//i,
