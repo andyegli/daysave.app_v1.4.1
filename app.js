@@ -167,6 +167,15 @@ db.sequelize.sync().then(() => {
     });
     
     if (req.user.Role && req.user.Role.name === 'admin') {
+      // Log admin dashboard access
+      logAuthEvent('ADMIN_DASHBOARD_ACCESS', {
+        adminId: req.user.id,
+        adminUsername: req.user.username,
+        ip: clientDetails.ip,
+        userAgent: clientDetails.userAgent,
+        timestamp: new Date().toISOString()
+      });
+      
       return res.render('admin-dashboard', {
         user: req.user,
         title: 'Admin Dashboard - DaySave'
