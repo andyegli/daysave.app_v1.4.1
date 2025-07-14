@@ -125,12 +125,13 @@ db.sequelize.sync().then(() => {
   // Routes
   app.use('/auth', require('./routes/auth'));
   app.use('/admin', require('./routes/admin'));
-  const contactsRouter = require('./routes/contacts');
-  app.use('/contacts', contactsRouter);
+  app.use('/contacts', require('./routes/contacts'));
   app.use('/files', require('./routes/files'));
   app.use('/content', require('./routes/content'));
   app.use('/multimedia', require('./routes/multimedia'));
   app.use('/api/keys', require('./routes/apiKeys'));
+  app.use('/subscription', require('./routes/subscription'));
+  app.use('/api/subscription', require('./routes/subscription'));
 
   // Basic route
   app.get('/', (req, res) => {
