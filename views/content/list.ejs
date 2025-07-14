@@ -206,17 +206,13 @@
                       
                       <!-- Transcription Summary -->
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>" style="display: none;">
-                        <div class="d-flex align-items-center justify-content-between mb-1">
-                          <div class="d-flex align-items-center">
-                            <i class="bi bi-file-text me-1 text-primary"></i>
-                            <small class="fw-semibold text-primary">Transcription Summary</small>
+                        <div class="position-relative">
+                          <div class="transcription-preview bg-light p-2 rounded small" style="max-height: 120px; overflow-y: auto; font-size: 0.85rem; line-height: 1.5;">
+                            <span class="transcription-text text-muted">Loading transcription...</span>
                           </div>
-                          <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="copyContentSummary('<%= item.id %>')" title="Copy Summary">
+                          <button class="btn btn-sm btn-outline-primary position-absolute top-0 end-0 mt-1 me-1 py-0 px-2" onclick="copyContentSummary('<%= item.id %>')" title="Copy Summary" style="z-index: 10;">
                             <i class="bi bi-clipboard" style="font-size: 0.7rem;"></i>
                           </button>
-                        </div>
-                        <div class="transcription-preview bg-light p-2 rounded small" style="max-height: 60px; overflow-y: auto; font-size: 0.8rem;">
-                          <span class="transcription-text text-muted">Loading transcription...</span>
                         </div>
                       </div>
                     </div>
