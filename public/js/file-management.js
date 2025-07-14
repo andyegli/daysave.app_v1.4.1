@@ -600,13 +600,19 @@ let fileManager;
 document.addEventListener('DOMContentLoaded', () => {
   fileManager = new FileManager();
   
+  console.log('File management JavaScript loaded');
+  
   // Add event listener for delete buttons
   document.addEventListener('click', (e) => {
+    console.log('Click event triggered on:', e.target);
+    
     if (e.target.closest('.delete-file-btn')) {
+      console.log('Delete button clicked');
       e.preventDefault();
       const btn = e.target.closest('.delete-file-btn');
       const fileId = btn.dataset.fileId;
       const filename = btn.dataset.filename;
+      console.log('File ID:', fileId, 'Filename:', filename);
       deleteFile(fileId, filename);
     }
   });
