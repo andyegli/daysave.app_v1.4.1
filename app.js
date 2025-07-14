@@ -15,7 +15,8 @@ const {
   requestLogger,
   sanitizeInput,
   corsMiddleware,
-  ensureRoleLoaded
+  ensureRoleLoaded,
+  isAuthenticated
 } = require('./middleware');
 
 const app = express();
@@ -129,6 +130,7 @@ db.sequelize.sync().then(() => {
   app.use('/files', require('./routes/files'));
   app.use('/content', require('./routes/content'));
   app.use('/multimedia', require('./routes/multimedia'));
+  app.use('/api/keys', require('./routes/apiKeys'));
 
   // Basic route
   app.get('/', (req, res) => {
@@ -149,20 +151,12 @@ db.sequelize.sync().then(() => {
     });
   });
 
-  // Dashboard route (protected)
-  app.get('/dashboard', (req, res) => {
+  // Dashboard route
+  app.get('/dashboard', isAuthenticated, (req, res) => {
     const clientDetails = {
       ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
       userAgent: req.headers['user-agent'] || 'unknown'
     };
-    
-    if (!req.isAuthenticated()) {
-      logAuthEvent('DASHBOARD_ACCESS_DENIED', {
-        ...clientDetails,
-        redirectTo: '/auth/login'
-      });
-      return res.redirect('/auth/login');
-    }
     
     logAuthEvent('DASHBOARD_ACCESSED', {
       ...clientDetails,
@@ -170,24 +164,28 @@ db.sequelize.sync().then(() => {
       username: req.user.username
     });
     
-    if (req.user.Role && req.user.Role.name === 'admin') {
-      // Log admin dashboard access
-      logAuthEvent('ADMIN_DASHBOARD_ACCESS', {
-        adminId: req.user.id,
-        adminUsername: req.user.username,
-        ip: clientDetails.ip,
-        userAgent: clientDetails.userAgent,
-        timestamp: new Date().toISOString()
-      });
-      
-      return res.render('admin-dashboard', {
-        user: req.user,
-        title: 'Admin Dashboard - DaySave'
-      });
-    }
-    res.render('dashboard', {
-      user: req.user,
-      title: 'Dashboard - DaySave'
+    res.render('dashboard', { 
+      title: 'Dashboard - DaySave',
+      user: req.user
+    });
+  });
+
+  // API Key Management route
+  app.get('/api-keys', isAuthenticated, (req, res) => {
+    const clientDetails = {
+      ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown'
+    };
+    
+    logAuthEvent('API_KEY_MANAGEMENT_ACCESSED', {
+      ...clientDetails,
+      userId: req.user.id,
+      username: req.user.username
+    });
+    
+    res.render('api-keys/manage', { 
+      title: 'API Key Management - DaySave',
+      user: req.user
     });
   });
 
