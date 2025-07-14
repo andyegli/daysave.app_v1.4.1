@@ -554,7 +554,7 @@ router.put('/:id', isAuthenticated, async (req, res) => {
       }
       
       // Log group membership changes
-      logger.user.contentGroupUpdate(req.user.id, content.id, group_ids);
+      logger.user.contentEdit(req.user.id, content.id, { group_ids });
     }
     
     res.json({ success: true, content });
