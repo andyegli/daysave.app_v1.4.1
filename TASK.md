@@ -29,6 +29,8 @@
   - [x] Users can only access their own uploaded files (except admins can access all)
   - [x] Fixed file access 404 errors by adding redirect route from /uploads/ to secure file serving endpoint
   - [x] Uploaded files now properly accessible through secure authentication-protected routes
+  - [x] Improved Google Cloud Storage fallback logic to automatically retry with local storage on GCS authentication failures
+  - [x] Fixed "Failed to fetch" upload errors by adding proper error handling with automatic fallback to local storage
 - [x] Refactor middleware into separate modules following best practices
   - [x] Create middleware/auth.js for authentication middleware
   - [x] Create middleware/error.js for error handling middleware
