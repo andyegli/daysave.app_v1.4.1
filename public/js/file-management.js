@@ -315,10 +315,53 @@ class FileManager {
       // Upload files
       const response = await fetch('/files/upload', {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: {
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin' // Include cookies for authentication
       });
 
-      const result = await response.json();
+      // Handle different response types
+      let result;
+      
+      if (response.status === 401) {
+        // Authentication required - redirect to login
+        result = {
+          success: false,
+          error: 'Authentication required',
+          message: 'Please log in to upload files'
+        };
+        // Redirect to login after showing error
+        setTimeout(() => {
+          window.location.href = '/auth/login';
+        }, 2000);
+      } else if (response.status === 302) {
+        // Redirect response (likely to login)
+        result = {
+          success: false,
+          error: 'Authentication required',
+          message: 'Please log in to upload files'
+        };
+        // Redirect to login after showing error
+        setTimeout(() => {
+          window.location.href = '/auth/login';
+        }, 2000);
+      } else if (!response.ok) {
+        // Other HTTP errors
+        try {
+          result = await response.json();
+        } catch (jsonError) {
+          result = {
+            success: false,
+            error: 'Upload failed',
+            message: `Server error: ${response.status} ${response.statusText}`
+          };
+        }
+      } else {
+        // Success response
+        result = await response.json();
+      }
 
       // Hide progress
       this.hideUploadProgress();
@@ -338,7 +381,7 @@ class FileManager {
       this.showUploadResults({
         success: false,
         error: 'Upload failed',
-        message: error.message
+        message: error.message || 'Network error - please check your connection'
       });
     }
   }
