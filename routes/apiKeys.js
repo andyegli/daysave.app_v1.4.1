@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
-const { isAuthenticated, isAdmin } = require('../middleware/auth');
+const { isAuthenticated, isAdmin, checkUsageLimit, updateUsage } = require('../middleware');
 const { authenticateApiKey, requireAdmin } = require('../middleware/apiKey');
 const apiKeyService = require('../services/apiKeyService');
 const { logAuthEvent, logAuthError } = require('../config/logger');
@@ -96,7 +96,12 @@ router.get('/', isAuthenticated, async (req, res) => {
 /**
  * POST /api/keys - Create new API key
  */
-router.post('/', isAuthenticated, validateApiKeyCreation, async (req, res) => {
+router.post('/', [
+  isAuthenticated, 
+  checkUsageLimit('api_keys'),
+  validateApiKeyCreation,
+  updateUsage('api_keys')
+], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

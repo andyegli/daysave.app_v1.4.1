@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { isAuthenticated, requireRole } = require('../middleware');
+const multer = require('multer');
+const { FileUploadService } = require('../services/fileUploadService');
 const { File, User, ContentGroup, ContentGroupMember } = require('../models');
-const fileUploadService = require('../services/fileUpload');
-const { logAuthEvent } = require('../config/logger');
+const { isAuthenticated, isAdmin, checkUsageLimit, checkFileSizeLimit, updateUsage } = require('../middleware');
+const { body, param, query, validationResult } = require('express-validator');
+const logger = require('../config/logger');
 const { Op } = require('sequelize');
 
 // File Management Dashboard
@@ -50,7 +52,7 @@ router.get('/', isAuthenticated, async (req, res) => {
     });
 
     // Get upload statistics
-    const stats = await fileUploadService.getUploadStats(req.user.id);
+    const stats = await FileUploadService.getUploadStats(req.user.id);
     
     // Calculate pagination
     const totalPages = Math.ceil(count / limit);
@@ -58,7 +60,7 @@ router.get('/', isAuthenticated, async (req, res) => {
     const hasPrev = page > 1;
 
     // Log file access
-    logAuthEvent('FILE_DASHBOARD_ACCESS', {
+    logger.logAuthEvent('FILE_DASHBOARD_ACCESS', {
       userId: req.user.id,
       fileCount: count,
       page,
@@ -94,141 +96,151 @@ router.get('/', isAuthenticated, async (req, res) => {
 });
 
 // File Upload Route
-router.post('/upload', isAuthenticated, async (req, res) => {
+const upload = multer({
+  storage: multer.memoryStorage(), // Store files in memory for validation
+  limits: {
+    fileSize: 1024 * 1024 * 1024, // 1GB limit
+    files: 10 // Max 10 files per upload
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'text/plain', 'audio/mpeg', 'audio/wav', 'audio/x-wav', 'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-ms-wmv'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type'));
+    }
+  }
+});
+
+router.post('/upload', [
+  isAuthenticated,
+  checkUsageLimit('file_uploads', (req) => req.files ? req.files.length : 1),
+  checkFileSizeLimit(),
+  upload.array('files', 10),
+  updateUsage('file_uploads', (req) => req.files ? req.files.length : 1),
+  updateUsage('storage_mb', (req) => {
+    if (req.files) {
+      return req.files.reduce((total, file) => total + Math.ceil(file.size / (1024 * 1024)), 0);
+    }
+    return 0;
+  })
+], async (req, res) => {
   try {
-    // Create upload middleware with current settings
-    const upload = await fileUploadService.createUploadMiddleware();
-    
-    // Handle the upload
-    upload.array('files', 10)(req, res, async (err) => {
-      if (err) {
-        console.error('File upload error:', err);
-        
-        if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({
-            error: 'File too large',
-            message: `File size exceeds the maximum allowed limit`
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        error: 'No files uploaded',
+        message: 'Please select at least one file to upload'
+      });
+    }
+
+    const uploadResults = [];
+    const errors = [];
+
+    // Process each uploaded file
+    for (const file of req.files) {
+      try {
+        // Validate file
+        const validation = await FileUploadService.validateFile(file);
+        if (!validation.isValid) {
+          errors.push({
+            filename: file.originalname,
+            errors: validation.errors
           });
+          continue;
         }
-        
-        return res.status(400).json({
-          error: 'Upload failed',
-          message: err.message
-        });
-      }
 
-      if (!req.files || req.files.length === 0) {
-        return res.status(400).json({
-          error: 'No files uploaded',
-          message: 'Please select at least one file to upload'
-        });
-      }
-
-      const uploadResults = [];
-      const errors = [];
-
-      // Process each uploaded file
-      for (const file of req.files) {
-        try {
-          // Validate file
-          const validation = await fileUploadService.validateFile(file);
-          if (!validation.isValid) {
-            errors.push({
-              filename: file.originalname,
-              errors: validation.errors
-            });
-            continue;
+        // Upload file to storage
+        const uploadResult = await FileUploadService.uploadFile(file, req.user.id, {
+          makePublic: false,
+          metadata: {
+            uploadedBy: req.user.id,
+            uploadMethod: 'web_interface'
           }
+        });
 
-          // Upload file to storage
-          const uploadResult = await fileUploadService.uploadFile(file, req.user.id, {
-            makePublic: false,
-            metadata: {
-              uploadedBy: req.user.id,
-              uploadMethod: 'web_interface'
-            }
-          });
-
-          // Create file record in database
-          const fileRecord = await File.create({
-            user_id: req.user.id,
-            filename: file.originalname,
-            file_path: uploadResult.filePath,
-            metadata: {
-              size: uploadResult.size,
-              mimetype: uploadResult.mimetype,
-              storage: uploadResult.storage,
-              uploadedAt: new Date().toISOString(),
-              publicUrl: uploadResult.publicUrl
-            },
-            user_comments: req.body.comments || '',
-            user_tags: req.body.tags ? req.body.tags.split(',').map(tag => tag.trim()) : []
-          });
-
-          // Assign to groups if specified
-          if (req.body.group_ids) {
-            const groupIds = Array.isArray(req.body.group_ids) ? req.body.group_ids : [req.body.group_ids];
-            const groupMemberships = groupIds.map(group_id => ({
-              content_id: fileRecord.id,
-              group_id
-            }));
-            await ContentGroupMember.bulkCreate(groupMemberships);
-          }
-
-          uploadResults.push({
-            id: fileRecord.id,
-            filename: file.originalname,
-            size: uploadResult.size,
-            mimetype: uploadResult.mimetype,
-            success: true
-          });
-
-          // Log successful upload
-          logAuthEvent('FILE_UPLOAD_SUCCESS', {
-            userId: req.user.id,
-            fileId: fileRecord.id,
-            filename: file.originalname,
+        // Create file record in database
+        const fileRecord = await File.create({
+          user_id: req.user.id,
+          filename: file.originalname,
+          file_path: uploadResult.filePath,
+          metadata: {
             size: uploadResult.size,
             mimetype: uploadResult.mimetype,
             storage: uploadResult.storage,
-            timestamp: new Date().toISOString()
-          });
+            uploadedAt: new Date().toISOString(),
+            publicUrl: uploadResult.publicUrl
+          },
+          user_comments: req.body.comments || '',
+          user_tags: req.body.tags ? req.body.tags.split(',').map(tag => tag.trim()) : []
+        });
 
-        } catch (uploadError) {
-          console.error('Individual file upload error:', uploadError);
-          errors.push({
-            filename: file.originalname,
-            errors: [uploadError.message]
-          });
+        // Assign to groups if specified
+        if (req.body.group_ids) {
+          const groupIds = Array.isArray(req.body.group_ids) ? req.body.group_ids : [req.body.group_ids];
+          const groupMemberships = groupIds.map(group_id => ({
+            content_id: fileRecord.id,
+            group_id
+          }));
+          await ContentGroupMember.bulkCreate(groupMemberships);
         }
+
+        uploadResults.push({
+          id: fileRecord.id,
+          filename: file.originalname,
+          size: uploadResult.size,
+          mimetype: uploadResult.mimetype,
+          success: true
+        });
+
+        // Log successful upload
+        logger.logAuthEvent('FILE_UPLOAD_SUCCESS', {
+          userId: req.user.id,
+          fileId: fileRecord.id,
+          filename: file.originalname,
+          size: uploadResult.size,
+          mimetype: uploadResult.mimetype,
+          storage: uploadResult.storage,
+          timestamp: new Date().toISOString()
+        });
+
+      } catch (uploadError) {
+        console.error('Individual file upload error:', uploadError);
+        errors.push({
+          filename: file.originalname,
+          errors: [uploadError.message]
+        });
       }
+    }
 
-      // Return results
-      const response = {
-        success: uploadResults.length > 0,
-        uploaded: uploadResults,
-        errors,
-        summary: {
-          total: req.files.length,
-          successful: uploadResults.length,
-          failed: errors.length
-        }
-      };
-
-      if (req.headers.accept && req.headers.accept.includes('application/json')) {
-        res.json(response);
-      } else {
-        // Handle form submission redirect
-        if (response.success) {
-          req.session.uploadSuccess = `Successfully uploaded ${uploadResults.length} file(s)`;
-        }
-        if (errors.length > 0) {
-          req.session.uploadErrors = errors;
-        }
-        res.redirect('/files');
+    // Return results
+    const response = {
+      success: uploadResults.length > 0,
+      uploaded: uploadResults,
+      errors,
+      summary: {
+        total: req.files.length,
+        successful: uploadResults.length,
+        failed: errors.length
       }
-    });
+    };
 
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      res.json(response);
+    } else {
+      // Handle form submission redirect
+      if (response.success) {
+        req.session.uploadSuccess = `Successfully uploaded ${uploadResults.length} file(s)`;
+      }
+      if (errors.length > 0) {
+        req.session.uploadErrors = errors;
+      }
+      res.redirect('/files');
+    }
   } catch (error) {
     console.error('Upload route error:', error);
     res.status(500).json({
@@ -264,10 +276,10 @@ router.get('/:id', isAuthenticated, async (req, res) => {
     }
 
     // Get file URL for viewing
-    const fileUrl = await fileUploadService.getFileUrl(file.file_path);
+    const fileUrl = await FileUploadService.getFileUrl(file.file_path);
 
     // Log file access
-    logAuthEvent('FILE_VIEW', {
+    logger.logAuthEvent('FILE_VIEW', {
       userId: req.user.id,
       fileId: file.id,
       filename: file.filename,
@@ -336,7 +348,7 @@ router.put('/:id', isAuthenticated, async (req, res) => {
     }
 
     // Log file update
-    logAuthEvent('FILE_UPDATE', {
+    logger.logAuthEvent('FILE_UPDATE', {
       userId: req.user.id,
       fileId: file.id,
       updates: Object.keys(updates),
@@ -375,7 +387,7 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
     }
 
     // Delete file from storage
-    await fileUploadService.deleteFile(file.file_path);
+    await FileUploadService.deleteFile(file.file_path);
 
     // Delete group memberships
     await ContentGroupMember.destroy({
@@ -386,7 +398,7 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
     await file.destroy();
 
     // Log file deletion
-    logAuthEvent('FILE_DELETE', {
+    logger.logAuthEvent('FILE_DELETE', {
       userId: req.user.id,
       fileId: file.id,
       filename: file.filename,
@@ -410,7 +422,7 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
 // Get Upload Settings (for frontend)
 router.get('/api/settings', isAuthenticated, async (req, res) => {
   try {
-    const settings = await fileUploadService.getUploadSettings();
+    const settings = await FileUploadService.getUploadSettings();
     res.json({
       maxFileSize: settings.maxFileSize,
       maxFileSizeMB: Math.round(settings.maxFileSize / 1024 / 1024),
@@ -433,7 +445,7 @@ router.get('/api/settings', isAuthenticated, async (req, res) => {
 // Get File Statistics
 router.get('/api/stats', isAuthenticated, async (req, res) => {
   try {
-    const stats = await fileUploadService.getUploadStats(req.user.id);
+    const stats = await FileUploadService.getUploadStats(req.user.id);
     res.json(stats);
   } catch (error) {
     console.error('Error getting file stats:', error);

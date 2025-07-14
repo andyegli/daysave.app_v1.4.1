@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { isAuthenticated } = require('../middleware');
+const { isAuthenticated, requireFeature } = require('../middleware');
 const { 
   MultimediaAnalyzer, 
   VoicePrintDatabase, 
@@ -57,7 +57,10 @@ const videoProcessor = new VideoProcessor();
  * - ocr_text: Extracted text from video frames
  * - metadata: Video metadata and technical information
  */
-router.post('/analyze', isAuthenticated, async (req, res) => {
+router.post('/analyze', [
+  isAuthenticated,
+  requireFeature('ai_analysis_enabled')
+], async (req, res) => {
   const startTime = Date.now();
   const analysisId = uuidv4();
   

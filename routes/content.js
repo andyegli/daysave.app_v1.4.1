@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { isAuthenticated } = require('../middleware');
+const { isAuthenticated, checkUsageLimit, updateUsage, requireFeature } = require('../middleware');
 const { Content, ContentGroup, ContentGroupMember } = require('../models');
 const { Op } = require('sequelize');
 const { MultimediaAnalyzer } = require('../services/multimedia');
@@ -403,7 +403,11 @@ router.get('/', isAuthenticated, async (req, res) => {
 });
 
 // Create new content
-router.post('/', isAuthenticated, async (req, res) => {
+router.post('/', [
+  isAuthenticated,
+  checkUsageLimit('content_items'),
+  updateUsage('content_items')
+], async (req, res) => {
   console.log('DEBUG: POST /content route hit by user:', req.user ? req.user.id : 'NO USER');
   console.log('DEBUG: Request method:', req.method);
   console.log('DEBUG: Request headers:', req.headers['content-type']);

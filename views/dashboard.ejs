@@ -181,9 +181,13 @@
                     </div>
                     <div class="col-md-6">
                         <p><strong>Subscription:</strong> 
-                            <span class="badge bg-<%= user.subscription_status === 'trial' ? 'warning' : 'success' %>">
-                                <%= user.subscription_status %>
-                            </span>
+                            <% if (subscription) { %>
+                                <span class="badge bg-<%= subscription.status === 'active' ? 'success' : 'warning' %>">
+                                    <%= subscription.subscriptionPlan.display_name %> - <%= subscription.status %>
+                                </span>
+                            <% } else { %>
+                                <span class="badge bg-secondary">No Subscription</span>
+                            <% } %>
                         </p>
                         <p><strong>Language:</strong> <%= user.language %></p>
                     </div>

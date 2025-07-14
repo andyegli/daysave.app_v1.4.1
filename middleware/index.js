@@ -1,22 +1,15 @@
-// Authentication middleware
-const { isAuthenticated, isAdmin, ensureRoleLoaded, requireTesterPermission } = require('./auth');
+const auth = require('./auth');
+const error = require('./error');
+const security = require('./security');
+const validation = require('./validation');
+const apiKey = require('./apiKey');
+const subscription = require('./subscription');
 
-// Error handling middleware
-const { errorHandler } = require('./error');
-
-// Security middleware
-const { securityHeaders } = require('./security');
-
-// Validation middleware
-const { validate } = require('./validation');
-
-// Export all middleware
 module.exports = {
-  isAuthenticated,
-  isAdmin,
-  ensureRoleLoaded,
-  requireTesterPermission,
-  validate,
-  errorHandler,
-  securityHeaders
+  ...auth,
+  ...error,
+  ...security,
+  ...validation,
+  ...apiKey,
+  ...subscription
 }; 

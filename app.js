@@ -153,7 +153,7 @@ db.sequelize.sync().then(() => {
   });
 
   // Dashboard route
-  app.get('/dashboard', isAuthenticated, (req, res) => {
+  app.get('/dashboard', isAuthenticated, async (req, res) => {
     const clientDetails = {
       ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
       userAgent: req.headers['user-agent'] || 'unknown'
@@ -165,9 +165,19 @@ db.sequelize.sync().then(() => {
       username: req.user.username
     });
     
+    // Load user's subscription information
+    let subscriptionInfo = null;
+    try {
+      const subscriptionService = require('./services/subscriptionService');
+      subscriptionInfo = await subscriptionService.getUserSubscription(req.user.id);
+    } catch (error) {
+      console.error('Error loading subscription info for dashboard:', error);
+    }
+    
     res.render('dashboard', { 
       title: 'Dashboard - DaySave',
-      user: req.user
+      user: req.user,
+      subscription: subscriptionInfo
     });
   });
 

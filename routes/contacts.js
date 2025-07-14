@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Contact, Role, User } = require('../models');
-const { isAuthenticated, ensureRoleLoaded } = require('../middleware');
+const { isAuthenticated, ensureRoleLoaded, checkUsageLimit, updateUsage } = require('../middleware');
 const { getGoogleMapsScriptUrl } = require('../config/maps');
 const { logAuthEvent, logAuthError } = require('../config/logger');
 
@@ -180,7 +180,10 @@ router.get('/new', async (req, res) => {
 });
 
 // Create contact (POST)
-router.post('/', async (req, res) => {
+router.post('/', [
+  checkUsageLimit('contacts'),
+  updateUsage('contacts')
+], async (req, res) => {
   try {
     // Process and clean the form data
     const contactData = processContactFormData(req.body);

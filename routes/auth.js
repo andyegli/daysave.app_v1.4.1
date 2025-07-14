@@ -2,7 +2,8 @@ const express = require('express');
 const passport = require('passport');
 const router = express.Router();
 const { logAuthEvent, logAuthError, logOAuthFlow, logOAuthError } = require('../config/logger');
-const { User, Role, Sequelize, SocialAccount } = require('../models');
+const { User, Role, Sequelize, SocialAccount, SubscriptionPlan } = require('../models');
+const subscriptionService = require('../services/subscriptionService');
 
 // Import middleware
 const {
@@ -382,6 +383,27 @@ router.post('/register', isNotAuthenticated, async (req, res) => {
       role_id: assignedRole.id
     });
     logAuthEvent('REGISTRATION_USER_CREATED', { userId: newUser.id, username, email });
+    
+    // Assign Free subscription plan to new user
+    try {
+      const freePlan = await SubscriptionPlan.findOne({ where: { name: 'free' } });
+      if (freePlan) {
+        await subscriptionService.createSubscription(newUser.id, freePlan.id, 'monthly');
+        logAuthEvent('REGISTRATION_SUBSCRIPTION_ASSIGNED', { 
+          userId: newUser.id, 
+          planId: freePlan.id,
+          planName: 'free' 
+        });
+      }
+    } catch (subscriptionError) {
+      logAuthError('REGISTRATION_SUBSCRIPTION_ERROR', subscriptionError, { 
+        userId: newUser.id, 
+        username, 
+        email 
+      });
+      // Continue with registration even if subscription assignment fails
+    }
+    
     // Send confirmation email
     const sendMail = require('../utils/send-mail');
     await sendMail({
