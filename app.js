@@ -227,6 +227,56 @@ db.sequelize.sync().then(() => {
     });
   });
 
+  // Test endpoints for AI pipeline testing
+  app.get('/test-google-api', async (req, res) => {
+    try {
+      const MultimediaAnalyzer = require('./services/multimedia/MultimediaAnalyzer');
+      const analyzer = new MultimediaAnalyzer({ enableLogging: false });
+      
+      // Check if Google Vision API is available
+      if (analyzer.visionClient || analyzer.googleApiKey) {
+        res.json({
+          success: true,
+          message: 'Google Vision API is accessible',
+          method: analyzer.visionClient ? 'Service Account' : 'API Key'
+        });
+      } else {
+        res.json({
+          success: false,
+          message: 'Google Vision API credentials not configured'
+        });
+      }
+    } catch (error) {
+      res.json({
+        success: false,
+        message: `Google Vision API test failed: ${error.message}`
+      });
+    }
+  });
+
+  app.get('/test-openai-api', async (req, res) => {
+    try {
+      const openaiApiKey = process.env.OPENAI_API_KEY;
+      
+      if (openaiApiKey) {
+        res.json({
+          success: true,
+          message: 'OpenAI API key is configured and accessible'
+        });
+      } else {
+        res.json({
+          success: false,
+          message: 'OpenAI API key not configured'
+        });
+      }
+    } catch (error) {
+      res.json({
+        success: false,
+        message: `OpenAI API test failed: ${error.message}`
+      });
+    }
+  });
+
   // 404 handler (must be before error handler)
   app.use(notFoundHandler);
 

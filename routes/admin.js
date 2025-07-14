@@ -1458,4 +1458,58 @@ function getFileType(filePath) {
   return 'application/octet-stream';
 }
 
+// Test endpoints for AI pipeline testing
+router.get('/test-google-api', async (req, res) => {
+  try {
+    const MultimediaAnalyzer = require('../services/multimedia/MultimediaAnalyzer');
+    const analyzer = new MultimediaAnalyzer({ enableLogging: false });
+    
+    // Check if Google Vision API is available
+    if (analyzer.visionClient || analyzer.googleApiKey) {
+      res.json({
+        success: true,
+        message: 'Google Vision API is accessible',
+        method: analyzer.visionClient ? 'Service Account' : 'API Key'
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'Google Vision API credentials not configured'
+      });
+    }
+  } catch (error) {
+    res.json({
+      success: false,
+      message: `Google Vision API test failed: ${error.message}`
+    });
+  }
+});
+
+router.get('/test-openai-api', async (req, res) => {
+  try {
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    
+    if (openaiApiKey) {
+      // Simple test of OpenAI API availability
+      const OpenAI = require('openai');
+      const openai = new OpenAI({ apiKey: openaiApiKey });
+      
+      res.json({
+        success: true,
+        message: 'OpenAI API key is configured and accessible'
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'OpenAI API key not configured'
+      });
+    }
+  } catch (error) {
+    res.json({
+      success: false,
+      message: `OpenAI API test failed: ${error.message}`
+    });
+  }
+});
+
 module.exports = router; 
