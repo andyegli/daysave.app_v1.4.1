@@ -90,7 +90,9 @@
                         ?
                       <% } %>
                     </div>
-                    <%= contact.name || '-' %>
+                    <a href="/contacts/<%= contact.id %>" class="text-decoration-none fw-semibold">
+                      <%= contact.name || 'Unnamed Contact' %>
+                    </a>
                   </div>
                 </td>
                 <td>
@@ -133,9 +135,10 @@
                   </td>
                 <% } %>
                 <td>
-                  <a href="/contacts/<%= contact.id %>/edit" class="btn btn-sm btn-outline-primary me-2"><i class="fa fa-edit"></i> Edit</a>
+                  <a href="/contacts/<%= contact.id %>" class="btn btn-sm btn-outline-info me-1" title="View Details"><i class="fa fa-eye"></i></a>
+                  <a href="/contacts/<%= contact.id %>/edit" class="btn btn-sm btn-outline-primary me-1" title="Edit Contact"><i class="fa fa-edit"></i></a>
                   <form method="POST" action="/contacts/<%= contact.id %>/delete" class="d-inline">
-                    <button type="submit" class="btn btn-sm btn-outline-danger delete-contact-btn" data-contact-name="<%= contact.name || 'this contact' %>"><i class="fa fa-trash"></i> Delete</button>
+                    <button type="submit" class="btn btn-sm btn-outline-danger delete-contact-btn" data-contact-name="<%= contact.name || 'this contact' %>" title="Delete Contact"><i class="fa fa-trash"></i></button>
                   </form>
                 </td>
               </tr>

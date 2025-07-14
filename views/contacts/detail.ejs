@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= contact.name || 'Contact' %> - DaySave</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .contact-detail-page {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding-top: 2rem;
+    }
+    
+    .contact-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      overflow: hidden;
+    }
+    
+    .contact-header {
+      background: linear-gradient(45deg, #667eea, #764ba2);
+      color: white;
+      padding: 2rem;
+      text-align: center;
+    }
+    
+    .contact-avatar {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      font-weight: 700;
+      margin: 0 auto 1rem;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .contact-info-section {
+      padding: 2rem;
+    }
+    
+    .info-card {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      transition: all 0.3s ease;
+    }
+    
+    .info-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .info-card h5 {
+      color: #495057;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .info-item {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+    
+    .info-item:last-child {
+      border-bottom: none;
+    }
+    
+    .info-label {
+      font-weight: 600;
+      color: #6c757d;
+      min-width: 80px;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .info-value {
+      flex: 1;
+      margin-left: 1rem;
+      word-break: break-word;
+    }
+    
+    .action-buttons {
+      background: white;
+      padding: 1.5rem 2rem;
+      border-top: 1px solid #e9ecef;
+      display: flex;
+      gap: 1rem;
+    }
+    
+    .btn-action {
+      border-radius: 10px;
+      padding: 0.75rem 1.5rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .btn-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .breadcrumb-custom {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    .breadcrumb-custom .breadcrumb-item {
+      color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .breadcrumb-custom .breadcrumb-item.active {
+      color: white;
+    }
+    
+    .map-link {
+      color: #007bff;
+      text-decoration: none;
+      margin-left: 0.5rem;
+      font-size: 0.9rem;
+    }
+    
+    .map-link:hover {
+      color: #0056b3;
+    }
+    
+    .empty-state {
+      text-align: center;
+      color: #6c757d;
+      font-style: italic;
+      padding: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <%- include('../partials/header', { user, title: 'Contact Details' }) %>
+  
+  <div class="contact-detail-page">
+    <div class="container">
+      <!-- Breadcrumb -->
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb breadcrumb-custom">
+          <li class="breadcrumb-item"><a href="/dashboard" class="text-white-50">Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="/contacts" class="text-white-50">Contacts</a></li>
+          <li class="breadcrumb-item active" aria-current="page"><%= contact.name || 'Contact' %></li>
+        </ol>
+      </nav>
+
+      <!-- Alerts -->
+      <% if (error) { %>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <%= error %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <% } %>
+      <% if (success) { %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <i class="fas fa-check-circle me-2"></i>
+          <%= success %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <% } %>
+
+      <!-- Contact Card -->
+      <div class="contact-card">
+        <!-- Header -->
+        <div class="contact-header">
+          <div class="contact-avatar">
+            <% if (contact.name) { %>
+              <%= contact.name.split(' ').map(n => n[0]).join('').toUpperCase() %>
+            <% } else { %>
+              <i class="fas fa-user"></i>
+            <% } %>
+          </div>
+          <h1 class="mb-2"><%= contact.name || 'Unnamed Contact' %></h1>
+          <% if (contact.organization) { %>
+            <p class="mb-1 opacity-75"><%= contact.organization %></p>
+          <% } %>
+          <% if (contact.job_title) { %>
+            <p class="mb-0 opacity-75"><%= contact.job_title %></p>
+          <% } %>
+          <% if (user.Role && user.Role.name === 'admin' && contact.User) { %>
+            <small class="opacity-75">
+              <i class="fas fa-user-circle me-1"></i>
+              Owner: <%= contact.User.first_name || contact.User.username %> (<%= contact.User.email %>)
+            </small>
+          <% } %>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="contact-info-section">
+          <div class="row">
+            <!-- Left Column -->
+            <div class="col-lg-6">
+              <!-- Emails -->
+              <% if (contact.emails && contact.emails.length) { %>
+                <div class="info-card">
+                  <h5><i class="fas fa-envelope text-primary"></i> Email Addresses</h5>
+                  <% contact.emails.forEach(function(email) { %>
+                    <% if (email.value) { %>
+                      <div class="info-item">
+                        <div class="info-label"><%= email.label || 'Email' %></div>
+                        <div class="info-value">
+                          <a href="mailto:<%= email.value %>" class="text-decoration-none">
+                            <%= email.value %>
+                          </a>
+                        </div>
+                      </div>
+                    <% } %>
+                  <% }) %>
+                </div>
+              <% } %>
+
+              <!-- Phones -->
+              <% if (contact.phones && contact.phones.length) { %>
+                <div class="info-card">
+                  <h5><i class="fas fa-phone text-success"></i> Phone Numbers</h5>
+                  <% contact.phones.forEach(function(phone) { %>
+                    <% if (phone.value) { %>
+                      <div class="info-item">
+                        <div class="info-label"><%= phone.label || 'Phone' %></div>
+                        <div class="info-value">
+                          <a href="tel:<%= phone.value %>" class="text-decoration-none">
+                            <%= phone.value %>
+                          </a>
+                        </div>
+                      </div>
+                    <% } %>
+                  <% }) %>
+                </div>
+              <% } %>
+
+              <!-- Social Profiles -->
+              <% if (contact.social_profiles && contact.social_profiles.length) { %>
+                <div class="info-card">
+                  <h5><i class="fas fa-share-alt text-info"></i> Social Profiles</h5>
+                  <% contact.social_profiles.forEach(function(social) { %>
+                    <% if (social.value) { %>
+                      <div class="info-item">
+                        <div class="info-label"><%= social.label || 'Social' %></div>
+                        <div class="info-value">
+                          <% if (social.value.startsWith('http')) { %>
+                            <a href="<%= social.value %>" target="_blank" class="text-decoration-none">
+                              <%= social.value %>
+                              <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8rem;"></i>
+                            </a>
+                          <% } else { %>
+                            <%= social.value %>
+                          <% } %>
+                        </div>
+                      </div>
+                    <% } %>
+                  <% }) %>
+                </div>
+              <% } %>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-lg-6">
+              <!-- Addresses -->
+              <% if (contact.addresses && contact.addresses.length) { %>
+                <div class="info-card">
+                  <h5><i class="fas fa-map-marker-alt text-danger"></i> Addresses</h5>
+                  <% contact.addresses.forEach(function(address) { %>
+                    <% if (address.value) { %>
+                      <div class="info-item">
+                        <div class="info-label"><%= address.label || 'Address' %></div>
+                        <div class="info-value">
+                          <%= address.value %>
+                          <a href="#" class="map-link show-map" data-address="<%= address.value.replace(/'/g, '&#39;') %>" title="Show on map">
+                            <i class="fas fa-map"></i> View on Map
+                          </a>
+                        </div>
+                      </div>
+                    <% } %>
+                  <% }) %>
+                </div>
+              <% } %>
+
+              <!-- Notes -->
+              <% if (contact.notes && contact.notes.length) { %>
+                <div class="info-card">
+                  <h5><i class="fas fa-sticky-note text-warning"></i> Notes</h5>
+                  <% contact.notes.forEach(function(note) { %>
+                    <% if (note.value) { %>
+                      <div class="info-item">
+                        <div class="info-label"><%= note.label || 'Note' %></div>
+                        <div class="info-value"><%= note.value %></div>
+                      </div>
+                    <% } %>
+                  <% }) %>
+                </div>
+              <% } %>
+
+              <!-- Additional Fields -->
+              <% if (contact.nickname || contact.urls || contact.dates || contact.instant_messages) { %>
+                <div class="info-card">
+                  <h5><i class="fas fa-info-circle text-secondary"></i> Additional Information</h5>
+                  
+                  <% if (contact.nickname) { %>
+                    <div class="info-item">
+                      <div class="info-label">Nickname</div>
+                      <div class="info-value"><%= contact.nickname %></div>
+                    </div>
+                  <% } %>
+                  
+                  <% if (contact.urls && contact.urls.length) { %>
+                    <% contact.urls.forEach(function(url) { %>
+                      <% if (url.value) { %>
+                        <div class="info-item">
+                          <div class="info-label"><%= url.label || 'Website' %></div>
+                          <div class="info-value">
+                            <a href="<%= url.value %>" target="_blank" class="text-decoration-none">
+                              <%= url.value %>
+                              <i class="fas fa-external-link-alt ms-1" style="font-size: 0.8rem;"></i>
+                            </a>
+                          </div>
+                        </div>
+                      <% } %>
+                    <% }) %>
+                  <% } %>
+                  
+                  <% if (contact.dates && contact.dates.length) { %>
+                    <% contact.dates.forEach(function(date) { %>
+                      <% if (date.value) { %>
+                        <div class="info-item">
+                          <div class="info-label"><%= date.label || 'Date' %></div>
+                          <div class="info-value"><%= new Date(date.value).toLocaleDateString() %></div>
+                        </div>
+                      <% } %>
+                    <% }) %>
+                  <% } %>
+                </div>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <% if ((!contact.emails || !contact.emails.length) && 
+                 (!contact.phones || !contact.phones.length) && 
+                 (!contact.addresses || !contact.addresses.length) && 
+                 (!contact.social_profiles || !contact.social_profiles.length) && 
+                 (!contact.notes || !contact.notes.length)) { %>
+            <div class="empty-state">
+              <i class="fas fa-user-slash fa-3x mb-3"></i>
+              <p>No additional contact information available.</p>
+              <a href="/contacts/<%= contact.id %>/edit" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-1"></i>Add Information
+              </a>
+            </div>
+          <% } %>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+          <a href="/contacts/<%= contact.id %>/edit" class="btn btn-primary btn-action">
+            <i class="fas fa-edit"></i>Edit Contact
+          </a>
+          <form method="POST" action="/contacts/<%= contact.id %>/delete" class="d-inline">
+            <button type="submit" class="btn btn-danger btn-action delete-contact-btn" data-contact-name="<%= contact.name || 'this contact' %>">
+              <i class="fas fa-trash"></i>Delete Contact
+            </button>
+          </form>
+          <a href="/contacts" class="btn btn-outline-secondary btn-action ms-auto">
+            <i class="fas fa-arrow-left"></i>Back to Contacts
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google Map Modal -->
+  <div class="modal fade" id="mapModal" tabindex="-1" aria-labelledby="mapModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="mapModalLabel">Address Location</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="height:400px;">
+          <div id="map" style="width:100%;height:100%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%- include('../partials/footer') %>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=<%= process.env.GOOGLE_MAPS_KEY %>&loading=async" async></script>
+  <script src="/js/contact-maps.js"></script>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Handle delete confirmation
+      const deleteBtn = document.querySelector('.delete-contact-btn');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          
+          const contactName = this.getAttribute('data-contact-name');
+          
+          if (confirm(`Are you sure you want to delete ${contactName}?\n\nThis action cannot be undone.`)) {
+            this.closest('form').submit();
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html> 

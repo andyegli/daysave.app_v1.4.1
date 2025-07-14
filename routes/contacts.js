@@ -8,6 +8,81 @@ const { logAuthEvent, logAuthError } = require('../config/logger');
 // Apply role loading middleware to all routes
 router.use(isAuthenticated, ensureRoleLoaded);
 
+// Helper function to process and clean contact form data
+function processContactFormData(formData) {
+  const contactData = {
+    name: formData.name ? formData.name.trim() : '',
+    nickname: formData.nickname ? formData.nickname.trim() : '',
+    organization: formData.organization ? formData.organization.trim() : '',
+    job_title: formData.job_title ? formData.job_title.trim() : '',
+    emails: [],
+    phones: [],
+    addresses: [],
+    social_profiles: [],
+    notes: [],
+    urls: [],
+    dates: [],
+    instant_messages: []
+  };
+
+  // Process emails
+  if (formData.emails) {
+    const emailsArray = Array.isArray(formData.emails) ? formData.emails : Object.values(formData.emails);
+    contactData.emails = emailsArray
+      .filter(email => email && email.value && email.value.trim())
+      .map(email => ({
+        label: email.label || 'email',
+        value: email.value.trim()
+      }));
+  }
+
+  // Process phones
+  if (formData.phones) {
+    const phonesArray = Array.isArray(formData.phones) ? formData.phones : Object.values(formData.phones);
+    contactData.phones = phonesArray
+      .filter(phone => phone && phone.value && phone.value.trim())
+      .map(phone => ({
+        label: phone.label || 'phone',
+        value: phone.value.trim()
+      }));
+  }
+
+  // Process addresses
+  if (formData.addresses) {
+    const addressesArray = Array.isArray(formData.addresses) ? formData.addresses : Object.values(formData.addresses);
+    contactData.addresses = addressesArray
+      .filter(address => address && address.value && address.value.trim())
+      .map(address => ({
+        label: address.label || 'address',
+        value: address.value.trim()
+      }));
+  }
+
+  // Process social profiles
+  if (formData.social_profiles) {
+    const socialsArray = Array.isArray(formData.social_profiles) ? formData.social_profiles : Object.values(formData.social_profiles);
+    contactData.social_profiles = socialsArray
+      .filter(social => social && social.value && social.value.trim())
+      .map(social => ({
+        label: social.label || 'social',
+        value: social.value.trim()
+      }));
+  }
+
+  // Process notes
+  if (formData.notes) {
+    const notesArray = Array.isArray(formData.notes) ? formData.notes : Object.values(formData.notes);
+    contactData.notes = notesArray
+      .filter(note => note && note.value && note.value.trim())
+      .map(note => ({
+        label: note.label || 'note',
+        value: note.value.trim()
+      }));
+  }
+
+  return contactData;
+}
+
 // List contacts
 router.get('/', async (req, res) => {
   try {
@@ -107,23 +182,68 @@ router.get('/new', async (req, res) => {
 // Create contact (POST)
 router.post('/', async (req, res) => {
   try {
-    const contactData = {
-      ...req.body,
-      user_id: req.user.id
-    };
-    await Contact.create(contactData);
-    res.redirect('/contacts?success=Contact created');
+    // Process and clean the form data
+    const contactData = processContactFormData(req.body);
+    contactData.user_id = req.user.id;
+    
+    // Validate required fields
+    if (!contactData.name || contactData.name.trim().length === 0) {
+      const googleMapsScriptUrl = getGoogleMapsScriptUrl();
+      return res.render('contacts/form', { 
+        user: req.user, 
+        contact: req.body, 
+        formAction: '/contacts', 
+        method: 'POST', 
+        error: 'Contact name is required.', 
+        success: null,
+        googleMapsScriptUrl 
+      });
+    }
+    
+    const newContact = await Contact.create(contactData);
+    res.redirect(`/contacts/${newContact.id}?success=Contact created successfully`);
   } catch (err) {
+    console.error('Error creating contact:', err);
     const googleMapsScriptUrl = getGoogleMapsScriptUrl();
     res.render('contacts/form', { 
       user: req.user, 
       contact: req.body, 
       formAction: '/contacts', 
       method: 'POST', 
-      error: 'Failed to create contact.', 
+      error: 'Failed to create contact. Please try again.', 
       success: null,
       googleMapsScriptUrl 
     });
+  }
+});
+
+// Contact detail view (Read functionality)
+router.get('/:id', async (req, res) => {
+  try {
+    const contact = await Contact.findByPk(req.params.id, {
+      include: [{
+        model: User,
+        attributes: ['id', 'username', 'email', 'first_name', 'last_name']
+      }]
+    });
+    
+    if (!contact) {
+      return res.redirect('/contacts?error=Contact not found');
+    }
+    
+    // Check if user can view this contact
+    if (contact.user_id !== req.user.id && !(req.user.Role && req.user.Role.name === 'admin')) {
+      return res.redirect('/contacts?error=Permission denied');
+    }
+    
+    res.render('contacts/detail', { 
+      user: req.user, 
+      contact,
+      error: null, 
+      success: req.query.success || null
+    });
+  } catch (err) {
+    res.redirect('/contacts?error=Failed to load contact');
   }
 });
 
@@ -164,16 +284,34 @@ router.post('/:id', async (req, res) => {
       return res.redirect('/contacts?error=Permission denied');
     }
     
-    await contact.update(req.body);
-    res.redirect('/contacts?success=Contact updated');
+    // Process and clean the form data
+    const contactData = processContactFormData(req.body);
+    
+    // Validate required fields
+    if (!contactData.name || contactData.name.trim().length === 0) {
+      const googleMapsScriptUrl = getGoogleMapsScriptUrl();
+      return res.render('contacts/form', { 
+        user: req.user, 
+        contact: { ...contact.toJSON(), ...req.body }, 
+        formAction: `/contacts/${req.params.id}`, 
+        method: 'POST', 
+        error: 'Contact name is required.', 
+        success: null,
+        googleMapsScriptUrl 
+      });
+    }
+    
+    await contact.update(contactData);
+    res.redirect(`/contacts/${contact.id}?success=Contact updated successfully`);
   } catch (err) {
+    console.error('Error updating contact:', err);
     const googleMapsScriptUrl = getGoogleMapsScriptUrl();
     res.render('contacts/form', { 
       user: req.user, 
-      contact: req.body, 
+      contact: { ...req.body, id: req.params.id }, 
       formAction: `/contacts/${req.params.id}`, 
       method: 'POST', 
-      error: 'Failed to update contact.', 
+      error: 'Failed to update contact. Please try again.', 
       success: null,
       googleMapsScriptUrl 
     });
@@ -184,17 +322,22 @@ router.post('/:id', async (req, res) => {
 router.post('/:id/delete', async (req, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id);
-    if (!contact) return res.redirect('/contacts?error=Contact not found');
+    if (!contact) {
+      return res.redirect('/contacts?error=Contact not found');
+    }
     
     // Check if user can delete this contact
     if (contact.user_id !== req.user.id && !(req.user.Role && req.user.Role.name === 'admin')) {
       return res.redirect('/contacts?error=Permission denied');
     }
     
+    const contactName = contact.name || 'Contact';
     await contact.destroy();
-    res.redirect('/contacts?success=Contact deleted');
+    
+    res.redirect('/contacts?success=' + encodeURIComponent(`${contactName} has been deleted successfully`));
   } catch (err) {
-    res.redirect('/contacts?error=Failed to delete contact');
+    console.error('Error deleting contact:', err);
+    res.redirect('/contacts?error=Failed to delete contact. Please try again.');
   }
 });
 

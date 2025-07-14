@@ -71,8 +71,25 @@
   3. Verify that a confirmation email is received (check inbox and spam).
   4. Click the confirmation link to verify the account.
   5. If email is not received, review logs for errors and check SMTP configuration in .env.
-- [ ] Fix OAuth account linking: update SocialAccount model and add migration for provider_user_id and profile_data fields 
-- [ ] Implement contact CRD (Create, Read, Delete) pages for users, including Bootstrap-styled EJS views and proper access control 
+- [x] Fix OAuth account linking: update SocialAccount model and add migration for provider_user_id and profile_data fields
+  - [x] SocialAccount model already includes provider_user_id and profile_data fields
+  - [x] Migration 20250630093000-add-provider-user-id-and-profile-data-to-social-accounts.js exists and applied
+  - [x] OAuth flows (Google, Microsoft, Apple) properly use these fields for account linking
+  - [x] Account linking routes (/auth/link-account GET/POST) implemented with security
+  - [x] Beautiful account linking view with modern styling and user experience
+  - [x] Helper functions for provider name display and session management
+  - [x] Database schema verified as up-to-date with all required fields 
+- [x] Implement contact CRD (Create, Read, Delete) pages for users, including Bootstrap-styled EJS views and proper access control
+  - [x] Enhanced contact list view with View/Edit/Delete action buttons
+  - [x] Created comprehensive contact detail view with modern glassmorphism design
+  - [x] Implemented contact detail route with proper access control (users see own, admins see all)
+  - [x] Enhanced contact form processing with data validation and cleaning
+  - [x] Improved contact create/update routes with better error handling
+  - [x] Added clickable contact names linking to detail views
+  - [x] Enhanced contact deletion with confirmation and success messages
+  - [x] Integrated Google Maps functionality for address viewing
+  - [x] Added breadcrumb navigation and responsive design
+  - [x] Bootstrap-styled EJS views with professional UI/UX design 
 - [x] Admins can see all contacts on /contacts, regular users see only their own
 - [x] Add 'Manage Contacts' link to admin dashboard
 - [x] Ensure role is always available in req.user for all routes that need it
