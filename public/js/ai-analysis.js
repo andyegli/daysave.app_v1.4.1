@@ -1046,4 +1046,45 @@ function showCopySuccess(message = 'Copied to clipboard!') {
       toast.remove();
     }
   }, 3000);
+}
+
+/**
+ * Copy content summary from content card
+ * Copies the transcription summary text from the content card to clipboard
+ * @param {string} contentId - Content ID to copy summary from
+ * @returns {void}
+ */
+function copyContentSummary(contentId) {
+  const summaryContainer = document.getElementById(`transcription-summary-${contentId}`);
+  if (!summaryContainer) {
+    alert('No summary available to copy');
+    return;
+  }
+  
+  const transcriptionText = summaryContainer.querySelector('.transcription-text');
+  if (!transcriptionText) {
+    alert('No summary text found');
+    return;
+  }
+  
+  const text = transcriptionText.textContent || transcriptionText.innerText;
+  
+  // Don't copy loading text
+  if (text.includes('Loading transcription')) {
+    alert('Summary is still loading, please wait...');
+    return;
+  }
+  
+  if (navigator.clipboard && window.isSecureContext) {
+    // Use modern clipboard API for secure contexts
+    navigator.clipboard.writeText(text).then(() => {
+      showCopySuccess('Content summary copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy content summary:', err);
+      fallbackCopyToClipboard(text);
+    });
+  } else {
+    // Fallback for older browsers or non-secure contexts
+    fallbackCopyToClipboard(text);
+  }
 } 
