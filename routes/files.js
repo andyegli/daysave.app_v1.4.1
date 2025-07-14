@@ -7,6 +7,132 @@ const { isAuthenticated, isAdmin, checkUsageLimit, checkFileSizeLimit, updateUsa
 const { body, param, query, validationResult } = require('express-validator');
 const logger = require('../config/logger');
 const { Op } = require('sequelize');
+const { MultimediaAnalyzer } = require('../services/multimedia');
+
+// Initialize multimedia analyzer for file processing
+const multimediaAnalyzer = new MultimediaAnalyzer();
+
+/**
+ * Check if file type should trigger multimedia analysis
+ * @param {string} mimetype - File MIME type
+ * @returns {boolean} - True if file should be analyzed
+ */
+function isMultimediaFile(mimetype) {
+  const multimediaTypes = [
+    // Video files
+    'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-ms-wmv', 'video/webm', 'video/avi',
+    // Audio files
+    'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp3', 'audio/mp4', 'audio/aac', 'audio/ogg',
+    // Image files (for OCR analysis)
+    'image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'image/tiff'
+  ];
+  
+  return multimediaTypes.includes(mimetype);
+}
+
+/**
+ * Trigger multimedia analysis for uploaded file
+ * @param {Object} fileRecord - File database record
+ * @param {Object} user - User object
+ */
+async function triggerFileAnalysis(fileRecord, user) {
+  try {
+    console.log(`🎬 Starting multimedia analysis for uploaded file ${fileRecord.id}`, {
+      user_id: user.id,
+      file_id: fileRecord.id,
+      filename: fileRecord.filename,
+      mimetype: fileRecord.metadata?.mimetype
+    });
+
+    // Determine file URL/path for analysis
+    const fileUrl = await FileUploadService.getFileUrl(fileRecord.file_path);
+    
+    // Run multimedia analysis
+    const analysisResults = await multimediaAnalyzer.analyzeContent(fileUrl, {
+      user_id: user.id,
+      file_id: fileRecord.id,
+      transcription: true,
+      sentiment: true,
+      thumbnails: true,
+      ocr: true,
+      speaker_identification: true,
+      enableSummarization: true
+    });
+
+    // Update file record with AI analysis results
+    const updateData = {};
+    
+    // Store transcription
+    if (analysisResults.transcription && analysisResults.transcription.length > 0) {
+      updateData.transcription = analysisResults.transcription;
+    }
+    
+    // Store summary
+    if (analysisResults.summary && analysisResults.summary.length > 0) {
+      updateData.summary = analysisResults.summary;
+    }
+    
+    // Store sentiment analysis
+    if (analysisResults.sentiment) {
+      updateData.sentiment = analysisResults.sentiment;
+    }
+    
+    // Store auto-generated tags
+    if (analysisResults.auto_tags && analysisResults.auto_tags.length > 0) {
+      updateData.auto_tags = analysisResults.auto_tags;
+    }
+    
+    // Store category
+    if (analysisResults.category) {
+      updateData.category = analysisResults.category;
+    }
+    
+    // Update metadata with analysis results
+    if (analysisResults.metadata) {
+      updateData.metadata = {
+        ...(fileRecord.metadata || {}),
+        ...analysisResults.metadata
+      };
+    }
+
+    // Update file record with analysis results
+    if (Object.keys(updateData).length > 0) {
+      await File.update(updateData, {
+        where: { id: fileRecord.id, user_id: user.id }
+      });
+      
+      console.log(`✅ File ${fileRecord.id} updated with AI analysis results`, {
+        user_id: user.id,
+        file_id: fileRecord.id,
+        updates: Object.keys(updateData)
+      });
+    }
+
+    console.log(`🎉 Multimedia analysis completed for file ${fileRecord.id}`, {
+      user_id: user.id,
+      file_id: fileRecord.id,
+      transcription_length: analysisResults.transcription?.length || 0,
+      sentiment: analysisResults.sentiment?.label || 'none',
+      thumbnails_count: analysisResults.thumbnails?.length || 0,
+      speakers_count: analysisResults.speakers?.length || 0
+    });
+
+  } catch (error) {
+    console.error(`❌ Multimedia analysis failed for file ${fileRecord.id}:`, {
+      user_id: user.id,
+      file_id: fileRecord.id,
+      error: error.message
+    });
+    
+    // Log the error but don't fail the upload
+    logger.logError(`File analysis failed for ${fileRecord.id}`, {
+      user_id: user.id,
+      file_id: fileRecord.id,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+}
 
 // File Management Dashboard
 router.get('/', isAuthenticated, async (req, res) => {
@@ -207,6 +333,17 @@ router.post('/upload', [
           storage: uploadResult.storage,
           timestamp: new Date().toISOString()
         });
+
+        // Trigger multimedia analysis if the file type is multimedia
+        if (isMultimediaFile(file.mimetype)) {
+          console.log(`🎬 Detected multimedia file, triggering analysis: ${file.originalname}`);
+          // Run analysis in background (don't wait for it)
+          setImmediate(() => {
+            triggerFileAnalysis(fileRecord, req.user);
+          });
+        } else {
+          console.log(`📄 Non-multimedia file, skipping analysis: ${file.originalname}`);
+        }
 
       } catch (uploadError) {
         console.error('Individual file upload error:', uploadError);
@@ -452,6 +589,62 @@ router.get('/api/stats', isAuthenticated, async (req, res) => {
     res.status(500).json({
       error: 'Failed to get file statistics'
     });
+  }
+});
+
+// Secure file serving route - serves uploaded files with authentication
+router.get('/serve/:userId/:filename', async (req, res) => {
+  try {
+    const { userId, filename } = req.params;
+    const requestingUserId = req.user?.id;
+    
+    // Check if user is authenticated
+    if (!requestingUserId) {
+      return res.status(401).json({ error: 'Authentication required to access files' });
+    }
+    
+    // Users can only access their own files (except admins)
+    const isAdmin = req.user.Role && req.user.Role.name === 'admin';
+    if (userId !== requestingUserId && !isAdmin) {
+      return res.status(403).json({ error: 'Access denied - you can only access your own files' });
+    }
+    
+    // Construct file path
+    const path = require('path');
+    const fs = require('fs');
+    const filePath = path.join(__dirname, '..', 'uploads', userId, filename);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // Get file stats
+    const stat = fs.statSync(filePath);
+    
+    // Set appropriate headers
+    const mimeType = await FileUploadService.getMimeType(filePath);
+    res.setHeader('Content-Type', mimeType || 'application/octet-stream');
+    res.setHeader('Content-Length', stat.size);
+    res.setHeader('Cache-Control', 'private, max-age=3600'); // Cache for 1 hour
+    
+    // Log file access
+    logger.logAuthEvent('FILE_SERVE', {
+      userId: requestingUserId,
+      accessedUserId: userId,
+      filename: filename,
+      fileSize: stat.size,
+      mimeType: mimeType,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Stream the file
+    const readStream = fs.createReadStream(filePath);
+    readStream.pipe(res);
+    
+  } catch (error) {
+    console.error('Error serving file:', error);
+    res.status(500).json({ error: 'Failed to serve file' });
   }
 });
 

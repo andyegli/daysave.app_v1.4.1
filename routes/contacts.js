@@ -84,7 +84,7 @@ function processContactFormData(formData) {
 }
 
 // List contacts
-router.get('/', async (req, res) => {
+router.get('/', isAuthenticated, async (req, res) => {
   try {
     let contacts, owners = [];
     let ownerFilter = req.query.owner_id || '';
@@ -137,44 +137,42 @@ router.get('/', async (req, res) => {
     }
     
     res.render('contacts/list', { user: req.user, contacts, owners, ownerFilter, error: null, success: req.query.success || null });
-  } catch (err) {
-    logAuthError('CONTACTS_LIST_ERROR', err, { 
+  } catch (error) {
+    logAuthEvent('CONTACTS_LIST_ERROR', {
       userId: req.user.id,
-      isAdmin: req.user.Role?.name === 'admin' 
+      isAdmin: req.user.Role?.name === 'admin'
     });
     res.render('contacts/list', { user: req.user, contacts: [], owners: [], ownerFilter: '', error: 'Failed to load contacts.', success: null });
   }
 });
 
-// Test Google Maps API
+// Test maps functionality
 router.get('/test-maps', isAuthenticated, (req, res) => {
-  res.render('test-maps', { 
-    mapsScriptUrl: getGoogleMapsScriptUrl()
-  });
+  res.render('test-maps', { user: req.user });
 });
 
 // Contact form (for creating new contact)
-router.get('/new', async (req, res) => {
+router.get('/new', isAuthenticated, async (req, res) => {
   try {
     const googleMapsScriptUrl = getGoogleMapsScriptUrl();
     res.render('contacts/form', { 
-      user: req.user, 
-      contact: {}, 
-      formAction: '/contacts', 
-      method: 'POST', 
-      error: null, 
-      success: null,
-      googleMapsScriptUrl 
+      user: req.user,
+      title: 'Add New Contact - DaySave',
+      contact: null,
+      isEdit: false,
+      error: null,
+      success: req.query.success || null,
+      googleMapsScriptUrl
     });
-  } catch (err) {
+  } catch (error) {
     res.render('contacts/form', { 
-      user: req.user, 
-      contact: {}, 
-      formAction: '/contacts', 
-      method: 'POST', 
-      error: 'Failed to load form.', 
+      user: req.user,
+      title: 'Add New Contact - DaySave',
+      contact: null,
+      isEdit: false,
+      error: 'Failed to load contact form.',
       success: null,
-      googleMapsScriptUrl: null 
+      googleMapsScriptUrl: null
     });
   }
 });
@@ -221,7 +219,7 @@ router.post('/', [
 });
 
 // Contact detail view (Read functionality)
-router.get('/:id', async (req, res) => {
+router.get('/:id', isAuthenticated, async (req, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id, {
       include: [{
@@ -251,7 +249,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Edit contact (form)
-router.get('/:id/edit', async (req, res) => {
+router.get('/:id/edit', isAuthenticated, async (req, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id);
     if (!contact) return res.redirect('/contacts?error=Contact not found');
@@ -263,16 +261,16 @@ router.get('/:id/edit', async (req, res) => {
     
     const googleMapsScriptUrl = getGoogleMapsScriptUrl();
     res.render('contacts/form', { 
-      user: req.user, 
-      contact, 
-      formAction: `/contacts/${req.params.id}`, 
-      method: 'POST', 
-      error: null, 
+      user: req.user,
+      title: 'Edit Contact - DaySave',
+      contact,
+      isEdit: true,
+      error: null,
       success: null,
-      googleMapsScriptUrl 
+      googleMapsScriptUrl
     });
   } catch (err) {
-    res.redirect('/contacts?error=Failed to load contact');
+    res.redirect('/contacts?error=Failed to load contact for editing');
   }
 });
 

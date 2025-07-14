@@ -39,28 +39,72 @@ class FileUploadService {
    */
   initializeStorage() {
     try {
-      // Initialize Google Cloud Storage
-      if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_CLOUD_PROJECT_ID) {
+      // Check if we have Google Cloud project configuration
+      if (process.env.GOOGLE_CLOUD_PROJECT_ID && process.env.GOOGLE_CLOUD_STORAGE_BUCKET) {
         const storageOptions = {};
         
+        // Use credentials file if specified
         if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
           storageOptions.keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
         }
         
-        if (process.env.GOOGLE_CLOUD_PROJECT_ID) {
-          storageOptions.projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
-        }
+        // Use project ID
+        storageOptions.projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
 
-        this.storage = new Storage(storageOptions);
-        console.log('✅ Google Cloud Storage initialized');
+        try {
+          this.storage = new Storage(storageOptions);
+          console.log('✅ Google Cloud Storage initialized with project:', process.env.GOOGLE_CLOUD_PROJECT_ID);
+        } catch (storageError) {
+          console.log('⚠️ Google Cloud Storage initialization failed, using local storage:', storageError.message);
+          this.storage = null;
+        }
       } else {
-        console.log('📁 Using local storage (Google Cloud Storage not configured)');
+        console.log('📁 Using local storage (Google Cloud project not fully configured)');
         this.storage = null;
       }
     } catch (error) {
-      console.error('❌ Error initializing Google Cloud Storage:', error);
+      console.error('❌ Error initializing Google Cloud Storage, falling back to local storage:', error);
       this.storage = null;
     }
+  }
+
+  /**
+   * Get MIME type for a file
+   * @param {string} filePath - Path to the file
+   * @returns {string} - MIME type
+   */
+  static async getMimeType(filePath) {
+    const path = require('path');
+    const mime = require('mime-types');
+    
+    // Get MIME type from file extension
+    const mimeType = mime.lookup(filePath);
+    
+    if (mimeType) {
+      return mimeType;
+    }
+    
+    // Fallback based on file extension
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeMap = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.avi': 'video/x-msvideo',
+      '.mov': 'video/quicktime',
+      '.mp3': 'audio/mpeg',
+      '.wav': 'audio/wav',
+      '.ogg': 'audio/ogg',
+      '.pdf': 'application/pdf',
+      '.txt': 'text/plain',
+      '.json': 'application/json'
+    };
+    
+    return mimeMap[ext] || 'application/octet-stream';
   }
 
   /**
