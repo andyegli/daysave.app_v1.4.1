@@ -27,6 +27,8 @@
   - [x] Multimedia analysis now triggers automatically for uploaded files (transcription, sentiment, OCR, thumbnails)
   - [x] Fixed missing file access issue with proper authentication checks
   - [x] Users can only access their own uploaded files (except admins can access all)
+  - [x] Fixed file access 404 errors by adding redirect route from /uploads/ to secure file serving endpoint
+  - [x] Uploaded files now properly accessible through secure authentication-protected routes
 - [x] Refactor middleware into separate modules following best practices
   - [x] Create middleware/auth.js for authentication middleware
   - [x] Create middleware/error.js for error handling middleware

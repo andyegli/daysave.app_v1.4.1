@@ -133,6 +133,12 @@ db.sequelize.sync().then(() => {
   app.use('/subscription', require('./routes/subscription'));
   app.use('/api/subscription', require('./routes/subscription'));
 
+  // Secure file serving route - redirect /uploads/ to secure serve endpoint
+  app.get('/uploads/:userId/:filename', (req, res) => {
+    const { userId, filename } = req.params;
+    res.redirect(`/files/serve/${userId}/${filename}`);
+  });
+
   // Basic route
   app.get('/', (req, res) => {
     const clientDetails = {
