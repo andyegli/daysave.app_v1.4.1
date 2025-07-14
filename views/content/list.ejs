@@ -25,7 +25,11 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 220px;
+      max-width: 280px;
+      cursor: pointer;
+    }
+    .content-card .card-title:hover {
+      color: #0d6efd;
     }
     .content-card .card-text {
       font-size: 0.95rem;
@@ -188,7 +192,7 @@
                   <!-- Main Content (title, comment) -->
                   <div class="flex-grow-1 d-flex flex-column justify-content-between">
                     <div>
-                      <h5 class="card-title mb-1" style="font-size:1.2rem; font-weight:600; cursor:pointer; white-space:normal; overflow-wrap:break-word;" title="<%= item.displayTitle %>"
+                      <h5 class="card-title mb-1" title="<%= item.displayTitle %>"
                         data-bs-toggle="modal" data-bs-target="#viewContentModal" data-id="<%= item.id %>">
                         <%= item.displayTitle %>
                       </h5>

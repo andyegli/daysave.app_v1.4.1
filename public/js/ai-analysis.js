@@ -762,10 +762,10 @@ function fallbackCopyToClipboard(text) {
   
   try {
     document.execCommand('copy');
-    showCopySuccess();
+    showCopySuccess('Summary copied to clipboard!');
   } catch (err) {
-    console.error('Failed to copy transcription:', err);
-    alert('Failed to copy transcription. Please select and copy manually.');
+    console.error('Failed to copy content:', err);
+    alert('Failed to copy content. Please select and copy manually.');
   }
   
   document.body.removeChild(textArea);
@@ -991,18 +991,47 @@ function copySummaryToClipboard() {
   
   const text = summaryText.textContent || summaryText.innerText;
   
+  // Get the copy button for visual feedback
+  const copyButton = document.querySelector('button[onclick="copySummaryToClipboard()"]');
+  
   if (navigator.clipboard && window.isSecureContext) {
     // Use modern clipboard API for secure contexts
     navigator.clipboard.writeText(text).then(() => {
       showCopySuccess('Summary copied to clipboard!');
+      showButtonCopyFeedback(copyButton);
     }).catch(err => {
       console.error('Failed to copy summary:', err);
       fallbackCopyToClipboard(text);
+      showButtonCopyFeedback(copyButton);
     });
   } else {
     // Fallback for older browsers or non-secure contexts
     fallbackCopyToClipboard(text);
+    showButtonCopyFeedback(copyButton);
   }
+}
+
+/**
+ * Show visual feedback on the copy button
+ * @param {HTMLElement} button - The copy button element
+ */
+function showButtonCopyFeedback(button) {
+  if (!button) return;
+  
+  const originalHTML = button.innerHTML;
+  const originalClasses = button.className;
+  
+  // Change button appearance to show success
+  button.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copied!';
+  button.className = button.className.replace('btn-outline-primary', 'btn-success');
+  button.disabled = true;
+  
+  // Reset button after 2 seconds
+  setTimeout(() => {
+    button.innerHTML = originalHTML;
+    button.className = originalClasses;
+    button.disabled = false;
+  }, 2000);
 }
 
 /**
