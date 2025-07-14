@@ -11,6 +11,13 @@
     - ✅ https://www.youtube.com/watch?v=kyphLGnSz6Q (232,886 chars, 45,858 words)
     - ✅ https://www.youtube.com/watch?v=onVCfMKd0nY (38,823 chars, 7,498 words)
     - 100% success rate, both videos now fully transcribed and stored in database
+- [x] Fix file upload "Failed to fetch" error in frontend JavaScript
+  - [x] Fixed authentication handling in file upload JavaScript
+  - [x] Added proper error handling for HTTP 401/302 responses
+  - [x] Added Accept header and credentials option to fetch() call
+  - [x] Improved error messages for authentication and network issues
+  - [x] Fixed Google Cloud Storage credentials configuration issue
+  - [x] FileUploadService now properly falls back to local storage when GCS credentials unavailable
 - [x] Refactor middleware into separate modules following best practices
   - [x] Create middleware/auth.js for authentication middleware
   - [x] Create middleware/error.js for error handling middleware
