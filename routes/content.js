@@ -537,9 +537,11 @@ router.put('/:id', isAuthenticated, async (req, res) => {
     if (summary !== undefined && summary !== originalValues.summary) updatedFields.push('summary');
     
     if (updatedFields.length > 0) {
-      logger.user.contentUpdate(req.user.id, content.id, updatedFields, {
-        original: originalValues,
-        updated: { title, user_comments, user_tags, summary }
+      logger.user.contentEdit(req.user.id, content.id, {
+        title: title !== undefined ? title : originalValues.title,
+        user_comments: user_comments !== undefined ? user_comments : originalValues.user_comments,
+        user_tags: user_tags !== undefined ? user_tags : originalValues.user_tags,
+        summary: summary !== undefined ? summary : originalValues.summary
       });
     }
     
