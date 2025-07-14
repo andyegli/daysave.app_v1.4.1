@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { User, Role } = require('../models');
 const { logAuthEvent, logAuthError } = require('../config/logger');
-const { isAuthenticated } = require('../middleware');
+const { isAuthenticated, isAdmin, requireTesterPermission } = require('../middleware');
 const { body, validationResult, param } = require('express-validator');
 
 // Enhanced admin error handler
@@ -100,90 +100,7 @@ const validateUserId = [
     .withMessage('Invalid user ID format')
 ];
 
-// Enhanced admin check middleware with better error handling
-async function isAdmin(req, res, next) {
-  try {
-    if (!req.isAuthenticated() || !req.user) {
-      logAuthEvent('ADMIN_ACCESS_DENIED', {
-        userId: req.user?.id || null,
-        username: req.user?.username || null,
-        ip: req.ip,
-        userAgent: req.headers['user-agent'],
-        reason: 'not_authenticated',
-        requestPath: req.path,
-        timestamp: new Date().toISOString()
-      });
-      return res.status(403).render('error', {
-        user: req.user,
-        title: 'Access Denied',
-        message: 'You need administrator privileges to access this page.'
-      });
-    }
-    
-    // Use the role loaded by ensureRoleLoaded middleware
-    if (!req.user.Role) {
-      logAuthEvent('ADMIN_ACCESS_DENIED', {
-        userId: req.user.id,
-        username: req.user.username,
-        ip: req.ip,
-        userAgent: req.headers['user-agent'],
-        reason: 'role_not_found',
-        requestPath: req.path,
-        timestamp: new Date().toISOString()
-      });
-      return res.status(403).render('error', {
-        user: req.user,
-        title: 'Role Error',
-        message: 'Your user role could not be verified. Please contact support.'
-      });
-    }
-    
-    if (req.user.Role.name === 'admin') {
-      req.user.roleName = req.user.Role.name; // For backward compatibility
-      logAuthEvent('ADMIN_ACCESS_GRANTED', {
-        adminId: req.user.id,
-        adminUsername: req.user.username,
-        ip: req.ip,
-        userAgent: req.headers['user-agent'],
-        requestPath: req.path,
-        timestamp: new Date().toISOString()
-      });
-      return next();
-    }
-    
-    logAuthEvent('ADMIN_ACCESS_DENIED', {
-      userId: req.user.id,
-      username: req.user.username,
-      userRole: req.user.Role.name,
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-      reason: 'insufficient_role',
-      requestPath: req.path,
-      timestamp: new Date().toISOString()
-    });
-    
-    return res.status(403).render('error', {
-      user: req.user,
-      title: 'Insufficient Privileges',
-      message: 'You need administrator privileges to access this page.'
-    });
-    
-  } catch (err) {
-    logAuthError('ADMIN_ROLE_CHECK_ERROR', err, {
-      userId: req.user?.id || null,
-      username: req.user?.username || null,
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-      requestPath: req.path
-    });
-    
-    return res.status(500).render('error', {
-      user: req.user,
-      title: 'Authentication Error',
-      message: 'Unable to verify your permissions. Please try again.'
-    });
-  }
-}
+// Admin check middleware is now imported from middleware/auth.js
 
 // List users with enhanced error handling
 router.get('/users', isAuthenticated, isAdmin, async (req, res) => {
@@ -1102,5 +1019,443 @@ router.get('/api/logs/stream', isAuthenticated, isAdmin, (req, res) => {
     }
   });
 });
+
+/**
+ * GET /admin/multimedia-testing
+ * Display the multimedia analysis testing interface
+ */
+router.get('/multimedia-testing', requireTesterPermission, async (req, res) => {
+  try {
+    // Get available test files
+    const fs = require('fs');
+    const path = require('path');
+    
+    const testFiles = {
+      images: [],
+      audio: [],
+      video: []
+    };
+    
+    // Read testfiles directory structure
+    const testfilesPath = path.join(__dirname, '..', 'testfiles');
+    
+    try {
+      const categories = ['images', 'audio', 'video'];
+      for (const category of categories) {
+        const categoryPath = path.join(testfilesPath, category);
+        if (fs.existsSync(categoryPath)) {
+          const files = fs.readdirSync(categoryPath)
+            .filter(file => !file.startsWith('.') && file !== 'README.md')
+            .map(file => ({
+              name: file,
+              path: path.join('testfiles', category, file),
+              size: fs.statSync(path.join(categoryPath, file)).size
+            }));
+          testFiles[category] = files;
+        }
+      }
+    } catch (error) {
+      console.error('Error reading test files:', error);
+    }
+    
+    // Get test URLs from configuration
+    let testUrls = {};
+    try {
+      const testUrlsPath = path.join(testfilesPath, 'test-urls.json');
+      if (fs.existsSync(testUrlsPath)) {
+        const urlsData = fs.readFileSync(testUrlsPath, 'utf8');
+        testUrls = JSON.parse(urlsData);
+      }
+    } catch (error) {
+      console.error('Error reading test URLs:', error);
+    }
+    
+    // Available AI jobs
+    const aiJobs = [
+      { id: 'object_detection', name: 'Object Detection', description: 'Detect and identify objects in images/video' },
+      { id: 'transcription', name: 'Audio Transcription', description: 'Convert speech to text' },
+      { id: 'speaker_diarization', name: 'Speaker Diarization', description: 'Identify different speakers' },
+      { id: 'voice_print_recognition', name: 'Voice Print Recognition', description: 'Match voices to known speakers' },
+      { id: 'sentiment_analysis', name: 'Sentiment Analysis', description: 'Analyze emotional tone' },
+      { id: 'summarization', name: 'Text Summarization', description: 'Generate content summaries' },
+      { id: 'thumbnail_generation', name: 'Thumbnail Generation', description: 'Generate thumbnails and key moments' },
+      { id: 'ocr_extraction', name: 'OCR Text Extraction', description: 'Extract text from images/video frames' },
+      { id: 'content_categorization', name: 'Content Categorization', description: 'Automatically categorize content' },
+      { id: 'named_entity_recognition', name: 'Named Entity Recognition', description: 'Extract entities from text' },
+      { id: 'profanity_detection', name: 'Profanity Detection', description: 'Detect inappropriate content' },
+      { id: 'keyword_detection', name: 'Keyword Detection', description: 'Identify key terms and phrases' }
+    ];
+    
+    // Get recent test runs
+    const { TestRun } = require('../models');
+    const recentRuns = await TestRun.findAll({
+      where: { user_id: req.user.id },
+      order: [['createdAt', 'DESC']],
+      limit: 10,
+      attributes: ['id', 'name', 'status', 'total_tests', 'passed_tests', 'failed_tests', 'createdAt']
+    });
+    
+    res.render('admin/multimedia-testing', {
+      title: 'Multimedia Analysis Testing',
+      testFiles,
+      testUrls,
+      aiJobs,
+      recentRuns,
+      user: req.user
+    });
+    
+  } catch (error) {
+    console.error('Error loading testing interface:', error);
+    res.status(500).render('error', { 
+      error: 'Failed to load testing interface', 
+      user: req.user 
+    });
+  }
+});
+
+/**
+ * POST /admin/multimedia-testing/run
+ * Execute a multimedia analysis test run
+ */
+router.post('/multimedia-testing/run', requireTesterPermission, async (req, res) => {
+  try {
+    const { name, selectedFiles, selectedUrls, selectedAiJobs, configuration } = req.body;
+    
+    if (!name || !selectedAiJobs || selectedAiJobs.length === 0) {
+      return res.status(400).json({ 
+        error: 'Test name and at least one AI job are required' 
+      });
+    }
+    
+    if ((!selectedFiles || selectedFiles.length === 0) && (!selectedUrls || selectedUrls.length === 0)) {
+      return res.status(400).json({ 
+        error: 'At least one file or URL must be selected' 
+      });
+    }
+    
+    const { TestRun } = require('../models');
+    const { v4: uuidv4 } = require('uuid');
+    
+    // Calculate total tests
+    const fileCount = selectedFiles ? selectedFiles.length : 0;
+    const urlCount = selectedUrls ? selectedUrls.length : 0;
+    const totalTests = (fileCount + urlCount) * selectedAiJobs.length;
+    
+    // Create test run record
+    const testRun = await TestRun.create({
+      id: uuidv4(),
+      user_id: req.user.id,
+      name,
+      test_type: fileCount > 0 && urlCount > 0 ? 'mixed' : fileCount > 0 ? 'file_upload' : 'url_analysis',
+      total_tests: totalTests,
+      selected_files: selectedFiles || [],
+      selected_urls: selectedUrls || [],
+      selected_ai_jobs: selectedAiJobs,
+      configuration: configuration || {},
+      status: 'running',
+      started_at: new Date()
+    });
+    
+    // Start test execution in background
+    setImmediate(() => {
+      executeTestRun(testRun.id, req.user.id);
+    });
+    
+    res.json({ 
+      success: true, 
+      testRunId: testRun.id,
+      totalTests,
+      message: 'Test run started successfully'
+    });
+    
+  } catch (error) {
+    console.error('Error starting test run:', error);
+    res.status(500).json({ error: 'Failed to start test run' });
+  }
+});
+
+/**
+ * GET /admin/multimedia-testing/status/:testRunId
+ * Get real-time status of a test run
+ */
+router.get('/multimedia-testing/status/:testRunId', requireTesterPermission, async (req, res) => {
+  try {
+    const { TestRun, TestResult } = require('../models');
+    
+    const testRun = await TestRun.findOne({
+      where: { 
+        id: req.params.testRunId,
+        user_id: req.user.id 
+      },
+      include: [{
+        model: TestResult,
+        as: 'testResults',
+        attributes: ['id', 'test_source', 'ai_job', 'status', 'pass_fail_reason', 'duration_ms', 'completed_at']
+      }]
+    });
+    
+    if (!testRun) {
+      return res.status(404).json({ error: 'Test run not found' });
+    }
+    
+    res.json({
+      id: testRun.id,
+      name: testRun.name,
+      status: testRun.status,
+      progress: testRun.progress,
+      total_tests: testRun.total_tests,
+      passed_tests: testRun.passed_tests,
+      failed_tests: testRun.failed_tests,
+      started_at: testRun.started_at,
+      completed_at: testRun.completed_at,
+      duration_seconds: testRun.duration_seconds,
+      error_message: testRun.error_message,
+      results: testRun.testResults || []
+    });
+    
+  } catch (error) {
+    console.error('Error getting test run status:', error);
+    res.status(500).json({ error: 'Failed to get test run status' });
+  }
+});
+
+/**
+ * GET /admin/multimedia-testing/results/:testRunId
+ * Get detailed results of a test run
+ */
+router.get('/multimedia-testing/results/:testRunId', requireTesterPermission, async (req, res) => {
+  try {
+    const { TestRun, TestResult, TestMetric } = require('../models');
+    
+    const testRun = await TestRun.findOne({
+      where: { 
+        id: req.params.testRunId,
+        user_id: req.user.id 
+      },
+      include: [
+        {
+          model: TestResult,
+          as: 'testResults',
+          attributes: ['id', 'test_source', 'ai_job', 'status', 'pass_fail_reason', 'ai_output', 'error_details', 'duration_ms', 'tokens_used', 'estimated_cost', 'confidence_score', 'completed_at']
+        },
+        {
+          model: TestMetric,
+          as: 'testMetrics',
+          attributes: ['metric_type', 'metric_name', 'ai_job', 'metric_value', 'metric_unit', 'collected_at']
+        }
+      ]
+    });
+    
+    if (!testRun) {
+      return res.status(404).json({ error: 'Test run not found' });
+    }
+    
+    res.render('admin/test-results', {
+      title: `Test Results - ${testRun.name}`,
+      testRun,
+      user: req.user
+    });
+    
+  } catch (error) {
+    console.error('Error getting test run results:', error);
+    res.status(500).render('error', { 
+      error: 'Failed to load test results', 
+      user: req.user 
+    });
+  }
+});
+
+/**
+ * Execute a test run in the background
+ */
+async function executeTestRun(testRunId, userId) {
+  const { TestRun, TestResult, TestMetric } = require('../models');
+  const { MultimediaAnalyzer } = require('../services/multimedia');
+  const { v4: uuidv4 } = require('uuid');
+  
+  try {
+    const testRun = await TestRun.findByPk(testRunId);
+    if (!testRun) {
+      throw new Error('Test run not found');
+    }
+    
+    const multimediaAnalyzer = new MultimediaAnalyzer();
+    const allTests = [];
+    
+    // Create test combinations
+    const selectedFiles = testRun.selected_files || [];
+    const selectedUrls = testRun.selected_urls || [];
+    const selectedAiJobs = testRun.selected_ai_jobs || [];
+    
+    // Add file tests
+    for (const file of selectedFiles) {
+      for (const aiJob of selectedAiJobs) {
+        allTests.push({
+          type: 'file_upload',
+          source: file,
+          aiJob
+        });
+      }
+    }
+    
+    // Add URL tests
+    for (const url of selectedUrls) {
+      for (const aiJob of selectedAiJobs) {
+        allTests.push({
+          type: 'url_analysis',
+          source: url,
+          aiJob
+        });
+      }
+    }
+    
+    let completedTests = 0;
+    let passedTests = 0;
+    let failedTests = 0;
+    
+    // Execute tests
+    for (const test of allTests) {
+      try {
+        const testResult = await TestResult.create({
+          id: uuidv4(),
+          test_run_id: testRunId,
+          user_id: userId,
+          test_type: test.type,
+          test_source: test.source,
+          ai_job: test.aiJob,
+          status: 'running',
+          started_at: new Date()
+        });
+        
+        const startTime = Date.now();
+        
+        try {
+          // Execute AI analysis based on test type
+          let result;
+          if (test.type === 'file_upload') {
+            // For file uploads, we need to determine file type and analyze
+            const path = require('path');
+            const fs = require('fs');
+            const filePath = path.join(__dirname, '..', test.source);
+            
+            if (!fs.existsSync(filePath)) {
+              throw new Error(`Test file not found: ${test.source}`);
+            }
+            
+            const fileType = getFileType(filePath);
+            result = await multimediaAnalyzer.analyzeMultimedia(userId, filePath, fileType, {
+              [test.aiJob]: true
+            });
+          } else {
+            // For URL analysis
+            result = await multimediaAnalyzer.analyzeContent(test.source, {
+              user_id: userId,
+              [test.aiJob]: true
+            });
+          }
+          
+          const endTime = Date.now();
+          const duration = endTime - startTime;
+          
+          // Determine pass/fail based on result
+          const isPass = result && !result.error;
+          const status = isPass ? 'passed' : 'failed';
+          const reason = isPass ? 'AI job completed successfully' : (result.error || 'Unknown error');
+          
+          await testResult.update({
+            status,
+            pass_fail_reason: reason,
+            ai_output: result,
+            duration_ms: duration,
+            completed_at: new Date(),
+            confidence_score: result.confidence_score || null,
+            tokens_used: result.tokens_used || 0,
+            estimated_cost: result.estimated_cost || 0
+          });
+          
+          // Create performance metrics
+          await TestMetric.create({
+            id: uuidv4(),
+            test_run_id: testRunId,
+            user_id: userId,
+            metric_type: 'performance',
+            metric_name: 'processing_time',
+            ai_job: test.aiJob,
+            metric_value: duration,
+            metric_unit: 'ms',
+            collected_at: new Date()
+          });
+          
+          if (isPass) {
+            passedTests++;
+          } else {
+            failedTests++;
+          }
+          
+        } catch (error) {
+          await testResult.update({
+            status: 'failed',
+            pass_fail_reason: error.message,
+            error_details: {
+              error: error.message,
+              stack: error.stack
+            },
+            completed_at: new Date()
+          });
+          failedTests++;
+        }
+        
+      } catch (error) {
+        console.error('Error creating test result:', error);
+        failedTests++;
+      }
+      
+      completedTests++;
+      
+      // Update test run progress
+      const progress = Math.round((completedTests / allTests.length) * 100);
+      await testRun.update({
+        progress,
+        passed_tests: passedTests,
+        failed_tests: failedTests
+      });
+    }
+    
+    // Complete test run
+    await testRun.update({
+      status: 'completed',
+      completed_at: new Date(),
+      duration_seconds: Math.round((Date.now() - new Date(testRun.started_at)) / 1000)
+    });
+    
+  } catch (error) {
+    console.error('Error executing test run:', error);
+    await TestRun.update({
+      status: 'failed',
+      error_message: error.message,
+      completed_at: new Date()
+    }, {
+      where: { id: testRunId }
+    });
+  }
+}
+
+/**
+ * Helper function to determine file type from file path
+ */
+function getFileType(filePath) {
+  const path = require('path');
+  const ext = path.extname(filePath).toLowerCase();
+  
+  const imageTypes = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+  const audioTypes = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac'];
+  const videoTypes = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv'];
+  
+  if (imageTypes.includes(ext)) return 'image/jpeg';
+  if (audioTypes.includes(ext)) return 'audio/mpeg';
+  if (videoTypes.includes(ext)) return 'video/mp4';
+  
+  return 'application/octet-stream';
+}
 
 module.exports = router; 

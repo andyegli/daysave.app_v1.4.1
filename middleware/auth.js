@@ -154,11 +154,39 @@ const logAuthAttempt = (req, res, next) => {
   next();
 };
 
+/**
+ * Middleware to check if user has tester permission
+ * Used to restrict access to the multimedia analysis testing interface
+ */
+function requireTesterPermission(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  if (!req.user.Role) {
+    return res.status(403).json({ error: 'User role not loaded' });
+  }
+
+  // Check if user has tester permission through their role
+  const hasPermission = req.user.Role.Permissions && 
+    req.user.Role.Permissions.some(permission => permission.name === 'tester');
+
+  if (!hasPermission) {
+    return res.status(403).json({ 
+      error: 'Insufficient permissions. Tester permission required.',
+      required_permission: 'tester'
+    });
+  }
+
+  next();
+}
+
 module.exports = {
   isAuthenticated,
   isNotAuthenticated,
   requireRole,
   logAuthAttempt,
   getClientDetails,
-  ensureRoleLoaded
+  ensureRoleLoaded,
+  requireTesterPermission
 }; 

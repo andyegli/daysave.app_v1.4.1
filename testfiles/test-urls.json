@@ -1,0 +1,44 @@
+{
+  "youtube": [
+    "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+    "https://youtu.be/3JZ_D3ELwOQ"
+  ],
+  "instagram": [
+    "https://www.instagram.com/p/example1/",
+    "https://www.instagram.com/reel/example2/"
+  ],
+  "tiktok": [
+    "https://www.tiktok.com/@user/video/example1",
+    "https://www.tiktok.com/@user/video/example2"
+  ],
+  "facebook": [
+    "https://www.facebook.com/watch/?v=example1",
+    "https://www.facebook.com/share/v/example2/"
+  ],
+  "twitter": [
+    "https://twitter.com/user/status/example1",
+    "https://x.com/user/status/example2"
+  ],
+  "vimeo": [
+    "https://vimeo.com/example1",
+    "https://vimeo.com/example2"
+  ],
+  "twitch": [
+    "https://www.twitch.tv/videos/example1",
+    "https://www.twitch.tv/videos/example2"
+  ],
+  "soundcloud": [
+    "https://soundcloud.com/user/track-example1",
+    "https://soundcloud.com/user/track-example2"
+  ],
+  "spotify": [
+    "https://open.spotify.com/track/example1",
+    "https://open.spotify.com/episode/example2"
+  ],
+  "direct_files": [
+    "https://example.com/video.mp4",
+    "https://example.com/audio.mp3",
+    "https://example.com/image.jpg"
+  ]
+} 

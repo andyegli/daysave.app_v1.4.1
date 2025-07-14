@@ -1,0 +1,264 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">📊 Test Results - <%= testRun.name %></h1>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="/admin/dashboard">Admin</a></li>
+            <li class="breadcrumb-item"><a href="/admin/multimedia-testing">Testing</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Results</li>
+          </ol>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test Run Summary -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-info-circle me-2"></i>Test Run Summary
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3">
+              <h6>Status</h6>
+              <% if (testRun.status === 'completed') { %>
+                <span class="badge bg-success fs-6">Completed</span>
+              <% } else if (testRun.status === 'failed') { %>
+                <span class="badge bg-danger fs-6">Failed</span>
+              <% } else { %>
+                <span class="badge bg-secondary fs-6"><%= testRun.status %></span>
+              <% } %>
+            </div>
+            <div class="col-md-3">
+              <h6>Total Tests</h6>
+              <p class="mb-0"><%= testRun.total_tests %></p>
+            </div>
+            <div class="col-md-3">
+              <h6>Results</h6>
+              <p class="mb-0">
+                <span class="text-success"><%= testRun.passed_tests %> passed</span> / 
+                <span class="text-danger"><%= testRun.failed_tests %> failed</span>
+              </p>
+            </div>
+            <div class="col-md-3">
+              <h6>Duration</h6>
+              <p class="mb-0"><%= testRun.duration_seconds ? testRun.duration_seconds + 's' : 'N/A' %></p>
+            </div>
+          </div>
+          
+          <% if (testRun.error_message) { %>
+            <div class="row mt-3">
+              <div class="col-12">
+                <div class="alert alert-danger">
+                  <strong>Error:</strong> <%= testRun.error_message %>
+                </div>
+              </div>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test Results Table -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-list me-2"></i>Individual Test Results
+          </h5>
+        </div>
+        <div class="card-body">
+          <% if (testRun.testResults && testRun.testResults.length > 0) { %>
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Test Source</th>
+                    <th>AI Job</th>
+                    <th>Status</th>
+                    <th>Duration</th>
+                    <th>Reason</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% testRun.testResults.forEach(result => { %>
+                    <tr>
+                      <td>
+                        <small class="text-muted"><%= result.test_source %></small>
+                      </td>
+                      <td>
+                        <span class="badge bg-info"><%= result.ai_job %></span>
+                      </td>
+                      <td>
+                        <% if (result.status === 'passed') { %>
+                          <span class="badge bg-success">Passed</span>
+                        <% } else if (result.status === 'failed') { %>
+                          <span class="badge bg-danger">Failed</span>
+                        <% } else { %>
+                          <span class="badge bg-secondary"><%= result.status %></span>
+                        <% } %>
+                      </td>
+                      <td>
+                        <%= result.duration_ms ? Math.round(result.duration_ms / 1000) + 's' : 'N/A' %>
+                      </td>
+                      <td>
+                        <small><%= result.pass_fail_reason || 'N/A' %></small>
+                      </td>
+                      <td>
+                        <button class="btn btn-sm btn-outline-primary" 
+                                onclick="showTestDetails('<%= result.id %>')">
+                          <i class="fas fa-eye"></i> Details
+                        </button>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          <% } else { %>
+            <p class="text-muted">No test results available.</p>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance Metrics -->
+  <% if (testRun.testMetrics && testRun.testMetrics.length > 0) { %>
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-chart-line me-2"></i>Performance Metrics
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>AI Job</th>
+                    <th>Value</th>
+                    <th>Unit</th>
+                    <th>Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% testRun.testMetrics.forEach(metric => { %>
+                    <tr>
+                      <td><%= metric.metric_name %></td>
+                      <td><span class="badge bg-info"><%= metric.ai_job %></span></td>
+                      <td><%= metric.metric_value %></td>
+                      <td><%= metric.metric_unit || 'N/A' %></td>
+                      <td><%= metric.metric_type %></td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Actions -->
+  <div class="row">
+    <div class="col-12">
+      <a href="/admin/multimedia-testing" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Testing
+      </a>
+      <button class="btn btn-primary ms-2" onclick="exportResults()">
+        <i class="fas fa-download me-2"></i>Export Results
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Test Details Modal -->
+<div class="modal fade" id="testDetailsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Test Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="testDetailsContent">
+          Loading...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Show test details in modal
+function showTestDetails(resultId) {
+  const modal = new bootstrap.Modal(document.getElementById('testDetailsModal'));
+  const results = <%- JSON.stringify(testRun.testResults) %>;
+  const result = results.find(r => r.id === resultId);
+  
+  if (result) {
+    let content = `
+      <h6>Test Information</h6>
+      <ul>
+        <li><strong>Source:</strong> ${result.test_source}</li>
+        <li><strong>AI Job:</strong> ${result.ai_job}</li>
+        <li><strong>Status:</strong> ${result.status}</li>
+        <li><strong>Duration:</strong> ${result.duration_ms ? Math.round(result.duration_ms / 1000) + 's' : 'N/A'}</li>
+        <li><strong>Reason:</strong> ${result.pass_fail_reason || 'N/A'}</li>
+      </ul>
+    `;
+    
+    if (result.ai_output) {
+      content += `
+        <h6>AI Output</h6>
+        <pre class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">${JSON.stringify(result.ai_output, null, 2)}</pre>
+      `;
+    }
+    
+    if (result.error_details) {
+      content += `
+        <h6>Error Details</h6>
+        <pre class="bg-danger text-white p-3 rounded" style="max-height: 200px; overflow-y: auto;">${JSON.stringify(result.error_details, null, 2)}</pre>
+      `;
+    }
+    
+    document.getElementById('testDetailsContent').innerHTML = content;
+  }
+  
+  modal.show();
+}
+
+// Export results
+function exportResults() {
+  const data = {
+    testRun: <%- JSON.stringify(testRun) %>,
+    exportDate: new Date().toISOString()
+  };
+  
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `test-results-${data.testRun.name.replace(/[^a-zA-Z0-9]/g, '-')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+
+<%- include('../partials/footer') %> 
