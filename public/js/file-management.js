@@ -317,9 +317,10 @@ class FileManager {
         method: 'POST',
         body: formData,
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
         },
-        credentials: 'same-origin' // Include cookies for authentication
+        credentials: 'include' // Ensure cookies are included for authentication
       });
 
       console.log('Upload response status:', response.status);

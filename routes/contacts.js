@@ -160,6 +160,7 @@ router.get('/new', isAuthenticated, async (req, res) => {
       title: 'Add New Contact - DaySave',
       contact: null,
       isEdit: false,
+      formAction: '/contacts',
       error: null,
       success: req.query.success || null,
       googleMapsScriptUrl
@@ -170,6 +171,7 @@ router.get('/new', isAuthenticated, async (req, res) => {
       title: 'Add New Contact - DaySave',
       contact: null,
       isEdit: false,
+      formAction: '/contacts',
       error: 'Failed to load contact form.',
       success: null,
       googleMapsScriptUrl: null
@@ -265,6 +267,7 @@ router.get('/:id/edit', isAuthenticated, async (req, res) => {
       title: 'Edit Contact - DaySave',
       contact,
       isEdit: true,
+      formAction: `/contacts/${req.params.id}`,
       error: null,
       success: null,
       googleMapsScriptUrl
