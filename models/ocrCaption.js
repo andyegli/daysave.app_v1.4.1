@@ -110,7 +110,7 @@ module.exports = (sequelize, DataTypes) => {
      * The actual text content extracted from the video frame
      */
     text: {
-      type: DataTypes.TEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: false,
       comment: 'The actual text content extracted from the video frame'
     },
@@ -276,7 +276,7 @@ module.exports = (sequelize, DataTypes) => {
      * Error message if OCR processing failed
      */
     error_message: {
-      type: DataTypes.TEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: true,
       comment: 'Error message if OCR processing failed'
     },
@@ -307,7 +307,7 @@ module.exports = (sequelize, DataTypes) => {
      * Original text before any user corrections
      */
     original_text: {
-      type: DataTypes.TEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: true,
       comment: 'Original text before any user corrections'
     },
@@ -317,7 +317,7 @@ module.exports = (sequelize, DataTypes) => {
      * Full-text search vector for efficient text searching
      */
     search_vector: {
-      type: DataTypes.TEXT,
+      type: DataTypes.TEXT('long'),
       allowNull: true,
       comment: 'Full-text search vector for efficient text searching'
     }

@@ -30,10 +30,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSON
     },
     transcription: {
-      type: DataTypes.TEXT
+      type: DataTypes.TEXT('long')
     },
     summary: {
-      type: DataTypes.TEXT
+      type: DataTypes.TEXT('long')
     },
     sentiment: {
       type: DataTypes.JSON
@@ -45,7 +45,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSON
     },
     user_comments: {
-      type: DataTypes.TEXT
+      type: DataTypes.TEXT('long')
     },
     category: {
       type: DataTypes.STRING
