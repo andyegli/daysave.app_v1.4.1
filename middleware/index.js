@@ -17,6 +17,7 @@ module.exports = {
   isNotAuthenticated: authMiddleware.isNotAuthenticated,
   requireRole: authMiddleware.requireRole,
   logAuthAttempt: authMiddleware.logAuthAttempt,
+  ensureRoleLoaded: authMiddleware.ensureRoleLoaded,
   
   // Error handling
   errorHandler: errorMiddleware.errorHandler,

@@ -1,4 +1,5 @@
 const { logAuthEvent, logAuthError } = require('../config/logger');
+const { Role } = require('../models');
 
 // Helper function to get client details
 const getClientDetails = (req) => ({
@@ -6,6 +7,37 @@ const getClientDetails = (req) => ({
   userAgent: req.headers['user-agent'] || 'unknown',
   referer: req.headers.referer || 'unknown'
 });
+
+// Middleware to ensure role is always available
+const ensureRoleLoaded = async (req, res, next) => {
+  if (req.isAuthenticated() && req.user) {
+    // If Role is not loaded or is incomplete, load it
+    if (!req.user.Role || !req.user.Role.name) {
+      try {
+        const role = await Role.findByPk(req.user.role_id);
+        if (role) {
+          req.user.Role = role;
+          // Also provide lowercase alias for compatibility
+          req.user.role = role;
+        } else {
+          logAuthError('ROLE_NOT_FOUND', new Error('User role not found'), {
+            userId: req.user.id,
+            roleId: req.user.role_id
+          });
+        }
+      } catch (error) {
+        logAuthError('ROLE_LOAD_ERROR', error, {
+          userId: req.user.id,
+          roleId: req.user.role_id
+        });
+      }
+    } else {
+      // Ensure lowercase alias exists for compatibility
+      req.user.role = req.user.Role;
+    }
+  }
+  next();
+};
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req, res, next) => {
@@ -68,7 +100,19 @@ const requireRole = (roles) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const userRole = req.user.role?.name || req.user.role_id;
+    // Use the consistent Role property (capital R from Sequelize include)
+    const userRole = req.user.Role?.name;
+    
+    if (!userRole) {
+      logAuthEvent('ROLE_CHECK_FAILED_NO_ROLE', {
+        ...clientDetails,
+        userId: req.user.id,
+        username: req.user.username,
+        requiredRoles: Array.isArray(roles) ? roles : [roles]
+      });
+      return res.status(403).json({ error: 'User role not found' });
+    }
+
     const hasRole = Array.isArray(roles) 
       ? roles.includes(userRole)
       : userRole === roles;
@@ -115,5 +159,6 @@ module.exports = {
   isNotAuthenticated,
   requireRole,
   logAuthAttempt,
-  getClientDetails
+  getClientDetails,
+  ensureRoleLoaded
 }; 

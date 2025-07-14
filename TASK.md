@@ -75,7 +75,15 @@
 - [ ] Implement contact CRD (Create, Read, Delete) pages for users, including Bootstrap-styled EJS views and proper access control 
 - [x] Admins can see all contacts on /contacts, regular users see only their own
 - [x] Add 'Manage Contacts' link to admin dashboard
-- [ ] Ensure role is always available in req.user for all routes that need it 
+- [x] Ensure role is always available in req.user for all routes that need it
+  - [x] Created ensureRoleLoaded middleware to automatically load roles for authenticated users
+  - [x] Applied role loading middleware globally in app.js for all authenticated routes
+  - [x] Fixed inconsistent role access patterns throughout the application
+  - [x] Updated admin middleware to use consistent Role property access
+  - [x] Updated contact routes to use consistent role checking
+  - [x] Added backward compatibility with both Role (capital R) and role (lowercase) properties
+  - [x] Enhanced error handling and logging for role loading failures
+  - [x] Removed manual role loading code in favor of consistent middleware approach 
 - [x] Ensure user-friendly redirect to login for isAuthenticated middleware (HTML requests) 
 - [x] Add functional File Management and Content Management dashboard buttons, with placeholder routes/views 
 - [x] Ensure all dashboard buttons open real, existing pages (not placeholders or #) — files and content now have minimal real pages 

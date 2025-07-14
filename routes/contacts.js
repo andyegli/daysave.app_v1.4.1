@@ -1,21 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const { Contact, Role, User } = require('../models');
-const { isAuthenticated } = require('../middleware');
+const { isAuthenticated, ensureRoleLoaded } = require('../middleware');
 const { getGoogleMapsScriptUrl } = require('../config/maps');
 const { logAuthEvent, logAuthError } = require('../config/logger');
 
+// Apply role loading middleware to all routes
+router.use(isAuthenticated, ensureRoleLoaded);
+
 // List contacts
-router.get('/', isAuthenticated, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    if (!req.user.role || !req.user.role.name) {
-      const userRole = await Role.findByPk(req.user.role_id);
-      req.user.role = userRole;
-    }
     let contacts, owners = [];
     let ownerFilter = req.query.owner_id || '';
     
-    if (req.user.role && req.user.role.name === 'admin') {
+    if (req.user.Role && req.user.Role.name === 'admin') {
       // Log admin accessing contacts with elevated privileges
       logAuthEvent('ADMIN_CONTACTS_ACCESS', {
         adminId: req.user.id,
@@ -66,7 +65,7 @@ router.get('/', isAuthenticated, async (req, res) => {
   } catch (err) {
     logAuthError('CONTACTS_LIST_ERROR', err, { 
       userId: req.user.id,
-      isAdmin: req.user.role?.name === 'admin' 
+      isAdmin: req.user.Role?.name === 'admin' 
     });
     res.render('contacts/list', { user: req.user, contacts: [], owners: [], ownerFilter: '', error: 'Failed to load contacts.', success: null });
   }
@@ -79,56 +78,43 @@ router.get('/test-maps', isAuthenticated, (req, res) => {
   });
 });
 
-// New contact form
-router.get('/new', isAuthenticated, (req, res) => {
-  res.render('contacts/form', { 
-    user: req.user, 
-    contact: {}, 
-    formAction: '/contacts', 
-    method: 'POST', 
-    error: null, 
-    success: null,
-    mapsScriptUrl: getGoogleMapsScriptUrl()
-  });
-});
-
-// Create contact
-router.post('/', isAuthenticated, async (req, res) => {
-  const { name } = req.body;
-  // Parse emails, phones, addresses, notes, social_profiles as arrays of objects
-  const emails = Array.isArray(req.body.emails) ? req.body.emails : Object.values(req.body.emails || {});
-  const phones = Array.isArray(req.body.phones) ? req.body.phones : Object.values(req.body.phones || {});
-  const addresses = Array.isArray(req.body.addresses) ? req.body.addresses : Object.values(req.body.addresses || {});
-  const notes = Array.isArray(req.body.notes) ? req.body.notes : Object.values(req.body.notes || {});
-  const social_profiles = Array.isArray(req.body.social_profiles) ? req.body.social_profiles : Object.values(req.body.social_profiles || {});
-  const parsedEmails = emails.map(e => ({ label: e.label, value: e.value })).filter(e => e.value);
-  const parsedPhones = phones.map(p => ({ label: p.label, value: p.value })).filter(p => p.value);
-  const parsedAddresses = addresses.map(a => ({ label: a.label, value: a.value })).filter(a => a.value);
-  const parsedNotes = notes.map(n => ({ label: n.label, value: n.value })).filter(n => n.value);
-  const parsedSocials = social_profiles.map(s => ({ label: s.label, value: s.value })).filter(s => s.value);
-  if (!name) {
-    return res.render('contacts/form', { 
+// Contact form (for creating new contact)
+router.get('/new', async (req, res) => {
+  try {
+    const googleMapsScriptUrl = getGoogleMapsScriptUrl();
+    res.render('contacts/form', { 
       user: req.user, 
-      contact: req.body, 
+      contact: {}, 
       formAction: '/contacts', 
       method: 'POST', 
-      error: 'Name is required.', 
+      error: null, 
       success: null,
-      mapsScriptUrl: getGoogleMapsScriptUrl()
+      googleMapsScriptUrl 
+    });
+  } catch (err) {
+    res.render('contacts/form', { 
+      user: req.user, 
+      contact: {}, 
+      formAction: '/contacts', 
+      method: 'POST', 
+      error: 'Failed to load form.', 
+      success: null,
+      googleMapsScriptUrl: null 
     });
   }
+});
+
+// Create contact (POST)
+router.post('/', async (req, res) => {
   try {
-    await Contact.create({
-      user_id: req.user.id,
-      name,
-      emails: parsedEmails,
-      phones: parsedPhones,
-      addresses: parsedAddresses,
-      notes: parsedNotes,
-      social_profiles: parsedSocials
-    });
+    const contactData = {
+      ...req.body,
+      user_id: req.user.id
+    };
+    await Contact.create(contactData);
     res.redirect('/contacts?success=Contact created');
   } catch (err) {
+    const googleMapsScriptUrl = getGoogleMapsScriptUrl();
     res.render('contacts/form', { 
       user: req.user, 
       contact: req.body, 
@@ -136,87 +122,75 @@ router.post('/', isAuthenticated, async (req, res) => {
       method: 'POST', 
       error: 'Failed to create contact.', 
       success: null,
-      mapsScriptUrl: getGoogleMapsScriptUrl()
+      googleMapsScriptUrl 
     });
   }
 });
 
-// Edit contact form
-router.get('/:id/edit', isAuthenticated, async (req, res) => {
+// Edit contact (form)
+router.get('/:id/edit', async (req, res) => {
   try {
-    let contact;
-    if (req.user.role && req.user.role.name === 'admin') {
-      contact = await Contact.findOne({ where: { id: req.params.id }, include: [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }] });
-    } else {
-      contact = await Contact.findOne({ where: { id: req.params.id, user_id: req.user.id }, include: [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }] });
-    }
+    const contact = await Contact.findByPk(req.params.id);
     if (!contact) return res.redirect('/contacts?error=Contact not found');
+    
+    // Check if user can edit this contact
+    if (contact.user_id !== req.user.id && !(req.user.Role && req.user.Role.name === 'admin')) {
+      return res.redirect('/contacts?error=Permission denied');
+    }
+    
+    const googleMapsScriptUrl = getGoogleMapsScriptUrl();
     res.render('contacts/form', { 
       user: req.user, 
       contact, 
-      formAction: `/contacts/${contact.id}`, 
+      formAction: `/contacts/${req.params.id}`, 
       method: 'POST', 
       error: null, 
       success: null,
-      mapsScriptUrl: getGoogleMapsScriptUrl()
+      googleMapsScriptUrl 
     });
   } catch (err) {
     res.redirect('/contacts?error=Failed to load contact');
   }
 });
 
-// Update contact
-router.post('/:id', isAuthenticated, async (req, res) => {
-  const { name } = req.body;
-  const emails = Array.isArray(req.body.emails) ? req.body.emails : Object.values(req.body.emails || {});
-  const phones = Array.isArray(req.body.phones) ? req.body.phones : Object.values(req.body.phones || {});
-  const addresses = Array.isArray(req.body.addresses) ? req.body.addresses : Object.values(req.body.addresses || {});
-  const notes = Array.isArray(req.body.notes) ? req.body.notes : Object.values(req.body.notes || {});
-  const social_profiles = Array.isArray(req.body.social_profiles) ? req.body.social_profiles : Object.values(req.body.social_profiles || {});
-  const parsedEmails = emails.map(e => ({ label: e.label, value: e.value })).filter(e => e.value);
-  const parsedPhones = phones.map(p => ({ label: p.label, value: p.value })).filter(p => p.value);
-  const parsedAddresses = addresses.map(a => ({ label: a.label, value: a.value })).filter(a => a.value);
-  const parsedNotes = notes.map(n => ({ label: n.label, value: n.value })).filter(n => n.value);
-  const parsedSocials = social_profiles.map(s => ({ label: s.label, value: s.value })).filter(s => s.value);
+// Update contact (POST)
+router.post('/:id', async (req, res) => {
   try {
-    let contact;
-    if (req.user.role && req.user.role.name === 'admin') {
-      contact = await Contact.findOne({ where: { id: req.params.id }, include: [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }] });
-    } else {
-      contact = await Contact.findOne({ where: { id: req.params.id, user_id: req.user.id }, include: [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }] });
-    }
+    const contact = await Contact.findByPk(req.params.id);
     if (!contact) return res.redirect('/contacts?error=Contact not found');
-    contact.name = name;
-    contact.emails = parsedEmails;
-    contact.phones = parsedPhones;
-    contact.addresses = parsedAddresses;
-    contact.notes = parsedNotes;
-    contact.social_profiles = parsedSocials;
-    await contact.save();
+    
+    // Check if user can edit this contact
+    if (contact.user_id !== req.user.id && !(req.user.Role && req.user.Role.name === 'admin')) {
+      return res.redirect('/contacts?error=Permission denied');
+    }
+    
+    await contact.update(req.body);
     res.redirect('/contacts?success=Contact updated');
   } catch (err) {
+    const googleMapsScriptUrl = getGoogleMapsScriptUrl();
     res.render('contacts/form', { 
       user: req.user, 
-      contact: { id: req.params.id, ...req.body }, 
+      contact: req.body, 
       formAction: `/contacts/${req.params.id}`, 
       method: 'POST', 
       error: 'Failed to update contact.', 
       success: null,
-      mapsScriptUrl: getGoogleMapsScriptUrl()
+      googleMapsScriptUrl 
     });
   }
 });
 
 // Delete contact
-router.post('/:id/delete', isAuthenticated, async (req, res) => {
+router.post('/:id/delete', async (req, res) => {
   try {
-    let contact;
-    if (req.user.role && req.user.role.name === 'admin') {
-      contact = await Contact.findOne({ where: { id: req.params.id } });
-    } else {
-      contact = await Contact.findOne({ where: { id: req.params.id, user_id: req.user.id } });
-    }
+    const contact = await Contact.findByPk(req.params.id);
     if (!contact) return res.redirect('/contacts?error=Contact not found');
+    
+    // Check if user can delete this contact
+    if (contact.user_id !== req.user.id && !(req.user.Role && req.user.Role.name === 'admin')) {
+      return res.redirect('/contacts?error=Permission denied');
+    }
+    
     await contact.destroy();
     res.redirect('/contacts?success=Contact deleted');
   } catch (err) {
@@ -236,7 +210,7 @@ router.get('/search', isAuthenticated, async (req, res) => {
   });
   let where = {};
   let include = [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }];
-  if (!(req.user.role && req.user.role.name === 'admin')) {
+  if (!(req.user.Role && req.user.Role.name === 'admin')) {
     where.user_id = req.user.id;
   }
   let contacts = await Contact.findAll({ where, include });
@@ -291,7 +265,7 @@ router.get('/autocomplete', isAuthenticated, async (req, res) => {
   if (!field || !query) return res.json([]);
   
   let where = {};
-  if (!(req.user.role && req.user.role.name === 'admin')) {
+  if (!(req.user.Role && req.user.Role.name === 'admin')) {
     where.user_id = req.user.id;
   }
   

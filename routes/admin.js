@@ -103,13 +103,13 @@ const validateUserId = [
 // Enhanced admin check middleware with better error handling
 async function isAdmin(req, res, next) {
   try {
-    if (!req.isAuthenticated() || !req.user || !req.user.role_id) {
+    if (!req.isAuthenticated() || !req.user) {
       logAuthEvent('ADMIN_ACCESS_DENIED', {
         userId: req.user?.id || null,
         username: req.user?.username || null,
         ip: req.ip,
         userAgent: req.headers['user-agent'],
-        reason: 'not_authenticated_or_no_role',
+        reason: 'not_authenticated',
         requestPath: req.path,
         timestamp: new Date().toISOString()
       });
@@ -120,9 +120,8 @@ async function isAdmin(req, res, next) {
       });
     }
     
-    // Fetch the user's role with error handling
-    const role = await Role.findByPk(req.user.role_id);
-    if (!role) {
+    // Use the role loaded by ensureRoleLoaded middleware
+    if (!req.user.Role) {
       logAuthEvent('ADMIN_ACCESS_DENIED', {
         userId: req.user.id,
         username: req.user.username,
@@ -139,8 +138,8 @@ async function isAdmin(req, res, next) {
       });
     }
     
-    if (role.name === 'admin') {
-      req.user.roleName = role.name;
+    if (req.user.Role.name === 'admin') {
+      req.user.roleName = req.user.Role.name; // For backward compatibility
       logAuthEvent('ADMIN_ACCESS_GRANTED', {
         adminId: req.user.id,
         adminUsername: req.user.username,
@@ -155,7 +154,7 @@ async function isAdmin(req, res, next) {
     logAuthEvent('ADMIN_ACCESS_DENIED', {
       userId: req.user.id,
       username: req.user.username,
-      userRole: role.name,
+      userRole: req.user.Role.name,
       ip: req.ip,
       userAgent: req.headers['user-agent'],
       reason: 'insufficient_role',

@@ -14,7 +14,8 @@ const {
   securityHeaders,
   requestLogger,
   sanitizeInput,
-  corsMiddleware
+  corsMiddleware,
+  ensureRoleLoaded
 } = require('./middleware');
 
 const app = express();
@@ -91,6 +92,9 @@ db.sequelize.sync().then(() => {
   // Initialize Passport
   app.use(passport.initialize());
   app.use(passport.session());
+  
+  // Ensure role is loaded for all authenticated requests
+  app.use(ensureRoleLoaded);
 
   // Serve static files with security headers
   app.use(express.static(path.join(__dirname, 'public'), {
