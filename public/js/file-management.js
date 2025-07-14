@@ -350,27 +350,6 @@ class FileManager {
         setTimeout(() => {
           window.location.href = '/auth/login';
         }, 2000);
-      } else if (!response.ok) {
-        // Other HTTP errors
-        try {
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            result = await response.json();
-          } else {
-            result = {
-              success: false,
-              error: 'Upload failed',
-              message: `Server error: ${response.status} ${response.statusText}`
-            };
-          }
-        } catch (jsonError) {
-          console.error('Error parsing error response:', jsonError);
-          result = {
-            success: false,
-            error: 'Upload failed',
-            message: `Server error: ${response.status} ${response.statusText}`
-          };
-        }
       } else {
         // Success response
         try {

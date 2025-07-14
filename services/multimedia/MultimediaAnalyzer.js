@@ -103,8 +103,8 @@ class MultimediaAnalyzer {
         if (this.enableLogging) {
           console.log('✅ Google Cloud clients initialized with service account');
         }
-      } else if (options.googleApiKey || process.env.GOOGLE_API_KEY) {
-        this.googleApiKey = options.googleApiKey || process.env.GOOGLE_API_KEY;
+      } else if (options.googleApiKey || process.env.GOOGLE_API_KEY || process.env.GOOGLE_MAPS_KEY) {
+        this.googleApiKey = options.googleApiKey || process.env.GOOGLE_API_KEY || process.env.GOOGLE_MAPS_KEY;
         
         if (this.enableLogging) {
           console.log('✅ Google Cloud API key configured');
