@@ -291,9 +291,9 @@ class StartupValidator {
    */
   async validateGoogleMaps() {
     try {
-      const apiKey = process.env.GOOGLE_MAPS_KEY;
+      const apiKey = process.env.GOOGLE_MAPS_KEY || process.env.GOOGLE_API_KEY;
       
-      if (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY') {
+      if (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY' || apiKey === 'your-google-api-key') {
         throw new Error('Google Maps API key not configured');
       }
 
@@ -339,7 +339,8 @@ class StartupValidator {
         critical: false,
         details: {
           error: error.message,
-          hasApiKey: !!process.env.GOOGLE_MAPS_KEY,
+          hasGoogleMapsKey: !!process.env.GOOGLE_MAPS_KEY,
+          hasGoogleApiKey: !!process.env.GOOGLE_API_KEY,
           setup: 'Ensure Maps JavaScript API and Places API are enabled'
         }
       };
@@ -348,87 +349,60 @@ class StartupValidator {
   }
 
   /**
-   * Validate Google Cloud Services with actual API calls
+   * Validate Google Cloud Services using API Key (preferred method)
    */
   async validateGoogleCloudServices() {
-    const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    const apiKey = process.env.GOOGLE_API_KEY;
     const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
     
-    // Validate Speech-to-Text API
+    // Validate Vision API using REST API with API key
     try {
-      if (!credentialsPath && !process.env.GOOGLE_API_KEY) {
-        throw new Error('Google Cloud credentials not configured');
+      if (!apiKey) {
+        throw new Error('GOOGLE_API_KEY not configured - required for Google Cloud services');
       }
 
-      const speech = require('@google-cloud/speech');
-      const speechClient = new speech.SpeechClient();
-      
-      const startTime = Date.now();
-      
-      // Test with a simple audio buffer (silence)
-      const request = {
-        audio: {
-          content: Buffer.from([]).toString('base64')
-        },
-        config: {
-          encoding: 'LINEAR16',
-          sampleRateHertz: 16000,
-          languageCode: 'en-US',
-        },
-      };
-      
-      // This will validate auth but return empty results (expected)
-      await speechClient.recognize(request);
-      
-      const responseTime = Date.now() - startTime;
-      
-      this.validationResults.googleCloud.speech = {
-        status: 'success',
-        message: 'Google Cloud Speech-to-Text API accessible',
-        critical: false,
-        details: {
-          projectId: projectId,
-          authMethod: credentialsPath ? 'service account' : 'api key',
-          responseTime: `${responseTime}ms`
-        }
-      };
-    } catch (error) {
-      this.validationResults.googleCloud.speech = {
-        status: 'error',
-        message: `Google Cloud Speech API failed: ${error.message}`,
-        critical: false,
-        details: {
-          error: error.message,
-          hasCredentials: !!credentialsPath,
-          hasApiKey: !!process.env.GOOGLE_API_KEY,
-          projectId: projectId || 'not set'
-        }
-      };
-    }
+      if (!projectId) {
+        throw new Error('GOOGLE_CLOUD_PROJECT_ID not configured');
+      }
 
-    // Validate Vision API
-    try {
-      const vision = require('@google-cloud/vision');
-      const visionClient = new vision.ImageAnnotatorClient();
-      
       const startTime = Date.now();
       
-      // Test with a simple 1x1 pixel image
-      const testImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
-      
-      const [result] = await visionClient.labelDetection({
-        image: { content: testImage }
-      });
-      
+      // Test Vision API with a simple text detection request
+      const visionResponse = await fetch(
+        `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            requests: [{
+              image: {
+                content: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+              },
+              features: [{ type: 'LABEL_DETECTION', maxResults: 1 }]
+            }]
+          })
+        }
+      );
+
+      if (!visionResponse.ok) {
+        const errorData = await visionResponse.text();
+        throw new Error(`Vision API HTTP ${visionResponse.status}: ${errorData}`);
+      }
+
+      const visionData = await visionResponse.json();
       const responseTime = Date.now() - startTime;
       
       this.validationResults.googleCloud.vision = {
         status: 'success',
-        message: 'Google Cloud Vision API accessible',
+        message: 'Google Cloud Vision API accessible via API key',
         critical: false,
         details: {
-          labelsDetected: result.labelAnnotations ? result.labelAnnotations.length : 0,
-          responseTime: `${responseTime}ms`
+          authMethod: 'api key',
+          projectId: projectId,
+          responseTime: `${responseTime}ms`,
+          testResponse: visionData.responses ? 'success' : 'no response'
         }
       };
     } catch (error) {
@@ -437,29 +411,112 @@ class StartupValidator {
         message: `Google Cloud Vision API failed: ${error.message}`,
         critical: false,
         details: {
-          error: error.message
+          error: error.message,
+          hasApiKey: !!apiKey,
+          projectId: projectId || 'not set',
+          authMethod: 'api key (preferred)'
         }
       };
     }
 
-    // Validate Storage API
+    // Validate Speech-to-Text API using REST API with API key
     try {
-      const { Storage } = require('@google-cloud/storage');
-      const storage = new Storage();
-      
+      if (!apiKey) {
+        throw new Error('GOOGLE_API_KEY not configured');
+      }
+
       const startTime = Date.now();
       
-      // Test by listing buckets (minimal operation)
-      const [buckets] = await storage.getBuckets();
-      
+      // Test Speech API with a simple request (will fail gracefully but validate auth)
+      const speechResponse = await fetch(
+        `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            config: {
+              encoding: 'LINEAR16',
+              sampleRateHertz: 16000,
+              languageCode: 'en-US',
+            },
+            audio: {
+              content: ''
+            }
+          })
+        }
+      );
+
       const responseTime = Date.now() - startTime;
+
+      // Even if the request fails due to empty audio, a 400 error means the API key is valid
+      if (speechResponse.status === 400 || speechResponse.status === 200) {
+        this.validationResults.googleCloud.speech = {
+          status: 'success',
+          message: 'Google Cloud Speech-to-Text API accessible via API key',
+          critical: false,
+          details: {
+            authMethod: 'api key',
+            projectId: projectId,
+            responseTime: `${responseTime}ms`,
+            statusCode: speechResponse.status
+          }
+        };
+      } else {
+        const errorData = await speechResponse.text();
+        throw new Error(`Speech API HTTP ${speechResponse.status}: ${errorData}`);
+      }
+    } catch (error) {
+      this.validationResults.googleCloud.speech = {
+        status: 'error',
+        message: `Google Cloud Speech API failed: ${error.message}`,
+        critical: false,
+        details: {
+          error: error.message,
+          hasApiKey: !!apiKey,
+          projectId: projectId || 'not set',
+          authMethod: 'api key (preferred)'
+        }
+      };
+    }
+
+    // Validate Cloud Storage API using REST API with API key
+    try {
+      if (!apiKey) {
+        throw new Error('GOOGLE_API_KEY not configured');
+      }
+
+      const startTime = Date.now();
+      
+      // Test Storage API by listing buckets
+      const storageResponse = await fetch(
+        `https://storage.googleapis.com/storage/v1/b?project=${projectId}&key=${apiKey}`,
+        {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          }
+        }
+      );
+
+      const responseTime = Date.now() - startTime;
+
+      if (!storageResponse.ok) {
+        const errorData = await storageResponse.text();
+        throw new Error(`Storage API HTTP ${storageResponse.status}: ${errorData}`);
+      }
+
+      const storageData = await storageResponse.json();
       
       this.validationResults.googleCloud.storage = {
         status: 'success',
-        message: 'Google Cloud Storage API accessible',
+        message: 'Google Cloud Storage API accessible via API key',
         critical: false,
         details: {
-          bucketsAccessible: buckets.length,
+          authMethod: 'api key',
+          projectId: projectId,
+          bucketsAccessible: storageData.items ? storageData.items.length : 0,
           responseTime: `${responseTime}ms`
         }
       };
@@ -469,7 +526,10 @@ class StartupValidator {
         message: `Google Cloud Storage API failed: ${error.message}`,
         critical: false,
         details: {
-          error: error.message
+          error: error.message,
+          hasApiKey: !!apiKey,
+          projectId: projectId || 'not set',
+          authMethod: 'api key (preferred)'
         }
       };
     }
@@ -714,21 +774,29 @@ class StartupValidator {
    * Validate multimedia processing services
    */
   async validateMultimedia() {
-    // YouTube processing
+    // YouTube processing with yt-dlp
     try {
-      const ytdl = require('ytdl-core');
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const execAsync = promisify(exec);
       
-      // Test with a known working video
+      // Test with a known working video using yt-dlp
       const testUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-      const info = await ytdl.getInfo(testUrl);
+      
+      // Use yt-dlp to extract video info
+      const command = `yt-dlp --no-check-certificates --print "%(title)s|%(duration)s" "${testUrl}"`;
+      const { stdout } = await execAsync(command, { timeout: 30000 });
+      
+      const [title, duration] = stdout.trim().split('|');
       
       this.validationResults.multimedia.youtube = {
         status: 'success',
         message: 'YouTube processing service working',
         critical: false,
         details: {
-          testTitle: info.videoDetails.title,
-          testDuration: info.videoDetails.lengthSeconds + ' seconds'
+          testTitle: title,
+          testDuration: duration + ' seconds',
+          tool: 'yt-dlp'
         }
       };
     } catch (error) {
@@ -738,7 +806,7 @@ class StartupValidator {
         critical: false,
         details: {
           error: error.message,
-          suggestion: 'YouTube processing may be rate limited or blocked'
+          suggestion: 'YouTube processing may be rate limited or blocked. Try updating yt-dlp: pip3 install --upgrade yt-dlp'
         }
       };
     }
