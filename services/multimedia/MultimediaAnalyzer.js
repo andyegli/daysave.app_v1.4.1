@@ -2135,6 +2135,13 @@ Return only the extracted text, preserving line breaks and formatting where poss
       /facebook\.com\/watch/i,
       /facebook\.com\/share\/v\//i,
       /facebook\.com\/share\/p\//i,
+      /facebook\.com\/video\//i,
+      /facebook\.com\/.*\/videos\//i,
+      /facebook\.com\/.*\/posts\//i,
+      /facebook\.com\/.*\/photos\//i,
+      /m\.facebook\.com\/watch/i,
+      /m\.facebook\.com\/video\//i,
+      /fb\.com\//i,
       /twitter\.com\/.*\/status/i,
       /x\.com\/.*\/status/i,
       

@@ -75,6 +75,16 @@ db.sequelize.sync().then(() => {
 }).then(() => {
   console.log('Session store synced');
 
+  // Run startup validation
+  const StartupValidator = require('./services/startupValidation');
+  const validator = new StartupValidator();
+  return validator.validateAll();
+}).then((validationResults) => {
+  console.log('Startup validation completed');
+  
+  // Store validation results globally for health checks
+  app.locals.startupValidation = validationResults;
+
   // Session configuration
   app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
@@ -132,6 +142,40 @@ db.sequelize.sync().then(() => {
   app.use('/api/keys', require('./routes/apiKeys'));
   app.use('/subscription', require('./routes/subscription'));
   app.use('/api/subscription', require('./routes/subscription'));
+
+  // Health check endpoints
+  app.get('/health', (req, res) => {
+    const validationResults = app.locals.startupValidation || {};
+    const StartupValidator = require('./services/startupValidation');
+    const validator = new StartupValidator();
+    
+    const isHealthy = validator.areAllCriticalServicesOperational ? 
+      validator.areAllCriticalServicesOperational() : 
+      Object.keys(validationResults).every(key => 
+        key === 'oauth' ? 
+          Object.keys(validationResults.oauth).every(okey => 
+            validationResults.oauth[okey].status === 'success' || !validationResults.oauth[okey].critical
+          ) :
+          validationResults[key].status === 'success' || !validationResults[key].critical
+      );
+    
+    res.status(isHealthy ? 200 : 503).json({
+      status: isHealthy ? 'healthy' : 'unhealthy',
+      timestamp: new Date().toISOString(),
+      services: validationResults
+    });
+  });
+
+  app.get('/health/detailed', (req, res) => {
+    const validationResults = app.locals.startupValidation || {};
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      version: require('./package.json').version,
+      services: validationResults
+    });
+  });
 
   // Secure file serving route - redirect /uploads/ to secure serve endpoint
   app.get('/uploads/:userId/:filename', (req, res) => {

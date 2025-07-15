@@ -65,9 +65,15 @@ uploads/
 temp/
 tmp/
 
-# Google Cloud
+# Google Cloud and OAuth credentials
 gcloud/
 .gcloudignore
+credentials.json
+service-account-key.json
+google-credentials.json
+client_secret_*.json
+*client_secret*.json
+google-service-account.json
 
 # Database
 *.sqlite
