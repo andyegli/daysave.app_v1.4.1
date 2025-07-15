@@ -863,7 +863,7 @@ class StartupValidator {
       const sessionSecret = process.env.SESSION_SECRET;
       
       if (!sessionSecret) {
-        throw new Error('SESSION_SECRET not configured');
+        throw new Error('SESSION_SECRET not configured. Add SESSION_SECRET to your .env file.');
       }
 
       const defaultSecrets = [
@@ -875,11 +875,11 @@ class StartupValidator {
       ];
 
       if (defaultSecrets.includes(sessionSecret)) {
-        throw new Error('SESSION_SECRET is using a default/insecure value - change in production');
+        throw new Error('SESSION_SECRET is using a default/insecure value. Generate a new secure secret.');
       }
 
       if (sessionSecret.length < 32) {
-        throw new Error('SESSION_SECRET should be at least 32 characters long');
+        throw new Error(`SESSION_SECRET must be at least 32 characters (current: ${sessionSecret.length}). Generate a longer secret.`);
       }
 
       // Check for sufficient entropy
@@ -889,6 +889,16 @@ class StartupValidator {
       const hasSpecialChars = /[!@#$%^&*(),.?":{}|<>]/.test(sessionSecret);
       
       const entropyScore = [hasNumbers, hasLowercase, hasUppercase, hasSpecialChars].filter(Boolean).length;
+
+      if (entropyScore < 3) {
+        const missing = [];
+        if (!hasNumbers) missing.push('numbers');
+        if (!hasLowercase) missing.push('lowercase letters');
+        if (!hasUppercase) missing.push('uppercase letters');
+        if (!hasSpecialChars) missing.push('special characters');
+        
+        throw new Error(`SESSION_SECRET lacks complexity. Missing: ${missing.join(', ')}. Use command: openssl rand -base64 32`);
+      }
 
       this.validationResults.sessionSecret = {
         status: 'success',
@@ -901,10 +911,26 @@ class StartupValidator {
           hasLowercase,
           hasUppercase,
           hasSpecialChars,
-          isSecure: entropyScore >= 3 && sessionSecret.length >= 32
+          isSecure: entropyScore >= 3 && sessionSecret.length >= 32,
+          instructions: {
+            command: 'openssl rand -base64 32',
+            description: 'Generate a secure 32-character session secret'
+          }
         }
       };
     } catch (error) {
+      // Enhanced error details with specific instructions
+      const instructions = {
+        command: 'openssl rand -base64 32',
+        description: 'Generate a secure session secret',
+        steps: [
+          '1. Run: openssl rand -base64 32',
+          '2. Copy the generated string',
+          '3. Add to .env file: SESSION_SECRET=<generated_string>',
+          '4. Restart the application'
+        ]
+      };
+
       this.validationResults.sessionSecret = {
         status: 'error',
         message: `Session secret validation failed: ${error.message}`,
@@ -912,10 +938,27 @@ class StartupValidator {
         details: {
           error: error.message,
           hasSecret: !!process.env.SESSION_SECRET,
-          length: process.env.SESSION_SECRET ? process.env.SESSION_SECRET.length : 0
+          length: process.env.SESSION_SECRET ? process.env.SESSION_SECRET.length : 0,
+          instructions,
+          troubleshooting: [
+            'Generate a secure random string (32+ characters)',
+            'Use: openssl rand -base64 32',
+            'Never use default or obvious values',
+            'Include numbers, letters, and special characters',
+            'Example: SESSION_SECRET=aB3$kL9mN2pQ7rS1tU8vW5xY0zA4bC6d'
+          ]
         }
       };
-      logAuthError('STARTUP_VALIDATION_ERROR', error, { service: 'session-secret' });
+      
+      // Log the command for easy access
+      console.log('\n🔐 SESSION_SECRET GENERATION:');
+      console.log('   Command: openssl rand -base64 32');
+      console.log('   Then add to .env: SESSION_SECRET=<generated_value>');
+      
+      logAuthError('STARTUP_VALIDATION_ERROR', error, { 
+        service: 'session-secret',
+        instructions: instructions.command
+      });
     }
   }
 
