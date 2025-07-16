@@ -9,8 +9,8 @@ const logger = require('../config/logger');
 const { Op } = require('sequelize');
 const { AutomationOrchestrator } = require('../services/multimedia');
 
-// Initialize automation orchestrator for file processing
-const orchestrator = new AutomationOrchestrator();
+// Initialize automation orchestrator for file processing (singleton)
+const orchestrator = AutomationOrchestrator.getInstance();
 
 /**
  * Check if file type should trigger multimedia analysis

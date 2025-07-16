@@ -19,13 +19,13 @@ class PerformanceMonitor extends EventEmitter {
     super();
     
     this.options = {
-      metricsInterval: options.metricsInterval || 5000, // 5 seconds
+      metricsInterval: options.metricsInterval || 10000, // 10 seconds (reduced frequency)
       alertThresholds: {
-        memoryUsage: options.memoryThreshold || 80, // 80%
-        cpuUsage: options.cpuThreshold || 85, // 85%
-        processingTime: options.processingTimeThreshold || 30000, // 30 seconds
-        errorRate: options.errorRateThreshold || 5, // 5%
-        queueSize: options.queueThreshold || 50
+        memoryUsage: options.memoryThreshold || 90, // 90% (more lenient)
+        cpuUsage: options.cpuThreshold || 95, // 95% (more lenient)
+        processingTime: options.processingTimeThreshold || 60000, // 60 seconds
+        errorRate: options.errorRateThreshold || 10, // 10%
+        queueSize: options.queueThreshold || 100
       },
       historySize: options.historySize || 1000,
       enableAlerts: options.enableAlerts !== false,

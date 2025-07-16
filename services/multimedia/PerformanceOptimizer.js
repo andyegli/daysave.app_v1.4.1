@@ -22,7 +22,7 @@ class PerformanceOptimizer extends EventEmitter {
     
     this.options = {
       maxMemoryUsage: options.maxMemoryUsage || 512 * 1024 * 1024, // 512MB
-      maxConcurrentJobs: options.maxConcurrentJobs || os.cpus().length,
+      maxConcurrentJobs: options.maxConcurrentJobs || Math.min(4, Math.max(2, Math.floor(os.cpus().length / 2))),
       cacheSize: options.cacheSize || 100,
       gcInterval: options.gcInterval || 30000, // 30 seconds
       monitoringInterval: options.monitoringInterval || 5000, // 5 seconds

@@ -1,6 +1,7 @@
 /**
  * AutomationOrchestrator - Central coordinator for multimedia processing workflows
  * Coordinates processors using plugin registry and configuration manager
+ * SINGLETON PATTERN: Only one instance will be created and shared across the application
  */
 
 const path = require('path');
@@ -15,8 +16,16 @@ const ConfigurationManager = require('./ConfigurationManager');
 const PerformanceOptimizer = require('./PerformanceOptimizer');
 const PerformanceMonitor = require('./PerformanceMonitor');
 
+// Singleton instance
+let instance = null;
+
 class AutomationOrchestrator {
     constructor() {
+        // Implement singleton pattern
+        if (instance) {
+            return instance;
+        }
+        
         this.processors = new Map();
         this.pluginRegistry = new PluginRegistry();
         this.configManager = new ConfigurationManager();
@@ -38,6 +47,19 @@ class AutomationOrchestrator {
         
         // Set up performance monitoring integration
         this.setupPerformanceIntegration();
+        
+        // Store singleton instance
+        instance = this;
+    }
+
+    /**
+     * Get singleton instance
+     */
+    static getInstance() {
+        if (!instance) {
+            instance = new AutomationOrchestrator();
+        }
+        return instance;
     }
 
     /**

@@ -36,7 +36,7 @@ const {
 
 class BackwardCompatibilityService {
   constructor() {
-    this.orchestrator = new AutomationOrchestrator();
+    this.orchestrator = AutomationOrchestrator.getInstance();
     this.resultFormatter = new ResultFormatter();
   }
 
