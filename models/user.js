@@ -87,6 +87,9 @@ module.exports = (sequelize, DataTypes) => {
     User.hasMany(models.Thumbnail, { foreignKey: 'user_id', as: 'thumbnails' });
     User.hasMany(models.OCRCaption, { foreignKey: 'user_id', as: 'ocrCaptions' });
     User.hasMany(models.VideoAnalysis, { foreignKey: 'user_id', as: 'videoAnalyses' });
+    User.hasMany(models.AudioAnalysis, { foreignKey: 'user_id', as: 'audioAnalyses' });
+    User.hasMany(models.ImageAnalysis, { foreignKey: 'user_id', as: 'imageAnalyses' });
+    User.hasMany(models.ProcessingJob, { foreignKey: 'user_id', as: 'processingJobs' });
   };
 
   return User;

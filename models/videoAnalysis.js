@@ -75,6 +75,20 @@ module.exports = (sequelize, DataTypes) => {
     },
 
     /**
+     * Processing Job Association
+     * Links video analysis to the processing job that generated it
+     */
+    processing_job_id: {
+      type: DataTypes.CHAR(36),
+      allowNull: true,
+      references: {
+        model: 'processing_jobs',
+        key: 'id'
+      },
+      comment: 'UUID of the processing job that generated this analysis'
+    },
+
+    /**
      * Video Duration
      * Total duration of the video in seconds
      */
@@ -499,6 +513,14 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'file_id',
       as: 'file',
       onDelete: 'CASCADE',
+      onUpdate: 'CASCADE'
+    });
+
+    // VideoAnalysis belongs to ProcessingJob (nullable)
+    VideoAnalysis.belongsTo(models.ProcessingJob, { 
+      foreignKey: 'processing_job_id',
+      as: 'processingJob',
+      onDelete: 'SET NULL',
       onUpdate: 'CASCADE'
     });
 

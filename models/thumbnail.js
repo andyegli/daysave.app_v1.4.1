@@ -75,6 +75,34 @@ module.exports = (sequelize, DataTypes) => {
     },
 
     /**
+     * Video Analysis Association
+     * Links thumbnail to video analysis record (for video thumbnails)
+     */
+    video_analysis_id: {
+      type: DataTypes.CHAR(36),
+      allowNull: true,
+      references: {
+        model: 'video_analysis',
+        key: 'id'
+      },
+      comment: 'UUID of the video analysis record this thumbnail belongs to (nullable for non-video content)'
+    },
+
+    /**
+     * Image Analysis Association
+     * Links thumbnail to image analysis record (for image thumbnails)
+     */
+    image_analysis_id: {
+      type: DataTypes.CHAR(36),
+      allowNull: true,
+      references: {
+        model: 'image_analysis',
+        key: 'id'
+      },
+      comment: 'UUID of the image analysis record this thumbnail belongs to (nullable for non-image content)'
+    },
+
+    /**
      * Thumbnail Type
      * Specifies the type of thumbnail generated
      * - main: Primary thumbnail (usually first frame or image resize)
@@ -355,6 +383,22 @@ module.exports = (sequelize, DataTypes) => {
     Thumbnail.belongsTo(models.File, { 
       foreignKey: 'file_id',
       as: 'file',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE'
+    });
+
+    // Thumbnail belongs to VideoAnalysis (nullable)
+    Thumbnail.belongsTo(models.VideoAnalysis, { 
+      foreignKey: 'video_analysis_id',
+      as: 'videoAnalysis',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE'
+    });
+
+    // Thumbnail belongs to ImageAnalysis (nullable)
+    Thumbnail.belongsTo(models.ImageAnalysis, { 
+      foreignKey: 'image_analysis_id',
+      as: 'imageAnalysis',
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE'
     });

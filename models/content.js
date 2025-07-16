@@ -70,6 +70,9 @@ module.exports = (sequelize, DataTypes) => {
     Content.hasMany(models.Thumbnail, { foreignKey: 'content_id', as: 'thumbnails' });
     Content.hasMany(models.OCRCaption, { foreignKey: 'content_id', as: 'ocrCaptions' });
     Content.hasOne(models.VideoAnalysis, { foreignKey: 'content_id', as: 'videoAnalysis' });
+    Content.hasOne(models.AudioAnalysis, { foreignKey: 'content_id', as: 'audioAnalysis' });
+    Content.hasOne(models.ImageAnalysis, { foreignKey: 'content_id', as: 'imageAnalysis' });
+    Content.hasMany(models.ProcessingJob, { foreignKey: 'content_id', as: 'processingJobs' });
   };
 
   return Content;

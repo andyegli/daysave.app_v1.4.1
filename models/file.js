@@ -64,6 +64,9 @@ module.exports = (sequelize, DataTypes) => {
     File.hasMany(models.Thumbnail, { foreignKey: 'file_id', as: 'thumbnails' });
     File.hasMany(models.OCRCaption, { foreignKey: 'file_id', as: 'ocrCaptions' });
     File.hasOne(models.VideoAnalysis, { foreignKey: 'file_id', as: 'videoAnalysis' });
+    File.hasOne(models.AudioAnalysis, { foreignKey: 'file_id', as: 'audioAnalysis' });
+    File.hasOne(models.ImageAnalysis, { foreignKey: 'file_id', as: 'imageAnalysis' });
+    File.hasMany(models.ProcessingJob, { foreignKey: 'file_id', as: 'processingJobs' });
   };
 
   return File;
