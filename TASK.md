@@ -642,6 +642,129 @@ All recent fixes have been implemented and tested. The system now properly handl
 
 ## Next Phase Development Tasks
 
+## 🚀 **PRIORITY: Automation Pipeline Modular Refactoring (v1.4.2)**
+
+### **Phase 1: Core Infrastructure (Weeks 1-2)**
+- [ ] **Create BaseMediaProcessor abstract class** - Define common interface contract for all media processors
+  - Abstract methods: initialize(), process(), validate(), cleanup()
+  - Common properties: config, logger, progress tracker
+  - Error handling patterns and validation rules
+  - Plugin system integration points
+
+- [ ] **Extract VideoProcessor class** - Dedicated video-specific processing logic
+  - Move video analysis logic from MultimediaAnalyzer
+  - Implement video-specific validation and metadata extraction
+  - FFmpeg integration for video processing
+  - Thumbnail generation coordination
+  - Chapter detection and key moment identification
+
+- [ ] **Extract AudioProcessor class** - Dedicated audio-specific processing logic
+  - Move audio analysis logic from MultimediaAnalyzer
+  - Implement speaker identification and voice print management
+  - Audio transcription with speaker diarization
+  - Audio quality assessment and enhancement
+  - Format conversion and optimization
+
+- [ ] **Extract ImageProcessor class** - Dedicated image-specific processing logic
+  - Move image analysis logic from MultimediaAnalyzer
+  - OCR text extraction and confidence scoring
+  - Object detection and scene analysis
+  - Image quality assessment and optimization
+  - Format conversion and thumbnail generation
+
+### **Phase 2: Plugin System & Configuration (Weeks 3-4)**
+- [ ] **Create plugin registry system** - Optional features per processor type
+  - Plugin discovery and loading mechanism
+  - Plugin configuration and dependency management
+  - Feature flags for optional processing capabilities
+  - Plugin lifecycle management (enable/disable/update)
+
+- [ ] **Build configuration manager** - Processor-specific settings
+  - Per-processor configuration schemas
+  - Environment-based configuration loading
+  - Runtime configuration updates
+  - Configuration validation and defaults
+
+### **Phase 3: Orchestration Layer (Weeks 5-6)**
+- [ ] **Create AutomationOrchestrator** - Coordinate processing without mixing logic
+  - Job queue management and priority handling
+  - Parallel processing coordination
+  - Cross-processor communication and data sharing
+  - Workflow state management and recovery
+
+- [ ] **Build ResultFormatter** - Convert processor results to unified UI format
+  - Standardized result structure for all media types
+  - UI component data transformation
+  - Backward compatibility with existing display logic
+  - Export formatting for different output types
+
+### **Phase 4: Error Handling & Progress (Weeks 7-8)**
+- [ ] **Implement error isolation** - Independent error handling per processor
+  - Processor-level error boundaries
+  - Graceful degradation strategies
+  - Error recovery and retry mechanisms
+  - Comprehensive error logging and reporting
+
+- [ ] **Create progress tracker** - Unified progress tracking across processors
+  - Real-time progress updates for long-running operations
+  - Progress aggregation across multiple processors
+  - User-facing progress indicators
+  - Performance metrics and timing analysis
+
+### **Phase 5: Database & Integration (Weeks 9-10)**
+- [ ] **Update database models** - Support processor-specific result structures
+  - Flexible schema for processor-specific metadata
+  - Migration scripts for existing data
+  - Backward compatibility during transition
+  - Performance optimization for new structure
+
+- [ ] **Update routes integration** - Use new orchestrator instead of MultimediaAnalyzer
+  - Update content.js routes to use AutomationOrchestrator
+  - Update files.js routes to use new architecture
+  - Maintain API compatibility during transition
+  - Add new endpoints for granular control
+
+- [ ] **Create migration script** - Migrate existing content to new result format
+  - Data transformation scripts
+  - Rollback capabilities
+  - Progress tracking for large datasets
+  - Validation of migrated data
+
+- [ ] **Implement backward compatibility** - Ensure existing API endpoints work
+  - Legacy endpoint wrappers
+  - Gradual migration strategy
+  - Feature flag controlled rollout
+  - Monitoring and rollback procedures
+
+- [ ] **Update UI components** - Use new unified result format
+  - Content card component updates
+  - Analysis modal enhancements
+  - Filter and search improvements
+  - Mobile responsiveness optimization
+
+### **Phase 6: Testing & Optimization (Ongoing)**
+- [ ] **Write integration tests** - Comprehensive tests for new architecture
+  - Unit tests for each processor
+  - Integration tests for orchestrator
+  - End-to-end workflow testing
+  - Performance and load testing
+
+- [ ] **Performance optimization** - Optimize for performance and memory usage
+  - Memory usage profiling and optimization
+  - Processing pipeline optimization
+  - Caching strategies implementation
+  - Resource cleanup and garbage collection
+
+### **Benefits of Modular Architecture**
+- **🔄 Independent Changes**: Modify image processing without affecting video/audio
+- **🔧 Individual Processing**: Granular control over processing options per job
+- **🎨 Uniform Display**: Consistent content card presentation across media types
+- **⚡ Performance**: Parallel processing and resource optimization
+- **🧩 Extensibility**: Easy addition of new media types and processing features
+- **🔒 Error Isolation**: Failures in one processor don't cascade to others
+- **📊 Better Monitoring**: Granular metrics and progress tracking
+- **🔄 Plugin System**: Optional features can be enabled/disabled per processor type
+
 ## Current Tasks
 
 ### 🔧 Google Cloud Configuration Issues
