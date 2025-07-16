@@ -336,9 +336,24 @@ class BackwardCompatibilityService {
       legacyResult.summary = data.summary;
     }
 
+    // Handle generated title
+    if (data.generatedTitle) {
+      legacyResult.generatedTitle = data.generatedTitle;
+    }
+
     // Handle auto tags
     if (data.auto_tags) {
       legacyResult.auto_tags = data.auto_tags;
+    }
+
+    // Handle tags (from AI analysis)
+    if (data.tags) {
+      legacyResult.tags = data.tags;
+    }
+
+    // Handle category
+    if (data.category) {
+      legacyResult.category = data.category;
     }
 
     return legacyResult;

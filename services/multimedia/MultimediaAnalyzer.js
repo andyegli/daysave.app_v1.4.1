@@ -242,6 +242,11 @@ class MultimediaAnalyzer {
       results.tags = await this.generateTags(results);
       results.category = await this.generateCategory(results);
 
+      // Generate title based on summary/content
+      if (this.openai && (results.summary || results.transcription)) {
+        results.generatedTitle = await this.generateTitle(results);
+      }
+
       // Calculate processing time
       results.processingTime = Date.now() - startTime;
 
@@ -636,6 +641,11 @@ class MultimediaAnalyzer {
         
         results.tags = await this.generateTags(results);
         results.category = await this.generateCategory(results);
+
+        // Generate title based on summary/content
+        if (this.openai && (results.summary || results.transcription)) {
+          results.generatedTitle = await this.generateTitle(results);
+        }
       } else {
         // For non-multimedia URLs, provide basic metadata only
         results.transcription = 'Content type does not support transcription.';
@@ -1933,6 +1943,114 @@ Return ONLY the category name, nothing else. Example: entertainment-content`;
     } catch (error) {
       console.error('❌ AI category generation failed:', error.message);
       return null;
+    }
+  }
+
+  /**
+   * Generate content title using AI-powered analysis
+   * 
+   * @param {Object} results - Analysis results containing summary/transcription
+   * @returns {Promise<string>} AI-generated title
+   */
+  async generateTitle(results) {
+    try {
+      console.log('📝 Starting AI-powered title generation');
+      
+      if (!this.openai) {
+        console.log('⚠️ OpenAI not available for title generation');
+        return this.getFallbackTitle(results);
+      }
+
+      // Prepare content for analysis - prioritize summary over transcription
+      let contentToAnalyze = '';
+
+      // Use summary if available (more focused content)
+      if (results.summary && results.summary.trim()) {
+        contentToAnalyze = results.summary.trim();
+      } 
+      // Fallback to transcription
+      else if (results.transcription && results.transcription.trim() && results.transcription.length > 50) {
+        // Use first 1000 characters to avoid token limits
+        const truncatedTranscription = results.transcription.trim().substring(0, 1000);
+        contentToAnalyze = truncatedTranscription;
+      }
+
+      if (!contentToAnalyze) {
+        console.log('⚠️ No content available for AI title generation');
+        return this.getFallbackTitle(results);
+      }
+
+      console.log(`🤖 Sending content to OpenAI for title generation (${contentToAnalyze.length} chars)`);
+
+      const prompt = `Based on the following content, create an engaging and descriptive title.
+
+The title should be:
+- Concise (5-10 words maximum)
+- Descriptive of the main topic or theme
+- Engaging and clickable
+- Professional and appropriate
+- Capture the essence of the content
+
+Content: ${contentToAnalyze}
+
+Respond with only the title, no quotes or additional text.`;
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert content creator who specializes in writing engaging titles that capture the essence of content. Create compelling titles that are descriptive yet concise.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 50
+      });
+
+      let generatedTitle = response.choices[0].message.content.trim();
+      
+      // Clean up title (remove quotes if present)
+      generatedTitle = generatedTitle.replace(/^["']|["']$/g, '');
+      
+      // Ensure title isn't too long
+      if (generatedTitle.length > 60) {
+        generatedTitle = generatedTitle.substring(0, 57) + '...';
+      }
+      
+      console.log(`✅ Generated AI title: "${generatedTitle}"`);
+      return generatedTitle;
+      
+    } catch (error) {
+      console.error('❌ AI title generation failed:', error.message);
+      return this.getFallbackTitle(results);
+    }
+  }
+
+  /**
+   * Generate fallback title when AI generation fails
+   * 
+   * @param {Object} results - Analysis results
+   * @returns {string} Fallback title
+   */
+  getFallbackTitle(results) {
+    // Try to use existing metadata title
+    if (results.metadata && results.metadata.title) {
+      return results.metadata.title;
+    }
+    
+    // Generate basic title based on content type
+    if (results.platform === 'youtube') {
+      return 'YouTube Video Content';
+    } else if (results.platform === 'instagram') {
+      return 'Instagram Content';
+    } else if (results.transcription && results.transcription.length > 100) {
+      return 'Multimedia Content with Transcription';
+    } else {
+      return 'Multimedia Content';
     }
   }
 
