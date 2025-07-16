@@ -12,12 +12,16 @@ const AudioProcessor = require('./AudioProcessor');
 const ImageProcessor = require('./ImageProcessor');
 const PluginRegistry = require('./PluginRegistry');
 const ConfigurationManager = require('./ConfigurationManager');
+const PerformanceOptimizer = require('./PerformanceOptimizer');
+const PerformanceMonitor = require('./PerformanceMonitor');
 
 class AutomationOrchestrator {
     constructor() {
         this.processors = new Map();
         this.pluginRegistry = new PluginRegistry();
         this.configManager = new ConfigurationManager();
+        this.performanceOptimizer = new PerformanceOptimizer();
+        this.performanceMonitor = new PerformanceMonitor();
         
         this.processingQueue = [];
         this.activeJobs = new Map();
@@ -31,6 +35,38 @@ class AutomationOrchestrator {
         };
         
         this.initialized = false;
+        
+        // Set up performance monitoring integration
+        this.setupPerformanceIntegration();
+    }
+
+    /**
+     * Set up performance monitoring integration
+     */
+    setupPerformanceIntegration() {
+        // Listen to performance events
+        this.performanceMonitor.on('alert', (alert) => {
+            console.warn(`🚨 Performance Alert: ${alert.type} - ${alert.severity}`);
+        });
+        
+        this.performanceMonitor.on('metrics', (metrics) => {
+            // Update internal metrics with performance data
+            this.updateInternalMetrics(metrics);
+        });
+    }
+    
+    /**
+     * Update internal metrics with performance data
+     */
+    updateInternalMetrics(performanceMetrics) {
+        this.performanceMonitor.updateApplicationMetrics({
+            totalJobs: this.metrics.totalProcessed,
+            activeJobs: this.activeJobs.size,
+            completedJobs: this.metrics.successCount,
+            failedJobs: this.metrics.errorCount,
+            queuedJobs: this.processingQueue.length,
+            averageProcessingTime: this.metrics.averageProcessingTime
+        });
     }
 
     /**
@@ -45,6 +81,10 @@ class AutomationOrchestrator {
             
             // Initialize plugin registry
             await this.pluginRegistry.initialize();
+            
+            // Initialize performance components
+            await this.performanceOptimizer.initialize();
+            this.performanceMonitor.initialize();
             
             // Register processors
             this.processors.set('video', new VideoProcessor());
@@ -111,9 +151,16 @@ class AutomationOrchestrator {
             job.config = processorConfig;
             job.availableFeatures = availableFeatures;
             
-            // Process the content
+            // Process the content with performance optimization
             const processingOptions = this.buildProcessingOptions(mediaType, metadata, availableFeatures);
-            const results = await processor.process(fileBuffer, processingOptions);
+            
+            // Use performance optimizer for processing
+            const results = await this.performanceOptimizer.processWithOptimization(
+                processor, 
+                fileBuffer, 
+                { ...metadata, jobId }, 
+                processingOptions
+            );
             
             // Post-process results
             const formattedResults = await this.formatResults(results, mediaType, jobId);
