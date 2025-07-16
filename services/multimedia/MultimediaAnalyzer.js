@@ -1600,23 +1600,43 @@ Return only the extracted text, preserving line breaks and formatting where poss
   }
 
   /**
-   * Generate tags based on analysis results
+   * Generate tags based on analysis results using AI-powered analysis
    * 
    * @param {Object} results - Analysis results
    * @returns {Promise<Array>} Array of generated tags
    */
   async generateTags(results) {
+    console.log('🏷️ Starting AI-powered tag generation with results:', {
+      hasSummary: !!results.summary,
+      hasTranscription: !!results.transcription,
+      summaryLength: results.summary ? results.summary.length : 0,
+      transcriptionLength: results.transcription ? results.transcription.length : 0
+    });
+
     const tags = [...(results.auto_tags || [])];
     
-    // Add tags based on transcription content
+    // Try AI-powered tag generation first
+    if (this.openai && (results.summary || results.transcription)) {
+      try {
+        const aiTags = await this.generateAITags(results);
+        if (aiTags && aiTags.length > 0) {
+          tags.push(...aiTags);
+          console.log(`🤖 Generated ${aiTags.length} AI tags:`, aiTags);
+        }
+      } catch (error) {
+        console.error('❌ AI tag generation failed, falling back to basic tags:', error);
+      }
+    }
+    
+    // Fallback to basic content analysis if AI fails or no content available
     if (results.transcription && results.transcription.length > 50) {
       const text = results.transcription.toLowerCase();
       
-      // Topic-based tags
-      if (text.includes('music') || text.includes('song') || text.includes('melody')) {
+      // Topic-based tags with enhanced detection
+      if (text.includes('music') || text.includes('song') || text.includes('melody') || text.includes('audio')) {
         tags.push('music');
       }
-      if (text.includes('education') || text.includes('learn') || text.includes('tutorial')) {
+      if (text.includes('education') || text.includes('learn') || text.includes('tutorial') || text.includes('how to')) {
         tags.push('educational');
       }
       if (text.includes('news') || text.includes('report') || text.includes('breaking')) {
@@ -1631,13 +1651,19 @@ Return only the extracted text, preserving line breaks and formatting where poss
       if (text.includes('interview') || text.includes('conversation') || text.includes('discussion')) {
         tags.push('interview');
       }
+      if (text.includes('funny') || text.includes('comedy') || text.includes('humor') || text.includes('laugh')) {
+        tags.push('comedy', 'entertainment');
+      }
+      if (text.includes('sport') || text.includes('game') || text.includes('match') || text.includes('team')) {
+        tags.push('sports');
+      }
     }
     
     // Add sentiment-based tags
     if (results.sentiment) {
-      if (results.sentiment.sentiment === 'positive') {
+      if (results.sentiment.sentiment === 'positive' || results.sentiment.label === 'positive') {
         tags.push('positive');
-      } else if (results.sentiment.sentiment === 'negative') {
+      } else if (results.sentiment.sentiment === 'negative' || results.sentiment.label === 'negative') {
         tags.push('negative');
       }
     }
@@ -1650,26 +1676,140 @@ Return only the extracted text, preserving line breaks and formatting where poss
     }
     
     // Remove duplicates and return
-    return [...new Set(tags)];
+    const uniqueTags = [...new Set(tags)];
+    console.log(`🏷️ Final tag count: ${uniqueTags.length} tags:`, uniqueTags);
+    return uniqueTags;
   }
 
   /**
-   * Generate category based on analysis results
+   * Generate content-based tags using OpenAI analysis
+   * 
+   * @param {Object} results - Analysis results containing summary/transcription
+   * @returns {Promise<Array>} Array of AI-generated tags
+   */
+  async generateAITags(results) {
+    try {
+      if (!this.openai) {
+        throw new Error('OpenAI client not initialized');
+      }
+
+      // Prepare content for analysis - prioritize summary over transcription
+      let contentToAnalyze = '';
+
+      // Use summary if available (more focused content)
+      if (results.summary && results.summary.trim()) {
+        contentToAnalyze = `Summary: ${results.summary.trim()}`;
+      } 
+      // Fallback to transcription
+      else if (results.transcription && results.transcription.trim() && results.transcription.length > 50) {
+        // Use first 2000 characters to avoid token limits
+        const truncatedTranscription = results.transcription.trim().substring(0, 2000);
+        contentToAnalyze = `Transcription: ${truncatedTranscription}`;
+      }
+
+      if (!contentToAnalyze) {
+        console.log('⚠️ No content available for AI tag generation');
+        return [];
+      }
+
+      console.log(`🤖 Sending content to OpenAI for tag analysis (${contentToAnalyze.length} chars)`);
+
+      const prompt = `Based on the following content, generate 5-8 relevant descriptive tags that capture the main topics, themes, emotions, and content type. Focus on:
+
+1. Content topics and themes (e.g., comedy, technology, education, sports, music)
+2. Emotions and tone (e.g., funny, serious, uplifting, dramatic)
+3. Content style (e.g., tutorial, interview, review, entertainment)
+4. Target audience or genre
+
+Content to analyze:
+${contentToAnalyze}
+
+Return ONLY a JSON array of strings with the tags. Example: ["comedy", "entertainment", "funny", "british", "awkward-situations"]`;
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert content analyst. Generate specific, relevant tags that accurately describe content themes, topics, and characteristics. Focus on meaningful descriptors rather than generic platform terms.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 200
+      });
+
+      const responseText = response.choices[0].message.content.trim();
+      console.log(`🤖 OpenAI tag response:`, responseText);
+      
+      // Parse the JSON response
+      try {
+        const tags = JSON.parse(responseText);
+        if (Array.isArray(tags)) {
+          // Filter and clean tags
+          const cleanedTags = tags
+            .filter(tag => tag && typeof tag === 'string' && tag.trim())
+            .map(tag => tag.trim().toLowerCase())
+            .filter(tag => tag.length > 1 && tag.length < 30) // Reasonable length limits
+            .slice(0, 8); // Limit to 8 tags
+          
+          console.log(`✅ Generated ${cleanedTags.length} AI tags:`, cleanedTags);
+          return cleanedTags;
+        } else {
+          console.log('⚠️ OpenAI returned non-array response');
+          return [];
+        }
+      } catch (parseError) {
+        console.error('❌ Failed to parse OpenAI tag response:', parseError.message);
+        console.log('Raw response:', responseText);
+        return [];
+      }
+
+    } catch (error) {
+      console.error('❌ AI tag generation failed:', error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Generate content category using AI-powered analysis
    * 
    * @param {Object} results - Analysis results
    * @returns {Promise<string>} Generated category
    */
   async generateCategory(results) {
-    // Default category
+    console.log('📂 Starting AI-powered category generation with results:', {
+      hasSummary: !!results.summary,
+      hasTranscription: !!results.transcription,
+      platform: results.platform
+    });
+
+    // Try AI-powered category generation first
+    if (this.openai && (results.summary || results.transcription)) {
+      try {
+        const aiCategory = await this.generateAICategory(results);
+        if (aiCategory && aiCategory.trim()) {
+          console.log(`🤖 Generated AI category: "${aiCategory}"`);
+          return aiCategory;
+        }
+      } catch (error) {
+        console.error('❌ AI category generation failed, falling back to basic categorization:', error);
+      }
+    }
+
+    // Fallback to basic categorization
     let category = 'general';
     
     // Category based on platform
     if (results.platform === 'youtube') {
-      category = 'video';
+      category = 'video-content';
     } else if (results.platform === 'soundcloud' || results.platform === 'spotify') {
-      category = 'audio';
+      category = 'audio-content';
     } else if (results.platform === 'instagram') {
-      category = 'social';
+      category = 'visual-content';
     }
     
     // Refine category based on content
@@ -1677,21 +1817,123 @@ Return only the extracted text, preserving line breaks and formatting where poss
       const text = results.transcription.toLowerCase();
       
       if (text.includes('music') || text.includes('song')) {
-        category = 'music';
+        category = 'music-content';
       } else if (text.includes('education') || text.includes('tutorial') || text.includes('learn')) {
-        category = 'educational';
+        category = 'educational-content';
       } else if (text.includes('news') || text.includes('report')) {
-        category = 'news';
+        category = 'news-content';
       } else if (text.includes('game') || text.includes('gaming')) {
-        category = 'gaming';
+        category = 'entertainment-content';
       } else if (text.includes('review') || text.includes('opinion')) {
-        category = 'review';
+        category = 'review-content';
       } else if (text.includes('interview') || text.includes('conversation')) {
-        category = 'interview';
+        category = 'conversation-content';
+      } else if (text.includes('funny') || text.includes('comedy') || text.includes('humor')) {
+        category = 'entertainment-content';
+      } else if (text.includes('sport') || text.includes('match') || text.includes('team')) {
+        category = 'sports-content';
       }
     }
     
+    console.log(`📂 Final category: "${category}"`);
     return category;
+  }
+
+  /**
+   * Generate content category using OpenAI analysis
+   * 
+   * @param {Object} results - Analysis results containing summary/transcription
+   * @returns {Promise<string>} AI-generated category
+   */
+  async generateAICategory(results) {
+    try {
+      if (!this.openai) {
+        throw new Error('OpenAI client not initialized');
+      }
+
+      // Prepare content for analysis - prioritize summary over transcription
+      let contentToAnalyze = '';
+
+      // Use summary if available (more focused content)
+      if (results.summary && results.summary.trim()) {
+        contentToAnalyze = `Summary: ${results.summary.trim()}`;
+      } 
+      // Fallback to transcription
+      else if (results.transcription && results.transcription.trim() && results.transcription.length > 50) {
+        // Use first 1500 characters to avoid token limits
+        const truncatedTranscription = results.transcription.trim().substring(0, 1500);
+        contentToAnalyze = `Transcription: ${truncatedTranscription}`;
+      }
+
+      if (!contentToAnalyze) {
+        console.log('⚠️ No content available for AI category generation');
+        return null;
+      }
+
+      console.log(`🤖 Sending content to OpenAI for category analysis (${contentToAnalyze.length} chars)`);
+
+      const prompt = `Based on the following content, select the most appropriate category from this list:
+
+- general (default/miscellaneous)
+- video-content (general video content)
+- audio-content (podcasts, music, audio)
+- visual-content (images, graphics, visual art)
+- people-content (interviews, personal stories, vlogs)
+- food-content (cooking, recipes, food reviews)
+- technology-content (tech reviews, tutorials, gadgets)
+- health-content (fitness, wellness, medical)
+- educational-content (tutorials, lectures, learning)
+- entertainment-content (comedy, movies, shows, games)
+- sports-content (athletics, games, competitions)
+- news-content (current events, reporting)
+- music-content (songs, concerts, music videos)
+- conversation-content (interviews, discussions, podcasts)
+- mature-content (adult themes)
+
+Content to analyze:
+${contentToAnalyze}
+
+Return ONLY the category name, nothing else. Example: entertainment-content`;
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert content categorization specialist. Analyze content and select the most appropriate category based on the main topic and theme.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 50
+      });
+
+      const category = response.choices[0].message.content.trim().toLowerCase();
+      console.log(`🤖 OpenAI category response: "${category}"`);
+      
+      // Validate the category is from our allowed list
+      const validCategories = [
+        'general', 'video-content', 'audio-content', 'visual-content', 'people-content',
+        'food-content', 'technology-content', 'health-content', 'educational-content',
+        'entertainment-content', 'sports-content', 'news-content', 'music-content',
+        'conversation-content', 'mature-content'
+      ];
+      
+      if (validCategories.includes(category)) {
+        console.log(`✅ Valid AI category generated: "${category}"`);
+        return category;
+      } else {
+        console.log(`⚠️ Invalid category "${category}", using fallback`);
+        return null;
+      }
+
+    } catch (error) {
+      console.error('❌ AI category generation failed:', error.message);
+      return null;
+    }
   }
 
   // Placeholder methods for features to be implemented
