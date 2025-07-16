@@ -508,6 +508,50 @@ function setupAIAnalysisModal() {
   console.log('✅ AI analysis modal handlers set up successfully');
 }
 
+// Global variable to track the current modal instance
+let currentModalInstance = null;
+
+// Global flag to prevent simultaneous modal creation
+let isModalLoading = false;
+
+/**
+ * Safely dispose of existing modal instance and clean up
+ */
+function cleanupExistingModal() {
+  // Dispose of any existing Bootstrap modal instance
+  if (currentModalInstance) {
+    console.log('🧹 Disposing of existing modal instance...');
+    try {
+      currentModalInstance.hide();
+      currentModalInstance.dispose();
+    } catch (error) {
+      console.warn('⚠️ Error disposing modal instance:', error);
+    }
+    currentModalInstance = null;
+  }
+  
+  // Remove any existing modal DOM elements
+  const existingModal = document.getElementById('aiAnalysisModal');
+  if (existingModal) {
+    console.log('🗑️ Removing existing modal DOM element...');
+    existingModal.remove();
+  }
+  
+  // Clean up any modal backdrops that might be stuck
+  const backdrops = document.querySelectorAll('.modal-backdrop');
+  backdrops.forEach(backdrop => backdrop.remove());
+  
+  // Remove modal-open class from body if it exists
+  document.body.classList.remove('modal-open');
+  
+  // Reset body styles that might be stuck
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+  
+  // Reset loading flag
+  isModalLoading = false;
+}
+
 /**
  * Show AI analysis modal with detailed results
  */
@@ -517,15 +561,19 @@ async function showAIAnalysisModal(contentId) {
   console.log('🚀 Content ID type:', typeof contentId);
   console.log('🚀 Content ID length:', contentId?.length);
   
+  // Prevent multiple simultaneous modal creation attempts
+  if (isModalLoading) {
+    console.log('⏸️ Modal already loading, ignoring duplicate request...');
+    return;
+  }
+  
+  isModalLoading = true;
+  
   try {
     console.log(`🔍 Loading AI analysis for content: ${contentId.substring(0, 8)}...`);
     
-    // Check if modal already exists and remove it
-    const existingModal = document.getElementById('aiAnalysisModal');
-    if (existingModal) {
-      console.log('🗑️ Removing existing modal...');
-      existingModal.remove();
-    }
+    // Clean up any existing modal instances and DOM elements
+    cleanupExistingModal();
     
     console.log('📞 Making fetch request to:', `/content/${contentId}/analysis`);
     
@@ -584,16 +632,10 @@ async function showAIAnalysisModal(contentId) {
       console.log('🎨 Modal HTML generated:', modalHtml ? 'YES' : 'NO');
       console.log('🎨 Modal HTML length:', modalHtml?.length);
       
-      // Create or update modal
-      console.log('🏗️ Creating modal...');
-      let modal = document.getElementById('aiAnalysisModal');
-      if (!modal) {
-        console.log('🏗️ Modal does not exist, creating new one...');
-        modal = createAIAnalysisModal();
-        console.log('🏗️ Modal created:', !!modal);
-      } else {
-        console.log('🏗️ Using existing modal');
-      }
+      // Create modal (we already cleaned up any existing ones)
+      console.log('🏗️ Creating new modal...');
+      const modal = createAIAnalysisModal();
+      console.log('🏗️ Modal created:', !!modal);
       
       console.log('📝 Setting modal body content...');
       const modalBody = modal.querySelector('.modal-body');
@@ -603,12 +645,23 @@ async function showAIAnalysisModal(contentId) {
         console.log('📝 Modal body content set');
       } else {
         console.error('❌ Modal body not found!');
+        isModalLoading = false;  // Reset flag on error
+        return;
       }
       
-      // Show modal
-      console.log('🎭 Showing modal with Bootstrap...');
-      const bsModal = new bootstrap.Modal(modal);
-      bsModal.show();
+      // Create and show modal with proper instance management
+      console.log('🎭 Creating Bootstrap modal instance...');
+      currentModalInstance = new bootstrap.Modal(modal, {
+        backdrop: 'static',  // Prevent closing by clicking backdrop to avoid conflicts
+        keyboard: true,      // Allow closing with ESC key
+        focus: true          // Ensure proper focus management
+      });
+      
+      console.log('🎭 Showing modal...');
+      currentModalInstance.show();
+      
+      // Reset loading flag after successful show
+      isModalLoading = false;
       
       console.log('✅ Modal displayed successfully');
       
@@ -623,6 +676,9 @@ async function showAIAnalysisModal(contentId) {
   } catch (error) {
     console.error('❌ Error loading AI analysis modal:', error);
     console.error('❌ Error stack:', error.stack);
+    
+    // Reset loading flag on error
+    isModalLoading = false;
     
     // Show error modal instead of leaving user with spinning wheel
     showErrorModal('Connection Error', 'Unable to connect to analysis service. Please try again later.');
@@ -639,14 +695,20 @@ function showErrorModal(title, message) {
   console.log('🚨 Title:', title);
   console.log('🚨 Message:', message);
   
-  let modal = document.getElementById('aiAnalysisModal');
-  console.log('🚨 Existing modal found:', !!modal);
-  
-  if (!modal) {
-    console.log('🚨 Creating new modal for error...');
-    modal = createAIAnalysisModal();
-    console.log('🚨 Modal created:', !!modal);
+  // Prevent multiple error modals
+  if (isModalLoading) {
+    console.log('⏸️ Modal already loading, ignoring error modal request...');
+    return;
   }
+  
+  isModalLoading = true;
+  
+  // Clean up any existing modal instances first
+  cleanupExistingModal();
+  
+  console.log('🚨 Creating new modal for error...');
+  const modal = createAIAnalysisModal();
+  console.log('🚨 Modal created:', !!modal);
   
   const modalTitle = modal.querySelector('.modal-title');
   const modalBody = modal.querySelector('.modal-body');
@@ -662,9 +724,17 @@ function showErrorModal(title, message) {
     </div>
   `;
   
-  console.log('🚨 Showing error modal...');
-  const bsModal = new bootstrap.Modal(modal);
-  bsModal.show();
+  console.log('🚨 Creating and showing error modal...');
+  currentModalInstance = new bootstrap.Modal(modal, {
+    backdrop: 'static',
+    keyboard: true,
+    focus: true
+  });
+  currentModalInstance.show();
+  
+  // Reset loading flag after successful show
+  isModalLoading = false;
+  
   console.log('🚨 Error modal shown successfully');
 }
 
@@ -2324,6 +2394,37 @@ function createAIAnalysisModal() {
       </div>
     </div>
   `;
+  
+  // Add event listeners for proper cleanup
+  modal.addEventListener('hidden.bs.modal', function() {
+    console.log('🧹 Modal hidden event - cleaning up instance...');
+    if (currentModalInstance) {
+      try {
+        currentModalInstance.dispose();
+      } catch (error) {
+        console.warn('⚠️ Error disposing modal on hidden event:', error);
+      }
+      currentModalInstance = null;
+    }
+    
+    // Clean up DOM element after it's hidden
+    if (modal.parentNode) {
+      modal.parentNode.removeChild(modal);
+    }
+  });
+  
+  // Add additional safety cleanup on show events
+  modal.addEventListener('show.bs.modal', function() {
+    console.log('🎭 Modal show event - ensuring clean state...');
+    // Remove any leftover backdrops
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    if (backdrops.length > 1) {
+      console.log('🧹 Removing extra modal backdrops...');
+      for (let i = 1; i < backdrops.length; i++) {
+        backdrops[i].remove();
+      }
+    }
+  });
   
   document.body.appendChild(modal);
   return modal;
