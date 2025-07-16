@@ -1,5 +1,4 @@
-const dotenv = require('dotenv');
-dotenv.config();
+require('dotenv').config();
 
 module.exports = {
   development: {
@@ -8,7 +7,8 @@ module.exports = {
     database: process.env.DB_NAME,
     host: process.env.DB_HOST || '127.0.0.1',
     port: process.env.DB_PORT || 3306,
-    dialect: 'mysql'
+    dialect: 'mysql',
+    logging: process.env.ENABLE_SQL_LOGGING === 'true' ? console.log : false
   },
   test: {
     username: process.env.DB_USER,
@@ -16,7 +16,8 @@ module.exports = {
     database: process.env.DB_NAME,
     host: process.env.DB_HOST || '127.0.0.1',
     port: process.env.DB_PORT || 3306,
-    dialect: 'mysql'
+    dialect: 'mysql',
+    logging: false
   },
   production: {
     username: process.env.DB_USER,
@@ -24,6 +25,7 @@ module.exports = {
     database: process.env.DB_NAME,
     host: process.env.DB_HOST || '127.0.0.1',
     port: process.env.DB_PORT || 3306,
-    dialect: 'mysql'
+    dialect: 'mysql',
+    logging: false
   }
 }; 

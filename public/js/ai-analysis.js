@@ -683,68 +683,531 @@ function renderAIAnalysisModal(result) {
   console.log('🎨 Analysis object:', analysis);
   console.log('🎨 Media type extracted:', mediaType);
   
+  // Start with compact header
   let html = `
     <div class="ai-analysis-content">
-      <div class="mb-4">
-        <h5 class="fw-bold">
-          <i class="bi bi-robot me-2"></i>AI Analysis Results
-          <span class="badge bg-secondary ms-2">${mediaType?.toUpperCase() || 'UNKNOWN'}</span>
-        </h5>
-        <p class="text-muted mb-0">${analysis.title || 'Multimedia Content Analysis'}</p>
+      <div class="d-flex align-items-center mb-4">
+        <i class="bi bi-robot me-2 text-primary" style="font-size: 1.5rem;"></i>
+        <h5 class="fw-bold mb-0 me-2">Analysis Results</h5>
+        <span class="badge bg-secondary">${mediaType?.toUpperCase() || 'UNKNOWN'}</span>
       </div>
   `;
-  
-  // Analysis quality indicator
-  if (analysis.quality) {
-    const qualityScore = analysis.quality.overallQuality || analysis.quality.qualityScore || 0;
-    const qualityLabel = getQualityLabel(qualityScore);
-    const qualityColor = getQualityColor(qualityScore);
-    
+
+  // 1. SUMMARY (Priority #1)
+  const summary = getSummaryFromResult(result);
+  if (summary) {
     html += `
       <div class="mb-4">
         <h6 class="fw-bold">
-          <i class="bi bi-award me-2"></i>Analysis Quality
+          <i class="bi bi-file-earmark-text me-2"></i>Summary
         </h6>
-        <div class="d-flex align-items-center">
-          <span class="badge ${qualityColor} me-2">${qualityLabel}</span>
-          <div class="progress flex-grow-1" style="height: 20px;">
-            <div class="progress-bar ${qualityColor.replace('bg-', 'bg-')}" 
-                 role="progressbar" 
-                 style="width: ${qualityScore}%"
-                 aria-valuenow="${qualityScore}" 
-                 aria-valuemin="0" 
-                 aria-valuemax="100">
-              ${Math.round(qualityScore)}%
+        <div class="border rounded p-3 bg-light">
+          <p class="mb-0">${summary}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  // 2. SENTIMENT ANALYSIS (Priority #2)
+  html += renderSentimentSection(analysis, result);
+
+  // 3. TRANSCRIPTION (Priority #3)
+  html += renderTranscriptionSection(analysis, mediaType);
+
+  // 4. CATEGORY & TAGS (Priority #4)
+  html += renderCategoryAndTagsSection(result);
+
+  // 5. REST OF AI PIPELINE OUTPUT
+  html += renderDetectedObjectsSection(analysis);
+  html += renderSpeakersSection(analysis, result);
+  html += renderOCRSection(analysis);
+  html += renderFacesSection(analysis);
+  html += renderColorsSection(analysis);
+  html += renderScenesSection(analysis);
+  html += renderThumbnailsSection(result);
+  html += renderTechnicalInfoSection(analysis, result);
+  html += renderProcessingInfoSection(analysis, result);
+  
+  html += '</div>';
+  
+  return html;
+}
+
+/**
+ * Get summary from various sources in the result
+ */
+function getSummaryFromResult(result) {
+  const analysis = result.analysis;
+  
+  // Try different sources for summary
+  if (analysis.summary && analysis.summary.trim()) {
+    return analysis.summary;
+  }
+  
+  // Check content record level
+  if (result.summary && result.summary.trim()) {
+    return result.summary;
+  }
+  
+  // Try metadata
+  if (analysis.metadata && analysis.metadata.summary) {
+    return analysis.metadata.summary;
+  }
+  
+  return null;
+}
+
+/**
+ * Render sentiment analysis section
+ */
+function renderSentimentSection(analysis, result) {
+  let html = '';
+  
+  // Try different sources for sentiment
+  let sentiment = analysis.sentiment;
+  if (!sentiment && result.sentiment) {
+    sentiment = result.sentiment;
+  }
+  
+  if (sentiment) {
+    // Handle different sentiment data formats
+    const sentimentLabel = sentiment.label || sentiment.sentiment || sentiment;
+    
+    if (sentimentLabel && typeof sentimentLabel === 'string') {
+      const sentimentColor = getSentimentColor(sentimentLabel);
+      const confidence = sentiment.confidence || sentiment.score || 0.5;
+      
+      html += `
+        <div class="mb-4">
+          <h6 class="fw-bold">
+            <i class="bi bi-emoji-smile me-2"></i>Sentiment Analysis
+          </h6>
+          <div class="d-flex align-items-center">
+            <span class="badge ${sentimentColor} me-2">${sentimentLabel.toUpperCase()}</span>
+            <div class="progress flex-grow-1" style="height: 20px;">
+              <div class="progress-bar ${sentimentColor.replace('bg-', 'bg-')}" 
+                   role="progressbar" 
+                   style="width: ${confidence * 100}%"
+                   aria-valuenow="${confidence * 100}" 
+                   aria-valuemin="0" 
+                   aria-valuemax="100">
+                ${Math.round(confidence * 100)}%
+              </div>
             </div>
           </div>
+          ${sentiment.emotions && sentiment.emotions.length > 0 ? `
+            <div class="mt-2">
+              <small class="text-muted">
+                <strong>Emotions:</strong> ${sentiment.emotions.join(', ')}
+              </small>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+  }
+  
+  return html;
+}
+
+/**
+ * Render transcription section based on media type
+ */
+function renderTranscriptionSection(analysis, mediaType) {
+  let html = '';
+  
+  // Get transcription text
+  let transcriptionText = '';
+  let title = 'Content Analysis';
+  let icon = 'bi-file-text';
+  
+  if (analysis.transcription && analysis.transcription.trim()) {
+    transcriptionText = analysis.transcription;
+    if (mediaType === 'video') {
+      title = 'Video Transcription';
+      icon = 'bi-play-circle';
+    } else if (mediaType === 'audio') {
+      title = 'Audio Transcription';
+      icon = 'bi-mic';
+    }
+  } else if (analysis.description && analysis.description.trim()) {
+    transcriptionText = analysis.description;
+    title = 'AI Description';
+    icon = 'bi-image';
+  }
+  
+  if (transcriptionText) {
+    const wordCount = transcriptionText.split(' ').length;
+    const sentences = transcriptionText.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const estimatedReadingTime = Math.ceil(wordCount / 200);
+    
+    html += `
+      <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold mb-0">
+            <i class="${icon} me-2"></i>${title}
+          </h6>
+          <button class="btn btn-sm btn-outline-primary" onclick="copyToClipboard('${transcriptionText.replace(/'/g, "\\'")}')">
+            <i class="bi bi-clipboard me-1"></i>Copy
+          </button>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <span class="badge bg-primary me-2">${wordCount} words</span>
+            <span class="badge bg-secondary me-2">${sentences.length} sentences</span>
+            <span class="badge bg-info">~${estimatedReadingTime} min read</span>
+          </div>
+        </div>
+        <div class="border rounded p-3 bg-light" style="max-height: 300px; overflow-y: auto; line-height: 1.6;">
+          <p class="mb-0">${transcriptionText}</p>
         </div>
       </div>
     `;
   }
   
-  // Media-specific content
-  switch (mediaType) {
-    case 'video':
-      html += renderVideoAnalysis(analysis, result);
-      break;
-    case 'audio':
-      html += renderAudioAnalysis(analysis, result);
-      break;
-    case 'image':
-      html += renderImageAnalysis(analysis, result);
-      break;
-    case 'legacy':
-      html += renderLegacyAnalysis(analysis, result);
-      break;
-    default:
-      html += renderGenericAnalysis(analysis, result);
-      break;
+  return html;
+}
+
+/**
+ * Render category and tags section
+ */
+function renderCategoryAndTagsSection(result) {
+  let html = '';
+  
+  // Get category and tags from various sources
+  const category = result.category || result.analysis?.category;
+  const autoTags = result.auto_tags || result.analysis?.auto_tags || [];
+  const userTags = result.user_tags || result.analysis?.user_tags || [];
+  
+  if (category || autoTags.length > 0 || userTags.length > 0) {
+    html += `
+      <div class="mb-4">
+        <h6 class="fw-bold">
+          <i class="bi bi-tags me-2"></i>Category & Tags
+        </h6>
+    `;
+    
+    if (category) {
+      html += `
+        <div class="mb-2">
+          <strong>Category:</strong>
+          <span class="badge bg-primary ms-2">${category}</span>
+        </div>
+      `;
+    }
+    
+    if (autoTags.length > 0) {
+      html += `
+        <div class="mb-2">
+          <strong>AI Generated Tags:</strong>
+          <div class="mt-1">
+            ${autoTags.map(tag => `<span class="badge bg-success me-1 mb-1">${tag}</span>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+    
+    if (userTags.length > 0) {
+      html += `
+        <div class="mb-2">
+          <strong>User Tags:</strong>
+          <div class="mt-1">
+            ${userTags.map(tag => `<span class="badge bg-warning text-dark me-1 mb-1">${tag}</span>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+    
+    html += '</div>';
   }
   
-  // Common sections
-  html += renderCommonSections(analysis, result);
+  return html;
+}
+
+/**
+ * Render detected objects section
+ */
+function renderDetectedObjectsSection(analysis) {
+  if (!analysis.objects || analysis.objects.length === 0) return '';
   
-  html += '</div>';
+  return `
+    <div class="mb-4">
+      <h6 class="fw-bold">
+        <i class="bi bi-eye me-2"></i>Detected Objects (${analysis.objects.length})
+      </h6>
+      <div class="row">
+        ${analysis.objects.map(obj => `
+          <div class="col-md-4 mb-2">
+            <div class="card">
+              <div class="card-body p-2">
+                <strong>${obj.name}</strong><br>
+                <small class="text-muted">Confidence: ${Math.round((obj.confidence || 0) * 100)}%</small>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render speakers section
+ */
+function renderSpeakersSection(analysis, result) {
+  const speakers = analysis.speakers || result.speakers || [];
+  if (speakers.length === 0) return '';
+  
+  return `
+    <div class="mb-4">
+      <h6 class="fw-bold">
+        <i class="bi bi-people me-2"></i>Identified Speakers (${speakers.length})
+      </h6>
+      <div class="row">
+        ${speakers.map(speaker => `
+          <div class="col-md-6 mb-2">
+            <div class="card">
+              <div class="card-body p-2">
+                <strong>${speaker.name || `Speaker ${speaker.id}`}</strong><br>
+                <small class="text-muted">
+                  Confidence: ${Math.round((speaker.confidence || 0) * 100)}%
+                  ${speaker.gender ? ` • ${speaker.gender}` : ''}
+                  ${speaker.language ? ` • ${speaker.language}` : ''}
+                </small>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render OCR text section
+ */
+function renderOCRSection(analysis) {
+  const ocrText = analysis.ocrText || (analysis.ocr_captions && analysis.ocr_captions.map(c => c.text).join(' '));
+  if (!ocrText || !ocrText.trim()) return '';
+  
+  const wordCount = ocrText.split(' ').length;
+  
+  return `
+    <div class="mb-4">
+      <h6 class="fw-bold">
+        <i class="bi bi-fonts me-2"></i>Extracted Text (OCR)
+      </h6>
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="badge bg-warning text-dark">${wordCount} words extracted</span>
+        <button class="btn btn-sm btn-outline-primary" onclick="copyToClipboard('${ocrText.replace(/'/g, "\\'")}')">
+          <i class="bi bi-clipboard me-1"></i>Copy
+        </button>
+      </div>
+      <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+        <p class="mb-0">${ocrText}</p>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render faces section
+ */
+function renderFacesSection(analysis) {
+  if (!analysis.faces || analysis.faces.length === 0) return '';
+  
+  return `
+    <div class="mb-4">
+      <h6 class="fw-bold">
+        <i class="bi bi-person me-2"></i>Detected Faces (${analysis.faces.length})
+      </h6>
+      <div class="row">
+        ${analysis.faces.map((face, index) => `
+          <div class="col-md-4 mb-2">
+            <div class="card">
+              <div class="card-body p-2">
+                <strong>Face ${index + 1}</strong><br>
+                <small class="text-muted">
+                  ${face.gender ? `${face.gender}` : 'Unknown gender'}
+                  ${face.age ? ` • ~${face.age} years` : ''}
+                  ${face.confidence ? ` • ${Math.round(face.confidence * 100)}% confidence` : ''}
+                </small>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render colors section
+ */
+function renderColorsSection(analysis) {
+  if (!analysis.colors || !analysis.colors.dominantColors) return '';
+  
+  return `
+    <div class="mb-4">
+      <h6 class="fw-bold">
+        <i class="bi bi-palette me-2"></i>Color Analysis
+      </h6>
+      <div class="d-flex flex-wrap gap-2">
+        ${analysis.colors.dominantColors.map(color => `
+          <div class="d-flex align-items-center">
+            <div class="color-swatch me-2" style="width: 20px; height: 20px; background-color: ${color.hex || color.rgb}; border: 1px solid #ccc; border-radius: 3px;"></div>
+            <small>${color.name || color.hex || 'Unknown'}</small>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render scenes section
+ */
+function renderScenesSection(analysis) {
+  if (!analysis.scenes || analysis.scenes.length === 0) return '';
+  
+  return `
+    <div class="mb-4">
+      <h6 class="fw-bold">
+        <i class="bi bi-camera-reels me-2"></i>Scene Detection (${analysis.scenes.length})
+      </h6>
+      <div class="row">
+        ${analysis.scenes.map((scene, index) => `
+          <div class="col-md-6 mb-2">
+            <div class="card">
+              <div class="card-body p-2">
+                <strong>Scene ${index + 1}</strong><br>
+                <small class="text-muted">
+                  ${scene.start ? `Start: ${formatDuration(scene.start)}` : ''}
+                  ${scene.duration ? ` • Duration: ${formatDuration(scene.duration)}` : ''}
+                  ${scene.confidence ? ` • ${Math.round(scene.confidence * 100)}% confidence` : ''}
+                </small>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render thumbnails section
+ */
+function renderThumbnailsSection(result) {
+  const thumbnails = result.thumbnails || [];
+  if (thumbnails.length === 0) return '';
+  
+  return `
+    <div class="mb-4">
+      <h6 class="fw-bold">
+        <i class="bi bi-images me-2"></i>Generated Thumbnails (${thumbnails.length})
+      </h6>
+      <div class="row">
+        ${thumbnails.map(thumb => `
+          <div class="col-md-3 mb-2">
+            <div class="card">
+              <img src="${thumb.url}" class="card-img-top" alt="Thumbnail" style="height: 100px; object-fit: cover;">
+              <div class="card-body p-2">
+                <small class="text-muted">
+                  ${thumb.timestamp ? `${formatDuration(thumb.timestamp)}` : ''}
+                  ${thumb.size ? ` • ${thumb.size}` : ''}
+                </small>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render technical information section
+ */
+function renderTechnicalInfoSection(analysis, result) {
+  let html = '';
+  
+  // Collect technical info
+  const techInfo = [];
+  
+  if (analysis.duration) {
+    techInfo.push(`Duration: ${formatDuration(analysis.duration)}`);
+  }
+  
+  if (analysis.metadata) {
+    if (analysis.metadata.resolution) techInfo.push(`Resolution: ${analysis.metadata.resolution}`);
+    if (analysis.metadata.fps) techInfo.push(`FPS: ${analysis.metadata.fps}`);
+    if (analysis.metadata.bitrate) techInfo.push(`Bitrate: ${analysis.metadata.bitrate}`);
+    if (analysis.metadata.codec) techInfo.push(`Codec: ${analysis.metadata.codec}`);
+    if (analysis.metadata.fileSize) techInfo.push(`Size: ${formatFileSize(analysis.metadata.fileSize)}`);
+  }
+  
+  if (analysis.language) {
+    techInfo.push(`Language: ${analysis.language}`);
+  }
+  
+  if (techInfo.length > 0) {
+    html += `
+      <div class="mb-4">
+        <h6 class="fw-bold">
+          <i class="bi bi-info-circle me-2"></i>Technical Information
+        </h6>
+        <div class="row">
+          ${techInfo.map(info => `
+            <div class="col-md-6 mb-1">
+              <small class="text-muted">${info}</small>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+  
+  return html;
+}
+
+/**
+ * Render processing information section
+ */
+function renderProcessingInfoSection(analysis, result) {
+  let html = '';
+  
+  if (analysis.processing_time || analysis.created_at || result.job) {
+    html += `
+      <div class="mb-4">
+        <h6 class="fw-bold">
+          <i class="bi bi-clock me-2"></i>Processing Information
+        </h6>
+        <div class="row">
+          ${analysis.processing_time ? `
+            <div class="col-md-6">
+              <small class="text-muted"><strong>Processing Time:</strong> ${formatProcessingTime(analysis.processing_time)}</small>
+            </div>
+          ` : ''}
+          ${analysis.created_at ? `
+            <div class="col-md-6">
+              <small class="text-muted"><strong>Analyzed:</strong> ${new Date(analysis.created_at).toLocaleString()}</small>
+            </div>
+          ` : ''}
+          ${result.job && result.job.status ? `
+            <div class="col-md-6">
+              <small class="text-muted"><strong>Status:</strong> ${result.job.status}</small>
+            </div>
+          ` : ''}
+          ${result.job && result.job.progress ? `
+            <div class="col-md-6">
+              <small class="text-muted"><strong>Progress:</strong> ${result.job.progress}%</small>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }
   
   return html;
 }
