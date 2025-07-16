@@ -53,6 +53,20 @@ function initializeAIIndicators() {
 async function loadAIIndicators(contentId) {
   try {
     const response = await fetch(`/content/${contentId}/analysis`);
+    
+    // Handle authentication errors
+    if (response.status === 401 || response.status === 403) {
+      console.log(`Authentication error for content ${contentId}, skipping AI indicators`);
+      return;
+    }
+    
+    // Handle HTML responses (redirects to login)
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+      console.log(`HTML response received for content ${contentId}, likely redirected to login`);
+      return;
+    }
+    
     const result = await response.json();
     
     if (result.success && result.status === 'completed' && result.analysis) {
@@ -452,6 +466,17 @@ async function showAIAnalysisModal(contentId) {
     console.log(`🔍 Loading AI analysis for content: ${contentId.substring(0, 8)}...`);
     
     const response = await fetch(`/content/${contentId}/analysis`);
+    
+    // Check for authentication errors
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('Authentication required. Please refresh the page and log in again.');
+    }
+    
+    // Check for HTML responses (redirects to login)
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+      throw new Error('Session expired. Please refresh the page and log in again.');
+    }
     
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);

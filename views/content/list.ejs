@@ -218,6 +218,45 @@
                       </p>
                       
                       <!-- Transcription Summary -->
+                      <% if (item.summary) { %>
+                      <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>">
+                        <div class="position-relative">
+                          <div class="transcription-preview bg-light p-2 rounded small">
+                            <div class="transcription-text text-dark">
+                              <%= item.summary.length > 150 ? item.summary.substring(0, 150) + '...' : item.summary %>
+                            </div>
+                            <% if (item.sentiment) { %>
+                              <% 
+                                let sentimentData = item.sentiment;
+                                if (typeof sentimentData === 'string') {
+                                  try {
+                                    sentimentData = JSON.parse(sentimentData);
+                                  } catch (e) {
+                                    sentimentData = null;
+                                  }
+                                }
+                                if (sentimentData && (sentimentData.label || sentimentData.sentiment)) {
+                                  const sentimentLabel = sentimentData.label || sentimentData.sentiment;
+                                  const confidence = sentimentData.confidence || 0;
+                                  let badgeClass = 'bg-secondary';
+                                  if (sentimentLabel === 'positive') badgeClass = 'bg-success';
+                                  else if (sentimentLabel === 'negative') badgeClass = 'bg-danger';
+                                  else if (sentimentLabel === 'neutral') badgeClass = 'bg-info';
+                              %>
+                              <div class="mt-1">
+                                <span class="badge <%= badgeClass %> small">
+                                  <%= sentimentLabel %> (<%= Math.round(confidence * 100) %>%)
+                                </span>
+                              </div>
+                              <% } %>
+                            <% } %>
+                          </div>
+                          <button class="btn btn-sm btn-outline-primary position-absolute top-0 end-0 mt-1 me-1 py-0 px-2" onclick="copyContentSummary('<%= item.id %>')" title="Copy Summary" style="z-index: 10;">
+                            <i class="bi bi-clipboard" style="font-size: 0.7rem;"></i>
+                          </button>
+                        </div>
+                      </div>
+                      <% } else { %>
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>" style="display: none;">
                         <div class="position-relative">
                           <div class="transcription-preview bg-light p-2 rounded small">
@@ -228,6 +267,7 @@
                           </button>
                         </div>
                       </div>
+                      <% } %>
                     </div>
                     <!-- Tags -->
                     <div class="mt-auto d-flex flex-wrap gap-1">
