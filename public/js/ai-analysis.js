@@ -449,29 +449,73 @@ function displayNoAnalysisIndicator(contentId) {
  * Setup AI analysis modal handling
  */
 function setupAIAnalysisModal() {
-  // Handle modal trigger
+  console.log('🔧 Setting up AI analysis modal handlers...');
+  
+  // Handle modal trigger (legacy class)
   document.addEventListener('click', function(e) {
     if (e.target.classList.contains('ai-analysis-trigger') || 
         e.target.closest('.ai-analysis-trigger')) {
+      console.log('📊 AI analysis trigger clicked (legacy)');
       e.preventDefault();
       
       const trigger = e.target.classList.contains('ai-analysis-trigger') ? 
                      e.target : e.target.closest('.ai-analysis-trigger');
       
       const contentId = trigger.getAttribute('data-content-id');
+      console.log('📊 Content ID from trigger:', contentId);
       if (contentId) {
         showAIAnalysisModal(contentId);
       }
     }
   });
+  
+  // Handle AI analysis button clicks (current implementation)
+  document.addEventListener('click', function(e) {
+    const aiAnalysisBtn = e.target.closest('.ai-analysis-btn');
+    if (aiAnalysisBtn) {
+      console.log('🧠 AI analysis button clicked!');
+      console.log('🧠 Button element:', aiAnalysisBtn);
+      console.log('🧠 Button classes:', aiAnalysisBtn.className);
+      console.log('🧠 Button attributes:', aiAnalysisBtn.attributes);
+      
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const contentId = aiAnalysisBtn.getAttribute('data-id');
+      console.log('🧠 Content ID from button:', contentId);
+      
+      if (contentId) {
+        console.log('🧠 Calling showAIAnalysisModal with contentId:', contentId);
+        showAIAnalysisModal(contentId);
+      } else {
+        console.error('❌ No content ID found on AI analysis button');
+      }
+    }
+  });
+  
+  console.log('✅ AI analysis modal handlers set up successfully');
 }
 
 /**
  * Show AI analysis modal with detailed results
  */
 async function showAIAnalysisModal(contentId) {
+  console.log('🚀 === STARTING AI ANALYSIS MODAL ===');
+  console.log('🚀 Content ID:', contentId);
+  console.log('🚀 Content ID type:', typeof contentId);
+  console.log('🚀 Content ID length:', contentId?.length);
+  
   try {
     console.log(`🔍 Loading AI analysis for content: ${contentId.substring(0, 8)}...`);
+    
+    // Check if modal already exists and remove it
+    const existingModal = document.getElementById('aiAnalysisModal');
+    if (existingModal) {
+      console.log('🗑️ Removing existing modal...');
+      existingModal.remove();
+    }
+    
+    console.log('📞 Making fetch request to:', `/content/${contentId}/analysis`);
     
     const response = await fetch(`/content/${contentId}/analysis`, {
       method: 'GET',
@@ -483,43 +527,74 @@ async function showAIAnalysisModal(contentId) {
       credentials: 'same-origin'
     });
     
+    console.log('📡 Response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: {
+        contentType: response.headers.get('content-type'),
+        contentLength: response.headers.get('content-length')
+      }
+    });
+    
     // Check for authentication errors
     if (response.status === 401 || response.status === 403) {
+      console.error('🚫 Authentication error:', response.status);
       throw new Error('Authentication required. Please refresh the page and log in again.');
     }
     
     // Check for HTML responses (redirects to login)
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('text/html')) {
+      console.error('🚫 HTML response detected (likely redirect):', contentType);
       throw new Error('Session expired. Please refresh the page and log in again.');
     }
     
     if (!response.ok) {
+      console.error('🚫 Non-OK response:', response.status, response.statusText);
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
+    console.log('📥 Parsing JSON response...');
     const result = await response.json();
     console.log('📡 API Response:', { 
       success: result.success, 
       status: result.status, 
       mediaType: result.mediaType,
-      hasAnalysis: !!result.analysis 
+      hasAnalysis: !!result.analysis,
+      fullResult: result
     });
     
     if (result.success) {
-      console.log('✅ Rendering modal with analysis data...');
+      console.log('✅ Success! Rendering modal with analysis data...');
+      console.log('🎨 Calling renderAIAnalysisModal...');
       const modalHtml = renderAIAnalysisModal(result);
+      console.log('🎨 Modal HTML generated:', modalHtml ? 'YES' : 'NO');
+      console.log('🎨 Modal HTML length:', modalHtml?.length);
       
       // Create or update modal
+      console.log('🏗️ Creating modal...');
       let modal = document.getElementById('aiAnalysisModal');
       if (!modal) {
+        console.log('🏗️ Modal does not exist, creating new one...');
         modal = createAIAnalysisModal();
+        console.log('🏗️ Modal created:', !!modal);
+      } else {
+        console.log('🏗️ Using existing modal');
       }
       
+      console.log('📝 Setting modal body content...');
       const modalBody = modal.querySelector('.modal-body');
-      modalBody.innerHTML = modalHtml;
+      console.log('📝 Modal body found:', !!modalBody);
+      if (modalBody) {
+        modalBody.innerHTML = modalHtml;
+        console.log('📝 Modal body content set');
+      } else {
+        console.error('❌ Modal body not found!');
+      }
       
       // Show modal
+      console.log('🎭 Showing modal with Bootstrap...');
       const bsModal = new bootstrap.Modal(modal);
       bsModal.show();
       
@@ -527,6 +602,7 @@ async function showAIAnalysisModal(contentId) {
       
     } else {
       console.error('❌ API returned success=false:', result.message || 'Unknown error');
+      console.error('❌ Full result object:', result);
       
       // Show error modal instead of leaving user with spinning wheel
       showErrorModal('Analysis Unavailable', result.message || 'Unable to load analysis results for this content.');
@@ -534,23 +610,37 @@ async function showAIAnalysisModal(contentId) {
     
   } catch (error) {
     console.error('❌ Error loading AI analysis modal:', error);
+    console.error('❌ Error stack:', error.stack);
     
     // Show error modal instead of leaving user with spinning wheel
     showErrorModal('Connection Error', 'Unable to connect to analysis service. Please try again later.');
   }
+  
+  console.log('🏁 === AI ANALYSIS MODAL COMPLETE ===');
 }
 
 /**
  * Show error modal when analysis fails to load
  */
 function showErrorModal(title, message) {
+  console.log('🚨 === SHOWING ERROR MODAL ===');
+  console.log('🚨 Title:', title);
+  console.log('🚨 Message:', message);
+  
   let modal = document.getElementById('aiAnalysisModal');
+  console.log('🚨 Existing modal found:', !!modal);
+  
   if (!modal) {
+    console.log('🚨 Creating new modal for error...');
     modal = createAIAnalysisModal();
+    console.log('🚨 Modal created:', !!modal);
   }
   
   const modalTitle = modal.querySelector('.modal-title');
   const modalBody = modal.querySelector('.modal-body');
+  
+  console.log('🚨 Modal title element found:', !!modalTitle);
+  console.log('🚨 Modal body element found:', !!modalBody);
   
   modalTitle.textContent = title;
   modalBody.innerHTML = `
@@ -560,16 +650,26 @@ function showErrorModal(title, message) {
     </div>
   `;
   
+  console.log('🚨 Showing error modal...');
   const bsModal = new bootstrap.Modal(modal);
   bsModal.show();
+  console.log('🚨 Error modal shown successfully');
 }
 
 /**
  * Render AI analysis modal content with unified format
  */
 function renderAIAnalysisModal(result) {
+  console.log('🎨 === RENDERING AI ANALYSIS MODAL ===');
+  console.log('🎨 Result object:', result);
+  console.log('🎨 Has analysis:', !!result.analysis);
+  console.log('🎨 Media type:', result.mediaType);
+  
   const analysis = result.analysis;
   const mediaType = result.mediaType;
+  
+  console.log('🎨 Analysis object:', analysis);
+  console.log('🎨 Media type extracted:', mediaType);
   
   let html = `
     <div class="ai-analysis-content">
@@ -877,6 +977,10 @@ function renderCommonSections(analysis, result) {
       </div>
     `;
   }
+  
+  console.log('🎨 Modal HTML generated successfully');
+  console.log('🎨 HTML length:', html.length);
+  console.log('🎨 HTML preview (first 200 chars):', html.substring(0, 200));
   
   return html;
 }
