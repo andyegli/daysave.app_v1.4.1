@@ -405,7 +405,13 @@ class AutomationOrchestrator {
             job.config = processorConfig;
             job.availableFeatures = availableFeatures;
             
-            console.log(`⚙️  [JOB-${jobId}] Available features: ${availableFeatures.join(', ')}`);
+            // Convert features object to array for display
+            const featuresList = Array.isArray(availableFeatures) ? availableFeatures : 
+                Object.entries(availableFeatures.plugins || {})
+                    .filter(([key, enabled]) => enabled)
+                    .map(([key]) => key);
+            
+            console.log(`⚙️  [JOB-${jobId}] Available features: ${featuresList.join(', ') || 'basic processing only'}`);
             
             // Process the content with performance optimization
             const processingOptions = this.buildProcessingOptions(mediaType, metadata, availableFeatures);
@@ -446,7 +452,7 @@ class AutomationOrchestrator {
                 processingTime: job.processingTime,
                 results: formattedResults,
                 warnings: job.warnings,
-                features: availableFeatures
+                features: featuresList // Return the array format for consistency
             };
             
         } catch (error) {

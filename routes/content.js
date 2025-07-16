@@ -6,8 +6,8 @@ const { Op } = require('sequelize');
 const { AutomationOrchestrator } = require('../services/multimedia');
 const logger = require('../config/logger');
 
-// Initialize automation orchestrator
-const orchestrator = new AutomationOrchestrator();
+// Initialize automation orchestrator (singleton)
+const orchestrator = AutomationOrchestrator.getInstance();
 
 /**
  * Detect if URL contains multimedia content that should be analyzed

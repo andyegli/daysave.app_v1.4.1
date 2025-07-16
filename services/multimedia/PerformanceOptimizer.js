@@ -178,7 +178,33 @@ class PerformanceOptimizer extends EventEmitter {
           originalSize: buffer.length
         };
         
-        return await processor.process(chunk, chunkMetadata, options);
+        // Extract userId from metadata
+        const userId = chunkMetadata.userId || chunkMetadata.user_id || 'unknown';
+        
+        // Create temp file for chunk processing  
+        const fs = require('fs');
+        const path = require('path');
+        const os = require('os');
+        
+        const tempDir = path.join(os.tmpdir(), 'daysave-processing');
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
+        }
+        
+        const extension = this.getFileExtension(chunkMetadata.mimeType || chunkMetadata.fileType || 'application/octet-stream');
+        const tempFilePath = path.join(tempDir, `chunk_${Date.now()}_${Math.random().toString(36).substring(7)}${extension}`);
+        
+        // Write chunk to temp file
+        fs.writeFileSync(tempFilePath, chunk);
+        
+        try {
+          return await processor.process(userId, tempFilePath, options);
+        } finally {
+          // Clean up temp file
+          if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+          }
+        }
       });
       
       const batchResults = await Promise.all(batchPromises);
@@ -266,14 +292,73 @@ class PerformanceOptimizer extends EventEmitter {
       }, timeout);
       
       try {
-        const result = await processor.process(buffer, metadata, options);
-        clearTimeout(timeoutId);
-        resolve(result);
+        // Extract userId and create a temporary file path for buffer processing
+        const userId = metadata.userId || metadata.user_id || 'unknown';
+        
+        // For buffer-based processing, we need to create a temporary file
+        // or modify the processor API to handle buffers directly
+        if (processor.processBuffer && typeof processor.processBuffer === 'function') {
+          // Use buffer processing method if available
+          const result = await processor.processBuffer(userId, buffer, metadata, options);
+          clearTimeout(timeoutId);
+          resolve(result);
+        } else {
+          // Fallback: create temp file for legacy processors
+          const fs = require('fs');
+          const path = require('path');
+          const os = require('os');
+          
+          const tempDir = path.join(os.tmpdir(), 'daysave-processing');
+          if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+          }
+          
+          const extension = this.getFileExtension(metadata.mimeType || metadata.fileType || 'application/octet-stream');
+          const tempFilePath = path.join(tempDir, `${Date.now()}_${Math.random().toString(36).substring(7)}${extension}`);
+          
+          // Write buffer to temp file
+          fs.writeFileSync(tempFilePath, buffer);
+          
+          try {
+            const result = await processor.process(userId, tempFilePath, options);
+            clearTimeout(timeoutId);
+            resolve(result);
+          } finally {
+            // Clean up temp file
+            if (fs.existsSync(tempFilePath)) {
+              fs.unlinkSync(tempFilePath);
+            }
+          }
+        }
       } catch (error) {
         clearTimeout(timeoutId);
         reject(error);
       }
     });
+  }
+  
+  /**
+   * Get file extension from MIME type
+   */
+  getFileExtension(mimeType) {
+    const mimeToExt = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/gif': '.gif',
+      'image/webp': '.webp',
+      'image/bmp': '.bmp',
+      'video/mp4': '.mp4',
+      'video/quicktime': '.mov',
+      'video/x-msvideo': '.avi',
+      'video/webm': '.webm',
+      'audio/mpeg': '.mp3',
+      'audio/wav': '.wav',
+      'audio/ogg': '.ogg',
+      'audio/mp4': '.m4a',
+      'application/octet-stream': '.bin'
+    };
+    
+    return mimeToExt[mimeType] || '.tmp';
   }
   
   /**
