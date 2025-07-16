@@ -57,11 +57,21 @@ const isAuthenticated = (req, res, next) => {
     requestedUrl: req.originalUrl
   });
   
+  // Better AJAX/API detection
+  const isAjaxRequest = 
+    req.headers['x-requested-with'] === 'XMLHttpRequest' ||
+    req.headers.accept?.includes('application/json') ||
+    req.headers['content-type']?.includes('application/json') ||
+    req.originalUrl.startsWith('/api/') ||
+    req.originalUrl.includes('/analysis') ||
+    req.originalUrl.includes('/ajax') ||
+    req.query.ajax !== undefined;
+  
   // Redirect to login for browser requests, JSON for API/AJAX
-  if (req.accepts(['html', 'json']) === 'html') {
-    return res.redirect('/auth/login');
-  } else {
+  if (isAjaxRequest) {
     return res.status(401).json({ error: 'Authentication required' });
+  } else {
+    return res.redirect('/auth/login');
   }
 };
 
@@ -193,10 +203,21 @@ const isAdmin = (req, res, next) => {
       ...clientDetails,
       requestedUrl: req.originalUrl
     });
-    if (req.accepts(['html', 'json']) === 'html') {
-      return res.redirect('/auth/login');
-    } else {
+    
+    // Better AJAX/API detection
+    const isAjaxRequest = 
+      req.headers['x-requested-with'] === 'XMLHttpRequest' ||
+      req.headers.accept?.includes('application/json') ||
+      req.headers['content-type']?.includes('application/json') ||
+      req.originalUrl.startsWith('/api/') ||
+      req.originalUrl.includes('/analysis') ||
+      req.originalUrl.includes('/ajax') ||
+      req.query.ajax !== undefined;
+    
+    if (isAjaxRequest) {
       return res.status(401).json({ error: 'Authentication required' });
+    } else {
+      return res.redirect('/auth/login');
     }
   }
 
@@ -229,14 +250,24 @@ const isAdmin = (req, res, next) => {
     userRole
   });
 
-  if (req.accepts(['html', 'json']) === 'html') {
+  // Better AJAX/API detection
+  const isAjaxRequest = 
+    req.headers['x-requested-with'] === 'XMLHttpRequest' ||
+    req.headers.accept?.includes('application/json') ||
+    req.headers['content-type']?.includes('application/json') ||
+    req.originalUrl.startsWith('/api/') ||
+    req.originalUrl.includes('/analysis') ||
+    req.originalUrl.includes('/ajax') ||
+    req.query.ajax !== undefined;
+
+  if (isAjaxRequest) {
+    return res.status(403).json({ error: 'Admin privileges required' });
+  } else {
     return res.status(403).render('error', {
       user: req.user,
       title: 'Access Denied',
       message: 'You need admin privileges to access this page.'
     });
-  } else {
-    return res.status(403).json({ error: 'Admin privileges required' });
   }
 };
 

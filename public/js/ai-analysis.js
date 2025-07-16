@@ -52,7 +52,15 @@ function initializeAIIndicators() {
  */
 async function loadAIIndicators(contentId) {
   try {
-    const response = await fetch(`/content/${contentId}/analysis`);
+    const response = await fetch(`/content/${contentId}/analysis`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      credentials: 'same-origin'
+    });
     
     // Handle authentication errors
     if (response.status === 401 || response.status === 403) {
@@ -465,7 +473,15 @@ async function showAIAnalysisModal(contentId) {
   try {
     console.log(`🔍 Loading AI analysis for content: ${contentId.substring(0, 8)}...`);
     
-    const response = await fetch(`/content/${contentId}/analysis`);
+    const response = await fetch(`/content/${contentId}/analysis`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      credentials: 'same-origin'
+    });
     
     // Check for authentication errors
     if (response.status === 401 || response.status === 403) {
@@ -1100,7 +1116,15 @@ async function checkOngoingAnalysis() {
   
   for (const contentId of contentIds) {
     try {
-      const response = await fetch(`/content/${contentId}/analysis`);
+      const response = await fetch(`/content/${contentId}/analysis`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+      });
       const result = await response.json();
       
       if (result.success && result.status === 'completed') {
@@ -1137,7 +1161,15 @@ async function refreshContentCard(contentId) {
   
   try {
     // Get updated content data from server
-    const response = await fetch(`/content/${contentId}/analysis`);
+    const response = await fetch(`/content/${contentId}/analysis`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      credentials: 'same-origin'
+    });
     const result = await response.json();
     
     if (result.success && result.status === 'completed' && result.analysis) {
