@@ -224,8 +224,8 @@
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>">
                         <div class="position-relative">
                           <div class="transcription-preview bg-light p-2 rounded small">
-                            <div class="transcription-text text-dark">
-                              <%= item.summary.length > 150 ? item.summary.substring(0, 150) + '...' : item.summary %>
+                            <div class="transcription-text text-dark" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4;">
+                              <%= item.summary %>
                             </div>
                             <% if (item.sentiment) { %>
                               <% 
