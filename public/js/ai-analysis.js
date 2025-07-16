@@ -1888,6 +1888,15 @@ function formatProcessingTime(milliseconds) {
   return `${Math.round(milliseconds / 60000)}m ${Math.round((milliseconds % 60000) / 1000)}s`;
 }
 
+function formatFileSize(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+}
+
 function copyToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => {
     // Show success feedback

@@ -47,7 +47,11 @@ class StartupValidator {
    * @returns {Promise<Object>} Validation results
    */
   async validateAll() {
-    console.log('🔍 Starting comprehensive startup validation with transaction tests...\n');
+    const enableValidationLogging = process.env.ENABLE_STARTUP_VALIDATION_LOGGING !== 'false';
+    
+    if (enableValidationLogging) {
+      console.log('🔍 Starting comprehensive startup validation with transaction tests...\n');
+    }
     
     const startTime = Date.now();
     
@@ -68,7 +72,9 @@ class StartupValidator {
     const duration = Date.now() - startTime;
     
     // Log comprehensive results
-    this.logResults(duration);
+    if (enableValidationLogging) {
+      this.logResults(duration);
+    }
     
     // Check for critical failures
     const criticalFailures = this.getCriticalFailures();
@@ -78,7 +84,9 @@ class StartupValidator {
       console.error('Failed services:', criticalFailures.join(', '));
       
       // Provide specific guidance
-      this.logTroubleshootingGuidance(criticalFailures);
+      if (enableValidationLogging) {
+        this.logTroubleshootingGuidance(criticalFailures);
+      }
       
       // In production, exit the process
       if (process.env.NODE_ENV === 'production') {
@@ -966,6 +974,9 @@ class StartupValidator {
    * Log comprehensive validation results
    */
   logResults(duration) {
+    const enableValidationLogging = process.env.ENABLE_STARTUP_VALIDATION_LOGGING !== 'false';
+    if (!enableValidationLogging) return;
+    
     console.log(`\n📊 Startup Validation Results (completed in ${duration}ms):`);
     console.log('=' .repeat(80));
     

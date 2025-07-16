@@ -71,24 +71,30 @@ class AutomationOrchestrator {
      * Setup detailed progress logging
      */
     setupProgressLogging() {
+        const enableConsoleLogging = process.env.ENABLE_MULTIMEDIA_CONSOLE_LOGGING === 'true';
+        
         // Listen to progress tracker events for detailed logging
         this.progressTracker.on('jobCreated', (data) => {
-            console.log(`🚀 [JOB-${data.jobId}] Started ${data.job.mediaType} processing pipeline`);
-            console.log(`   📄 File: ${data.job.metadata.filename} (${this.formatFileSize(data.job.metadata.fileSize)})`);
-            console.log(`   📋 Stages: ${data.job.stages?.length || 0} planned steps`);
+            if (enableConsoleLogging) {
+                console.log(`🚀 [JOB-${data.jobId}] Started ${data.job.mediaType} processing pipeline`);
+                console.log(`   📄 File: ${data.job.metadata.filename} (${this.formatFileSize(data.job.metadata.fileSize)})`);
+                console.log(`   📋 Stages: ${data.job.stages?.length || 0} planned steps`);
+            }
         });
 
         this.progressTracker.on('stageStarted', (data) => {
-            const duration = Date.now() - data.job.startTime;
-            console.log(`🔄 [JOB-${data.jobId}] Step ${data.stageIndex + 1}: ${data.details.label || data.stageName}`);
-            console.log(`   ⏱️  Elapsed: ${this.formatDuration(duration)} | Progress: ${data.job.progress.overall.toFixed(1)}%`);
-            if (data.details.description) {
-                console.log(`   ℹ️  ${data.details.description}`);
+            if (enableConsoleLogging) {
+                const duration = Date.now() - data.job.startTime;
+                console.log(`🔄 [JOB-${data.jobId}] Step ${data.stageIndex + 1}: ${data.details.label || data.stageName}`);
+                console.log(`   ⏱️  Elapsed: ${this.formatDuration(duration)} | Progress: ${data.job.progress.overall.toFixed(1)}%`);
+                if (data.details.description) {
+                    console.log(`   ℹ️  ${data.details.description}`);
+                }
             }
         });
 
         this.progressTracker.on('stageProgress', (data) => {
-            if (data.progress % 25 === 0 || data.progress === 100) { // Log every 25% progress
+            if (enableConsoleLogging && (data.progress % 25 === 0 || data.progress === 100)) { // Log every 25% progress
                 console.log(`   📊 ${data.stageName}: ${data.progress}% complete (Overall: ${data.overallProgress.toFixed(1)}%)`);
                 if (data.details.processed && data.details.total) {
                     console.log(`      📈 Processed: ${data.details.processed}/${data.details.total} items`);
@@ -97,30 +103,40 @@ class AutomationOrchestrator {
         });
 
         this.progressTracker.on('stageCompleted', (data) => {
-            console.log(`✅ [JOB-${data.jobId}] Completed: ${data.stageName} (${this.formatDuration(data.duration)})`);
-            if (data.result) {
-                this.logStageResults(data.stageName, data.result);
+            if (enableConsoleLogging) {
+                console.log(`✅ [JOB-${data.jobId}] Completed: ${data.stageName} (${this.formatDuration(data.duration)})`);
+                if (data.result) {
+                    this.logStageResults(data.stageName, data.result);
+                }
             }
         });
 
         this.progressTracker.on('stageFailed', (data) => {
-            console.log(`❌ [JOB-${data.jobId}] Failed: ${data.stageName} - ${data.error}`);
+            if (enableConsoleLogging) {
+                console.log(`❌ [JOB-${data.jobId}] Failed: ${data.stageName} - ${data.error}`);
+            }
         });
 
         this.progressTracker.on('stageSkipped', (data) => {
-            console.log(`⏭️  [JOB-${data.jobId}] Skipped: ${data.stageName} (${data.reason})`);
+            if (enableConsoleLogging) {
+                console.log(`⏭️  [JOB-${data.jobId}] Skipped: ${data.stageName} (${data.reason})`);
+            }
         });
 
         this.progressTracker.on('jobCompleted', (data) => {
-            console.log(`🎉 [JOB-${data.jobId}] Pipeline completed successfully!`);
-            console.log(`   ⏱️  Total time: ${this.formatDuration(data.duration)}`);
-            console.log(`   📊 Performance: ${this.formatProcessingSpeed(data.job)}`);
-            this.logFinalResults(data.jobId, data.result);
+            if (enableConsoleLogging) {
+                console.log(`🎉 [JOB-${data.jobId}] Pipeline completed successfully!`);
+                console.log(`   ⏱️  Total time: ${this.formatDuration(data.duration)}`);
+                console.log(`   📊 Performance: ${this.formatProcessingSpeed(data.job)}`);
+                this.logFinalResults(data.jobId, data.result);
+            }
         });
 
         this.progressTracker.on('jobFailed', (data) => {
-            console.log(`💥 [JOB-${data.jobId}] Pipeline failed: ${data.error}`);
-            console.log(`   ⏱️  Failed after: ${this.formatDuration(data.duration)}`);
+            if (enableConsoleLogging) {
+                console.log(`💥 [JOB-${data.jobId}] Pipeline failed: ${data.error}`);
+                console.log(`   ⏱️  Failed after: ${this.formatDuration(data.duration)}`);
+            }
         });
     }
     
@@ -128,6 +144,9 @@ class AutomationOrchestrator {
      * Log detailed results for each stage
      */
     logStageResults(stageName, result) {
+        const enableConsoleLogging = process.env.ENABLE_MULTIMEDIA_CONSOLE_LOGGING === 'true';
+        if (!enableConsoleLogging) return;
+        
         const indent = '      ';
         
         switch (stageName) {
@@ -237,6 +256,9 @@ class AutomationOrchestrator {
      * Log final processing results
      */
     logFinalResults(jobId, result) {
+        const enableConsoleLogging = process.env.ENABLE_MULTIMEDIA_CONSOLE_LOGGING === 'true';
+        if (!enableConsoleLogging) return;
+        
         console.log(`\n📊 [JOB-${jobId}] Final Results Summary:`);
         console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
         

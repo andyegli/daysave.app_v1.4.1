@@ -175,7 +175,9 @@ class BaseMediaProcessor {
       this.progressCallback(this.currentProgress, message, this.processorType, details);
     }
     
-    if (this.enableLogging && message) {
+    const enableConsoleLogging = process.env.ENABLE_PROCESSOR_STEP_LOGGING === 'true';
+    
+    if (this.enableLogging && enableConsoleLogging && message) {
       const timestamp = new Date().toISOString().substring(11, 23);
       console.log(`${timestamp} 📊 ${this.processorType}: ${this.currentProgress}% - ${message}`);
       
@@ -203,7 +205,8 @@ class BaseMediaProcessor {
    * @param {Object} details - Step details
    */
   logStep(step, status, details = {}) {
-    if (!this.enableLogging) return;
+    const enableConsoleLogging = process.env.ENABLE_PROCESSOR_STEP_LOGGING === 'true';
+    if (!this.enableLogging || !enableConsoleLogging) return;
     
     const timestamp = new Date().toISOString().substring(11, 23);
     const icons = {
@@ -557,7 +560,8 @@ class BaseMediaProcessor {
    * @param {any} data - Additional data to log
    */
   log(message, data = null) {
-    if (this.enableLogging) {
+    const enableConsoleLogging = process.env.ENABLE_PROCESSOR_STEP_LOGGING === 'true';
+    if (this.enableLogging && enableConsoleLogging) {
       if (data) {
         console.log(`🔧 ${this.processorType}: ${message}`, data);
       } else {

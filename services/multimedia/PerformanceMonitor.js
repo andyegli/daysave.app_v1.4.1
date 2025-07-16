@@ -441,6 +441,9 @@ class PerformanceMonitor extends EventEmitter {
    * Log alert
    */
   logAlert(alert) {
+    const enableConsoleLogging = process.env.ENABLE_PERFORMANCE_CONSOLE_LOGGING === 'true';
+    if (!enableConsoleLogging) return;
+    
     const severity = alert.severity.toUpperCase();
     const message = `${severity} ALERT: ${alert.type} - Current: ${alert.current}, Threshold: ${alert.threshold}`;
     
