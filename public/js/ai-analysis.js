@@ -1464,6 +1464,11 @@ function renderCommonSections(analysis, result) {
  * Helper function to render transcription/description section
  */
 function renderTranscriptionSection(text, title, icon) {
+  // Ensure text is a string and not null/undefined
+  if (!text || typeof text !== 'string') {
+    text = '';
+  }
+  
   const wordCount = text.split(' ').length;
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
   const estimatedReadingTime = Math.ceil(wordCount / 200);
@@ -1550,6 +1555,11 @@ function renderSpeakersSection(speakers) {
  * Helper function to render OCR section
  */
 function renderOCRSection(ocrText) {
+  // Ensure ocrText is a string and not null/undefined
+  if (!ocrText || typeof ocrText !== 'string') {
+    ocrText = '';
+  }
+  
   const wordCount = ocrText.split(' ').length;
   
   return `
