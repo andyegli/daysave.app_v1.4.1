@@ -11,6 +11,11 @@ beforeAll(async () => {
   app = require('../app');
 }, 15000);
 
+afterAll(async () => {
+  // Allow pending operations to complete
+  await new Promise(resolve => setTimeout(resolve, 1000));
+});
+
 describe('DaySave Basic Route Tests', () => {
   
   it('should have app defined', () => {
