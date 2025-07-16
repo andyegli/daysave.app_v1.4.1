@@ -685,7 +685,19 @@ function renderAIAnalysisModal(result) {
   
   // Compact header with robot icon + Analysis Results + type
   let html = `
-    <div class="ai-analysis-content">
+    <div class="ai-analysis-content">`;
+  
+  // Add generated title if available
+  const generatedTitle = getGeneratedTitleFromResult(result);
+  if (generatedTitle && generatedTitle.trim()) {
+    html += `
+      <div class="mb-3 pb-2 border-bottom">
+        <h4 class="fw-bold text-primary mb-0">${generatedTitle}</h4>
+      </div>
+    `;
+  }
+  
+  html += `
       <div class="d-flex align-items-center mb-3">
         <i class="bi bi-robot me-2 text-primary" style="font-size: 1.5rem;"></i>
         <h5 class="fw-bold mb-0 me-2">Analysis Results</h5>
@@ -2405,4 +2417,49 @@ window.copyContentSummary = function(contentId) {
   if (summaryElement) {
     copyToClipboard(summaryElement.textContent);
   }
-}; 
+};
+
+/**
+ * Get generated title from various sources in the result
+ */
+function getGeneratedTitleFromResult(result) {
+  const analysis = result.analysis;
+  
+  // Try different sources for generated title
+  if (analysis.generatedTitle && analysis.generatedTitle.trim()) {
+    return analysis.generatedTitle;
+  }
+  
+  // Check content record level
+  if (result.generatedTitle && result.generatedTitle.trim()) {
+    return result.generatedTitle;
+  }
+  
+  // Check if it's stored in metadata
+  if (analysis.metadata && analysis.metadata.generatedTitle) {
+    return analysis.metadata.generatedTitle;
+  }
+  
+  return null;
+}
+
+/**
+ * Get transcription from various sources
+ */
+function getTranscriptionFromResult(result) {
+  const analysis = result.analysis;
+  
+  if (analysis.transcription && analysis.transcription.trim()) {
+    return analysis.transcription;
+  }
+  
+  if (analysis.description && analysis.description.trim()) {
+    return analysis.description;
+  }
+  
+  if (result.transcription && result.transcription.trim()) {
+    return result.transcription;
+  }
+  
+  return '';
+}

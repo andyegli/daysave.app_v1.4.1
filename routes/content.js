@@ -152,6 +152,11 @@ async function triggerMultimediaAnalysis(content, user) {
       updateData.summary = formattedResults.summary;
     }
     
+    // Handle generated title
+    if (formattedResults.generatedTitle) {
+      updateData.generated_title = formattedResults.generatedTitle;
+    }
+    
     // Store sentiment analysis
     if (formattedResults.sentiment) {
       updateData.sentiment = formattedResults.sentiment;
@@ -317,7 +322,12 @@ router.get('/', isAuthenticated, async (req, res) => {
 
     // Function to extract title from URL or metadata
     function getContentTitle(item) {
-      // First try metadata title
+      // First priority: AI-generated title
+      if (item.generated_title && item.generated_title.trim()) {
+        return item.generated_title;
+      }
+      
+      // Second priority: metadata title
       if (item.metadata && item.metadata.title) {
         return item.metadata.title;
       }
@@ -656,12 +666,17 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     
     // Function to get proper title (reuse from main route)
     function getContentTitle(item) {
-      // First try metadata title
+      // First priority: AI-generated title
+      if (item.generated_title && item.generated_title.trim()) {
+        return item.generated_title;
+      }
+      
+      // Second priority: metadata title
       if (item.metadata && item.metadata.title) {
         return item.metadata.title;
       }
       
-      // Then try content title field
+      // Third priority: content title field
       if (item.title && item.title.trim()) {
         return item.title;
       }

@@ -2943,10 +2943,17 @@ Please respond in JSON format with the following structure:
         results.category = category;
         console.log(`📂 Category: ${category}`);
         console.log(`🏷️ Tags: ${tags.join(', ')}`);
+        
+        // Generate title based on summary
+        console.log('📝 Generating content title...');
+        const generatedTitle = await this.generateTitle(results, fileType);
+        results.generatedTitle = generatedTitle;
+        console.log(`📰 Generated Title: "${generatedTitle}"`);
       } catch (tagError) {
         console.log(`⚠️ Tag generation failed: ${tagError.message}`);
         results.tags = ['multimedia', 'analysis'];
         results.category = 'general';
+        results.generatedTitle = 'Multimedia Content';
       }
 
       console.log('✅ Analysis completed successfully!');
@@ -3522,16 +3529,8 @@ Respond with just the description, no additional formatting or labels.`;
         contentToAnalyze += 'Content Type: Image\n';
       }
 
-      // First try to use transcription text if available
-      if (results.transcription && results.transcription.text) {
-        const transcriptionText = results.transcription.text.trim();
-        if (transcriptionText) {
-          console.log(`🎤 Using transcription text for tag generation (${transcriptionText.length} chars)`);
-          contentToAnalyze += `\nTranscription:\n${transcriptionText}\n`;
-        }
-      }
-      // Fallback to summary if no transcription available
-      else if (results.summary) {
+      // Prioritize summary for more focused tag generation
+      if (results.summary) {
         let summaryText = '';
         
         // Handle different summary formats
@@ -3726,6 +3725,107 @@ Only return the JSON, no other text.`;
         tags: Array.from(tags),
         category
       };
+    }
+  }
+
+  /**
+   * Generate Title based on Summary
+   * 
+   * Uses ChatGPT to create an engaging title based on content summary
+   * 
+   * @param {Object} results - Analysis results containing summary
+   * @param {string} fileType - File MIME type
+   * @returns {Promise<string>} Generated title
+   */
+  async generateTitle(results, fileType) {
+    try {
+      console.log('📝 Starting title generation based on summary');
+      
+      // Get summary text
+      let summaryText = '';
+      if (results.summary) {
+        if (typeof results.summary === 'string') {
+          summaryText = results.summary.trim();
+        } else if (results.summary && typeof results.summary === 'object') {
+          // Handle different summary formats
+          if (results.summary.text) {
+            summaryText = results.summary.text.trim();
+          } else if (results.summary.summary) {
+            summaryText = results.summary.summary.trim();
+          } else if (results.summary.description) {
+            summaryText = results.summary.description.trim();
+          }
+        }
+      }
+      
+      // If no summary available, use fallback
+      if (!summaryText) {
+        console.log('⚠️ No summary available for title generation, using fallback');
+        if (fileType.startsWith('video/')) {
+          return 'Video Content';
+        } else if (fileType.startsWith('audio/')) {
+          return 'Audio Content';
+        } else if (fileType.startsWith('image/')) {
+          return 'Image Content';
+        }
+        return 'Multimedia Content';
+      }
+      
+      // Generate title using ChatGPT
+      const prompt = `Based on the following content summary, create an engaging and descriptive title.
+
+The title should be:
+- Concise (5-10 words maximum)
+- Descriptive of the main topic or theme
+- Engaging and clickable
+- Professional and appropriate
+- Capture the essence of the content
+
+Summary: ${summaryText}
+
+Respond with only the title, no quotes or additional text.`;
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert content creator who specializes in writing engaging titles that capture the essence of content. Create compelling titles that are descriptive yet concise.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 50
+      });
+
+      const generatedTitle = response.choices[0].message.content.trim();
+      
+      // Clean up title (remove quotes if present)
+      let cleanTitle = generatedTitle.replace(/^["']|["']$/g, '');
+      
+      // Ensure title isn't too long
+      if (cleanTitle.length > 60) {
+        cleanTitle = cleanTitle.substring(0, 57) + '...';
+      }
+      
+      console.log(`✅ Generated title: "${cleanTitle}"`);
+      return cleanTitle;
+      
+    } catch (error) {
+      console.error('❌ Title generation failed:', error);
+      
+      // Fallback title based on file type
+      if (fileType.startsWith('video/')) {
+        return 'Video Content';
+      } else if (fileType.startsWith('audio/')) {
+        return 'Audio Content';
+      } else if (fileType.startsWith('image/')) {
+        return 'Image Content';
+      }
+      return 'Multimedia Content';
     }
   }
 
