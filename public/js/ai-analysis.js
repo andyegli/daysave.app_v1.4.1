@@ -703,10 +703,15 @@ function renderAIAnalysisModal(result) {
           <h6 class="fw-bold mb-0">
             <i class="bi bi-file-earmark-text me-2"></i>Summary
           </h6>
-          <span class="badge bg-light text-dark">${wordCount} words</span>
+          <div>
+            <span class="badge bg-light text-dark me-2">${wordCount} words</span>
+            <button class="btn btn-sm btn-outline-primary" onclick="copyToClipboard('${summary.replace(/'/g, "\\'")}')">
+              <i class="bi bi-clipboard me-1"></i>Copy
+            </button>
+          </div>
         </div>
-        <div class="border rounded p-3 bg-light">
-          <p class="mb-0">${summary}</p>
+        <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto; line-height: 1.6; word-wrap: break-word;">
+          <p class="mb-0" style="font-family: system-ui, -apple-system, sans-serif; font-size: 0.95rem;">${summary}</p>
         </div>
       </div>
     `;
@@ -1934,8 +1939,8 @@ function renderTranscriptionSection(text, title, icon) {
           <span class="badge bg-info">~${estimatedReadingTime} min read</span>
         </div>
       </div>
-      <div class="border rounded p-3 bg-light" style="max-height: 300px; overflow-y: auto; line-height: 1.6;">
-        <p class="mb-0">${text}</p>
+      <div class="border rounded p-3 bg-light" style="max-height: 400px; overflow-y: auto; line-height: 1.6; word-wrap: break-word; white-space: pre-wrap;">
+        <p class="mb-0" style="font-family: system-ui, -apple-system, sans-serif; font-size: 0.95rem;">${text}</p>
       </div>
     </div>
   `;
@@ -2292,13 +2297,13 @@ function createAIAnalysisModal() {
   modal.id = 'aiAnalysisModal';
   modal.setAttribute('tabindex', '-1');
   modal.innerHTML = `
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">AI Analysis Results</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
           <!-- Content will be populated dynamically -->
         </div>
         <div class="modal-footer">
