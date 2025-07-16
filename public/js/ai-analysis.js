@@ -321,12 +321,14 @@ function getLegacyIndicators(analysis, result) {
   
   // Sentiment (legacy format)
   if (analysis.sentiment) {
-    const sentimentLabel = analysis.sentiment.label || 'neutral';
+    // Handle different sentiment data formats (label, sentiment field, or direct string)
+    const sentimentLabel = analysis.sentiment.label || analysis.sentiment.sentiment || analysis.sentiment || 'neutral';
+    const finalLabel = typeof sentimentLabel === 'string' ? sentimentLabel : 'neutral';
     indicators.push({
       icon: 'bi-emoji-smile',
-      color: getSentimentColor(sentimentLabel),
-      text: sentimentLabel.charAt(0).toUpperCase(),
-      title: `Sentiment: ${sentimentLabel}`
+      color: getSentimentColor(finalLabel),
+      text: finalLabel.charAt(0).toUpperCase(),
+      title: `Sentiment: ${finalLabel}`
     });
   }
   
@@ -447,10 +449,24 @@ function setupAIAnalysisModal() {
  */
 async function showAIAnalysisModal(contentId) {
   try {
+    console.log(`🔍 Loading AI analysis for content: ${contentId.substring(0, 8)}...`);
+    
     const response = await fetch(`/content/${contentId}/analysis`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
     const result = await response.json();
+    console.log('📡 API Response:', { 
+      success: result.success, 
+      status: result.status, 
+      mediaType: result.mediaType,
+      hasAnalysis: !!result.analysis 
+    });
     
     if (result.success) {
+      console.log('✅ Rendering modal with analysis data...');
       const modalHtml = renderAIAnalysisModal(result);
       
       // Create or update modal
@@ -466,13 +482,45 @@ async function showAIAnalysisModal(contentId) {
       const bsModal = new bootstrap.Modal(modal);
       bsModal.show();
       
+      console.log('✅ Modal displayed successfully');
+      
     } else {
-      console.error('Failed to load AI analysis:', result.message);
+      console.error('❌ API returned success=false:', result.message || 'Unknown error');
+      
+      // Show error modal instead of leaving user with spinning wheel
+      showErrorModal('Analysis Unavailable', result.message || 'Unable to load analysis results for this content.');
     }
     
   } catch (error) {
-    console.error('Error loading AI analysis modal:', error);
+    console.error('❌ Error loading AI analysis modal:', error);
+    
+    // Show error modal instead of leaving user with spinning wheel
+    showErrorModal('Connection Error', 'Unable to connect to analysis service. Please try again later.');
   }
+}
+
+/**
+ * Show error modal when analysis fails to load
+ */
+function showErrorModal(title, message) {
+  let modal = document.getElementById('aiAnalysisModal');
+  if (!modal) {
+    modal = createAIAnalysisModal();
+  }
+  
+  const modalTitle = modal.querySelector('.modal-title');
+  const modalBody = modal.querySelector('.modal-body');
+  
+  modalTitle.textContent = title;
+  modalBody.innerHTML = `
+    <div class="alert alert-warning" role="alert">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      ${message}
+    </div>
+  `;
+  
+  const bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
 }
 
 /**
@@ -727,15 +775,17 @@ function renderCommonSections(analysis, result) {
   // Sentiment Analysis
   if (analysis.sentiment) {
     const sentiment = analysis.sentiment.overall || analysis.sentiment;
-    if (sentiment.label) {
-      const sentimentColor = getSentimentColor(sentiment.label);
+    // Handle different sentiment data formats (label, sentiment field, or direct string)
+    const sentimentLabel = sentiment.label || sentiment.sentiment || sentiment;
+    if (sentimentLabel && typeof sentimentLabel === 'string') {
+      const sentimentColor = getSentimentColor(sentimentLabel);
       html += `
         <div class="mb-4">
           <h6 class="fw-bold">
             <i class="bi bi-emoji-smile me-2"></i>Sentiment Analysis
           </h6>
           <div class="d-flex align-items-center">
-            <span class="badge ${sentimentColor} me-2">${sentiment.label.toUpperCase()}</span>
+            <span class="badge ${sentimentColor} me-2">${sentimentLabel.toUpperCase()}</span>
             <div class="progress flex-grow-1" style="height: 20px;">
               <div class="progress-bar ${sentimentColor.replace('bg-', 'bg-')}" 
                    role="progressbar" 
@@ -747,6 +797,13 @@ function renderCommonSections(analysis, result) {
               </div>
             </div>
           </div>
+          ${sentiment.emotions && sentiment.emotions.length > 0 ? `
+            <div class="mt-2">
+              <small class="text-muted">
+                <strong>Emotions:</strong> ${sentiment.emotions.join(', ')}
+              </small>
+            </div>
+          ` : ''}
         </div>
       `;
     }
