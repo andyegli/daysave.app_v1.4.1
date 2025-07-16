@@ -123,7 +123,7 @@ class AutomationOrchestrator {
             console.log(`   ⏱️  Failed after: ${this.formatDuration(data.duration)}`);
         });
     }
-
+    
     /**
      * Log detailed results for each stage
      */
@@ -418,9 +418,9 @@ class AutomationOrchestrator {
             
             // Enhanced processing with progress tracking
             const results = await this.processWithDetailedTracking(
-                processor,
-                fileBuffer,
-                { ...metadata, jobId },
+                processor, 
+                fileBuffer, 
+                { ...metadata, jobId }, 
                 processingOptions,
                 jobId,
                 mediaType

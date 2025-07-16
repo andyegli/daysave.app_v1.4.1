@@ -4,6 +4,7 @@ const { isAuthenticated, checkUsageLimit, updateUsage, requireFeature } = requir
 const { Content, ContentGroup, ContentGroupMember } = require('../models');
 const { Op } = require('sequelize');
 const { AutomationOrchestrator } = require('../services/multimedia');
+const BackwardCompatibilityService = require('../services/BackwardCompatibilityService');
 const logger = require('../config/logger');
 
 // Initialize automation orchestrator (singleton)
@@ -82,6 +83,12 @@ function isMultimediaURL(url) {
  */
 async function triggerMultimediaAnalysis(content, user) {
   try {
+    console.log(`🎬 TRIGGER: Starting multimedia analysis for content ${content.id}`, {
+      user_id: user.id,
+      content_id: content.id,
+      url: content.url
+    });
+
     // Enhanced logging for analysis start
     logger.multimedia.start(user.id, content.id, content.url, {
       transcription: true,
@@ -89,12 +96,6 @@ async function triggerMultimediaAnalysis(content, user) {
       summarization: true,
       thumbnails: true,
       speakers: true
-    });
-
-    console.log(`🎬 Starting orchestrated multimedia analysis for content ${content.id}`, {
-      user_id: user.id,
-      content_id: content.id,
-      url: content.url
     });
 
     // Create a buffer/stream from URL for processing
@@ -107,92 +108,76 @@ async function triggerMultimediaAnalysis(content, user) {
       url: content.url
     };
 
-    // Process content with new orchestrator
-    const processingResult = await orchestrator.processContent(
-      null, // No buffer for URL content - orchestrator will fetch
-      contentMetadata
-    );
+    // For URL-based content, we need to use the backward compatibility service
+    // since the orchestrator expects file buffers, not URLs
+    console.log('🔄 TRIGGER: Using backward compatibility service for URL processing...');
+    
+    const compatibilityService = new BackwardCompatibilityService();
+    
+    const processingResult = await compatibilityService.analyzeContent(content.url, {
+      transcription: true,
+      sentiment: true,
+      summarization: true,
+      thumbnails: true,
+      speaker_identification: true,
+      enableSummarization: true,
+      enableSentimentAnalysis: true,
+      user_id: user.id,
+      content_id: content.id
+    });
 
-    // Extract results from orchestrator response
-    const formattedResults = processingResult.results;
+    // Extract results from backward compatibility service
+    const formattedResults = processingResult;
     
     // Update content record with new structured results
     const updateData = {};
     
-    // Store basic metadata
-    if (formattedResults.data.metadata) {
+    // Store basic metadata from backward compatibility service
+    if (formattedResults.metadata) {
       updateData.metadata = {
         ...(content.metadata || {}),
-        ...formattedResults.data.metadata,
-        processingJobId: processingResult.jobId,
+        ...formattedResults.metadata,
+        analysisId: formattedResults.analysisId,
         lastAnalyzed: new Date().toISOString()
       };
     }
     
-    // Handle transcription results based on media type
-    if (formattedResults.data.transcription) {
-      if (formattedResults.data.transcription.fullText) {
-        updateData.transcription = formattedResults.data.transcription.fullText;
-      } else if (typeof formattedResults.data.transcription === 'string') {
-        updateData.transcription = formattedResults.data.transcription;
-      }
+    // Handle transcription results
+    if (formattedResults.transcription) {
+      updateData.transcription = formattedResults.transcription;
     }
     
-    // Handle AI descriptions for images
-    if (formattedResults.data.aiDescription) {
-      updateData.summary = formattedResults.data.aiDescription.description || '';
-    }
-    
-    // Handle OCR text for images/videos
-    if (formattedResults.data.ocrText && formattedResults.data.ocrText.fullText) {
-      // Append OCR text to existing summary or create new one
-      const ocrText = formattedResults.data.ocrText.fullText;
-      updateData.summary = updateData.summary ? 
-        `${updateData.summary}\n\nExtracted Text: ${ocrText}` : 
-        `Extracted Text: ${ocrText}`;
+    // Handle summary
+    if (formattedResults.summary) {
+      updateData.summary = formattedResults.summary;
     }
     
     // Store sentiment analysis
-    if (formattedResults.data.sentiment) {
-      updateData.sentiment = formattedResults.data.sentiment;
+    if (formattedResults.sentiment) {
+      updateData.sentiment = formattedResults.sentiment;
     }
     
-    // Handle auto-generated tags from various sources
-    const autoTags = [];
-    
-    // Tags from objects detected
-    if (formattedResults.data.objects) {
-      formattedResults.data.objects.forEach(obj => {
-        if (obj.confidence > 0.7) { // Only high-confidence objects
-          autoTags.push(obj.name);
-        }
-      });
+    // Handle auto-generated tags
+    if (formattedResults.auto_tags && formattedResults.auto_tags.length > 0) {
+      updateData.auto_tags = [...new Set(formattedResults.auto_tags)]; // Remove duplicates
     }
     
-    // Tags from AI description
-    if (formattedResults.data.aiDescription && formattedResults.data.aiDescription.tags) {
-      autoTags.push(...formattedResults.data.aiDescription.tags);
-    }
-    
-    // Store auto tags if we have any
-    if (autoTags.length > 0) {
-      updateData.auto_tags = [...new Set(autoTags)]; // Remove duplicates
-    }
-    
-    // Determine category based on media type and content
-    if (formattedResults.mediaType) {
-      updateData.category = formattedResults.mediaType;
+    // Store category
+    if (formattedResults.category) {
+      updateData.category = formattedResults.category;
     }
 
     // Log processing results
-    console.log(`🎬 Orchestrated analysis completed for content ${content.id}`, {
+    console.log(`🎬 Multimedia analysis completed for content ${content.id}`, {
       user_id: user.id,
       content_id: content.id,
-      job_id: processingResult.jobId,
-      media_type: formattedResults.mediaType,
-      processing_time: processingResult.processingTime,
-      features_used: Object.keys(formattedResults.data),
-      warnings: processingResult.warnings?.length || 0
+      analysis_id: formattedResults.analysisId,
+      platform: formattedResults.platform,
+      processing_time: formattedResults.processing_time,
+      status: formattedResults.status,
+      has_transcription: !!formattedResults.transcription,
+      has_summary: !!formattedResults.summary,
+      has_sentiment: !!formattedResults.sentiment
     });
     
     // Update content record if we have data to update
@@ -210,7 +195,7 @@ async function triggerMultimediaAnalysis(content, user) {
     }
     
   } catch (error) {
-    console.error(`❌ Orchestrated analysis failed for content ${content.id}:`, {
+    console.error(`❌ TRIGGER ERROR: Analysis failed for content ${content.id}:`, {
       user_id: user.id,
       content_id: content.id,
       error: error.message,
@@ -467,8 +452,56 @@ router.post('/', [
       console.log('DEBUG: Multimedia URL detected, triggering analysis for content:', content.id);
       
       // Trigger multimedia analysis in background (don't wait for it)
-      setImmediate(() => {
-        triggerMultimediaAnalysis(content, req.user);
+      setImmediate(async () => {
+        const startTime = Date.now();
+        const automationId = `AUTO-${content.id.substring(0, 8)}`;
+        
+        try {
+          console.log(`🚀 [${automationId}] AUTOMATION TRIGGER: Starting multimedia analysis for content: ${content.id}`);
+          console.log(`📊 [${automationId}] System status: Memory usage being monitored...`);
+          
+          // Check if we have the required services before starting
+          if (!req.user) {
+            throw new Error('User object is missing');
+          }
+          
+          console.log(`🎯 [${automationId}] User: ${req.user.id}, Content: ${content.id}, URL: ${content.url}`);
+          
+          // Add process monitoring
+          const beforeMemory = process.memoryUsage();
+          console.log(`📈 [${automationId}] Memory before: ${Math.round(beforeMemory.heapUsed / 1024 / 1024)}MB`);
+          
+          await triggerMultimediaAnalysis(content, req.user);
+          
+          const afterMemory = process.memoryUsage();
+          const duration = Date.now() - startTime;
+          
+          console.log(`✅ [${automationId}] AUTOMATION TRIGGER: Analysis started successfully for content: ${content.id}`);
+          console.log(`📊 [${automationId}] Duration: ${duration}ms, Memory after: ${Math.round(afterMemory.heapUsed / 1024 / 1024)}MB`);
+          
+        } catch (error) {
+          const duration = Date.now() - startTime;
+          console.error(`❌ [${automationId}] AUTOMATION TRIGGER: Failed to start analysis for content: ${content.id}`);
+          console.error(`❌ [${automationId}] Error details:`, {
+            error: error.message,
+            stack: error.stack,
+            duration: `${duration}ms`,
+            contentId: content.id,
+            userId: req.user?.id,
+            url: content.url
+          });
+          
+          // Log to error file as well
+          const logger = require('../config/logger');
+          logger.logError(`Automation trigger failed for content ${content.id}`, {
+            error: error.message,
+            stack: error.stack,
+            contentId: content.id,
+            userId: req.user?.id,
+            url: content.url,
+            duration
+          });
+        }
       });
       
       // Return success immediately - analysis will update content in background

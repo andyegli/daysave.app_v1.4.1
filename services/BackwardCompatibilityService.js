@@ -68,12 +68,15 @@ class BackwardCompatibilityService {
         analysisId: analysisId
       };
 
-      // Process through new orchestrator
-      const processingResult = await this.orchestrator.processContent(
-        null, // No buffer for URL content
-        contentMetadata,
-        orchestratorOptions
-      );
+      // For URL content, use MultimediaAnalyzer directly instead of orchestrator
+      console.log('🔄 Processing URL content with MultimediaAnalyzer...');
+      const { MultimediaAnalyzer } = require('./multimedia');
+      const analyzer = new MultimediaAnalyzer({ enableLogging: true });
+      
+      const processingResult = await analyzer.analyzeContent(url, {
+        ...options,
+        analysisId: analysisId
+      });
 
       // Convert new results to legacy format
       const legacyResults = await this.convertToLegacyFormat(
@@ -259,8 +262,12 @@ class BackwardCompatibilityService {
    * Convert new orchestrator results to legacy format
    */
   async convertToLegacyFormat(processingResult, analysisId, url, options, startTime) {
-    const results = processingResult.results;
     const processingTime = Date.now() - startTime;
+
+    // Handle both orchestrator format (processingResult.results.data) and 
+    // MultimediaAnalyzer format (direct properties)
+    const isOrchestratorFormat = processingResult.results && processingResult.results.data;
+    const data = isOrchestratorFormat ? processingResult.results.data : processingResult;
 
     // Base legacy result structure
     const legacyResult = {
@@ -268,60 +275,70 @@ class BackwardCompatibilityService {
       analysis_id: analysisId,
       processing_time: processingTime,
       url: url,
-      platform: this.detectPlatform(url),
-      status: 'completed',
-      metadata: results.data.metadata || {},
-      quality_score: results.data.qualityAnalysis?.overallScore || 0,
+      platform: data.platform || this.detectPlatform(url),
+      status: data.status || 'completed',
+      metadata: data.metadata || {},
+      quality_score: data.qualityAnalysis?.overallScore || 0,
       errors: processingResult.errors || [],
       warnings: processingResult.warnings || []
     };
 
     // Handle transcription
-    if (results.data.transcription) {
-      if (results.data.transcription.fullText) {
-        legacyResult.transcription = results.data.transcription.fullText;
-        legacyResult.language = results.data.transcription.language || 'unknown';
-      } else if (typeof results.data.transcription === 'string') {
-        legacyResult.transcription = results.data.transcription;
+    if (data.transcription) {
+      if (data.transcription.fullText) {
+        legacyResult.transcription = data.transcription.fullText;
+        legacyResult.language = data.transcription.language || 'unknown';
+      } else if (typeof data.transcription === 'string') {
+        legacyResult.transcription = data.transcription;
       }
     }
 
     // Handle sentiment analysis
-    if (results.data.sentiment) {
+    if (data.sentiment) {
       legacyResult.sentiment = {
-        score: results.data.sentiment.overall?.score || 0,
-        label: results.data.sentiment.overall?.label || 'neutral',
-        confidence: results.data.sentiment.overall?.confidence || 0
+        score: data.sentiment.overall?.score || data.sentiment.score || 0,
+        label: data.sentiment.overall?.label || data.sentiment.label || 'neutral',
+        confidence: data.sentiment.overall?.confidence || data.sentiment.confidence || 0
       };
     }
 
     // Handle speakers
-    if (results.data.speakers) {
-      legacyResult.speakers = results.data.speakers.speakers || [];
+    if (data.speakers) {
+      legacyResult.speakers = data.speakers.speakers || data.speakers || [];
       legacyResult.speaker_count = legacyResult.speakers.length;
     }
 
     // Handle thumbnails
-    if (results.data.thumbnails) {
-      legacyResult.thumbnails = results.data.thumbnails;
+    if (data.thumbnails) {
+      legacyResult.thumbnails = data.thumbnails;
       legacyResult.thumbnail_count = legacyResult.thumbnails.length;
     }
 
     // Handle OCR/text extraction
-    if (results.data.ocrText) {
-      legacyResult.ocr_text = results.data.ocrText.fullText || '';
+    if (data.ocrText) {
+      legacyResult.ocr_text = data.ocrText.fullText || data.ocrText || '';
       legacyResult.ocr_text_length = legacyResult.ocr_text.length;
     }
 
     // Handle object detection
-    if (results.data.objects) {
-      legacyResult.objects = results.data.objects;
+    if (data.objects) {
+      legacyResult.objects = data.objects;
     }
 
     // Handle AI description (for images)
-    if (results.data.aiDescription) {
-      legacyResult.description = results.data.aiDescription.description;
-      legacyResult.ai_confidence = results.data.aiDescription.confidence;
+    if (data.aiDescription) {
+      legacyResult.description = data.aiDescription.description;
+      legacyResult.ai_confidence = data.aiDescription.confidence;
+    }
+
+    // Handle summary
+    if (data.summary) {
+      legacyResult.summary = data.summary;
+    }
+
+    // Handle auto tags
+    if (data.auto_tags) {
+      legacyResult.auto_tags = data.auto_tags;
     }
 
     return legacyResult;
