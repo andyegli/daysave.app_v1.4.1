@@ -227,31 +227,6 @@
                             <div class="transcription-text text-dark" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4;">
                               <%= item.summary %>
                             </div>
-                            <% if (item.sentiment) { %>
-                              <% 
-                                let sentimentData = item.sentiment;
-                                if (typeof sentimentData === 'string') {
-                                  try {
-                                    sentimentData = JSON.parse(sentimentData);
-                                  } catch (e) {
-                                    sentimentData = null;
-                                  }
-                                }
-                                if (sentimentData && (sentimentData.label || sentimentData.sentiment)) {
-                                  const sentimentLabel = sentimentData.label || sentimentData.sentiment;
-                                  const confidence = sentimentData.confidence || 0;
-                                  let badgeClass = 'bg-secondary';
-                                  if (sentimentLabel === 'positive') badgeClass = 'bg-success';
-                                  else if (sentimentLabel === 'negative') badgeClass = 'bg-danger';
-                                  else if (sentimentLabel === 'neutral') badgeClass = 'bg-info';
-                              %>
-                              <div class="mt-1">
-                                <span class="badge <%= badgeClass %> small">
-                                  <%= sentimentLabel %> (<%= Math.round(confidence * 100) %>%)
-                                </span>
-                              </div>
-                              <% } %>
-                            <% } %>
                           </div>
                           <button class="btn btn-sm btn-outline-primary position-absolute top-0 end-0 mt-1 me-1 py-0 px-2" onclick="copyContentSummary('<%= item.id %>')" title="Copy Summary" style="z-index: 10;">
                             <i class="bi bi-clipboard" style="font-size: 0.7rem;"></i>
@@ -271,23 +246,58 @@
                       </div>
                       <% } %>
                     </div>
-                    <!-- Tags -->
-                    <div class="mt-auto d-flex flex-wrap gap-1">
-                      <% 
-                        let tags = [];
-                        if (item.auto_tags) tags = tags.concat(item.auto_tags.map(t => ({ tag: t, type: 'auto' })));
-                        if (item.user_tags) tags = tags.concat(item.user_tags.map(t => ({ tag: t, type: 'user' })));
-                        let shownTags = tags.slice(0, 4);
-                        let moreTags = tags.length > 4 ? tags.length - 4 : 0;
-                      %>
-                      <% shownTags.forEach(function(t) { %>
-                        <span class="badge <%= t.type === 'auto' ? 'bg-info' : 'bg-success' %> tag-badge" data-tag="<%= t.tag %>">
-                          <%= t.tag %>
-                        </span>
-                      <% }); %>
-                      <% if (moreTags) { %>
-                        <span class="badge bg-secondary">+<%= moreTags %> more</span>
-                      <% } %>
+                    <!-- Tags and Sentiment -->
+                    <div class="mt-auto">
+                      <!-- Tags -->
+                      <div class="d-flex flex-wrap gap-1 align-items-center">
+                        <% 
+                          let tags = [];
+                          if (item.auto_tags) tags = tags.concat(item.auto_tags.map(t => ({ tag: t, type: 'auto' })));
+                          if (item.user_tags) tags = tags.concat(item.user_tags.map(t => ({ tag: t, type: 'user' })));
+                          let shownTags = tags.slice(0, 4);
+                          let moreTags = tags.length > 4 ? tags.length - 4 : 0;
+                          let hiddenTags = tags.slice(4);
+                        %>
+                        <% shownTags.forEach(function(t) { %>
+                          <span class="badge <%= t.type === 'auto' ? 'bg-info' : 'bg-success' %> tag-badge" data-tag="<%= t.tag %>">
+                            <%= t.tag %>
+                          </span>
+                        <% }); %>
+                        <% if (moreTags) { %>
+                          <span class="badge bg-secondary more-tags-badge" style="cursor: pointer;" 
+                                data-bs-toggle="modal" data-bs-target="#allTagsModal" 
+                                data-content-id="<%= item.id %>"
+                                data-all-tags="<%= JSON.stringify(hiddenTags).replace(/"/g, '&quot;') %>"
+                                title="Click to see all tags">
+                            +<%= moreTags %> more
+                          </span>
+                        <% } %>
+                        
+                        <!-- Sentiment Badge (moved from summary section) -->
+                        <% if (item.sentiment) { %>
+                          <% 
+                            let sentimentData = item.sentiment;
+                            if (typeof sentimentData === 'string') {
+                              try {
+                                sentimentData = JSON.parse(sentimentData);
+                              } catch (e) {
+                                sentimentData = null;
+                              }
+                            }
+                            if (sentimentData && (sentimentData.label || sentimentData.sentiment)) {
+                              const sentimentLabel = sentimentData.label || sentimentData.sentiment;
+                              const confidence = sentimentData.confidence || 0;
+                              let badgeClass = 'bg-secondary';
+                              if (sentimentLabel === 'positive') badgeClass = 'bg-success';
+                              else if (sentimentLabel === 'negative') badgeClass = 'bg-danger';
+                              else if (sentimentLabel === 'neutral') badgeClass = 'bg-info';
+                          %>
+                            <span class="badge <%= badgeClass %> small ms-2">
+                              <%= sentimentLabel %> (<%= Math.round(confidence * 100) %>%)
+                            </span>
+                          <% } %>
+                        <% } %>
+                      </div>
                     </div>
                   </div>
                   <!-- Right Info Column -->
@@ -475,6 +485,21 @@
     </div>
   </div>
 
+  <!-- All Tags Modal -->
+  <div class="modal fade" id="allTagsModal" tabindex="-1" aria-labelledby="allTagsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="allTagsModalLabel">All Tags</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="allTagsModalBody">
+          <!-- Tags will be populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+  </div>
+
 
 
   <!-- Footer Include -->
@@ -489,5 +514,50 @@
   <script src="/js/content-management.js"></script>
   <script src="/js/content-filters.js"></script>
   <script src="/js/ai-analysis.js?v=<%= Date.now() %>"></script>
+  
+  <!-- Tags Modal JavaScript -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Handle click on "+n more" tags badge
+      const allTagsModal = document.getElementById('allTagsModal');
+      
+      if (allTagsModal) {
+        allTagsModal.addEventListener('show.bs.modal', function(event) {
+          const button = event.relatedTarget;
+          const contentId = button.getAttribute('data-content-id');
+          const hiddenTagsData = button.getAttribute('data-all-tags');
+          
+          try {
+            const hiddenTags = JSON.parse(hiddenTagsData);
+            const modalBody = document.getElementById('allTagsModalBody');
+            
+            // Clear previous content
+            modalBody.innerHTML = '';
+            
+            if (hiddenTags.length > 0) {
+              modalBody.innerHTML = `
+                <div class="mb-3">
+                  <h6 class="text-muted mb-2">Additional Tags:</h6>
+                  <div class="d-flex flex-wrap gap-2">
+                    ${hiddenTags.map(t => 
+                      `<span class="badge ${t.type === 'auto' ? 'bg-info' : 'bg-success'} tag-badge" data-tag="${t.tag}">
+                        ${t.tag}
+                      </span>`
+                    ).join('')}
+                  </div>
+                </div>
+              `;
+            } else {
+              modalBody.innerHTML = '<p class="text-muted">No additional tags to display.</p>';
+            }
+          } catch (error) {
+            console.error('Error parsing tags data:', error);
+            document.getElementById('allTagsModalBody').innerHTML = 
+              '<p class="text-danger">Error loading tags.</p>';
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html> 
