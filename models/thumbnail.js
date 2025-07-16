@@ -1,4 +1,4 @@
-const { v4: uuidv4 } = require('uuid');
+writeconst { v4: uuidv4 } = require('uuid');
 
 /**
  * Thumbnail Model
