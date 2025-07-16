@@ -1501,6 +1501,11 @@ function renderTranscriptionSection(text, title, icon) {
  * Helper function to render objects section
  */
 function renderObjectsSection(objects) {
+  // Ensure objects is an array and not null/undefined
+  if (!objects || !Array.isArray(objects)) {
+    objects = [];
+  }
+  
   return `
     <div class="mb-4">
       <h6 class="fw-bold">
@@ -1526,6 +1531,11 @@ function renderObjectsSection(objects) {
  * Helper function to render speakers section
  */
 function renderSpeakersSection(speakers) {
+  // Ensure speakers is an array and not null/undefined
+  if (!speakers || !Array.isArray(speakers)) {
+    speakers = [];
+  }
+  
   return `
     <div class="mb-4">
       <h6 class="fw-bold">
@@ -1584,6 +1594,11 @@ function renderOCRSection(ocrText) {
  * Helper function to render faces section
  */
 function renderFacesSection(faces) {
+  // Ensure faces is an array and not null/undefined
+  if (!faces || !Array.isArray(faces)) {
+    faces = [];
+  }
+  
   return `
     <div class="mb-4">
       <h6 class="fw-bold">
@@ -1634,6 +1649,11 @@ function renderColorsSection(colors) {
  * Helper function to render thumbnails section
  */
 function renderThumbnailsSection(thumbnails) {
+  // Ensure thumbnails is an array and not null/undefined
+  if (!thumbnails || !Array.isArray(thumbnails)) {
+    thumbnails = [];
+  }
+  
   return `
     <div class="mb-4">
       <h6 class="fw-bold">
