@@ -7,10 +7,10 @@ const { isAuthenticated, isAdmin, checkUsageLimit, checkFileSizeLimit, updateUsa
 const { body, param, query, validationResult } = require('express-validator');
 const logger = require('../config/logger');
 const { Op } = require('sequelize');
-const { MultimediaAnalyzer } = require('../services/multimedia');
+const { AutomationOrchestrator } = require('../services/multimedia');
 
-// Initialize multimedia analyzer for file processing
-const multimediaAnalyzer = new MultimediaAnalyzer();
+// Initialize automation orchestrator for file processing
+const orchestrator = new AutomationOrchestrator();
 
 /**
  * Check if file type should trigger multimedia analysis
@@ -31,13 +31,13 @@ function isMultimediaFile(mimetype) {
 }
 
 /**
- * Trigger multimedia analysis for uploaded file
+ * Trigger multimedia analysis for uploaded file using new orchestrator
  * @param {Object} fileRecord - File database record
  * @param {Object} user - User object
  */
 async function triggerFileAnalysis(fileRecord, user) {
   try {
-    console.log(`🎬 Starting multimedia analysis for uploaded file ${fileRecord.id}`, {
+    console.log(`🎬 Starting orchestrated file analysis for ${fileRecord.id}`, {
       user_id: user.id,
       file_id: fileRecord.id,
       filename: fileRecord.filename,
@@ -46,12 +46,13 @@ async function triggerFileAnalysis(fileRecord, user) {
 
     // Get the actual filesystem path for the uploaded file
     const path = require('path');
+    const fs = require('fs');
     let filePath;
     
     if (fileRecord.file_path.startsWith('gs://')) {
       // For Google Cloud Storage files, we need to download them first
       // This is a temporary solution - in production, you might want to stream directly
-      throw new Error('Google Cloud Storage files not yet supported for AI analysis');
+      throw new Error('Google Cloud Storage files not yet supported for orchestrated analysis');
     } else {
       // For local files, convert the stored path to absolute path
       if (fileRecord.file_path.startsWith('/uploads/')) {
@@ -64,77 +65,99 @@ async function triggerFileAnalysis(fileRecord, user) {
     }
 
     // Verify file exists
-    const fs = require('fs');
     if (!fs.existsSync(filePath)) {
       throw new Error(`File not found at path: ${filePath}`);
     }
 
-    // Use analyzeMultimedia for local files instead of analyzeContent
-    const analysisResults = await multimediaAnalyzer.analyzeMultimedia(
-      user.id,
-      filePath,
-      fileRecord.metadata?.mimetype,
-      {
-        enableObjectDetection: true,
-        enableTranscription: true,
-        enableVideoAnalysis: true,
-        enableSummarization: true,
-        enableSentimentAnalysis: true,
-        enableSpeakerDiarization: true,
-        enableVoicePrintRecognition: true,
-        enableThumbnailGeneration: true,
-        enableOCRExtraction: true,
-        transcriptionProvider: 'google',
-        objectDetectionMode: 'enhanced',
-        thumbnailOptions: {
-          imageSizes: [150, 300, 500],
-          thumbnailSize: 300,
-          keyMomentsCount: 5,
-          keyMomentsSize: 200
-        },
-        ocrOptions: {
-          frameInterval: 2,
-          maxFrames: 30,
-          confidenceThreshold: 0.5,
-          filterShortText: true
-        }
-      }
+    // Read file into buffer for processing
+    const fileBuffer = await fs.readFile(filePath);
+    
+    // Create metadata for orchestrator
+    const fileMetadata = {
+      filename: fileRecord.filename,
+      fileId: fileRecord.id,
+      userId: user.id,
+      mimeType: fileRecord.metadata?.mimetype,
+      fileSize: fileRecord.metadata?.size,
+      source: 'upload',
+      filePath: filePath
+    };
+
+    // Process file with new orchestrator
+    const processingResult = await orchestrator.processContent(
+      fileBuffer,
+      fileMetadata
     );
 
-    // Update file record with AI analysis results
+    // Extract results from orchestrator response
+    const formattedResults = processingResult.results;
+    
+    // Update file record with new structured results
     const updateData = {};
     
-    // Store transcription
-    if (analysisResults.transcription && analysisResults.transcription.length > 0) {
-      updateData.transcription = analysisResults.transcription;
+    // Store basic metadata
+    if (formattedResults.data.metadata) {
+      updateData.metadata = {
+        ...(fileRecord.metadata || {}),
+        ...formattedResults.data.metadata,
+        processingJobId: processingResult.jobId,
+        lastAnalyzed: new Date().toISOString()
+      };
     }
     
-    // Store summary
-    if (analysisResults.summary && analysisResults.summary.length > 0) {
-      updateData.summary = analysisResults.summary;
+    // Handle transcription results based on media type
+    if (formattedResults.data.transcription) {
+      if (formattedResults.data.transcription.fullText) {
+        updateData.transcription = formattedResults.data.transcription.fullText;
+      } else if (typeof formattedResults.data.transcription === 'string') {
+        updateData.transcription = formattedResults.data.transcription;
+      }
+    }
+    
+    // Handle AI descriptions for images
+    if (formattedResults.data.aiDescription) {
+      updateData.summary = formattedResults.data.aiDescription.description || '';
+    }
+    
+    // Handle OCR text for images/videos
+    if (formattedResults.data.ocrText && formattedResults.data.ocrText.fullText) {
+      // Append OCR text to existing summary or create new one
+      const ocrText = formattedResults.data.ocrText.fullText;
+      updateData.summary = updateData.summary ? 
+        `${updateData.summary}\n\nExtracted Text: ${ocrText}` : 
+        `Extracted Text: ${ocrText}`;
     }
     
     // Store sentiment analysis
-    if (analysisResults.sentiment) {
-      updateData.sentiment = analysisResults.sentiment;
+    if (formattedResults.data.sentiment) {
+      updateData.sentiment = formattedResults.data.sentiment;
     }
     
-    // Store auto-generated tags
-    if (analysisResults.tags && analysisResults.tags.length > 0) {
-      updateData.auto_tags = analysisResults.tags;
+    // Handle auto-generated tags from various sources
+    const autoTags = [];
+    
+    // Tags from objects detected
+    if (formattedResults.data.objects) {
+      formattedResults.data.objects.forEach(obj => {
+        if (obj.confidence > 0.7) { // Only high-confidence objects
+          autoTags.push(obj.name);
+        }
+      });
     }
     
-    // Store category
-    if (analysisResults.category) {
-      updateData.category = analysisResults.category;
+    // Tags from AI description
+    if (formattedResults.data.aiDescription && formattedResults.data.aiDescription.tags) {
+      autoTags.push(...formattedResults.data.aiDescription.tags);
     }
     
-    // Update metadata with analysis results
-    if (analysisResults.metadata) {
-      updateData.metadata = {
-        ...(fileRecord.metadata || {}),
-        ...analysisResults.metadata
-      };
+    // Store auto tags if we have any
+    if (autoTags.length > 0) {
+      updateData.auto_tags = [...new Set(autoTags)]; // Remove duplicates
+    }
+    
+    // Determine category based on media type and content
+    if (formattedResults.mediaType) {
+      updateData.category = formattedResults.mediaType;
     }
 
     // Update file record with analysis results
@@ -143,27 +166,30 @@ async function triggerFileAnalysis(fileRecord, user) {
         where: { id: fileRecord.id, user_id: user.id }
       });
       
-      console.log(`✅ File ${fileRecord.id} updated with AI analysis results`, {
+      console.log(`✅ File ${fileRecord.id} updated with orchestrated analysis results`, {
         user_id: user.id,
         file_id: fileRecord.id,
+        job_id: processingResult.jobId,
         updates: Object.keys(updateData)
       });
     }
 
-    console.log(`🎉 Multimedia analysis completed for file ${fileRecord.id}`, {
+    console.log(`🎉 Orchestrated file analysis completed for ${fileRecord.id}`, {
       user_id: user.id,
       file_id: fileRecord.id,
-      transcription_length: analysisResults.transcription?.length || 0,
-      sentiment: analysisResults.sentiment?.label || 'none',
-      thumbnails_count: analysisResults.thumbnails?.length || 0,
-      speakers_count: analysisResults.speakers?.length || 0
+      job_id: processingResult.jobId,
+      media_type: formattedResults.mediaType,
+      processing_time: processingResult.processingTime,
+      features_used: Object.keys(formattedResults.data),
+      warnings: processingResult.warnings?.length || 0
     });
 
   } catch (error) {
-    console.error(`❌ Multimedia analysis failed for file ${fileRecord.id}:`, {
+    console.error(`❌ Orchestrated file analysis failed for ${fileRecord.id}:`, {
       user_id: user.id,
       file_id: fileRecord.id,
-      error: error.message
+      error: error.message,
+      stack: error.stack
     });
     
     // Log the error but don't fail the upload
@@ -171,7 +197,8 @@ async function triggerFileAnalysis(fileRecord, user) {
       user_id: user.id,
       file_id: fileRecord.id,
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      orchestrator: true
     });
   }
 }
@@ -703,7 +730,7 @@ router.get('/serve/:userId/:filename', isAuthenticated, async (req, res) => {
   }
 });
 
-// Get file analysis results
+// Get file analysis results (updated for new architecture)
 router.get('/:id/analysis', isAuthenticated, async (req, res) => {
   try {
     const fileId = req.params.id;
@@ -714,6 +741,9 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     if (!file) {
       return res.status(404).json({ error: 'File not found.' });
     }
+    
+    // Get multimedia analysis results from new models
+    const { VideoAnalysis, AudioAnalysis, ImageAnalysis, ProcessingJob, Thumbnail, OCRCaption, Speaker } = require('../models');
     
     // Function to get proper title
     function getFileTitle(fileRecord) {
@@ -727,75 +757,219 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
       return nameWithoutExt.replace(/[-_]/g, ' ');
     }
     
-    // Check if we have analysis data
+    // Look for processing jobs for this file
+    const processingJobs = await ProcessingJob.findAll({
+      where: { file_id: fileId, user_id: userId },
+      order: [['createdAt', 'DESC']],
+      limit: 5
+    });
+    
+    // Look for analysis records
+    const [videoAnalysis, audioAnalysis, imageAnalysis] = await Promise.all([
+      VideoAnalysis.findOne({ where: { file_id: fileId, user_id: userId } }),
+      AudioAnalysis.findOne({ where: { file_id: fileId, user_id: userId } }),
+      ImageAnalysis.findOne({ where: { file_id: fileId, user_id: userId } })
+    ]);
+    
+    // Get any analysis record that exists
+    const analysis = videoAnalysis || audioAnalysis || imageAnalysis;
+    
+    // Check if we have transcription data directly in the file record (legacy support)
     const hasTranscription = file.transcription && file.transcription.length > 0;
     const hasSummary = file.summary && file.summary.length > 0;
     
-    if (!hasTranscription && !hasSummary) {
+    // Determine media type
+    const mimeType = file.metadata?.mimetype || '';
+    let mediaType = 'file';
+    if (videoAnalysis) mediaType = 'video';
+    else if (audioAnalysis) mediaType = 'audio';
+    else if (imageAnalysis) mediaType = 'image';
+    else if (mimeType.startsWith('image/')) mediaType = 'image';
+    else if (mimeType.startsWith('video/')) mediaType = 'video';
+    else if (mimeType.startsWith('audio/')) mediaType = 'audio';
+    
+    // If we have processing jobs, get the latest one
+    const latestJob = processingJobs.length > 0 ? processingJobs[0] : null;
+    
+    // If no analysis but we have a processing job, check its status
+    if (!analysis && latestJob) {
       return res.json({
         success: true,
-        status: 'not_analyzed',
-        message: 'No analysis data found for this file'
+        status: latestJob.status,
+        job: {
+          id: latestJob.id,
+          status: latestJob.status,
+          progress: latestJob.progress,
+          currentStage: latestJob.current_stage,
+          startedAt: latestJob.started_at,
+          estimatedCompletion: latestJob.estimated_completion
+        },
+        message: `Processing ${latestJob.status} - ${latestJob.progress}% complete`
       });
     }
     
-    // Parse sentiment data
-    let sentiment = null;
-    if (file.sentiment) {
-      try {
-        sentiment = typeof file.sentiment === 'string' ? JSON.parse(file.sentiment) : file.sentiment;
-      } catch (e) {
-        console.log('Could not parse sentiment from file.sentiment field:', e.message);
-        // Create a default sentiment
-        sentiment = {
-          label: 'neutral',
-          confidence: 0.5
-        };
+    // If no analysis but we have legacy data
+    if (!analysis && (hasTranscription || hasSummary)) {
+      // Parse sentiment data
+      let sentiment = null;
+      if (file.sentiment) {
+        try {
+          sentiment = typeof file.sentiment === 'string' ? JSON.parse(file.sentiment) : file.sentiment;
+        } catch (e) {
+          sentiment = { label: 'neutral', confidence: 0.5 };
+        }
+      } else {
+        sentiment = { label: 'neutral', confidence: 0.5 };
       }
-    } else {
-      // Create a default sentiment
-      sentiment = {
-        label: 'neutral',
-        confidence: 0.5
-      };
+      
+      return res.json({
+        success: true,
+        status: 'completed',
+        mediaType: 'legacy',
+        analysis: {
+          id: file.id,
+          title: getFileTitle(file),
+          description: file.metadata?.description || '',
+          duration: file.metadata?.duration || 0,
+          transcription: file.transcription || '',
+          summary: file.summary || '',
+          sentiment: sentiment,
+          language: file.metadata?.language || 'unknown',
+          processing_time: file.metadata?.processing_time || null,
+          quality_score: file.metadata?.quality_score || null,
+          created_at: file.createdAt,
+          metadata: file.metadata || {}
+        },
+        thumbnails: [],
+        speakers: [],
+        ocr_captions: [],
+        auto_tags: file.auto_tags || [],
+        user_tags: file.user_tags || []
+      });
     }
     
-    // Determine content type from file metadata
-    const mimeType = file.metadata?.mimetype || '';
-    let contentType = 'file';
-    if (mimeType.startsWith('image/')) {
-      contentType = 'image';
-    } else if (mimeType.startsWith('video/')) {
-      contentType = 'video';
-    } else if (mimeType.startsWith('audio/')) {
-      contentType = 'audio';
+    // If no analysis data at all
+    if (!analysis) {
+      return res.json({
+        success: true,
+        status: 'not_analyzed',
+        message: 'No multimedia analysis found for this file'
+      });
     }
     
-    // Return analysis data
-    res.json({
+    // Get related multimedia data based on analysis type
+    let thumbnails = [];
+    let speakers = [];
+    let ocrCaptions = [];
+    
+    if (videoAnalysis) {
+      // Get video-specific related data
+      [thumbnails, ocrCaptions] = await Promise.all([
+        Thumbnail.findAll({
+          where: { file_id: fileId, user_id: userId },
+          order: [['timestamp_seconds', 'ASC']],
+          limit: 10
+        }),
+        OCRCaption.findAll({
+          where: { file_id: fileId, user_id: userId },
+          order: [['timestamp_seconds', 'ASC']],
+          limit: 20
+        })
+      ]);
+    }
+    
+    if (audioAnalysis) {
+      // Get audio-specific related data
+      speakers = await Speaker.findAll({
+        where: { user_id: userId, audio_analysis_id: audioAnalysis.id },
+        order: [['confidence_score', 'DESC']],
+        limit: 5
+      });
+    }
+    
+    if (imageAnalysis) {
+      // Get image-specific related data
+      thumbnails = await Thumbnail.findAll({
+        where: { file_id: fileId, user_id: userId },
+        order: [['createdAt', 'ASC']],
+        limit: 5
+      });
+    }
+    
+    // Format response based on analysis type
+    const responseData = {
       success: true,
-      status: 'completed',
-      contentType: contentType,
+      status: analysis.status || 'completed',
+      mediaType: mediaType,
       analysis: {
-        id: file.id,
+        id: analysis.id,
         title: getFileTitle(file),
-        description: file.metadata?.description || '',
-        duration: file.metadata?.duration || 0,
-        transcription: file.transcription || '',
-        summary: file.summary || '',
-        sentiment: sentiment,
-        language: file.metadata?.language || 'unknown',
-        processing_time: file.metadata?.processing_time || null,
-        quality_score: file.metadata?.quality_score || null,
-        created_at: file.createdAt,
+        description: analysis.metadata?.description || file.metadata?.description || '',
+        duration: analysis.duration || file.metadata?.duration || 0,
+        quality: analysis.quality_assessment,
+        processing_time: analysis.processing_stats?.processingTime,
+        created_at: analysis.createdAt,
         metadata: file.metadata || {}
       },
-      thumbnails: [], // Files don't have separate thumbnail records
-      speakers: [], // Files don't have separate speaker records
-      ocr_captions: [], // Files don't have separate OCR records
+      job: latestJob ? {
+        id: latestJob.id,
+        status: latestJob.status,
+        progress: latestJob.progress,
+        processingTime: latestJob.duration_ms
+      } : null,
       auto_tags: file.auto_tags || [],
       user_tags: file.user_tags || []
-    });
+    };
+    
+    // Add type-specific data
+    if (videoAnalysis) {
+      responseData.analysis.transcription = videoAnalysis.transcription_results?.fullText || '';
+      responseData.analysis.sentiment = videoAnalysis.sentiment_analysis;
+      responseData.analysis.objects = videoAnalysis.object_detection?.objects || [];
+      responseData.analysis.scenes = videoAnalysis.scene_detection?.scenes || [];
+    }
+    
+    if (audioAnalysis) {
+      responseData.analysis.transcription = audioAnalysis.transcription_results?.fullText || '';
+      responseData.analysis.sentiment = audioAnalysis.sentiment_analysis;
+      responseData.analysis.speakers = audioAnalysis.speaker_analysis?.speakers || [];
+      responseData.analysis.language = audioAnalysis.language_detection?.primaryLanguage || 'unknown';
+    }
+    
+    if (imageAnalysis) {
+      responseData.analysis.description = imageAnalysis.ai_description?.description || '';
+      responseData.analysis.objects = imageAnalysis.object_detection?.objects || [];
+      responseData.analysis.ocrText = imageAnalysis.ocr_results?.fullText || '';
+      responseData.analysis.colors = imageAnalysis.color_analysis;
+      responseData.analysis.faces = imageAnalysis.face_detection?.faces || [];
+    }
+    
+    // Add related data
+    responseData.thumbnails = thumbnails.map(t => ({
+      id: t.id,
+      url: t.file_path,
+      timestamp: t.timestamp_seconds || 0,
+      size: t.size || 'medium',
+      width: t.width,
+      height: t.height
+    }));
+    
+    responseData.speakers = speakers.map(s => ({
+      id: s.id,
+      name: s.name || `Speaker ${s.id}`,
+      confidence: s.confidence_score || 0,
+      gender: s.gender || 'unknown',
+      language: s.language || 'unknown'
+    }));
+    
+    responseData.ocr_captions = ocrCaptions.map(o => ({
+      id: o.id,
+      text: o.text,
+      timestamp: o.timestamp_seconds,
+      confidence: o.confidence
+    }));
+    
+    res.json(responseData);
     
   } catch (error) {
     console.error('ERROR getting file analysis:', error);

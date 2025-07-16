@@ -3,11 +3,11 @@ const router = express.Router();
 const { isAuthenticated, checkUsageLimit, updateUsage, requireFeature } = require('../middleware');
 const { Content, ContentGroup, ContentGroupMember } = require('../models');
 const { Op } = require('sequelize');
-const { MultimediaAnalyzer } = require('../services/multimedia');
+const { AutomationOrchestrator } = require('../services/multimedia');
 const logger = require('../config/logger');
 
-// Initialize multimedia analyzer
-const multimediaAnalyzer = new MultimediaAnalyzer();
+// Initialize automation orchestrator
+const orchestrator = new AutomationOrchestrator();
 
 /**
  * Detect if URL contains multimedia content that should be analyzed
@@ -76,7 +76,7 @@ function isMultimediaURL(url) {
 }
 
 /**
- * Trigger multimedia analysis for content in background
+ * Trigger multimedia analysis for content using new orchestrator
  * @param {Object} content - Content record
  * @param {Object} user - User object
  */
@@ -91,100 +91,109 @@ async function triggerMultimediaAnalysis(content, user) {
       speakers: true
     });
 
-    console.log(`🎬 Starting background multimedia analysis for content ${content.id}`, {
+    console.log(`🎬 Starting orchestrated multimedia analysis for content ${content.id}`, {
       user_id: user.id,
       content_id: content.id,
       url: content.url
     });
 
-    // Run multimedia analysis in background
-    const analysisResults = await multimediaAnalyzer.analyzeContent(content.url, {
-      user_id: user.id,
-      content_id: content.id,
-      transcription: true,
-      sentiment: true,
-      thumbnails: true,
-      ocr: true,
-      speaker_identification: true,
-      enableSummarization: true
-    });
+    // Create a buffer/stream from URL for processing
+    // For URL-based content, we'll pass metadata and let the orchestrator handle it
+    const contentMetadata = {
+      filename: content.url,
+      contentId: content.id,
+      userId: user.id,
+      source: 'url',
+      url: content.url
+    };
 
-    // Update content record with AI-generated results
+    // Process content with new orchestrator
+    const processingResult = await orchestrator.processContent(
+      null, // No buffer for URL content - orchestrator will fetch
+      contentMetadata
+    );
+
+    // Extract results from orchestrator response
+    const formattedResults = processingResult.results;
+    
+    // Update content record with new structured results
     const updateData = {};
     
-    // Update title if we got one from analysis
-    if (analysisResults.metadata && analysisResults.metadata.title) {
-      updateData.title = analysisResults.metadata.title;
-    }
-    
-    // Update description if we got one from analysis
-    if (analysisResults.metadata && analysisResults.metadata.description) {
-      updateData.description = analysisResults.metadata.description;
-    }
-    
-    // Store transcription data directly in content record
-    if (analysisResults.transcription && analysisResults.transcription.length > 0) {
-      updateData.transcription = analysisResults.transcription;
-    }
-    
-    // Store summary data if available
-    if (analysisResults.summary && analysisResults.summary.length > 0) {
-      updateData.summary = analysisResults.summary;
-    }
-    
-    // Store sentiment data
-    if (analysisResults.sentiment) {
-      updateData.sentiment = analysisResults.sentiment;
-    }
-    
-    // Store auto tags if available
-    if (analysisResults.auto_tags && analysisResults.auto_tags.length > 0) {
-      updateData.auto_tags = analysisResults.auto_tags;
-    }
-    
-    // Store category if available
-    if (analysisResults.category) {
-      updateData.category = analysisResults.category;
-    }
-    
-    // Store metadata if available (including thumbnails)
-    if (analysisResults.metadata) {
+    // Store basic metadata
+    if (formattedResults.data.metadata) {
       updateData.metadata = {
         ...(content.metadata || {}),
-        ...analysisResults.metadata
+        ...formattedResults.data.metadata,
+        processingJobId: processingResult.jobId,
+        lastAnalyzed: new Date().toISOString()
       };
-      
-      // Ensure thumbnail URL is accessible if available
-      if (analysisResults.metadata.thumbnail) {
-        updateData.metadata.thumbnail = analysisResults.metadata.thumbnail;
+    }
+    
+    // Handle transcription results based on media type
+    if (formattedResults.data.transcription) {
+      if (formattedResults.data.transcription.fullText) {
+        updateData.transcription = formattedResults.data.transcription.fullText;
+      } else if (typeof formattedResults.data.transcription === 'string') {
+        updateData.transcription = formattedResults.data.transcription;
       }
     }
     
-    // Log AI analysis results for debugging (don't add to user_comments)
-    if (analysisResults.transcription || analysisResults.sentiment) {
-      const logSummary = [];
-      
-      if (analysisResults.sentiment && analysisResults.sentiment.label) {
-        logSummary.push(`Sentiment: ${analysisResults.sentiment.label} (${Math.round(analysisResults.sentiment.confidence * 100)}%)`);
-      }
-      
-      if (analysisResults.transcription && analysisResults.transcription.length > 0) {
-        const wordCount = analysisResults.transcription.split(' ').length;
-        logSummary.push(`Transcription: ${wordCount} words`);
-      }
-      
-      if (analysisResults.speakers && analysisResults.speakers.length > 0) {
-        logSummary.push(`Speakers: ${analysisResults.speakers.length} identified`);
-      }
-      
-      if (analysisResults.thumbnails && analysisResults.thumbnails.length > 0) {
-        logSummary.push(`Thumbnails: ${analysisResults.thumbnails.length} generated`);
-      }
-      
-      if (logSummary.length > 0) {
-        console.log(`🎬 AI Analysis completed for content ${content.id}:`, logSummary.join(', '));
-      }
+    // Handle AI descriptions for images
+    if (formattedResults.data.aiDescription) {
+      updateData.summary = formattedResults.data.aiDescription.description || '';
     }
+    
+    // Handle OCR text for images/videos
+    if (formattedResults.data.ocrText && formattedResults.data.ocrText.fullText) {
+      // Append OCR text to existing summary or create new one
+      const ocrText = formattedResults.data.ocrText.fullText;
+      updateData.summary = updateData.summary ? 
+        `${updateData.summary}\n\nExtracted Text: ${ocrText}` : 
+        `Extracted Text: ${ocrText}`;
+    }
+    
+    // Store sentiment analysis
+    if (formattedResults.data.sentiment) {
+      updateData.sentiment = formattedResults.data.sentiment;
+    }
+    
+    // Handle auto-generated tags from various sources
+    const autoTags = [];
+    
+    // Tags from objects detected
+    if (formattedResults.data.objects) {
+      formattedResults.data.objects.forEach(obj => {
+        if (obj.confidence > 0.7) { // Only high-confidence objects
+          autoTags.push(obj.name);
+        }
+      });
+    }
+    
+    // Tags from AI description
+    if (formattedResults.data.aiDescription && formattedResults.data.aiDescription.tags) {
+      autoTags.push(...formattedResults.data.aiDescription.tags);
+    }
+    
+    // Store auto tags if we have any
+    if (autoTags.length > 0) {
+      updateData.auto_tags = [...new Set(autoTags)]; // Remove duplicates
+    }
+    
+    // Determine category based on media type and content
+    if (formattedResults.mediaType) {
+      updateData.category = formattedResults.mediaType;
+    }
+
+    // Log processing results
+    console.log(`🎬 Orchestrated analysis completed for content ${content.id}`, {
+      user_id: user.id,
+      content_id: content.id,
+      job_id: processingResult.jobId,
+      media_type: formattedResults.mediaType,
+      processing_time: processingResult.processingTime,
+      features_used: Object.keys(formattedResults.data),
+      warnings: processingResult.warnings?.length || 0
+    });
     
     // Update content record if we have data to update
     if (Object.keys(updateData).length > 0) {
@@ -192,28 +201,28 @@ async function triggerMultimediaAnalysis(content, user) {
         where: { id: content.id, user_id: user.id }
       });
       
-      console.log(`✅ Content ${content.id} updated with AI analysis results`, {
+      console.log(`✅ Content ${content.id} updated with orchestrated analysis results`, {
         user_id: user.id,
         content_id: content.id,
+        job_id: processingResult.jobId,
         updates: Object.keys(updateData)
       });
     }
     
-    console.log(`🎉 Multimedia analysis completed for content ${content.id}`, {
-      user_id: user.id,
-      content_id: content.id,
-      transcription_length: analysisResults.transcription?.length || 0,
-      sentiment: analysisResults.sentiment?.label || 'none',
-      thumbnails_count: analysisResults.thumbnails?.length || 0,
-      speakers_count: analysisResults.speakers?.length || 0
-    });
-    
   } catch (error) {
-    logger.logError(`Multimedia analysis failed for content ${content.id}`, {
+    console.error(`❌ Orchestrated analysis failed for content ${content.id}:`, {
       user_id: user.id,
       content_id: content.id,
       error: error.message,
       stack: error.stack
+    });
+    
+    logger.logError(`Multimedia analysis failed for content ${content.id}`, {
+      user_id: user.id,
+      content_id: content.id,
+      error: error.message,
+      stack: error.stack,
+      orchestrator: true
     });
   }
 }
@@ -597,7 +606,7 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
   }
 });
 
-// Get multimedia analysis status for content
+// Get multimedia analysis status for content (updated for new architecture)
 router.get('/:id/analysis', isAuthenticated, async (req, res) => {
   try {
     const contentId = req.params.id;
@@ -609,15 +618,8 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
       return res.status(404).json({ error: 'Content not found.' });
     }
     
-    // Get multimedia analysis results
-    const { VideoAnalysis, Speaker, Thumbnail, OCRCaption } = require('../models');
-    
-    const analysis = await VideoAnalysis.findOne({
-      where: { content_id: contentId, user_id: userId }
-    });
-    
-    // Check if we have transcription data directly in the content record
-    const hasContentTranscription = content.transcription && content.transcription.length > 0;
+    // Get multimedia analysis results from new models
+    const { VideoAnalysis, AudioAnalysis, ImageAnalysis, ProcessingJob, Thumbnail, OCRCaption, Speaker } = require('../models');
     
     // Function to get proper title (reuse from main route)
     function getContentTitle(item) {
@@ -649,14 +651,57 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
       return 'Untitled Content';
     }
     
-    // If no VideoAnalysis record but we have transcription in content, create a response from content data
+    // Look for processing jobs for this content
+    const processingJobs = await ProcessingJob.findAll({
+      where: { content_id: contentId, user_id: userId },
+      order: [['createdAt', 'DESC']],
+      limit: 5
+    });
+    
+    // Look for analysis records
+    const [videoAnalysis, audioAnalysis, imageAnalysis] = await Promise.all([
+      VideoAnalysis.findOne({ where: { content_id: contentId, user_id: userId } }),
+      AudioAnalysis.findOne({ where: { content_id: contentId, user_id: userId } }),
+      ImageAnalysis.findOne({ where: { content_id: contentId, user_id: userId } })
+    ]);
+    
+    // Get any analysis record that exists
+    const analysis = videoAnalysis || audioAnalysis || imageAnalysis;
+    
+    // Check if we have transcription data directly in the content record (legacy support)
+    const hasContentTranscription = content.transcription && content.transcription.length > 0;
+    
+    // Determine media type
+    let mediaType = 'unknown';
+    if (videoAnalysis) mediaType = 'video';
+    else if (audioAnalysis) mediaType = 'audio';
+    else if (imageAnalysis) mediaType = 'image';
+    
+    // If we have processing jobs, get the latest one
+    const latestJob = processingJobs.length > 0 ? processingJobs[0] : null;
+    
+    // If no analysis but we have a processing job, check its status
+    if (!analysis && latestJob) {
+      return res.json({
+        success: true,
+        status: latestJob.status,
+        job: {
+          id: latestJob.id,
+          status: latestJob.status,
+          progress: latestJob.progress,
+          currentStage: latestJob.current_stage,
+          startedAt: latestJob.started_at,
+          estimatedCompletion: latestJob.estimated_completion
+        },
+        message: `Processing ${latestJob.status} - ${latestJob.progress}% complete`
+      });
+    }
+    
+    // If no analysis but we have legacy transcription data
     if (!analysis && hasContentTranscription) {
       // Parse transcription data from content
       const transcriptionText = content.transcription;
       const wordCount = transcriptionText.split(' ').length;
-      
-      // Default speaker count (we know from your content it has 3 speakers)
-      let speakerCount = 3; // Default for multimedia content
       
       // Get sentiment from content.sentiment field
       let sentiment = null;
@@ -664,24 +709,16 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
         try {
           sentiment = typeof content.sentiment === 'string' ? JSON.parse(content.sentiment) : content.sentiment;
         } catch (e) {
-          console.log('Could not parse sentiment from content.sentiment field:', e.message);
-          // Create a default positive sentiment for content with transcription
-          sentiment = {
-            label: 'positive',
-            confidence: 0.75
-          };
+          sentiment = { label: 'positive', confidence: 0.75 };
         }
       } else {
-        // Create a default positive sentiment for content with transcription
-        sentiment = {
-          label: 'positive',
-          confidence: 0.75
-        };
+        sentiment = { label: 'neutral', confidence: 0.5 };
       }
       
       return res.json({
         success: true,
         status: 'completed',
+        mediaType: 'legacy',
         analysis: {
           id: content.id,
           title: getContentTitle(content),
@@ -696,19 +733,13 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
           created_at: content.createdAt
         },
         thumbnails: [],
-        speakers: speakerCount > 0 ? Array.from({ length: speakerCount }, (_, i) => ({
-          id: `speaker-${i + 1}`,
-          name: `Speaker ${i + 1}`,
-          confidence: 0.8,
-          gender: 'unknown',
-          language: 'unknown'
-        })) : [],
+        speakers: [],
         ocr_captions: []
       });
     }
     
     // If no analysis data at all
-    if (!analysis && !hasContentTranscription) {
+    if (!analysis) {
       return res.json({
         success: true,
         status: 'not_analyzed',
@@ -716,66 +747,116 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
       });
     }
     
-    // Get related multimedia data for VideoAnalysis records
-    const [thumbnails, speakers, ocrCaptions] = await Promise.all([
-      Thumbnail.findAll({
-        where: { user_id: userId, video_url: content.url },
-        order: [['timestamp', 'ASC']],
-        limit: 10
-      }),
-      Speaker.findAll({
-        where: { user_id: userId },
+    // Get related multimedia data based on analysis type
+    let thumbnails = [];
+    let speakers = [];
+    let ocrCaptions = [];
+    
+    if (videoAnalysis) {
+      // Get video-specific related data
+      [thumbnails, ocrCaptions] = await Promise.all([
+        Thumbnail.findAll({
+          where: { content_id: contentId, user_id: userId },
+          order: [['timestamp_seconds', 'ASC']],
+          limit: 10
+        }),
+        OCRCaption.findAll({
+          where: { content_id: contentId, user_id: userId },
+          order: [['timestamp_seconds', 'ASC']],
+          limit: 20
+        })
+      ]);
+    }
+    
+    if (audioAnalysis) {
+      // Get audio-specific related data
+      speakers = await Speaker.findAll({
+        where: { user_id: userId, audio_analysis_id: audioAnalysis.id },
         order: [['confidence_score', 'DESC']],
         limit: 5
-      }),
-      OCRCaption.findAll({
-        where: { user_id: userId, video_url: content.url },
-        order: [['timestamp_seconds', 'ASC']],
-        limit: 20
-      })
-    ]);
+      });
+    }
     
-    res.json({
+    if (imageAnalysis) {
+      // Get image-specific related data
+      thumbnails = await Thumbnail.findAll({
+        where: { content_id: contentId, user_id: userId },
+        order: [['createdAt', 'ASC']],
+        limit: 5
+      });
+    }
+    
+    // Format response based on analysis type
+    const responseData = {
       success: true,
-      status: 'completed',
+      status: analysis.status || 'completed',
+      mediaType: mediaType,
       analysis: {
         id: analysis.id,
-        title: analysis.title || getContentTitle(content),
-        description: analysis.description,
-        duration: analysis.duration,
-        transcription: analysis.transcription,
-        summary: analysis.summary || content.summary || '',
-        sentiment: {
-          score: analysis.sentiment_score,
-          label: analysis.sentiment_label,
-          confidence: analysis.sentiment_confidence
-        },
-        language: analysis.language_detected,
-        processing_time: analysis.processing_time,
-        quality_score: analysis.quality_score,
-        created_at: analysis.created_at
+        title: getContentTitle(content),
+        description: analysis.metadata?.description || content.metadata?.description || '',
+        duration: analysis.duration || 0,
+        quality: analysis.quality_assessment,
+        processing_time: analysis.processing_stats?.processingTime,
+        created_at: analysis.createdAt
       },
-      thumbnails: thumbnails.map(t => ({
-        id: t.id,
-        url: t.thumbnail_url,
-        timestamp: t.timestamp,
-        is_key_moment: t.is_key_moment,
-        confidence: t.confidence_score
-      })),
-      speakers: speakers.map(s => ({
-        id: s.id,
-        name: s.name,
-        confidence: s.confidence_score,
-        gender: s.gender,
-        language: s.language
-      })),
-      ocr_captions: ocrCaptions.map(o => ({
-        id: o.id,
-        text: o.text,
-        timestamp: o.timestamp_seconds,
-        confidence: o.confidence
-      }))
-    });
+      job: latestJob ? {
+        id: latestJob.id,
+        status: latestJob.status,
+        progress: latestJob.progress,
+        processingTime: latestJob.duration_ms
+      } : null
+    };
+    
+    // Add type-specific data
+    if (videoAnalysis) {
+      responseData.analysis.transcription = videoAnalysis.transcription_results?.fullText || '';
+      responseData.analysis.sentiment = videoAnalysis.sentiment_analysis;
+      responseData.analysis.objects = videoAnalysis.object_detection?.objects || [];
+      responseData.analysis.scenes = videoAnalysis.scene_detection?.scenes || [];
+    }
+    
+    if (audioAnalysis) {
+      responseData.analysis.transcription = audioAnalysis.transcription_results?.fullText || '';
+      responseData.analysis.sentiment = audioAnalysis.sentiment_analysis;
+      responseData.analysis.speakers = audioAnalysis.speaker_analysis?.speakers || [];
+      responseData.analysis.language = audioAnalysis.language_detection?.primaryLanguage || 'unknown';
+    }
+    
+    if (imageAnalysis) {
+      responseData.analysis.description = imageAnalysis.ai_description?.description || '';
+      responseData.analysis.objects = imageAnalysis.object_detection?.objects || [];
+      responseData.analysis.ocrText = imageAnalysis.ocr_results?.fullText || '';
+      responseData.analysis.colors = imageAnalysis.color_analysis;
+      responseData.analysis.faces = imageAnalysis.face_detection?.faces || [];
+    }
+    
+    // Add related data
+    responseData.thumbnails = thumbnails.map(t => ({
+      id: t.id,
+      url: t.file_path,
+      timestamp: t.timestamp_seconds || 0,
+      size: t.size || 'medium',
+      width: t.width,
+      height: t.height
+    }));
+    
+    responseData.speakers = speakers.map(s => ({
+      id: s.id,
+      name: s.name || `Speaker ${s.id}`,
+      confidence: s.confidence_score || 0,
+      gender: s.gender || 'unknown',
+      language: s.language || 'unknown'
+    }));
+    
+    responseData.ocr_captions = ocrCaptions.map(o => ({
+      id: o.id,
+      text: o.text,
+      timestamp: o.timestamp_seconds,
+      confidence: o.confidence
+    }));
+    
+    res.json(responseData);
     
   } catch (error) {
     console.error('ERROR getting content analysis:', error);
