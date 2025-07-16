@@ -31,13 +31,13 @@ function isMultimediaFile(mimetype) {
 }
 
 /**
- * Trigger multimedia analysis for uploaded file using new orchestrator
+ * Trigger multimedia analysis for uploaded file using enhanced AI system
  * @param {Object} fileRecord - File database record
  * @param {Object} user - User object
  */
 async function triggerFileAnalysis(fileRecord, user) {
   try {
-    console.log(`🎬 Starting orchestrated file analysis for ${fileRecord.id}`, {
+    console.log(`🎬 Starting enhanced file analysis for ${fileRecord.id}`, {
       user_id: user.id,
       file_id: fileRecord.id,
       filename: fileRecord.filename,
@@ -83,7 +83,7 @@ async function triggerFileAnalysis(fileRecord, user) {
       filePath: filePath
     };
 
-    // Process file with new orchestrator
+    // Process file with new orchestrator for detailed analysis
     const processingResult = await orchestrator.processContent(
       fileBuffer,
       fileMetadata
@@ -92,7 +92,62 @@ async function triggerFileAnalysis(fileRecord, user) {
     // Extract results from orchestrator response
     const formattedResults = processingResult.results;
     
-    // Update file record with new structured results
+    // ✨ ENHANCED AI PROCESSING: Use BackwardCompatibilityService for AI-powered titles and tags
+    console.log(`🚀 Starting enhanced AI analysis for file ${fileRecord.id}`);
+    const BackwardCompatibilityService = require('../services/BackwardCompatibilityService');
+    const compatibilityService = new BackwardCompatibilityService();
+    
+    // Create a summary/transcription for AI analysis
+    let contentForAI = '';
+    
+    // Build content string for AI analysis
+    if (formattedResults.data.transcription) {
+      if (formattedResults.data.transcription.fullText) {
+        contentForAI = formattedResults.data.transcription.fullText;
+      } else if (typeof formattedResults.data.transcription === 'string') {
+        contentForAI = formattedResults.data.transcription;
+      }
+    }
+    
+    // For images, use AI description
+    if (formattedResults.data.aiDescription && formattedResults.data.aiDescription.description) {
+      contentForAI = formattedResults.data.aiDescription.description;
+    }
+    
+    // For OCR text, append it
+    if (formattedResults.data.ocrText && formattedResults.data.ocrText.fullText) {
+      contentForAI = contentForAI ? 
+        `${contentForAI}\n\nExtracted Text: ${formattedResults.data.ocrText.fullText}` : 
+        `Extracted Text: ${formattedResults.data.ocrText.fullText}`;
+    }
+    
+    // Enhanced AI analysis using our improved system
+    let enhancedResults = null;
+    if (contentForAI.trim().length > 10) { // Only if we have sufficient content
+      try {
+        // Create a fake analysis result with our content for AI enhancement
+        const fakeAnalysisForAI = {
+          transcription: contentForAI,
+          summary: contentForAI.length > 500 ? contentForAI.substring(0, 500) + '...' : contentForAI,
+          metadata: formattedResults.data.metadata || {}
+        };
+        
+        enhancedResults = await compatibilityService.convertToLegacyFormat(fakeAnalysisForAI);
+        
+        console.log(`✨ Enhanced AI analysis completed for file ${fileRecord.id}`, {
+          user_id: user.id,
+          file_id: fileRecord.id,
+          generated_title: enhancedResults.generatedTitle,
+          ai_tags: enhancedResults.auto_tags,
+          ai_category: enhancedResults.category
+        });
+      } catch (aiError) {
+        console.error(`⚠️ Enhanced AI analysis failed for file ${fileRecord.id}:`, aiError.message);
+        // Continue with basic analysis if AI enhancement fails
+      }
+    }
+    
+    // Update file record with enhanced structured results
     const updateData = {};
     
     // Store basic metadata
@@ -133,30 +188,50 @@ async function triggerFileAnalysis(fileRecord, user) {
       updateData.sentiment = formattedResults.data.sentiment;
     }
     
-    // Handle auto-generated tags from various sources
-    const autoTags = [];
-    
-    // Tags from objects detected
-    if (formattedResults.data.objects) {
-      formattedResults.data.objects.forEach(obj => {
-        if (obj.confidence > 0.7) { // Only high-confidence objects
-          autoTags.push(obj.name);
-        }
-      });
+    // ✨ ENHANCED: Use AI-powered tags and title if available
+    if (enhancedResults) {
+      // AI-generated title
+      if (enhancedResults.generatedTitle) {
+        updateData.generated_title = enhancedResults.generatedTitle;
+      }
+      
+      // AI-powered tags (prioritize these over basic object detection)
+      if (enhancedResults.auto_tags && enhancedResults.auto_tags.length > 0) {
+        updateData.auto_tags = [...new Set(enhancedResults.auto_tags)]; // Remove duplicates
+      }
+      
+      // AI-powered category
+      if (enhancedResults.category) {
+        updateData.category = enhancedResults.category;
+      }
     }
     
-    // Tags from AI description
-    if (formattedResults.data.aiDescription && formattedResults.data.aiDescription.tags) {
-      autoTags.push(...formattedResults.data.aiDescription.tags);
+    // Fallback to basic tags if AI enhancement didn't produce any
+    if (!updateData.auto_tags || updateData.auto_tags.length === 0) {
+      const autoTags = [];
+      
+      // Tags from objects detected (fallback)
+      if (formattedResults.data.objects) {
+        formattedResults.data.objects.forEach(obj => {
+          if (obj.confidence > 0.7) { // Only high-confidence objects
+            autoTags.push(obj.name);
+          }
+        });
+      }
+      
+      // Tags from AI description (fallback)
+      if (formattedResults.data.aiDescription && formattedResults.data.aiDescription.tags) {
+        autoTags.push(...formattedResults.data.aiDescription.tags);
+      }
+      
+      // Store fallback tags if we have any
+      if (autoTags.length > 0) {
+        updateData.auto_tags = [...new Set(autoTags)]; // Remove duplicates
+      }
     }
     
-    // Store auto tags if we have any
-    if (autoTags.length > 0) {
-      updateData.auto_tags = [...new Set(autoTags)]; // Remove duplicates
-    }
-    
-    // Determine category based on media type and content
-    if (formattedResults.mediaType) {
+    // Determine category based on media type and content (fallback)
+    if (!updateData.category && formattedResults.mediaType) {
       updateData.category = formattedResults.mediaType;
     }
 
@@ -166,26 +241,31 @@ async function triggerFileAnalysis(fileRecord, user) {
         where: { id: fileRecord.id, user_id: user.id }
       });
       
-      console.log(`✅ File ${fileRecord.id} updated with orchestrated analysis results`, {
+      console.log(`✅ File ${fileRecord.id} updated with enhanced analysis results`, {
         user_id: user.id,
         file_id: fileRecord.id,
         job_id: processingResult.jobId,
-        updates: Object.keys(updateData)
+        updates: Object.keys(updateData),
+        enhanced_ai: !!enhancedResults,
+        generated_title: updateData.generated_title,
+        ai_tags: updateData.auto_tags,
+        ai_category: updateData.category
       });
     }
 
-    console.log(`🎉 Orchestrated file analysis completed for ${fileRecord.id}`, {
+    console.log(`🎉 Enhanced file analysis completed for ${fileRecord.id}`, {
       user_id: user.id,
       file_id: fileRecord.id,
       job_id: processingResult.jobId,
       media_type: formattedResults.mediaType,
       processing_time: processingResult.processingTime,
       features_used: Object.keys(formattedResults.data),
-      warnings: processingResult.warnings?.length || 0
+      warnings: processingResult.warnings?.length || 0,
+      enhanced_ai_success: !!enhancedResults
     });
 
   } catch (error) {
-    console.error(`❌ Orchestrated file analysis failed for ${fileRecord.id}:`, {
+    console.error(`❌ Enhanced file analysis failed for ${fileRecord.id}:`, {
       user_id: user.id,
       file_id: fileRecord.id,
       error: error.message,

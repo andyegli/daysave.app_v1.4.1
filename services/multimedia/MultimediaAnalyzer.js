@@ -350,6 +350,9 @@ class MultimediaAnalyzer {
           });
         }
         
+        // Platform tags will be intelligently added later by the AI tag generation system
+        // This ensures content-based tags take priority over generic platform terms
+        
         // Add platform-specific auto-tags
         if (results.platform) {
           results.auto_tags.push(results.platform.toLowerCase());
@@ -1620,17 +1623,19 @@ Return only the extracted text, preserving line breaks and formatting where poss
       hasSummary: !!results.summary,
       hasTranscription: !!results.transcription,
       summaryLength: results.summary ? results.summary.length : 0,
-      transcriptionLength: results.transcription ? results.transcription.length : 0
+      transcriptionLength: results.transcription ? results.transcription.length : 0,
+      platform: results.platform
     });
 
-    const tags = [...(results.auto_tags || [])];
+    // Start with AI-powered tags first (prioritize intelligent content analysis)
+    let aiTags = [];
+    let fallbackTags = [];
     
-    // Try AI-powered tag generation first
+    // Try AI-powered tag generation first - this should be the primary source
     if (this.openai && (results.summary || results.transcription)) {
       try {
-        const aiTags = await this.generateAITags(results);
+        aiTags = await this.generateAITags(results);
         if (aiTags && aiTags.length > 0) {
-          tags.push(...aiTags);
           console.log(`🤖 Generated ${aiTags.length} AI tags:`, aiTags);
         }
       } catch (error) {
@@ -1638,56 +1643,119 @@ Return only the extracted text, preserving line breaks and formatting where poss
       }
     }
     
-    // Fallback to basic content analysis if AI fails or no content available
-    if (results.transcription && results.transcription.length > 50) {
-      const text = results.transcription.toLowerCase();
+    // Only add basic fallback tags if AI failed or no meaningful content available
+    if (aiTags.length === 0) {
+      console.log('⚠️ No AI tags generated, using fallback content analysis');
       
-      // Topic-based tags with enhanced detection
-      if (text.includes('music') || text.includes('song') || text.includes('melody') || text.includes('audio')) {
-        tags.push('music');
+      // Enhanced content analysis fallback
+      if (results.transcription && results.transcription.length > 50) {
+        const text = results.transcription.toLowerCase();
+        
+        // Topic-based tags with enhanced detection
+        if (text.includes('music') || text.includes('song') || text.includes('melody') || text.includes('audio')) {
+          fallbackTags.push('music');
+        }
+        if (text.includes('education') || text.includes('learn') || text.includes('tutorial') || text.includes('how to')) {
+          fallbackTags.push('educational');
+        }
+        if (text.includes('news') || text.includes('report') || text.includes('breaking')) {
+          fallbackTags.push('news');
+        }
+        if (text.includes('game') || text.includes('gaming') || text.includes('play')) {
+          fallbackTags.push('gaming');
+        }
+        if (text.includes('review') || text.includes('opinion') || text.includes('rating')) {
+          fallbackTags.push('review');
+        }
+        if (text.includes('interview') || text.includes('conversation') || text.includes('discussion')) {
+          fallbackTags.push('interview');
+        }
+        if (text.includes('funny') || text.includes('comedy') || text.includes('humor') || text.includes('laugh')) {
+          fallbackTags.push('comedy', 'entertainment');
+        }
+        if (text.includes('sport') || text.includes('game') || text.includes('match') || text.includes('team')) {
+          fallbackTags.push('sports');
+        }
+        if (text.includes('cooking') || text.includes('recipe') || text.includes('food')) {
+          fallbackTags.push('cooking', 'food');
+        }
+        if (text.includes('technology') || text.includes('tech') || text.includes('software') || text.includes('programming')) {
+          fallbackTags.push('technology');
+        }
       }
-      if (text.includes('education') || text.includes('learn') || text.includes('tutorial') || text.includes('how to')) {
-        tags.push('educational');
+      
+      // Add sentiment-based tags
+      if (results.sentiment) {
+        if (results.sentiment.sentiment === 'positive' || results.sentiment.label === 'positive') {
+          fallbackTags.push('positive');
+        } else if (results.sentiment.sentiment === 'negative' || results.sentiment.label === 'negative') {
+          fallbackTags.push('negative');
+        }
       }
-      if (text.includes('news') || text.includes('report') || text.includes('breaking')) {
-        tags.push('news');
-      }
-      if (text.includes('game') || text.includes('gaming') || text.includes('play')) {
-        tags.push('gaming');
-      }
-      if (text.includes('review') || text.includes('opinion') || text.includes('rating')) {
-        tags.push('review');
-      }
-      if (text.includes('interview') || text.includes('conversation') || text.includes('discussion')) {
-        tags.push('interview');
-      }
-      if (text.includes('funny') || text.includes('comedy') || text.includes('humor') || text.includes('laugh')) {
-        tags.push('comedy', 'entertainment');
-      }
-      if (text.includes('sport') || text.includes('game') || text.includes('match') || text.includes('team')) {
-        tags.push('sports');
+      
+      // Add speaker-based tags
+      if (results.speakers && results.speakers.length > 1) {
+        fallbackTags.push('conversation', 'multiple-speakers');
+      } else if (results.speakers && results.speakers.length === 1) {
+        fallbackTags.push('monologue', 'single-speaker');
       }
     }
     
-    // Add sentiment-based tags
-    if (results.sentiment) {
-      if (results.sentiment.sentiment === 'positive' || results.sentiment.label === 'positive') {
-        tags.push('positive');
-      } else if (results.sentiment.sentiment === 'negative' || results.sentiment.label === 'negative') {
-        tags.push('negative');
+    // Combine AI tags with fallback tags (prioritize AI tags)
+    const contentBasedTags = aiTags.length > 0 ? aiTags : fallbackTags;
+    
+    // Add minimal platform context tags only if we have meaningful content tags
+    const platformTags = [];
+    if (contentBasedTags.length > 0) {
+      // Only add platform tag if it adds value and isn't redundant
+      if (results.platform && !contentBasedTags.includes(results.platform.toLowerCase())) {
+        platformTags.push(results.platform.toLowerCase());
       }
+      
+      // Add media type only if it's not obvious from content tags
+      const hasMediaType = contentBasedTags.some(tag => 
+        ['video', 'audio', 'image', 'visual', 'music'].includes(tag)
+      );
+      if (!hasMediaType) {
+        if (results.metadata?.fileCategory === 'video') {
+          platformTags.push('video');
+        } else if (results.metadata?.fileCategory === 'audio') {
+          platformTags.push('audio');
+        } else if (results.metadata?.fileCategory === 'image') {
+          platformTags.push('image');
+        }
+      }
+    } else {
+      // If we have no content tags, fall back to basic platform tags
+      console.log('⚠️ No content-based tags available, using basic platform tags');
+      const basicTags = [...(results.auto_tags || [])];
+      
+      if (results.platform) {
+        basicTags.push(results.platform.toLowerCase());
+      }
+      
+      // Add content type tags
+      if (results.url && results.url.includes('youtube.com') || results.url && results.url.includes('youtu.be')) {
+        basicTags.push('video', 'youtube');
+      } else if (results.url && (results.url.includes('soundcloud.com') || results.url.includes('spotify.com'))) {
+        basicTags.push('audio', 'music');
+      } else if (results.url && results.url.includes('instagram.com')) {
+        basicTags.push('social', 'visual');
+      }
+      
+      platformTags.push(...basicTags);
     }
     
-    // Add speaker-based tags
-    if (results.speakers && results.speakers.length > 1) {
-      tags.push('conversation', 'multiple-speakers');
-    } else if (results.speakers && results.speakers.length === 1) {
-      tags.push('monologue', 'single-speaker');
-    }
+    // Combine all tags and remove duplicates
+    const allTags = [...contentBasedTags, ...platformTags];
+    const uniqueTags = [...new Set(allTags)].filter(tag => tag && tag.trim());
     
-    // Remove duplicates and return
-    const uniqueTags = [...new Set(tags)];
-    console.log(`🏷️ Final tag count: ${uniqueTags.length} tags:`, uniqueTags);
+    console.log(`🏷️ Final tag generation result:`);
+    console.log(`   🤖 AI-generated: ${aiTags.length} tags: [${aiTags.join(', ')}]`);
+    console.log(`   🔄 Fallback: ${fallbackTags.length} tags: [${fallbackTags.join(', ')}]`);
+    console.log(`   📱 Platform: ${platformTags.length} tags: [${platformTags.join(', ')}]`);
+    console.log(`   ✅ Final: ${uniqueTags.length} tags: [${uniqueTags.join(', ')}]`);
+    
     return uniqueTags;
   }
 
@@ -1724,24 +1792,37 @@ Return only the extracted text, preserving line breaks and formatting where poss
 
       console.log(`🤖 Sending content to OpenAI for tag analysis (${contentToAnalyze.length} chars)`);
 
-      const prompt = `Based on the following content, generate 5-8 relevant descriptive tags that capture the main topics, themes, emotions, and content type. Focus on:
+      const prompt = `Analyze this multimedia content and generate 5-8 highly specific, descriptive tags that capture the actual content, NOT platform or generic media terms.
 
-1. Content topics and themes (e.g., comedy, technology, education, sports, music)
-2. Emotions and tone (e.g., funny, serious, uplifting, dramatic)
-3. Content style (e.g., tutorial, interview, review, entertainment)
-4. Target audience or genre
+FOCUS ON:
+• Specific topics, subjects, or themes discussed
+• Emotions, tone, and mood (funny, serious, dramatic, uplifting)
+• Content style (tutorial, interview, review, documentary, vlog)
+• Specific people, brands, or entities mentioned
+• Genre or category (comedy, technology, cooking, sports, etc.)
+• Target audience or expertise level
+• Cultural context or geographic relevance
+
+AVOID GENERIC TERMS LIKE:
+❌ "video", "audio", "youtube", "social", "content", "media"
+❌ Platform names unless specifically relevant to the content topic
+
+EXAMPLES OF GOOD TAGS:
+✅ For Mr. Bean content: ["comedy", "rowan-atkinson", "british-humor", "physical-comedy", "awkward-situations"]
+✅ For cooking video: ["italian-cuisine", "pasta-making", "beginner-friendly", "traditional-recipes"]
+✅ For tech review: ["smartphone-review", "budget-devices", "performance-testing", "consumer-advice"]
 
 Content to analyze:
 ${contentToAnalyze}
 
-Return ONLY a JSON array of strings with the tags. Example: ["comedy", "entertainment", "funny", "british", "awkward-situations"]`;
+Return ONLY a JSON array of specific, meaningful tags. No explanations.`;
 
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4',
         messages: [
           {
             role: 'system',
-            content: 'You are an expert content analyst. Generate specific, relevant tags that accurately describe content themes, topics, and characteristics. Focus on meaningful descriptors rather than generic platform terms.'
+            content: 'You are an expert content analyst specializing in multimedia tagging. Generate specific, meaningful tags that describe the actual content themes, topics, and characteristics. Avoid generic platform or media type terms. Focus on what makes this content unique and searchable.'
           },
           {
             role: 'user',
@@ -1759,14 +1840,26 @@ Return ONLY a JSON array of strings with the tags. Example: ["comedy", "entertai
       try {
         const tags = JSON.parse(responseText);
         if (Array.isArray(tags)) {
-          // Filter and clean tags
+          // Filter and clean tags - be more strict about quality
           const cleanedTags = tags
             .filter(tag => tag && typeof tag === 'string' && tag.trim())
             .map(tag => tag.trim().toLowerCase())
-            .filter(tag => tag.length > 1 && tag.length < 30) // Reasonable length limits
+            .filter(tag => {
+              // More strict filtering to ensure quality tags
+              if (tag.length < 2 || tag.length > 30) return false;
+              
+              // Reject generic media terms
+              const genericTerms = ['video', 'audio', 'youtube', 'instagram', 'social', 'media', 'content', 'digital', 'online'];
+              if (genericTerms.some(generic => tag === generic)) return false;
+              
+              // Reject single letters or numbers
+              if (/^[a-z0-9]$/.test(tag)) return false;
+              
+              return true;
+            })
             .slice(0, 8); // Limit to 8 tags
           
-          console.log(`✅ Generated ${cleanedTags.length} AI tags:`, cleanedTags);
+          console.log(`✅ Generated ${cleanedTags.length} high-quality AI tags:`, cleanedTags);
           return cleanedTags;
         } else {
           console.log('⚠️ OpenAI returned non-array response');

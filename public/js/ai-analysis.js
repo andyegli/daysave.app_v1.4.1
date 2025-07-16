@@ -628,6 +628,10 @@ async function showAIAnalysisModal(contentId) {
     if (result.success) {
       console.log('✅ Success! Rendering modal with analysis data...');
       console.log('🎨 Calling renderAIAnalysisModal...');
+      
+      // Store analysis data globally for copy all functionality
+      currentModalAnalysisData = result;
+      
       const modalHtml = renderAIAnalysisModal(result);
       console.log('🎨 Modal HTML generated:', modalHtml ? 'YES' : 'NO');
       console.log('🎨 Modal HTML length:', modalHtml?.length);
@@ -780,20 +784,22 @@ function renderAIAnalysisModal(result) {
   if (summary) {
     const wordCount = summary.split(' ').length;
     html += `
-      <div class="mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="fw-bold mb-0">
-            <i class="bi bi-file-earmark-text me-2"></i>Summary
-          </h6>
-          <div>
-            <span class="badge bg-light text-dark me-2">${wordCount} words</span>
-            <button class="btn btn-sm btn-outline-primary" onclick="copyToClipboard('${summary.replace(/'/g, "\\'")}')">
-              <i class="bi bi-clipboard me-1"></i>Copy
-            </button>
+      <div class="mb-4 border border-primary rounded">
+        <div class="bg-primary text-white p-3 rounded-top">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0">
+              <i class="bi bi-file-earmark-text me-2"></i>AI Summary
+            </h5>
+            <div>
+              <span class="badge bg-light text-primary me-2">${wordCount} words</span>
+              <button class="btn btn-sm btn-outline-light" onclick="copyToClipboard('${summary.replace(/'/g, "\\'")}')">
+                <i class="bi bi-clipboard me-1"></i>Copy
+              </button>
+            </div>
           </div>
         </div>
-        <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto; line-height: 1.6; word-wrap: break-word;">
-          <p class="mb-0" style="font-family: system-ui, -apple-system, sans-serif; font-size: 0.95rem;">${summary}</p>
+        <div class="p-4 bg-light" style="max-height: 250px; overflow-y: auto; line-height: 1.7; word-wrap: break-word;">
+          <p class="mb-0 lead" style="font-family: system-ui, -apple-system, sans-serif; font-size: 1rem; color: #333;">${summary}</p>
         </div>
       </div>
     `;
@@ -2005,24 +2011,24 @@ function renderTranscriptionSection(text, title, icon) {
   const estimatedReadingTime = Math.ceil(wordCount / 200);
   
   return `
-    <div class="mb-4">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h6 class="fw-bold mb-0">
-          <i class="${icon} me-2"></i>${title}
-        </h6>
-        <button class="btn btn-sm btn-outline-primary" onclick="copyToClipboard('${text.replace(/'/g, "\\'")}')">
-          <i class="bi bi-clipboard me-1"></i>Copy
-        </button>
-      </div>
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <div>
-          <span class="badge bg-primary me-2">${wordCount} words</span>
-          <span class="badge bg-secondary me-2">${sentences.length} sentences</span>
-          <span class="badge bg-info">~${estimatedReadingTime} min read</span>
+    <div class="mb-4 border border-success rounded">
+      <div class="bg-success text-white p-3 rounded-top">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="fw-bold mb-0">
+            <i class="${icon} me-2"></i>${title}
+          </h5>
+          <button class="btn btn-sm btn-outline-light" onclick="copyToClipboard('${text.replace(/'/g, "\\'")}')">
+            <i class="bi bi-clipboard me-1"></i>Copy
+          </button>
+        </div>
+        <div class="mt-2">
+          <span class="badge bg-light text-success me-2">${wordCount} words</span>
+          <span class="badge bg-light text-success me-2">${sentences.length} sentences</span>
+          <span class="badge bg-light text-success">~${estimatedReadingTime} min read</span>
         </div>
       </div>
-      <div class="border rounded p-3 bg-light" style="max-height: 400px; overflow-y: auto; line-height: 1.6; word-wrap: break-word; white-space: pre-wrap;">
-        <p class="mb-0" style="font-family: system-ui, -apple-system, sans-serif; font-size: 0.95rem;">${text}</p>
+      <div class="p-4 bg-light" style="max-height: 350px; overflow-y: auto; line-height: 1.7; word-wrap: break-word; white-space: pre-wrap;">
+        <p class="mb-0" style="font-family: 'Georgia', serif; font-size: 0.95rem; color: #333;">${text}</p>
       </div>
     </div>
   `;
@@ -2381,15 +2387,28 @@ function createAIAnalysisModal() {
   modal.innerHTML = `
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
       <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">AI Analysis Results</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">
+            <i class="bi bi-robot me-2"></i>AI Analysis Results
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-          <!-- Content will be populated dynamically -->
+        <div class="modal-body p-0">
+          <div class="p-4" style="max-height: 75vh; overflow-y: auto; overflow-x: hidden;">
+            <!-- Content will be populated dynamically -->
+          </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <div class="modal-footer bg-light">
+          <div class="text-muted small me-auto">
+            <i class="bi bi-info-circle me-1"></i>
+            Scroll to view all analysis results
+          </div>
+          <button type="button" class="btn btn-outline-primary me-2" onclick="copyAllToClipboard()">
+            <i class="bi bi-clipboard me-1"></i>Copy All
+          </button>
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+            <i class="bi bi-check-lg me-1"></i>Close
+          </button>
         </div>
       </div>
     </div>
@@ -2493,9 +2512,105 @@ function copyToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => {
     // Show success feedback
     console.log('Text copied to clipboard');
+    
+    // Show toast notification
+    showToastNotification('Text copied to clipboard!', 'success');
   }).catch(err => {
     console.error('Failed to copy text: ', err);
+    showToastNotification('Failed to copy text', 'error');
   });
+}
+
+// Global variable to store current modal content for copying
+let currentModalAnalysisData = null;
+
+function copyAllToClipboard() {
+  if (!currentModalAnalysisData) {
+    showToastNotification('No analysis data to copy', 'warning');
+    return;
+  }
+  
+  // Create a comprehensive text version of all analysis results
+  let text = '=== AI ANALYSIS RESULTS ===\n\n';
+  
+  // Add title
+  const title = getGeneratedTitleFromResult(currentModalAnalysisData);
+  if (title) {
+    text += `TITLE: ${title}\n\n`;
+  }
+  
+  // Add summary
+  const summary = getSummaryFromResult(currentModalAnalysisData);
+  if (summary) {
+    text += `SUMMARY:\n${summary}\n\n`;
+  }
+  
+  // Add transcription
+  const transcription = getTranscriptionFromResult(currentModalAnalysisData);
+  if (transcription) {
+    text += `TRANSCRIPTION:\n${transcription}\n\n`;
+  }
+  
+  // Add sentiment
+  const analysis = currentModalAnalysisData.analysis;
+  if (analysis.sentiment) {
+    text += `SENTIMENT: ${analysis.sentiment.sentiment?.toUpperCase() || 'UNKNOWN'}`;
+    if (analysis.sentiment.confidence) {
+      text += ` (${Math.round(analysis.sentiment.confidence * 100)}% confidence)`;
+    }
+    text += '\n\n';
+  }
+  
+  // Add category and tags
+  const category = analysis.category || currentModalAnalysisData.category;
+  if (category) {
+    text += `CATEGORY: ${category}\n`;
+  }
+  
+  const tags = analysis.tags || currentModalAnalysisData.tags || [];
+  if (tags.length > 0) {
+    text += `TAGS: ${tags.join(', ')}\n\n`;
+  }
+  
+  // Add technical info
+  text += `MEDIA TYPE: ${currentModalAnalysisData.mediaType?.toUpperCase() || 'UNKNOWN'}\n`;
+  if (analysis.duration) {
+    text += `DURATION: ${formatDuration(analysis.duration)}\n`;
+  }
+  
+  text += `\nGenerated by DaySave AI Analysis - ${new Date().toLocaleString()}`;
+  
+  copyToClipboard(text);
+}
+
+function showToastNotification(message, type = 'info') {
+  // Create toast notification element
+  const toast = document.createElement('div');
+  toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} position-fixed`;
+  toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; opacity: 0; transition: opacity 0.3s;';
+  toast.innerHTML = `
+    <div class="d-flex align-items-center">
+      <i class="bi ${type === 'success' ? 'bi-check-circle' : type === 'error' ? 'bi-exclamation-circle' : 'bi-info-circle'} me-2"></i>
+      ${message}
+    </div>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  // Fade in
+  setTimeout(() => {
+    toast.style.opacity = '1';
+  }, 10);
+  
+  // Fade out and remove
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 300);
+  }, 3000);
 }
 
 // Global functions for backward compatibility

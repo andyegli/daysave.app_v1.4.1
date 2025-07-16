@@ -341,12 +341,16 @@ class BackwardCompatibilityService {
       legacyResult.generatedTitle = data.generatedTitle;
     }
 
-    // Handle auto tags
-    if (data.auto_tags) {
+    // Handle auto tags - prioritize AI-generated tags over generic platform tags
+    if (data.tags && data.tags.length > 0) {
+      // Use AI-generated tags (from MultimediaAnalyzer.generateTags)
+      legacyResult.auto_tags = data.tags;
+    } else if (data.auto_tags && data.auto_tags.length > 0) {
+      // Fallback to basic auto_tags if no AI tags available
       legacyResult.auto_tags = data.auto_tags;
     }
 
-    // Handle tags (from AI analysis)
+    // Handle tags (from AI analysis) - ensure compatibility
     if (data.tags) {
       legacyResult.tags = data.tags;
     }
