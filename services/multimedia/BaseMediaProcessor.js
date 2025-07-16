@@ -162,21 +162,170 @@ class BaseMediaProcessor {
   }
 
   /**
-   * Update processing progress
+   * Update processing progress with enhanced logging
    * @protected
    * @param {number} progress - Progress percentage (0-100)
    * @param {string} message - Progress message
+   * @param {Object} details - Additional details about the progress
    */
-  updateProgress(progress, message = '') {
+  updateProgress(progress, message = '', details = {}) {
     this.currentProgress = Math.min(100, Math.max(0, progress));
     
     if (this.progressCallback) {
-      this.progressCallback(this.currentProgress, message, this.processorType);
+      this.progressCallback(this.currentProgress, message, this.processorType, details);
     }
     
     if (this.enableLogging && message) {
-      console.log(`📊 ${this.processorType} Progress: ${this.currentProgress}% - ${message}`);
+      const timestamp = new Date().toISOString().substring(11, 23);
+      console.log(`${timestamp} 📊 ${this.processorType}: ${this.currentProgress}% - ${message}`);
+      
+      // Log additional details if provided
+      if (details.bytesProcessed && details.totalBytes) {
+        const percentage = (details.bytesProcessed / details.totalBytes * 100).toFixed(1);
+        console.log(`        📈 Data: ${this.formatBytes(details.bytesProcessed)}/${this.formatBytes(details.totalBytes)} (${percentage}%)`);
+      }
+      
+      if (details.itemsProcessed && details.totalItems) {
+        console.log(`        🔢 Items: ${details.itemsProcessed}/${details.totalItems}`);
+      }
+      
+      if (details.estimatedTimeRemaining) {
+        console.log(`        ⏱️  ETA: ${this.formatDuration(details.estimatedTimeRemaining)}`);
+      }
     }
+  }
+
+  /**
+   * Log processing step with details
+   * @protected
+   * @param {string} step - Step name
+   * @param {string} status - Status (started, progress, completed, failed)
+   * @param {Object} details - Step details
+   */
+  logStep(step, status, details = {}) {
+    if (!this.enableLogging) return;
+    
+    const timestamp = new Date().toISOString().substring(11, 23);
+    const icons = {
+      started: '🔄',
+      progress: '⏳',
+      completed: '✅',
+      failed: '❌',
+      warning: '⚠️'
+    };
+    
+    const icon = icons[status] || 'ℹ️';
+    console.log(`${timestamp} ${icon} ${this.processorType} - ${step}: ${status}`);
+    
+    // Log step-specific details
+    if (details.description) {
+      console.log(`        📝 ${details.description}`);
+    }
+    
+    if (details.inputFile) {
+      console.log(`        📁 Input: ${details.inputFile}`);
+    }
+    
+    if (details.outputFile) {
+      console.log(`        📤 Output: ${details.outputFile}`);
+    }
+    
+    if (details.duration) {
+      console.log(`        ⏱️  Duration: ${this.formatDuration(details.duration)}`);
+    }
+    
+    if (details.result) {
+      this.logStepResult(step, details.result);
+    }
+    
+    if (details.error) {
+      console.log(`        💥 Error: ${details.error}`);
+    }
+  }
+
+  /**
+   * Log step-specific results
+   * @protected
+   * @param {string} step - Step name
+   * @param {Object} result - Step result
+   */
+  logStepResult(step, result) {
+    const indent = '        ';
+    
+    switch (step.toLowerCase()) {
+      case 'metadata_extraction':
+        if (result.format) console.log(`${indent}📝 Format: ${result.format}`);
+        if (result.duration) console.log(`${indent}⏱️  Duration: ${this.formatDuration(result.duration * 1000)}`);
+        if (result.dimensions) console.log(`${indent}📐 Dimensions: ${result.dimensions.width}x${result.dimensions.height}`);
+        if (result.bitrate) console.log(`${indent}📊 Bitrate: ${this.formatBitrate(result.bitrate)}`);
+        break;
+        
+      case 'transcription':
+        if (result.wordCount) console.log(`${indent}📝 Words: ${result.wordCount}`);
+        if (result.confidence) console.log(`${indent}🎯 Confidence: ${(result.confidence * 100).toFixed(1)}%`);
+        if (result.language) console.log(`${indent}🌍 Language: ${result.language}`);
+        break;
+        
+      case 'object_detection':
+        if (result.objectCount) console.log(`${indent}🔍 Objects: ${result.objectCount}`);
+        if (result.avgConfidence) console.log(`${indent}🎯 Avg Confidence: ${(result.avgConfidence * 100).toFixed(1)}%`);
+        break;
+        
+      case 'thumbnail_generation':
+        if (result.count) console.log(`${indent}🖼️  Thumbnails: ${result.count}`);
+        if (result.sizes) console.log(`${indent}📏 Sizes: ${result.sizes.join(', ')}`);
+        break;
+        
+      case 'quality_analysis':
+        if (result.overall) console.log(`${indent}⭐ Overall: ${result.overall}`);
+        if (result.resolution) console.log(`${indent}📐 Resolution: ${result.resolution}`);
+        if (result.clarity) console.log(`${indent}🔍 Clarity: ${result.clarity}`);
+        break;
+        
+      default:
+        if (result.message) console.log(`${indent}📄 ${result.message}`);
+        if (result.count !== undefined) console.log(`${indent}🔢 Count: ${result.count}`);
+        if (result.size !== undefined) console.log(`${indent}📦 Size: ${this.formatBytes(result.size)}`);
+    }
+  }
+
+  /**
+   * Format bytes for display
+   * @protected
+   * @param {number} bytes - Bytes to format
+   * @returns {string} Formatted string
+   */
+  formatBytes(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+  }
+
+  /**
+   * Format duration for display
+   * @protected
+   * @param {number} ms - Milliseconds to format
+   * @returns {string} Formatted string
+   */
+  formatDuration(ms) {
+    if (ms < 1000) return `${ms}ms`;
+    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return `${minutes}m ${seconds}s`;
+  }
+
+  /**
+   * Format bitrate for display
+   * @protected
+   * @param {number} bitrate - Bitrate in bps
+   * @returns {string} Formatted string
+   */
+  formatBitrate(bitrate) {
+    if (bitrate < 1000) return `${bitrate} bps`;
+    if (bitrate < 1000000) return `${(bitrate / 1000).toFixed(1)} Kbps`;
+    return `${(bitrate / 1000000).toFixed(1)} Mbps`;
   }
 
   /**
@@ -418,4 +567,4 @@ class BaseMediaProcessor {
   }
 }
 
-module.exports = BaseMediaProcessor; 
+module.exports = BaseMediaProcessor;

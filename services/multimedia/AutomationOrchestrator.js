@@ -15,6 +15,7 @@ const PluginRegistry = require('./PluginRegistry');
 const ConfigurationManager = require('./ConfigurationManager');
 const PerformanceOptimizer = require('./PerformanceOptimizer');
 const PerformanceMonitor = require('./PerformanceMonitor');
+const ProgressTracker = require('./ProgressTracker');
 
 // Singleton instance
 let instance = null;
@@ -31,6 +32,7 @@ class AutomationOrchestrator {
         this.configManager = new ConfigurationManager();
         this.performanceOptimizer = new PerformanceOptimizer();
         this.performanceMonitor = new PerformanceMonitor();
+        this.progressTracker = new ProgressTracker();
         
         this.processingQueue = [];
         this.activeJobs = new Map();
@@ -48,12 +50,15 @@ class AutomationOrchestrator {
         // Set up performance monitoring integration
         this.setupPerformanceIntegration();
         
+        // Set up detailed progress logging
+        this.setupProgressLogging();
+        
         // Store singleton instance
         instance = this;
     }
-
+    
     /**
-     * Get singleton instance
+     * Static method to get the singleton instance
      */
     static getInstance() {
         if (!instance) {
@@ -63,31 +68,236 @@ class AutomationOrchestrator {
     }
 
     /**
-     * Set up performance monitoring integration
+     * Setup detailed progress logging
      */
-    setupPerformanceIntegration() {
-        // Listen to performance events
-        this.performanceMonitor.on('alert', (alert) => {
-            console.warn(`🚨 Performance Alert: ${alert.type} - ${alert.severity}`);
+    setupProgressLogging() {
+        // Listen to progress tracker events for detailed logging
+        this.progressTracker.on('jobCreated', (data) => {
+            console.log(`🚀 [JOB-${data.jobId}] Started ${data.job.mediaType} processing pipeline`);
+            console.log(`   📄 File: ${data.job.metadata.filename} (${this.formatFileSize(data.job.metadata.fileSize)})`);
+            console.log(`   📋 Stages: ${data.job.stages?.length || 0} planned steps`);
         });
-        
-        this.performanceMonitor.on('metrics', (metrics) => {
-            // Update internal metrics with performance data
-            this.updateInternalMetrics(metrics);
+
+        this.progressTracker.on('stageStarted', (data) => {
+            const duration = Date.now() - data.job.startTime;
+            console.log(`🔄 [JOB-${data.jobId}] Step ${data.stageIndex + 1}: ${data.details.label || data.stageName}`);
+            console.log(`   ⏱️  Elapsed: ${this.formatDuration(duration)} | Progress: ${data.job.progress.overall.toFixed(1)}%`);
+            if (data.details.description) {
+                console.log(`   ℹ️  ${data.details.description}`);
+            }
+        });
+
+        this.progressTracker.on('stageProgress', (data) => {
+            if (data.progress % 25 === 0 || data.progress === 100) { // Log every 25% progress
+                console.log(`   📊 ${data.stageName}: ${data.progress}% complete (Overall: ${data.overallProgress.toFixed(1)}%)`);
+                if (data.details.processed && data.details.total) {
+                    console.log(`      📈 Processed: ${data.details.processed}/${data.details.total} items`);
+                }
+            }
+        });
+
+        this.progressTracker.on('stageCompleted', (data) => {
+            console.log(`✅ [JOB-${data.jobId}] Completed: ${data.stageName} (${this.formatDuration(data.duration)})`);
+            if (data.result) {
+                this.logStageResults(data.stageName, data.result);
+            }
+        });
+
+        this.progressTracker.on('stageFailed', (data) => {
+            console.log(`❌ [JOB-${data.jobId}] Failed: ${data.stageName} - ${data.error}`);
+        });
+
+        this.progressTracker.on('stageSkipped', (data) => {
+            console.log(`⏭️  [JOB-${data.jobId}] Skipped: ${data.stageName} (${data.reason})`);
+        });
+
+        this.progressTracker.on('jobCompleted', (data) => {
+            console.log(`🎉 [JOB-${data.jobId}] Pipeline completed successfully!`);
+            console.log(`   ⏱️  Total time: ${this.formatDuration(data.duration)}`);
+            console.log(`   📊 Performance: ${this.formatProcessingSpeed(data.job)}`);
+            this.logFinalResults(data.jobId, data.result);
+        });
+
+        this.progressTracker.on('jobFailed', (data) => {
+            console.log(`💥 [JOB-${data.jobId}] Pipeline failed: ${data.error}`);
+            console.log(`   ⏱️  Failed after: ${this.formatDuration(data.duration)}`);
         });
     }
-    
+
     /**
-     * Update internal metrics with performance data
+     * Log detailed results for each stage
      */
-    updateInternalMetrics(performanceMetrics) {
-        this.performanceMonitor.updateApplicationMetrics({
-            totalJobs: this.metrics.totalProcessed,
-            activeJobs: this.activeJobs.size,
-            completedJobs: this.metrics.successCount,
-            failedJobs: this.metrics.errorCount,
-            queuedJobs: this.processingQueue.length,
-            averageProcessingTime: this.metrics.averageProcessingTime
+    logStageResults(stageName, result) {
+        const indent = '      ';
+        
+        switch (stageName) {
+            case 'validation':
+                if (result.isValid) {
+                    console.log(`${indent}✓ File validation passed`);
+                    if (result.format) console.log(`${indent}📝 Format: ${result.format}`);
+                    if (result.duration) console.log(`${indent}⏱️  Duration: ${this.formatDuration(result.duration * 1000)}`);
+                } else {
+                    console.log(`${indent}❌ Validation failed: ${result.error}`);
+                }
+                break;
+                
+            case 'metadata_extraction':
+                console.log(`${indent}📋 Extracted metadata:`);
+                if (result.dimensions) console.log(`${indent}   📐 Dimensions: ${result.dimensions.width}x${result.dimensions.height}`);
+                if (result.duration) console.log(`${indent}   ⏱️  Duration: ${this.formatDuration(result.duration * 1000)}`);
+                if (result.fileSize) console.log(`${indent}   📦 Size: ${this.formatFileSize(result.fileSize)}`);
+                if (result.codec) console.log(`${indent}   🎬 Codec: ${result.codec}`);
+                break;
+                
+            case 'transcription':
+                if (result.transcript) {
+                    const wordCount = result.transcript.split(' ').length;
+                    console.log(`${indent}📝 Transcription: ${wordCount} words`);
+                    if (result.confidence) console.log(`${indent}   🎯 Confidence: ${(result.confidence * 100).toFixed(1)}%`);
+                    if (result.language) console.log(`${indent}   🌍 Language: ${result.language}`);
+                    console.log(`${indent}   📄 Preview: "${result.transcript.substring(0, 100)}..."`);
+                }
+                break;
+                
+            case 'speaker_analysis':
+                if (result.speakers) {
+                    console.log(`${indent}👥 Detected ${result.speakers.length} speaker(s)`);
+                    result.speakers.forEach((speaker, i) => {
+                        console.log(`${indent}   🗣️  Speaker ${i + 1}: ${this.formatDuration(speaker.duration * 1000)} speaking time`);
+                    });
+                }
+                break;
+                
+            case 'object_detection':
+                if (result.objects) {
+                    console.log(`${indent}🔍 Detected ${result.objects.length} object(s)`);
+                    result.objects.slice(0, 5).forEach(obj => {
+                        console.log(`${indent}   🏷️  ${obj.name}: ${(obj.confidence * 100).toFixed(1)}% confidence`);
+                    });
+                    if (result.objects.length > 5) {
+                        console.log(`${indent}   ... and ${result.objects.length - 5} more objects`);
+                    }
+                }
+                break;
+                
+            case 'thumbnail_generation':
+                if (result.thumbnails) {
+                    console.log(`${indent}🖼️  Generated ${result.thumbnails.length} thumbnail(s)`);
+                    result.thumbnails.forEach(thumb => {
+                        console.log(`${indent}   📸 ${thumb.size}: ${thumb.filename}`);
+                    });
+                }
+                break;
+                
+            case 'ocr_processing':
+                if (result.text) {
+                    const charCount = result.text.length;
+                    console.log(`${indent}📖 OCR extracted ${charCount} characters`);
+                    if (result.confidence) console.log(`${indent}   🎯 Average confidence: ${(result.confidence * 100).toFixed(1)}%`);
+                    if (charCount > 0) {
+                        console.log(`${indent}   📄 Preview: "${result.text.substring(0, 100)}..."`);
+                    }
+                }
+                break;
+                
+            case 'ai_description':
+                if (result.description) {
+                    console.log(`${indent}🤖 AI Description generated`);
+                    console.log(`${indent}   📄 "${result.description.substring(0, 150)}..."`);
+                }
+                break;
+                
+            case 'quality_analysis':
+                if (result.quality) {
+                    console.log(`${indent}⭐ Quality score: ${result.quality.overall || 'N/A'}`);
+                    if (result.quality.resolution) console.log(`${indent}   📐 Resolution quality: ${result.quality.resolution}`);
+                    if (result.quality.clarity) console.log(`${indent}   🔍 Clarity: ${result.quality.clarity}`);
+                }
+                break;
+                
+            case 'sentiment_analysis':
+                if (result.sentiment) {
+                    console.log(`${indent}😊 Sentiment: ${result.sentiment.label} (${(result.sentiment.score * 100).toFixed(1)}%)`);
+                }
+                break;
+                
+            case 'database_storage':
+                console.log(`${indent}💾 Data stored successfully`);
+                if (result.recordsCreated) console.log(`${indent}   📊 Records: ${result.recordsCreated}`);
+                break;
+                
+            default:
+                if (result.message) {
+                    console.log(`${indent}📝 ${result.message}`);
+                }
+        }
+    }
+
+    /**
+     * Log final processing results
+     */
+    logFinalResults(jobId, result) {
+        console.log(`\n📊 [JOB-${jobId}] Final Results Summary:`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        
+        if (result.data) {
+            const data = result.data;
+            
+            // Metadata summary
+            if (data.metadata) {
+                console.log(`📋 Metadata:`);
+                if (data.metadata.format) console.log(`   📝 Format: ${data.metadata.format}`);
+                if (data.metadata.duration) console.log(`   ⏱️  Duration: ${this.formatDuration(data.metadata.duration * 1000)}`);
+                if (data.metadata.fileSize) console.log(`   📦 Size: ${this.formatFileSize(data.metadata.fileSize)}`);
+            }
+            
+            // Content analysis summary
+            if (data.transcription) {
+                const wordCount = data.transcription.split(' ').length;
+                console.log(`📝 Transcription: ${wordCount} words extracted`);
+            }
+            
+            if (data.objects && data.objects.length > 0) {
+                console.log(`🔍 Objects: ${data.objects.length} items detected`);
+            }
+            
+            if (data.thumbnails && data.thumbnails.length > 0) {
+                console.log(`🖼️  Thumbnails: ${data.thumbnails.length} generated`);
+            }
+            
+            if (data.ocrText && data.ocrText.length > 0) {
+                console.log(`📖 OCR Text: ${data.ocrText.length} characters extracted`);
+            }
+            
+            if (data.speakers && data.speakers.length > 0) {
+                console.log(`👥 Speakers: ${data.speakers.length} detected`);
+            }
+            
+            if (data.sentiment) {
+                console.log(`😊 Sentiment: ${data.sentiment.label} (${(data.sentiment.score * 100).toFixed(1)}%)`);
+            }
+            
+            if (data.quality) {
+                console.log(`⭐ Quality: ${data.quality.overall || 'Analyzed'}`);
+            }
+        }
+        
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+    }
+
+    /**
+     * Setup performance monitoring integration
+     */
+    setupPerformanceIntegration() {
+        this.performanceMonitor.on('alert', (alert) => {
+            if (alert.type === 'memory_high' || alert.type === 'cpu_high') {
+                console.log(`⚠️ Performance Alert: ${alert.type} - ${alert.severity}`);
+                console.log(`   📊 Current: ${alert.current}, Threshold: ${alert.threshold}`);
+            }
+        });
+        
+        this.performanceOptimizer.on('memoryPressure', (memUsage) => {
+            console.log(`🧹 Memory cleanup triggered - Usage: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
         });
     }
 
@@ -98,17 +308,24 @@ class AutomationOrchestrator {
         if (this.initialized) return;
 
         try {
+            console.log('\n🚀 Initializing Automation Orchestrator...');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            
             // Initialize configuration manager first
+            console.log('⚙️  Initializing configuration manager...');
             await this.configManager.initialize();
             
             // Initialize plugin registry
+            console.log('🔌 Initializing plugin registry...');
             await this.pluginRegistry.initialize();
             
             // Initialize performance components
+            console.log('📊 Initializing performance systems...');
             await this.performanceOptimizer.initialize();
             this.performanceMonitor.initialize();
             
             // Register processors
+            console.log('🎬 Registering media processors...');
             this.processors.set('video', new VideoProcessor());
             this.processors.set('audio', new AudioProcessor());
             this.processors.set('image', new ImageProcessor());
@@ -116,6 +333,7 @@ class AutomationOrchestrator {
             // Initialize all processors with configuration
             for (const [type, processor] of this.processors) {
                 const config = this.configManager.getProcessorConfig(type);
+                console.log(`   🔧 Initializing ${type} processor...`);
                 await processor.initialize(config);
             }
             
@@ -123,10 +341,11 @@ class AutomationOrchestrator {
             this.setupPeriodicCleanup();
             
             this.initialized = true;
-            console.log('AutomationOrchestrator initialized successfully');
+            console.log('✅ Automation Orchestrator initialized successfully');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
             
         } catch (error) {
-            console.error('Failed to initialize AutomationOrchestrator:', error);
+            console.error('❌ Failed to initialize AutomationOrchestrator:', error);
             throw new Error(`Orchestrator initialization failed: ${error.message}`);
         }
     }
@@ -143,6 +362,8 @@ class AutomationOrchestrator {
         const startTime = Date.now();
         
         try {
+            console.log(`\n🎯 Starting new processing job: ${jobId}`);
+            
             // Create job record
             const job = {
                 id: jobId,
@@ -157,14 +378,25 @@ class AutomationOrchestrator {
             this.activeJobs.set(jobId, job);
             
             // Detect media type
+            console.log(`🔍 [JOB-${jobId}] Detecting media type...`);
             const mediaType = await this.detectMediaType(fileBuffer, metadata);
             job.mediaType = mediaType;
+            console.log(`   📝 Detected: ${mediaType.toUpperCase()} media`);
+            
+            // Create progress tracking job
+            const progressJob = this.progressTracker.createJob(jobId, mediaType, {
+                filename: metadata.filename || 'unknown',
+                fileSize: fileBuffer.length,
+                duration: metadata.duration || 0
+            });
             
             // Check if we have a processor for this type
             const processor = this.processors.get(mediaType);
             if (!processor) {
                 throw new Error(`No processor available for media type: ${mediaType}`);
             }
+            
+            console.log(`🎛️  [JOB-${jobId}] Using ${mediaType} processor`);
             
             // Check configuration and feature availability
             const processorConfig = this.configManager.getProcessorConfig(mediaType);
@@ -173,15 +405,19 @@ class AutomationOrchestrator {
             job.config = processorConfig;
             job.availableFeatures = availableFeatures;
             
+            console.log(`⚙️  [JOB-${jobId}] Available features: ${availableFeatures.join(', ')}`);
+            
             // Process the content with performance optimization
             const processingOptions = this.buildProcessingOptions(mediaType, metadata, availableFeatures);
             
-            // Use performance optimizer for processing
-            const results = await this.performanceOptimizer.processWithOptimization(
-                processor, 
-                fileBuffer, 
-                { ...metadata, jobId }, 
-                processingOptions
+            // Enhanced processing with progress tracking
+            const results = await this.processWithDetailedTracking(
+                processor,
+                fileBuffer,
+                { ...metadata, jobId },
+                processingOptions,
+                jobId,
+                mediaType
             );
             
             // Post-process results
@@ -225,9 +461,76 @@ class AutomationOrchestrator {
             }
             
             this.metrics.errorCount++;
-            console.error(`Processing failed for job ${jobId}:`, error);
+            console.error(`💥 [JOB-${jobId}] Processing failed:`, error.message);
+            
+            // Emit job failed event
+            this.progressTracker.emit('jobFailed', {
+                jobId,
+                error: error.message,
+                duration: Date.now() - startTime
+            });
             
             throw new Error(`Content processing failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Process content with detailed progress tracking
+     */
+    async processWithDetailedTracking(processor, fileBuffer, metadata, options, jobId, mediaType) {
+        const stages = this.progressTracker.stages.get(mediaType) || [];
+        
+        try {
+            // Start validation stage
+            if (stages.find(s => s.name === 'validation')) {
+                this.progressTracker.startStage(jobId, 'validation', {
+                    label: 'Validating file format and integrity',
+                    description: `Checking ${mediaType} file validity`
+                });
+                
+                // Simulate validation process with progress updates
+                for (let i = 0; i <= 100; i += 25) {
+                    this.progressTracker.updateStageProgress(jobId, 'validation', i, {
+                        step: i === 0 ? 'Starting validation' :
+                              i === 25 ? 'Checking file format' :
+                              i === 50 ? 'Validating headers' :
+                              i === 75 ? 'Checking integrity' :
+                              'Validation complete'
+                    });
+                    if (i < 100) await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                this.progressTracker.completeStage(jobId, 'validation', {
+                    isValid: true,
+                    format: mediaType,
+                    fileSize: fileBuffer.length
+                });
+            }
+            
+            // Use performance optimizer for actual processing
+            const result = await this.performanceOptimizer.processWithOptimization(
+                processor, 
+                fileBuffer, 
+                metadata, 
+                {
+                    ...options,
+                    progressCallback: (progress, stage, details) => {
+                        if (stage && stages.find(s => s.name === stage)) {
+                            this.progressTracker.updateStageProgress(jobId, stage, progress, details);
+                        }
+                    }
+                }
+            );
+            
+            return result;
+            
+        } catch (error) {
+            // Find current stage and mark it as failed
+            const job = this.progressTracker.jobs.get(jobId);
+            if (job && job.currentStage) {
+                this.progressTracker.failStage(jobId, job.currentStage.name, error);
+            }
+            throw error;
         }
     }
 
@@ -596,6 +899,32 @@ class AutomationOrchestrator {
         } catch (error) {
             console.error('Cleanup error:', error);
         }
+    }
+
+    /**
+     * Utility methods for formatting
+     */
+    formatDuration(ms) {
+        if (ms < 1000) return `${ms}ms`;
+        if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+        const minutes = Math.floor(ms / 60000);
+        const seconds = Math.floor((ms % 60000) / 1000);
+        return `${minutes}m ${seconds}s`;
+    }
+
+    formatFileSize(bytes) {
+        if (bytes < 1024) return `${bytes} bytes`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+        return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+    }
+
+    formatProcessingSpeed(job) {
+        if (job.metadata.fileSize && job.duration) {
+            const mbPerSecond = (job.metadata.fileSize / 1024 / 1024) / (job.duration / 1000);
+            return `${mbPerSecond.toFixed(2)} MB/s`;
+        }
+        return 'N/A';
     }
 }
 

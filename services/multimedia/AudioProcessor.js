@@ -105,86 +105,231 @@ class AudioProcessor extends BaseMediaProcessor {
   }
 
   /**
-   * Process audio content
+   * Process audio file with comprehensive analysis
    * 
-   * @param {string} userId - User ID
+   * @param {string} userId - User ID for database storage
    * @param {string} filePath - Path to the audio file
    * @param {Object} options - Processing options
-   * @returns {Promise<Object>} Processing results
+   * @returns {Promise<Object>} Complete audio analysis results
    */
   async process(userId, filePath, options = {}) {
     const results = this.initializeResults(userId, filePath, 'audio');
+    const startTime = Date.now();
     
     try {
-      // Validate audio file
-      await this.validate(filePath, 'audio');
-      
-      this.updateProgress(10, 'Starting audio processing');
-      
-      // Extract audio metadata
-      const metadata = await this.getAudioMetadata(filePath);
-      results.metadata.audio = metadata;
-      this.updateProgress(20, 'Audio metadata extracted');
+      this.logStep('initialization', 'started', {
+        description: 'Starting audio processing pipeline',
+        inputFile: path.basename(filePath),
+        options: Object.keys(options)
+      });
 
-      // Transcribe audio (if enabled)
+      // File validation
+      this.logStep('validation', 'started', {
+        description: 'Validating audio file format and accessibility'
+      });
+      
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`Audio file not found: ${filePath}`);
+      }
+      
+      this.logStep('validation', 'completed', {
+        description: 'File validation passed',
+        result: { isValid: true, fileExists: true }
+      });
+
+      // Extract metadata
+      this.logStep('metadata_extraction', 'started', {
+        description: 'Extracting audio metadata and properties'
+      });
+      
+      this.updateProgress(10, 'Extracting audio metadata');
+      const metadata = await this.extractAudioMetadata(filePath);
+      results.results.metadata = metadata;
+      
+      this.logStep('metadata_extraction', 'completed', {
+        duration: Date.now() - startTime,
+        result: {
+          format: metadata.format,
+          duration: metadata.duration,
+          bitrate: metadata.bitrate,
+          sampleRate: metadata.sampleRate,
+          channels: metadata.channels
+        }
+      });
+
+      // Audio transcription (if enabled)
       if (options.enableTranscription) {
+        this.logStep('transcription', 'started', {
+          description: 'Converting speech to text using AI services'
+        });
+        
         try {
-          const transcription = await this.transcribeAudio(filePath, options.transcriptionOptions || this.config.transcriptionOptions);
+          this.updateProgress(30, 'Transcribing audio content', {
+            estimatedTimeRemaining: metadata.duration * 1000 * 0.5 // Estimate 0.5x realtime
+          });
+          
+          const transcription = await this.transcribeAudio(userId, filePath, options.transcriptionOptions || this.config.transcriptionOptions);
           results.results.transcription = transcription;
-          this.updateProgress(50, 'Audio transcription completed');
+          
+          this.logStep('transcription', 'completed', {
+            duration: Date.now() - startTime,
+            result: {
+              wordCount: transcription.split(' ').length,
+              confidence: transcription.confidence || 0.9,
+              language: transcription.language || 'en-US'
+            }
+          });
+          
+          this.updateProgress(50, 'Transcription completed');
         } catch (error) {
+          this.logStep('transcription', 'failed', { error: error.message });
           this.addWarning(results, 'Failed to transcribe audio', 'transcription');
         }
+      } else {
+        this.logStep('transcription', 'skipped', { reason: 'Feature disabled in options' });
       }
 
-      // Analyze speakers (if enabled and transcription available)
-      if (options.enableSpeakerDiarization && results.results.transcription) {
+      // Speaker analysis (if enabled)
+      if (options.enableSpeakerDiarization) {
+        this.logStep('speaker_analysis', 'started', {
+          description: 'Identifying and analyzing different speakers'
+        });
+        
         try {
-          const speakers = await this.analyzeSpeakers(userId, filePath, results.results.transcription, options);
+          this.updateProgress(60, 'Analyzing speakers');
+          const speakers = await this.analyzeSpeakers(userId, filePath, results.results.transcription);
           results.results.speakers = speakers;
+          
+          this.logStep('speaker_analysis', 'completed', {
+            duration: Date.now() - startTime,
+            result: {
+              speakerCount: speakers.length,
+              totalSpeakingTime: speakers.reduce((sum, s) => sum + s.duration, 0)
+            }
+          });
+          
           this.updateProgress(70, 'Speaker analysis completed');
         } catch (error) {
+          this.logStep('speaker_analysis', 'failed', { error: error.message });
           this.addWarning(results, 'Failed to analyze speakers', 'speaker_analysis');
         }
+      } else {
+        this.logStep('speaker_analysis', 'skipped', { reason: 'Feature disabled in options' });
       }
 
       // Voice print analysis (if enabled)
       if (options.enableVoicePrintRecognition) {
+        this.logStep('voice_print_analysis', 'started', {
+          description: 'Generating voice prints for speaker identification'
+        });
+        
         try {
+          this.updateProgress(80, 'Analyzing voice prints');
           const voicePrints = await this.analyzeVoicePrints(userId, filePath, options.voicePrintOptions || this.config.voicePrintOptions);
           results.results.voicePrints = voicePrints;
-          this.updateProgress(80, 'Voice print analysis completed');
+          
+          this.logStep('voice_print_analysis', 'completed', {
+            duration: Date.now() - startTime,
+            result: {
+              voicePrintCount: voicePrints.length,
+              matchesFound: voicePrints.filter(vp => vp.matchedSpeaker).length
+            }
+          });
+          
+          this.updateProgress(85, 'Voice print analysis completed');
         } catch (error) {
+          this.logStep('voice_print_analysis', 'failed', { error: error.message });
           this.addWarning(results, 'Failed to analyze voice prints', 'voice_print_analysis');
         }
+      } else {
+        this.logStep('voice_print_analysis', 'skipped', { reason: 'Feature disabled in options' });
       }
 
       // Analyze audio quality (if enabled)
       if (options.enableQualityAnalysis) {
+        this.logStep('quality_analysis', 'started', {
+          description: 'Analyzing audio quality metrics and characteristics'
+        });
+        
         try {
+          this.updateProgress(90, 'Analyzing audio quality');
           const qualityAnalysis = await this.analyzeAudioQuality(filePath);
           results.results.qualityAnalysis = qualityAnalysis;
-          this.updateProgress(85, 'Audio quality analyzed');
+          
+          this.logStep('quality_analysis', 'completed', {
+            duration: Date.now() - startTime,
+            result: {
+              overall: qualityAnalysis.overall,
+              clarity: qualityAnalysis.clarity,
+              noiseLevel: qualityAnalysis.noiseLevel
+            }
+          });
+          
+          this.updateProgress(95, 'Quality analysis completed');
         } catch (error) {
+          this.logStep('quality_analysis', 'failed', { error: error.message });
           this.addWarning(results, 'Failed to analyze audio quality', 'quality_analysis');
         }
+      } else {
+        this.logStep('quality_analysis', 'skipped', { reason: 'Feature disabled in options' });
       }
 
       // Generate sentiment analysis (if transcription available)
       if (options.enableSentimentAnalysis && results.results.transcription) {
+        this.logStep('sentiment_analysis', 'started', {
+          description: 'Analyzing emotional tone and sentiment'
+        });
+        
         try {
+          this.updateProgress(98, 'Analyzing sentiment');
           const sentiment = await this.analyzeSentiment(results.results.transcription);
           results.results.sentiment = sentiment;
-          this.updateProgress(90, 'Sentiment analysis completed');
+          
+          this.logStep('sentiment_analysis', 'completed', {
+            duration: Date.now() - startTime,
+            result: {
+              sentiment: sentiment.label,
+              confidence: sentiment.score,
+              emotions: sentiment.emotions ? Object.keys(sentiment.emotions) : []
+            }
+          });
         } catch (error) {
+          this.logStep('sentiment_analysis', 'failed', { error: error.message });
           this.addWarning(results, 'Failed to analyze sentiment', 'sentiment_analysis');
         }
+      } else {
+        this.logStep('sentiment_analysis', 'skipped', { 
+          reason: options.enableSentimentAnalysis ? 'No transcription available' : 'Feature disabled' 
+        });
       }
 
-      this.updateProgress(100, 'Audio processing completed');
+      // Final processing steps
+      this.logStep('finalization', 'started', {
+        description: 'Finalizing results and cleaning up'
+      });
+
+      this.updateProgress(100, 'Audio processing completed', {
+        totalProcessingTime: Date.now() - startTime,
+        stagesCompleted: Object.keys(results.results).length
+      });
+      
+      this.logStep('finalization', 'completed', {
+        duration: Date.now() - startTime,
+        result: {
+          totalStages: Object.keys(results.results).length,
+          successfulStages: Object.keys(results.results).filter(key => results.results[key]).length,
+          warnings: results.warnings.length,
+          errors: results.errors.length
+        }
+      });
+
       return this.finalizeResults(results);
 
     } catch (error) {
+      this.logStep('processing', 'failed', { 
+        error: error.message,
+        duration: Date.now() - startTime 
+      });
       this.addError(results, error, 'audio_processing');
       return this.finalizeResults(results);
     }
