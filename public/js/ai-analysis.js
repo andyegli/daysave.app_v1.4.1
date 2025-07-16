@@ -14,8 +14,12 @@
  * - Unified result formatting for consistent display across all processors
  */
 
+console.log('🔴 AI ANALYSIS SCRIPT LOADED - This should appear first!');
+console.log('🔴 Script timestamp:', new Date().toISOString());
+
 // AI Analysis functionality
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('🟢 DOM Content Loaded - AI Analysis script initializing...');
   
   // Initialize AI analysis indicators for all content items
   initializeAIIndicators();
@@ -450,6 +454,14 @@ function displayNoAnalysisIndicator(contentId) {
  */
 function setupAIAnalysisModal() {
   console.log('🔧 Setting up AI analysis modal handlers...');
+  
+  // Debug: Check what AI analysis buttons exist on the page
+  const aiButtons = document.querySelectorAll('.ai-analysis-btn');
+  console.log('🔍 Found AI analysis buttons:', aiButtons.length);
+  aiButtons.forEach((btn, index) => {
+    console.log(`🔍 Button ${index}:`, btn);
+    console.log(`🔍 Button ${index} data-id:`, btn.getAttribute('data-id'));
+  });
   
   // Handle modal trigger (legacy class)
   document.addEventListener('click', function(e) {
