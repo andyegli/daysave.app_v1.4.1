@@ -66,9 +66,65 @@ const sessionStore = new SequelizeStore({
   expiration: 24 * 60 * 60 * 1000  // The maximum age (in milliseconds) of a valid session.
 });
 
-// Sync database models
-db.sequelize.sync().then(() => {
-  console.log('Database synced');
+/**
+ * Check database connectivity before attempting sync
+ */
+async function checkDatabaseConnection() {
+  try {
+    await db.sequelize.authenticate();
+    console.log('✅ Database connection has been established successfully.');
+    return true;
+  } catch (error) {
+    console.error('\n❌ DATABASE CONNECTION FAILED');
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    if (error.name === 'SequelizeConnectionRefusedError' || error.original?.code === 'ECONNREFUSED') {
+      console.error('🔴 MySQL database server is not running');
+      console.error('');
+      console.error('💡 To fix this issue, please start your MySQL server:');
+      console.error('   • Using Homebrew: brew services start mysql');
+      console.error('   • Using XAMPP: Start the MySQL service in XAMPP control panel');
+      console.error('   • Using MAMP: Start the MySQL server in MAMP');
+      console.error('   • Manual start: sudo /usr/local/mysql/support-files/mysql.server start');
+      console.error('');
+      console.error('📋 Current database configuration:');
+      console.error(`   • Host: ${process.env.DB_HOST || 'localhost'}`);
+      console.error(`   • Port: ${process.env.DB_PORT || '3306'}`);
+      console.error(`   • Database: ${process.env.DB_NAME || 'daysave_v141'}`);
+      console.error(`   • User: ${process.env.DB_USER || 'root'}`);
+    } else if (error.name === 'SequelizeAccessDeniedError') {
+      console.error('🔴 Database authentication failed');
+      console.error('');
+      console.error('💡 Please check your database credentials in .env file:');
+      console.error('   • DB_USER (current: ' + (process.env.DB_USER || 'root') + ')');
+      console.error('   • DB_PASSWORD');
+      console.error('   • DB_NAME (current: ' + (process.env.DB_NAME || 'daysave_v141') + ')');
+    } else {
+      console.error('🔴 Database connection error:', error.message);
+      console.error('');
+      console.error('💡 Please check:');
+      console.error('   • Database server is running');
+      console.error('   • Connection settings in .env file');
+      console.error('   • Network connectivity');
+    }
+    
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('');
+    return false;
+  }
+}
+
+// Check database connection first
+checkDatabaseConnection().then(async (connected) => {
+  if (!connected) {
+    console.error('❌ Cannot start application without database connection');
+    process.exit(1);
+  }
+
+  // Sync database models
+  return db.sequelize.sync();
+}).then(() => {
+  console.log('✅ Database synced');
 
   // Sync session store
   return sessionStore.sync();
@@ -345,7 +401,39 @@ db.sequelize.sync().then(() => {
   });
 
 }).catch(err => {
-  console.error('Failed to sync database or session store:', err);
+  console.error('\n❌ APPLICATION STARTUP FAILED');
+  console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
+  if (err.name && err.name.includes('Sequelize')) {
+    console.error('🔴 Database synchronization failed:', err.message);
+    console.error('');
+    console.error('💡 This could be due to:');
+    console.error('   • Database schema conflicts');
+    console.error('   • Missing database tables');
+    console.error('   • Insufficient database permissions');
+    console.error('   • Database version compatibility issues');
+    console.error('');
+    console.error('🔧 Try running database migrations:');
+    console.error('   npx sequelize-cli db:migrate');
+  } else if (err.message && err.message.includes('session')) {
+    console.error('🔴 Session store initialization failed:', err.message);
+    console.error('');
+    console.error('💡 This could be due to:');
+    console.error('   • Session table creation issues');
+    console.error('   • Database permission problems');
+    console.error('   • Invalid session configuration');
+  } else {
+    console.error('🔴 Unknown startup error:', err.message);
+    console.error('');
+    console.error('💡 Please check:');
+    console.error('   • All environment variables are set correctly');
+    console.error('   • All required services are running');
+    console.error('   • Application logs for more details');
+  }
+  
+  console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.error('');
+  console.error('❌ Exiting application...');
   process.exit(1);
 });
 

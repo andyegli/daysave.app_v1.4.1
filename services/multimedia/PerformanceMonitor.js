@@ -154,7 +154,8 @@ class PerformanceMonitor extends EventEmitter {
     this.metrics.system.cpu = {
       usage: await this.getCPUUsage(),
       cores: os.cpus().length,
-      loadAverage: os.loadavg()
+      loadAverage: os.loadavg(),
+      processUsage: await this.getProcessCPUUsage() // Separate process-specific CPU usage
     };
     
     // Load average
@@ -170,22 +171,47 @@ class PerformanceMonitor extends EventEmitter {
   }
   
   /**
-   * Get CPU usage percentage
+   * Get CPU usage percentage using load average (more accurate for system-wide usage)
    */
   async getCPUUsage() {
-    const startUsage = process.cpuUsage();
-    const startTime = process.hrtime();
+    // Use OS load average for system-wide CPU usage estimation
+    // Load average represents the average load over 1, 5, and 15 minutes
+    const loadAvg = os.loadavg();
+    const cpuCount = os.cpus().length;
     
-    // Wait a short time to measure
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Use 1-minute load average and normalize by CPU count
+    // Convert to percentage (load of 1.0 = 100% of one CPU core)
+    const systemLoad = (loadAvg[0] / cpuCount) * 100;
     
-    const endUsage = process.cpuUsage(startUsage);
-    const endTime = process.hrtime(startTime);
+    // Cap at 100% and ensure it's not negative
+    return Math.max(0, Math.min(100, systemLoad));
+  }
+
+  /**
+   * Get Node.js process specific CPU usage (for debugging purposes)
+   */
+  async getProcessCPUUsage() {
+    if (!this.lastCpuUsage) {
+      // First call - initialize baseline
+      this.lastCpuUsage = process.cpuUsage();
+      this.lastCpuTime = process.hrtime();
+      return 0;
+    }
+
+    const currentUsage = process.cpuUsage(this.lastCpuUsage);
+    const currentTime = process.hrtime(this.lastCpuTime);
     
-    const totalTime = endTime[0] * 1000 + endTime[1] / 1000000; // Convert to milliseconds
-    const totalCPUTime = (endUsage.user + endUsage.system) / 1000; // Convert to milliseconds
+    // Update baselines for next measurement
+    this.lastCpuUsage = process.cpuUsage();
+    this.lastCpuTime = process.hrtime();
     
-    return Math.min(100, (totalCPUTime / totalTime) * 100);
+    // Convert to milliseconds
+    const totalTime = currentTime[0] * 1000 + currentTime[1] / 1000000;
+    const totalCPUTime = (currentUsage.user + currentUsage.system) / 1000;
+    
+    // Calculate percentage and cap at reasonable values
+    const percentage = (totalCPUTime / totalTime) * 100;
+    return Math.max(0, Math.min(200, percentage)); // Cap at 200% for multi-core
   }
   
   /**

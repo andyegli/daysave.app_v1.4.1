@@ -1,1 +1,27 @@
- 
+# DaySave Automation Pipeline Diagram
+
+This is a Mermaid diagram that shows the complete automation pipeline flow.
+
+To view this diagram:
+
+1. **In GitHub**: The .mmd file will render automatically
+2. **In VS Code**: Install the Mermaid Preview extension
+3. **Online**: Copy the content from automation.mmd to https://mermaid.live/
+4. **Documentation**: Use Mermaid-enabled markdown renderers
+
+## Mermaid Source
+
+The source code for this diagram is in `automation.mmd` in the same directory.
+
+## Diagram Elements
+
+- **Content Input**: Starting point for all content
+- **Content Type Detection**: URL vs File analysis
+- **Platform Detection**: YouTube, TikTok, Instagram, etc.
+- **MIME Classification**: video/*, audio/*, image/*
+- **Processing Pipelines**: Specialized handlers for each content type
+- **AI Analysis**: Object detection, transcription, sentiment analysis
+- **Database Storage**: Persistent storage of all analysis results
+- **Real-time Updates**: Live status updates to user dashboard
+
+This diagram represents the complete flow from content input to final processed results in the user dashboard. 
