@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= contact && contact.id ? 'Edit' : 'Add' %> Contact - DaySave</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <%- include('../partials/header', { user, title: 'Contact Form' }) %>
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h3 class="card-title mb-4 fw-bold"><%= contact && contact.id ? 'Edit' : 'Add' %> Contact</h3>
+            <% if (error) { %>
+              <div class="alert alert-danger"><%= error %></div>
+            <% } %>
+            <% if (success) { %>
+              <div class="alert alert-success"><%= success %></div>
+            <% } %>
+            <% if (user.role && user.role.name === 'admin' && contact && contact.User) { %>
+              <div class="mb-3">
+                <label class="form-label">Owner</label>
+                <input type="text" class="form-control" value="<%= contact.User.first_name || contact.User.username %> (<%= contact.User.email %>)" readonly>
+              </div>
+            <% } %>
+            <form method="POST" action="<%= formAction %>">
+              <div class="mb-3">
+                <label for="name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="name" name="name" value="<%= contact && contact.name || '' %>" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Emails</label>
+                <div id="emails-list">
+                  <% (contact && contact.emails && contact.emails.length ? contact.emails : [{label:'home',value:''}]).forEach(function(email, idx) { %>
+                    <div class="input-group mb-2 email-row">
+                      <select class="form-select form-select-sm" name="emails[<%= idx %>][label]" style="max-width: 100px;">
+                        <option value="home" <%= email.label === 'home' ? 'selected' : '' %>>Home</option>
+                        <option value="work" <%= email.label === 'work' ? 'selected' : '' %>>Work</option>
+                        <option value="other" <%= email.label === 'other' ? 'selected' : '' %>>Other</option>
+                        <% if (email.label && !['home','work','other','__custom__'].includes(email.label)) { %>
+                          <option value="<%= email.label %>" selected><%= email.label %></option>
+                        <% } %>
+                        <option value="__custom__">Other...</option>
+                      </select>
+                      <input type="email" class="form-control" name="emails[<%= idx %>][value]" value="<%= email.value || '' %>" placeholder="Email">
+                      <button type="button" class="btn btn-outline-danger remove-email" <%= (contact && contact.emails && contact.emails.length <= 1) ? 'disabled' : '' %>>–</button>
+                    </div>
+                  <% }) %>
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="add-email">+ Add Email</button>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Phones</label>
+                <div id="phones-list">
+                  <% (contact && contact.phones && contact.phones.length ? contact.phones : [{label:'mobile',value:''}]).forEach(function(phone, idx) { %>
+                    <div class="input-group mb-2 phone-row">
+                      <select class="form-select form-select-sm" name="phones[<%= idx %>][label]" style="max-width: 100px;">
+                        <option value="mobile" <%= phone.label === 'mobile' ? 'selected' : '' %>>Mobile</option>
+                        <option value="home" <%= phone.label === 'home' ? 'selected' : '' %>>Home</option>
+                        <option value="work" <%= phone.label === 'work' ? 'selected' : '' %>>Work</option>
+                        <option value="other" <%= phone.label === 'other' ? 'selected' : '' %>>Other</option>
+                        <% if (phone.label && !['mobile','home','work','other','__custom__'].includes(phone.label)) { %>
+                          <option value="<%= phone.label %>" selected><%= phone.label %></option>
+                        <% } %>
+                        <option value="__custom__">Other...</option>
+                      </select>
+                      <input type="text" class="form-control" name="phones[<%= idx %>][value]" value="<%= phone.value || '' %>" placeholder="Phone">
+                      <button type="button" class="btn btn-outline-danger remove-phone" <%= (contact && contact.phones && contact.phones.length <= 1) ? 'disabled' : '' %>>–</button>
+                    </div>
+                  <% }) %>
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="add-phone">+ Add Phone</button>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Social Profiles</label>
+                <div id="socials-list">
+                  <% (contact && contact.social_profiles && contact.social_profiles.length ? contact.social_profiles : [{label:'twitter',value:''}]).forEach(function(social, idx) { %>
+                    <div class="input-group mb-2 social-row">
+                      <select class="form-select form-select-sm" name="social_profiles[<%= idx %>][label]" style="max-width: 100px;">
+                        <option value="twitter" <%= social.label === 'twitter' ? 'selected' : '' %>>Twitter</option>
+                        <option value="facebook" <%= social.label === 'facebook' ? 'selected' : '' %>>Facebook</option>
+                        <option value="instagram" <%= social.label === 'instagram' ? 'selected' : '' %>>Instagram</option>
+                        <option value="linkedin" <%= social.label === 'linkedin' ? 'selected' : '' %>>LinkedIn</option>
+                        <option value="tiktok" <%= social.label === 'tiktok' ? 'selected' : '' %>>TikTok</option>
+                        <option value="other" <%= social.label === 'other' ? 'selected' : '' %>>Other</option>
+                        <% if (social.label && !['twitter','facebook','instagram','linkedin','tiktok','other','__custom__'].includes(social.label)) { %>
+                          <option value="<%= social.label %>" selected><%= social.label %></option>
+                        <% } %>
+                        <option value="__custom__">Other...</option>
+                      </select>
+                      <input type="text" class="form-control" name="social_profiles[<%= idx %>][value]" value="<%= social.value || '' %>" placeholder="Profile URL or handle">
+                      <button type="button" class="btn btn-outline-danger remove-social" <%= (contact && contact.social_profiles && contact.social_profiles.length <= 1) ? 'disabled' : '' %>>–</button>
+                    </div>
+                  <% }) %>
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="add-social">+ Add Social Profile</button>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Addresses <span class="text-muted" style="font-size:0.9em;">(Tip: Use full address, e.g. '1600 Amphitheatre Pkwy, Mountain View, CA, USA'. Google Maps autocomplete recommended for best results.)</span></label>
+                <div id="addresses-list">
+                  <% (contact && contact.addresses && contact.addresses.length ? contact.addresses : [{label:'home',value:''}]).forEach(function(address, idx) { %>
+                    <div class="input-group mb-2 address-row">
+                      <select class="form-select form-select-sm" name="addresses[<%= idx %>][label]" style="max-width: 100px;">
+                        <option value="home" <%= address.label === 'home' ? 'selected' : '' %>>Home</option>
+                        <option value="work" <%= address.label === 'work' ? 'selected' : '' %>>Work</option>
+                        <option value="other" <%= address.label === 'other' ? 'selected' : '' %>>Other</option>
+                        <% if (address.label && !['home','work','other','__custom__'].includes(address.label)) { %>
+                          <option value="<%= address.label %>" selected><%= address.label %></option>
+                        <% } %>
+                        <option value="__custom__">Other...</option>
+                      </select>
+                      <input type="text" class="form-control" name="addresses[<%= idx %>][value]" value="<%= address.value || '' %>" placeholder="Address">
+                      <button type="button" class="btn btn-outline-danger remove-address" <%= (contact && contact.addresses && contact.addresses.length <= 1) ? 'disabled' : '' %>>–</button>
+                    </div>
+                  <% }) %>
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="add-address">+ Add Address</button>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Notes</label>
+                <div id="notes-list">
+                  <% (contact && contact.notes && contact.notes.length ? contact.notes : [{label:'note',value:''}]).forEach(function(note, idx) { %>
+                    <div class="input-group mb-2 note-row">
+                      <select class="form-select form-select-sm" name="notes[<%= idx %>][label]" style="max-width: 100px;">
+                        <option value="note" <%= note.label === 'note' ? 'selected' : '' %>>Note</option>
+                        <option value="other" <%= note.label === 'other' ? 'selected' : '' %>>Other</option>
+                        <% if (note.label && !['note','other','__custom__'].includes(note.label)) { %>
+                          <option value="<%= note.label %>" selected><%= note.label %></option>
+                        <% } %>
+                        <option value="__custom__">Other...</option>
+                      </select>
+                      <input type="text" class="form-control" name="notes[<%= idx %>][value]" value="<%= note.value || '' %>" placeholder="Note">
+                      <button type="button" class="btn btn-outline-danger remove-note" <%= (contact && contact.notes && contact.notes.length <= 1) ? 'disabled' : '' %>>–</button>
+                    </div>
+                  <% }) %>
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="add-note">+ Add Note</button>
+              </div>
+              <button type="submit" class="btn btn-primary w-100"><%= contact && contact.id ? 'Update' : 'Create' %> Contact</button>
+              <a href="/contacts" class="btn btn-link w-100 mt-2">Cancel</a>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <%- include('../partials/footer') %>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/contact-form.js"></script>
+  <script src="/js/contact-autocomplete.js"></script>
+  <script src="/js/contact-maps-autocomplete.js"></script>
+  <script src="<%= googleMapsScriptUrl %>&callback=initContactMaps" async defer></script>
+</body>
+</html> 

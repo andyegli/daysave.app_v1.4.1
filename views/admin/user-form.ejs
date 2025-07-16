@@ -1,0 +1,39 @@
+<%- include('../partials/header', { title: 'Admin - User Form' }) %>
+<div class="container mt-4">
+  <h1><%= userData.id ? 'Edit User' : 'Add User' %></h1>
+  <% if (error) { %>
+    <div class="alert alert-danger"><%= error %></div>
+  <% } %>
+  <% if (success) { %>
+    <div class="alert alert-success"><%= success %></div>
+  <% } %>
+  <form action="<%= formAction %>" method="POST">
+    <div class="mb-3">
+      <label for="username" class="form-label">Username</label>
+      <input type="text" class="form-control" id="username" name="username" value="<%= userData.username || '' %>" required>
+    </div>
+    <div class="mb-3">
+      <label for="email" class="form-label">Email</label>
+      <input type="email" class="form-control" id="email" name="email" value="<%= userData.email || '' %>" required>
+    </div>
+    <div class="mb-3">
+      <label for="role_id" class="form-label">Role</label>
+      <select class="form-select" id="role_id" name="role_id" required>
+        <% roles.forEach(function(role) { %>
+          <option value="<%= role.id %>" <%= userData.role_id == role.id ? 'selected' : '' %>><%= role.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label for="password" class="form-label">Password</label>
+      <input type="password" class="form-control" id="password" name="password" <%= userData.id ? '' : 'required' %>>
+    </div>
+    <div class="mb-3">
+      <label for="confirmPassword" class="form-label">Confirm Password</label>
+      <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" <%= userData.id ? '' : 'required' %>>
+    </div>
+    <button type="submit" class="btn btn-success">Save</button>
+    <a href="/admin/users" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+<%- include('../partials/footer') %> 

@@ -1,0 +1,61 @@
+graph TD
+    A[Content Input] --> B[Automation Orchestrator]
+    
+    B --> C{Content Type Detection}
+    C -->|video/*| D[Video Processor]
+    C -->|audio/*| E[Audio Processor] 
+    C -->|image/*| F[Image Processor]
+    
+    D --> G[Video Plugin Registry]
+    E --> H[Audio Plugin Registry]
+    F --> I[Image Plugin Registry]
+    
+    G --> G1[Transcription Plugin]
+    G --> G2[Object Detection Plugin]
+    G --> G3[Thumbnail Plugin]
+    G --> G4[OCR Plugin]
+    G --> G5[Speaker Analysis Plugin]
+    
+    H --> H1[Transcription Plugin]
+    H --> H2[Speaker Analysis Plugin]
+    H --> H3[Audio Analysis Plugin]
+    
+    I --> I1[Object Detection Plugin]
+    I --> I2[OCR Plugin] 
+    I --> I3[Description Plugin]
+    I --> I4[Thumbnail Plugin]
+    
+    G1 --> J[Video Results]
+    G2 --> J
+    G3 --> J
+    G4 --> J
+    G5 --> J
+    
+    H1 --> K[Audio Results]
+    H2 --> K
+    H3 --> K
+    
+    I1 --> L[Image Results]
+    I2 --> L
+    I3 --> L
+    I4 --> L
+    
+    J --> M[Result Formatter]
+    K --> M
+    L --> M
+    
+    M --> N[Unified Content Card Format]
+    N --> O[Database Storage]
+    N --> P[User Interface]
+    
+    Q[Configuration Manager] --> D
+    Q --> E
+    Q --> F
+    
+    R[Error Handler] --> D
+    R --> E
+    R --> F
+    
+    S[Progress Tracker] --> D
+    S --> E
+    S --> F 

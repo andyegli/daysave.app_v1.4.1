@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Content Management - DaySave</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+
+  <style>
+    .content-card {
+      transition: box-shadow 0.2s;
+      border-radius: 1rem;
+      overflow: hidden;
+      min-height: 180px;
+      background: #fff;
+    }
+    .content-card:hover {
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    .content-card .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 280px;
+      cursor: pointer;
+    }
+    .content-card .card-title:hover {
+      color: #0d6efd;
+    }
+    .content-card .card-text {
+      font-size: 0.95rem;
+    }
+    .content-card .badge {
+      font-size: 0.85rem;
+      margin-right: 0.2rem;
+    }
+    @media (max-width: 768px) {
+      .content-card .card-title { max-width: 120px; }
+      .content-card { min-height: 140px; }
+    }
+    .content-card .flex-shrink-0 {
+      min-width: 60px;
+      max-width: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .content-card .img-fluid {
+      border-radius: 0.5rem;
+      max-height: 80px;
+      object-fit: cover;
+    }
+    
+    /* Transcription Summary Styles */
+    .transcription-summary {
+      border-left: 3px solid #0d6efd;
+      padding-left: 8px;
+      margin-left: 4px;
+    }
+    
+    .transcription-preview {
+      background-color: #f8f9fa !important;
+      border: 1px solid #e9ecef;
+      line-height: 1.6;
+      height: 100px;
+      overflow-y: auto;
+      font-size: 0.85rem;
+    }
+    
+    .transcription-preview:hover {
+      background-color: #e9ecef !important;
+    }
+    
+    /* Transcription text flow improvements */
+    .transcription-text {
+      display: block;
+      width: 100%;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
+    }
+    
+    /* Brain icon styling */
+    .ai-analysis-btn .bi-brain {
+      font-size: 1rem;
+      color: #6f42c1;
+    }
+    
+    .ai-analysis-btn:hover .bi-brain {
+      color: #fff;
+    }
+    
+    .ai-analysis-btn.btn-info .bi-brain {
+      color: #fff;
+    }
+
+  </style>
+</head>
+<body>
+  <!-- Header Include -->
+  <%- include('../partials/header', { user, title: 'Content Management' }) %>
+
+  <div class="container mt-5">
+    <h2 class="fw-bold mb-4">Content Management</h2>
+
+    <!-- Button to open Add Content Modal -->
+    <div class="mb-3">
+      <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addContentModal">
+        <i class="bi bi-plus-circle"></i> Add New Content
+      </button>
+    </div>
+
+    <% 
+      const allTags = Array.from(new Set(
+        (contentItems || []).flatMap(i => [
+          ...(i.user_tags || []),
+          ...(i.auto_tags || [])
+        ]).filter(Boolean).map(t => t.trim())
+      ));
+      console.log('DEBUG: Content items count:', contentItems ? contentItems.length : 0);
+    %>
+
+    <!-- Filter Bar -->
+    <div class="card mb-4 p-3">
+      <form class="row g-2 align-items-end" method="get" action="/content" id="filterForm">
+
+
+
+
+        <!-- Tag Filter with autocomplete -->
+        <div class="col-md-2">
+          <label for="filterTag" class="form-label mb-0">Tag</label>
+          <div class="input-group">
+            <input type="text" class="form-control" id="filterTag" name="tag" placeholder="Type to filter by tag" value="<%= typeof tag !== 'undefined' ? tag : '' %>" list="tagOptions">
+            <datalist id="tagOptions">
+              <% allTags.forEach(function(tagOption) { %>
+                <option value="<%= tagOption %>">
+              <% }); %>
+            </datalist>
+            <button class="btn btn-outline-secondary clear-filter-btn" type="button" data-target="#filterTag" title="Clear">
+              <i class="bi bi-x-circle"></i>
+            </button>
+          </div>
+        </div>
+        <!-- Date Range Filter -->
+        <div class="col-md-2">
+          <label for="filterFrom" class="form-label mb-0">From</label>
+          <div class="input-group">
+            <input type="date" class="form-control" id="filterFrom" name="from" value="<%= typeof from !== 'undefined' ? from : '' %>">
+            <button class="btn btn-outline-secondary clear-filter-btn" type="button" data-target="#filterFrom" title="Clear">
+              <i class="bi bi-x-circle"></i>
+            </button>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <label for="filterTo" class="form-label mb-0">To</label>
+          <div class="input-group">
+            <input type="date" class="form-control" id="filterTo" name="to" value="<%= typeof to !== 'undefined' ? to : '' %>">
+            <button class="btn btn-outline-secondary clear-filter-btn" type="button" data-target="#filterTo" title="Clear">
+              <i class="bi bi-x-circle"></i>
+            </button>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Filter</button>
+        </div>
+        <div class="col-md-2">
+          <button type="button" class="btn btn-outline-secondary w-100" id="clearAllFilters">
+            <i class="bi bi-x-circle"></i> Clear All
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Content Cards Grid -->
+    <div class="row row-cols-1 g-4" id="contentCardsGrid">
+      <% if (contentItems && contentItems.length > 0) { %>
+        <% contentItems.forEach(function(item) { %>
+          <div class="col">
+            <div class="card h-100 shadow-sm content-card flex-row flex-wrap" data-id="<%= item.id %>" style="min-height:unset;">
+              <div class="d-flex flex-row w-100">
+                <!-- Thumbnail -->
+                <div class="flex-shrink-0 d-flex align-items-center justify-content-center bg-light" style="width: 90px;">
+                  <% if (item.metadata && item.metadata.thumbnail) { %>
+                    <a href="<%= item.url %>" target="_blank" rel="noopener noreferrer">
+                      <img src="<%= item.metadata.thumbnail %>" class="img-fluid" alt="Thumbnail">
+                    </a>
+                  <% } else if (item.url && item.url.match(/\.(jpg|jpeg|png|gif)$/i)) { %>
+                    <a href="<%= item.url %>" target="_blank" rel="noopener noreferrer">
+                      <img src="<%= item.url %>" class="img-fluid" alt="Thumbnail">
+                    </a>
+                  <% } else { %>
+                    <a href="<%= item.url %>" target="_blank" rel="noopener noreferrer">
+                      <i class="bi bi-file-earmark-text fs-1 text-secondary"></i>
+                    </a>
+                  <% } %>
+                </div>
+                <!-- Card Body -->
+                <div class="flex-grow-1 d-flex flex-row p-3 align-items-stretch">
+                  <!-- Main Content (title, comment) -->
+                  <div class="flex-grow-1 d-flex flex-column justify-content-between">
+                    <div>
+                      <h5 class="card-title mb-1" title="<%= item.displayTitle %>"
+                        data-bs-toggle="modal" data-bs-target="#viewContentModal" data-id="<%= item.id %>">
+                        <%= item.displayTitle %>
+                      </h5>
+                      <% const comment = item.user_comments || ''; %>
+                      <p class="card-text mb-2 text-muted small" style="white-space:normal; overflow-wrap:break-word;" title="<%= comment %>">
+                        <%= comment.length > 200 ? comment.slice(0, 200) + '...' : comment %>
+                        <% if (comment.length > 200) { %>
+                          <a href="#" class="show-full-comment" data-id="<%= item.id %>">Show more</a>
+                        <% } %>
+                      </p>
+                      
+                      <!-- Transcription Summary -->
+                      <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>" style="display: none;">
+                        <div class="position-relative">
+                          <div class="transcription-preview bg-light p-2 rounded small">
+                            <div class="transcription-text text-muted">Loading transcription...</div>
+                          </div>
+                          <button class="btn btn-sm btn-outline-primary position-absolute top-0 end-0 mt-1 me-1 py-0 px-2" onclick="copyContentSummary('<%= item.id %>')" title="Copy Summary" style="z-index: 10;">
+                            <i class="bi bi-clipboard" style="font-size: 0.7rem;"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Tags -->
+                    <div class="mt-auto d-flex flex-wrap gap-1">
+                      <% 
+                        let tags = [];
+                        if (item.auto_tags) tags = tags.concat(item.auto_tags.map(t => ({ tag: t, type: 'auto' })));
+                        if (item.user_tags) tags = tags.concat(item.user_tags.map(t => ({ tag: t, type: 'user' })));
+                        let shownTags = tags.slice(0, 4);
+                        let moreTags = tags.length > 4 ? tags.length - 4 : 0;
+                      %>
+                      <% shownTags.forEach(function(t) { %>
+                        <span class="badge <%= t.type === 'auto' ? 'bg-info' : 'bg-success' %> tag-badge" data-tag="<%= t.tag %>">
+                          <%= t.tag %>
+                        </span>
+                      <% }); %>
+                      <% if (moreTags) { %>
+                        <span class="badge bg-secondary">+<%= moreTags %> more</span>
+                      <% } %>
+                    </div>
+                  </div>
+                  <!-- Right Info Column -->
+                  <div class="d-flex flex-column align-items-end justify-content-between ms-3" style="min-width: 140px;">
+                    <div class="text-end">
+                      <div class="d-flex align-items-center justify-content-end mb-1">
+                        <i class="bi <%= item.sourceInfo.logo %> me-1" style="color: <%= item.sourceInfo.color %>; font-size: 1.1rem;"></i>
+                        <span class="fw-semibold small"><%= item.sourceInfo.source %></span>
+                      </div>
+
+                      <div class="text-muted small"><%= item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '' %></div>
+                      
+                      <!-- AI Analysis Indicators -->
+                      <div class="mt-2">
+                        <div class="d-flex flex-wrap gap-1" id="ai-indicators-<%= item.id %>">
+                          <!-- Indicators will be populated by JavaScript -->
+                        </div>
+                      </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-2">
+                      <a href="#" class="btn btn-outline-primary btn-sm edit-content-btn" data-id="<%= item.id %>" data-bs-toggle="modal" data-bs-target="#editContentModal">
+                        <i class="bi bi-pencil"></i>
+                      </a>
+                      <button class="btn btn-outline-danger btn-sm delete-content-btn" data-id="<%= item.id %>">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                      <button class="btn btn-outline-success btn-sm share-content-btn" data-id="<%= item.id %>">
+                        <i class="bi bi-share"></i>
+                      </button>
+                      <button class="btn btn-outline-info btn-sm ai-analysis-btn" data-id="<%= item.id %>" data-bs-toggle="modal" data-bs-target="#aiAnalysisModal" title="View AI Analysis">
+                        <i class="bi bi-brain"></i>
+                      </button>
+                    </div>
+                    <div class="mt-2">
+                      <input type="checkbox" class="form-check-input content-select-checkbox" data-id="<%= item.id %>">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+      <% } else { %>
+        <div class="col">
+          <div class="alert alert-info">No content found. Click "Add New Content" to get started!</div>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Pagination (if needed) -->
+    <% if (pagination && pagination.totalPages > 1) { %>
+      <div class="row mt-4">
+        <div class="col-12 d-flex justify-content-center">
+          <nav>
+            <ul class="pagination">
+              <% for (let i = 1; i <= pagination.totalPages; i++) { %>
+                <li class="page-item <%= i === pagination.currentPage ? 'active' : '' %>">
+                  <a class="page-link" href="?page=<%= i %>"><%= i %></a>
+                </li>
+              <% } %>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- Add Content Modal -->
+  <div class="modal fade" id="addContentModal" tabindex="-1" aria-labelledby="addContentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <form class="modal-content" id="addContentForm">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addContentModalLabel">Add New Content</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Title Input -->
+          <div class="mb-3">
+            <label for="contentTitle" class="form-label">Title</label>
+            <input type="text" class="form-control" id="contentTitle" name="title" placeholder="Content Title">
+          </div>
+          <!-- URL Input -->
+          <div class="mb-3">
+            <label for="contentUrl" class="form-label">Content URL</label>
+            <input type="url" class="form-control" id="contentUrl" name="url" required placeholder="https://example.com/post">
+          </div>
+          <!-- User Comment -->
+          <div class="mb-3">
+            <label for="contentComment" class="form-label">Your Comment</label>
+            <textarea class="form-control" id="contentComment" name="user_comments" rows="2"></textarea>
+          </div>
+
+
+
+
+          <!-- User Tags -->
+          <div class="mb-3">
+            <label for="contentTags" class="form-label">Tags (comma separated)</label>
+            <input type="text" class="form-control" id="contentTags" name="user_tags" placeholder="tag1, tag2">
+          </div>
+          <!-- Group Assignment -->
+          <div class="mb-3">
+            <label for="contentGroups" class="form-label">Assign to Groups</label>
+            <select class="form-select" id="contentGroups" name="group_ids" multiple>
+              <% (contentGroups || []).forEach(function(group) { %>
+                <option value="<%= group.id %>"><%= group.name %></option>
+              <% }); %>
+            </select>
+            <div class="form-text">Hold Ctrl/Cmd to select multiple groups.</div>
+          </div>
+          <div id="addContentAlert" class="alert d-none mt-2"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Add Content</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Content Modal -->
+  <div class="modal fade" id="editContentModal" tabindex="-1" aria-labelledby="editContentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <form class="modal-content" id="editContentForm">
+        <input type="hidden" id="editContentId" name="id">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editContentModalLabel">Edit Content</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Title Input -->
+          <div class="mb-3">
+            <label for="editContentTitle" class="form-label">Title</label>
+            <input type="text" class="form-control" id="editContentTitle" name="title" placeholder="Content Title">
+          </div>
+          <!-- URL Input (readonly) -->
+          <div class="mb-3">
+            <label for="editContentUrl" class="form-label">Content URL</label>
+            <input type="url" class="form-control" id="editContentUrl" name="url" readonly>
+          </div>
+          <!-- User Comment -->
+          <div class="mb-3">
+            <label for="editContentComment" class="form-label">Your Comment</label>
+            <textarea class="form-control" id="editContentComment" name="user_comments" rows="2"></textarea>
+          </div>
+
+
+
+
+          <!-- User Tags -->
+          <div class="mb-3">
+            <label for="editContentTags" class="form-label">Tags (comma separated)</label>
+            <input type="text" class="form-control" id="editContentTags" name="user_tags" placeholder="tag1, tag2">
+          </div>
+          <!-- Group Assignment -->
+          <div class="mb-3">
+            <label for="editContentGroups" class="form-label">Assign to Groups</label>
+            <select class="form-select" id="editContentGroups" name="group_ids" multiple>
+              <% (contentGroups || []).forEach(function(group) { %>
+                <option value="<%= group.id %>"><%= group.name %></option>
+              <% }); %>
+            </select>
+            <div class="form-text">Hold Ctrl/Cmd to select multiple groups.</div>
+          </div>
+          <div id="editContentAlert" class="alert d-none mt-2"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- View Content Modal (placeholder, to be filled by JS) -->
+  <div class="modal fade" id="viewContentModal" tabindex="-1" aria-labelledby="viewContentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="viewContentModalLabel">Content Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="viewContentModalBody">
+          <!-- Content details will be filled by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Analysis Modal -->
+  <div class="modal fade" id="aiAnalysisModal" tabindex="-1" aria-labelledby="aiAnalysisModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="aiAnalysisModalLabel">
+            <i class="bi bi-brain me-2"></i>AI Analysis Results
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="aiAnalysisModalBody">
+          <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading AI analysis results...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Include -->
+  <%- include('../partials/footer') %>
+  <!-- jQuery (required for Bootstrap Select) -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+
+  <!-- Custom JS for Content Management -->
+  <script src="/js/content-management.js"></script>
+  <script src="/js/content-filters.js"></script>
+  <script src="/js/ai-analysis.js"></script>
+</body>
+</html> 

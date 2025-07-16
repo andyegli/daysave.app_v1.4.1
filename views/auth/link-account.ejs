@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Account - DaySave</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .link-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        
+        .logo {
+            max-width: 150px;
+            margin-bottom: 1rem;
+        }
+        
+        .verification-option {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .verification-option.active {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        
+        .verification-option:hover {
+            border-color: #007bff;
+            transform: translateY(-2px);
+        }
+        
+        .verification-option.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .verification-option.disabled:hover {
+            transform: none;
+        }
+        
+        .provider-icon {
+            font-size: 1.2rem;
+            margin-right: 0.5rem;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .info-message {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">DaySave.app</a>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="link-card mt-5 text-center">
+                    <img src="/images/daysave-logo.png" alt="DaySave Logo" class="logo">
+                    <h2 class="fw-bold text-dark mb-3">Link Account</h2>
+                    
+                    <% if (isOwnEmail) { %>
+                        <!-- User is logged in and owns this email -->
+                        <div class="info-message">
+                            <i class="fas fa-check-circle me-2"></i>
+                            You're already logged in with this email address.
+                        </div>
+                        <p class="text-muted mb-4">
+                            Link your <strong><%= providerName %></strong> account to enable quick login.
+                        </p>
+                        
+                        <form method="POST" action="/auth/link-account">
+                            <input type="hidden" name="verificationMethod" value="authenticated">
+                            <button type="submit" class="btn btn-primary w-100 mb-3">
+                                <i class="<%= provider === 'google' ? 'fab fa-google' : provider === 'microsoft' ? 'fab fa-microsoft' : 'fab fa-apple' %> me-2"></i>
+                                Link <%= providerName %> Account
+                            </button>
+                        </form>
+                        
+                    <% } else { %>
+                        <!-- User is not logged in or doesn't own this email -->
+                        <p class="text-muted mb-4">
+                            An account with the email <strong><%= email %></strong> already exists.<br>
+                            Choose how you'd like to link your <strong><%= providerName %></strong> account:
+                        </p>
+                        
+                        <% if (error) { %>
+                            <div class="alert alert-danger"><%= error %></div>
+                        <% } %>
+                        
+                        <% if (emailSent) { %>
+                            <div class="success-message">
+                                <i class="fas fa-envelope me-2"></i>
+                                <strong>Email sent!</strong> Check your inbox and click the link to complete the account linking.
+                            </div>
+                            <p class="text-muted">
+                                Didn't receive the email? Check your spam folder or try a different verification method below.
+                            </p>
+                        <% } %>
+                        
+                        <div class="verification-options">
+                            <!-- Email Verification Option -->
+                            <div class="verification-option" id="emailOption" onclick="selectVerificationMethod('email')">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-envelope provider-icon text-info"></i>
+                                    <div class="flex-grow-1 text-start">
+                                        <strong>Email Verification</strong>
+                                        <div class="text-muted small">
+                                            Send a verification link to your email
+                                        </div>
+                                    </div>
+                                    <i class="fas fa-check-circle text-success d-none" id="emailCheck"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- Password Verification Option -->
+                            <div class="verification-option" id="passwordOption" onclick="selectVerificationMethod('password')">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-lock provider-icon text-warning"></i>
+                                    <div class="flex-grow-1 text-start">
+                                        <strong>Password Verification</strong>
+                                        <div class="text-muted small">
+                                            Enter your account password
+                                        </div>
+                                    </div>
+                                    <i class="fas fa-check-circle text-success d-none" id="passwordCheck"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <form method="POST" action="/auth/link-account" id="linkForm">
+                            <input type="hidden" name="provider" value="<%= provider %>">
+                            <input type="hidden" name="token" value="<%= token %>">
+                            <input type="hidden" name="verificationMethod" id="verificationMethod" value="">
+                            
+                            <!-- Email Verification Form -->
+                            <div id="emailForm" class="d-none">
+                                <div class="info-message">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    We'll send a secure link to <strong><%= email %></strong>
+                                </div>
+                                <button type="submit" class="btn btn-info w-100 mb-2">
+                                    <i class="fas fa-envelope me-2"></i>
+                                    Send Verification Email
+                                </button>
+                            </div>
+                            
+                            <!-- Password Verification Form -->
+                            <div id="passwordForm" class="d-none">
+                                <div class="mb-3 text-start">
+                                    <label for="password" class="form-label">Account Password <span class="text-danger">*</span></label>
+                                    <input type="password" class="form-control" id="password" name="password" placeholder="Enter your account password">
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 mb-2">
+                                    <i class="fas fa-link me-2"></i>
+                                    Link Account
+                                </button>
+                            </div>
+                        </form>
+                    <% } %>
+                    
+                    <a href="/auth/login" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Back to Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function selectVerificationMethod(method) {
+            // Reset all options
+            document.querySelectorAll('.verification-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            document.querySelectorAll('.verification-option i:last-child').forEach(check => {
+                check.classList.add('d-none');
+            });
+            
+            // Activate selected option
+            const selectedOption = document.getElementById(method + 'Option');
+            const selectedCheck = document.getElementById(method + 'Check');
+            selectedOption.classList.add('active');
+            selectedCheck.classList.remove('d-none');
+            
+            // Show appropriate form
+            document.getElementById('emailForm').classList.add('d-none');
+            document.getElementById('passwordForm').classList.add('d-none');
+            document.getElementById(method + 'Form').classList.remove('d-none');
+            
+            // Set hidden field
+            document.getElementById('verificationMethod').value = method;
+        }
+    </script>
+    
+    <% if (!isOwnEmail && !emailSent) { %>
+    <script>
+        // Auto-select password method by default for non-authenticated users
+        document.addEventListener('DOMContentLoaded', function() {
+            selectVerificationMethod('password');
+        });
+    </script>
+    <% } %>
+</body>
+</html> 

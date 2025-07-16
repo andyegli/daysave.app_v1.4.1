@@ -1,0 +1,417 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">🧪 Multimedia Analysis Testing</h1>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="/admin/dashboard">Admin</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Testing</li>
+          </ol>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test Configuration Panel -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-cogs me-2"></i>Test Configuration
+          </h5>
+        </div>
+        <div class="card-body">
+          <form id="testConfigForm">
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="testName" class="form-label">Test Run Name</label>
+                <input type="text" class="form-control" id="testName" name="testName" required 
+                       placeholder="Enter a descriptive name for this test run">
+              </div>
+              <div class="col-md-6">
+                <label for="testDescription" class="form-label">Description (Optional)</label>
+                <input type="text" class="form-control" id="testDescription" name="testDescription" 
+                       placeholder="Brief description of test objectives">
+              </div>
+            </div>
+            
+            <!-- Test Source Selection -->
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <h6 class="mb-3">
+                  <i class="fas fa-folder me-2"></i>Test Files
+                  <small class="text-muted">(Select files to test)</small>
+                </h6>
+                
+                <!-- File Categories -->
+                <div class="accordion" id="filesAccordion">
+                  <!-- Images -->
+                  <div class="accordion-item">
+                    <h2 class="accordion-header" id="imagesHeading">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                              data-bs-target="#imagesCollapse" aria-expanded="false">
+                        📸 Images (<%= testFiles.images.length %> files)
+                      </button>
+                    </h2>
+                    <div id="imagesCollapse" class="accordion-collapse collapse" data-bs-parent="#filesAccordion">
+                      <div class="accordion-body">
+                        <% if (testFiles.images.length > 0) { %>
+                          <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="selectAllImages" 
+                                   onchange="toggleCategorySelection('images', this.checked)">
+                            <label class="form-check-label fw-bold" for="selectAllImages">
+                              Select All Images
+                            </label>
+                          </div>
+                          <hr>
+                          <% testFiles.images.forEach(file => { %>
+                            <div class="form-check mb-2">
+                              <input class="form-check-input test-file-checkbox" type="checkbox" 
+                                     name="selectedFiles" value="<%= file.path %>" 
+                                     id="file_<%= file.path.replace(/[^a-zA-Z0-9]/g, '_') %>"
+                                     data-category="images">
+                              <label class="form-check-label" for="file_<%= file.path.replace(/[^a-zA-Z0-9]/g, '_') %>">
+                                <%= file.name %> 
+                                <small class="text-muted">(<%= Math.round(file.size / 1024) %> KB)</small>
+                              </label>
+                            </div>
+                          <% }); %>
+                        <% } else { %>
+                          <p class="text-muted">No image files available. Add files to testfiles/images/</p>
+                        <% } %>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Audio -->
+                  <div class="accordion-item">
+                    <h2 class="accordion-header" id="audioHeading">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                              data-bs-target="#audioCollapse" aria-expanded="false">
+                        🎵 Audio (<%= testFiles.audio.length %> files)
+                      </button>
+                    </h2>
+                    <div id="audioCollapse" class="accordion-collapse collapse" data-bs-parent="#filesAccordion">
+                      <div class="accordion-body">
+                        <% if (testFiles.audio.length > 0) { %>
+                          <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="selectAllAudio" 
+                                   onchange="toggleCategorySelection('audio', this.checked)">
+                            <label class="form-check-label fw-bold" for="selectAllAudio">
+                              Select All Audio
+                            </label>
+                          </div>
+                          <hr>
+                          <% testFiles.audio.forEach(file => { %>
+                            <div class="form-check mb-2">
+                              <input class="form-check-input test-file-checkbox" type="checkbox" 
+                                     name="selectedFiles" value="<%= file.path %>" 
+                                     id="file_<%= file.path.replace(/[^a-zA-Z0-9]/g, '_') %>"
+                                     data-category="audio">
+                              <label class="form-check-label" for="file_<%= file.path.replace(/[^a-zA-Z0-9]/g, '_') %>">
+                                <%= file.name %> 
+                                <small class="text-muted">(<%= Math.round(file.size / 1024) %> KB)</small>
+                              </label>
+                            </div>
+                          <% }); %>
+                        <% } else { %>
+                          <p class="text-muted">No audio files available. Add files to testfiles/audio/</p>
+                        <% } %>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Video -->
+                  <div class="accordion-item">
+                    <h2 class="accordion-header" id="videoHeading">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                              data-bs-target="#videoCollapse" aria-expanded="false">
+                        🎬 Video (<%= testFiles.video.length %> files)
+                      </button>
+                    </h2>
+                    <div id="videoCollapse" class="accordion-collapse collapse" data-bs-parent="#filesAccordion">
+                      <div class="accordion-body">
+                        <% if (testFiles.video.length > 0) { %>
+                          <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="selectAllVideo" 
+                                   onchange="toggleCategorySelection('video', this.checked)">
+                            <label class="form-check-label fw-bold" for="selectAllVideo">
+                              Select All Video
+                            </label>
+                          </div>
+                          <hr>
+                          <% testFiles.video.forEach(file => { %>
+                            <div class="form-check mb-2">
+                              <input class="form-check-input test-file-checkbox" type="checkbox" 
+                                     name="selectedFiles" value="<%= file.path %>" 
+                                     id="file_<%= file.path.replace(/[^a-zA-Z0-9]/g, '_') %>"
+                                     data-category="video">
+                              <label class="form-check-label" for="file_<%= file.path.replace(/[^a-zA-Z0-9]/g, '_') %>">
+                                <%= file.name %> 
+                                <small class="text-muted">(<%= Math.round(file.size / 1024) %> KB)</small>
+                              </label>
+                            </div>
+                          <% }); %>
+                        <% } else { %>
+                          <p class="text-muted">No video files available. Add files to testfiles/video/</p>
+                        <% } %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <h6 class="mb-3">
+                  <i class="fas fa-link me-2"></i>Test URLs
+                  <small class="text-muted">(Select URLs to test)</small>
+                </h6>
+                
+                <!-- URL Categories -->
+                <div class="accordion" id="urlsAccordion">
+                  <% Object.keys(testUrls).forEach(platform => { %>
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="<%= platform %>Heading">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#<%= platform %>Collapse" aria-expanded="false">
+                          <%= platform.charAt(0).toUpperCase() + platform.slice(1) %> 
+                          (<%= testUrls[platform].length %> URLs)
+                        </button>
+                      </h2>
+                      <div id="<%= platform %>Collapse" class="accordion-collapse collapse" data-bs-parent="#urlsAccordion">
+                        <div class="accordion-body">
+                          <% if (testUrls[platform].length > 0) { %>
+                            <div class="form-check mb-2">
+                              <input class="form-check-input" type="checkbox" id="selectAll<%= platform %>" 
+                                     onchange="toggleUrlCategorySelection('<%= platform %>', this.checked)">
+                              <label class="form-check-label fw-bold" for="selectAll<%= platform %>">
+                                Select All <%= platform.charAt(0).toUpperCase() + platform.slice(1) %>
+                              </label>
+                            </div>
+                            <hr>
+                            <% testUrls[platform].forEach((url, index) => { %>
+                              <div class="form-check mb-2">
+                                <input class="form-check-input test-url-checkbox" type="checkbox" 
+                                       name="selectedUrls" value="<%= url %>" 
+                                       id="url_<%= platform %>_<%= index %>"
+                                       data-platform="<%= platform %>">
+                                <label class="form-check-label" for="url_<%= platform %>_<%= index %>">
+                                  <%= url %>
+                                </label>
+                              </div>
+                            <% }); %>
+                          <% } else { %>
+                            <p class="text-muted">No URLs available for <%= platform %></p>
+                          <% } %>
+                        </div>
+                      </div>
+                    </div>
+                  <% }); %>
+                </div>
+              </div>
+            </div>
+            
+            <!-- AI Jobs Selection -->
+            <div class="row mb-4">
+              <div class="col-12">
+                <h6 class="mb-3">
+                  <i class="fas fa-robot me-2"></i>AI Jobs to Test
+                  <small class="text-muted">(Select which AI analysis jobs to run)</small>
+                </h6>
+                
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="selectAllAiJobs" 
+                             onchange="toggleAllAiJobs(this.checked)">
+                      <label class="form-check-label fw-bold" for="selectAllAiJobs">
+                        Select All AI Jobs
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <% aiJobs.forEach((job, index) => { %>
+                    <div class="col-md-4 mb-3">
+                      <div class="form-check">
+                        <input class="form-check-input ai-job-checkbox" type="checkbox" 
+                               name="selectedAiJobs" value="<%= job.id %>" 
+                               id="ai_<%= job.id %>">
+                        <label class="form-check-label" for="ai_<%= job.id %>">
+                          <strong><%= job.name %></strong>
+                          <br>
+                          <small class="text-muted"><%= job.description %></small>
+                        </label>
+                      </div>
+                    </div>
+                  <% }); %>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Test Summary -->
+            <div class="row mb-4">
+              <div class="col-12">
+                <div class="card bg-light">
+                  <div class="card-body">
+                    <h6 class="card-title">Test Summary</h6>
+                    <div class="row">
+                      <div class="col-md-3">
+                        <strong>Selected Files:</strong> <span id="selectedFilesCount">0</span>
+                      </div>
+                      <div class="col-md-3">
+                        <strong>Selected URLs:</strong> <span id="selectedUrlsCount">0</span>
+                      </div>
+                      <div class="col-md-3">
+                        <strong>Selected AI Jobs:</strong> <span id="selectedAiJobsCount">0</span>
+                      </div>
+                      <div class="col-md-3">
+                        <strong>Total Tests:</strong> <span id="totalTestsCount">0</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="row">
+              <div class="col-12">
+                <button type="submit" class="btn btn-primary me-2" id="startTestBtn">
+                  <i class="fas fa-play me-2"></i>Start Test Run
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                  <i class="fas fa-undo me-2"></i>Reset
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test Progress Panel (Hidden by default) -->
+  <div class="row mb-4" id="testProgressPanel" style="display: none;">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-hourglass-half me-2"></i>Test Progress
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <h6 id="currentTestName">Test Name</h6>
+              <p class="text-muted mb-0" id="currentTestStatus">Status: Running</p>
+            </div>
+            <div class="col-md-6 text-end">
+              <p class="mb-0">
+                <strong>Progress:</strong> 
+                <span id="currentTestProgress">0</span>% 
+                (<span id="currentTestCompleted">0</span> / <span id="currentTestTotal">0</span>)
+              </p>
+            </div>
+          </div>
+          
+          <div class="progress mb-3" style="height: 20px;">
+            <div class="progress-bar" role="progressbar" style="width: 0%" 
+                 id="testProgressBar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+              0%
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-4">
+              <div class="text-center">
+                <span class="badge bg-success fs-6" id="passedCount">0 Passed</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="text-center">
+                <span class="badge bg-danger fs-6" id="failedCount">0 Failed</span>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="text-center">
+                <span class="badge bg-primary fs-6" id="elapsedTime">0s</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Test Runs -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-history me-2"></i>Recent Test Runs
+          </h5>
+        </div>
+        <div class="card-body">
+          <% if (recentRuns.length > 0) { %>
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Tests</th>
+                    <th>Results</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% recentRuns.forEach(run => { %>
+                    <tr>
+                      <td><%= run.name %></td>
+                      <td>
+                        <% if (run.status === 'completed') { %>
+                          <span class="badge bg-success">Completed</span>
+                        <% } else if (run.status === 'failed') { %>
+                          <span class="badge bg-danger">Failed</span>
+                        <% } else if (run.status === 'running') { %>
+                          <span class="badge bg-primary">Running</span>
+                        <% } else { %>
+                          <span class="badge bg-secondary"><%= run.status %></span>
+                        <% } %>
+                      </td>
+                      <td><%= run.total_tests %></td>
+                      <td>
+                        <span class="text-success"><%= run.passed_tests %> passed</span> / 
+                        <span class="text-danger"><%= run.failed_tests %> failed</span>
+                      </td>
+                      <td><%= new Date(run.createdAt).toLocaleDateString() %></td>
+                      <td>
+                        <a href="/admin/multimedia-testing/results/<%= run.id %>" class="btn btn-sm btn-outline-primary">
+                          <i class="fas fa-eye"></i> View Results
+                        </a>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          <% } else { %>
+            <p class="text-muted">No test runs found. Start your first test run above!</p>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/multimedia-testing.js"></script>
+
+<%- include('../partials/footer') %> 

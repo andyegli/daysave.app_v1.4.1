@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multimedia Analysis API</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Video.js CSS -->
+    <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
+    
+    <style>
+        .upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        .upload-area:hover {
+            border-color: #0d6efd;
+            background: #e7f3ff;
+        }
+        .upload-area.dragover {
+            border-color: #0d6efd;
+            background: #e7f3ff;
+        }
+        .result-card {
+            border-left: 4px solid #0d6efd;
+        }
+        .loading {
+            display: none;
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        .file-preview {
+            max-width: 200px;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .analysis-section {
+            margin-top: 20px;
+        }
+        .error-message {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .success-message {
+            color: #155724;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        /* Progress Styles */
+        .current-step-display {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .completed-steps {
+            max-height: 150px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        
+        .completed-step-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            background-color: white;
+            border-radius: 5px;
+            border-left: 3px solid #28a745;
+        }
+        
+        .completed-step-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .live-status-container {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .status-message {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            background-color: white;
+            border-radius: 5px;
+            border-left: 3px solid #17a2b8;
+        }
+        
+        .status-message:last-child {
+            margin-bottom: 0;
+        }
+        
+        .status-message.error {
+            border-left-color: #dc3545;
+        }
+        
+        .status-message.warning {
+            border-left-color: #ffc107;
+        }
+        
+        .status-message.success {
+            border-left-color: #28a745;
+        }
+        
+        .progress-bar {
+            transition: width 0.5s ease;
+        }
+        
+        #analysisSpinner {
+            width: 2rem;
+            height: 2rem;
+        }
+        
+        /* Thumbnail Styles */
+        .thumbnail-container {
+            position: relative;
+            display: inline-block;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+        }
+        
+        .thumbnail-container:hover {
+            transform: scale(1.05);
+        }
+        
+        .thumbnail-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .thumbnail-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            color: white;
+            padding: 8px;
+            font-size: 0.8rem;
+        }
+        
+        .video-thumbnail-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .video-thumbnail-container::before {
+            content: '\f04b';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 2rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 2;
+        }
+        
+        .key-moments-preview {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 2px solid #0d6efd;
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        /* Video Player Styles */
+        .video-player-container {
+            position: relative;
+        }
+        
+        .video-controls {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .video-scrubber-container {
+            position: relative;
+        }
+        
+        .video-scrubber {
+            width: 100%;
+            height: 8px;
+            background: #dee2e6;
+            border-radius: 4px;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            cursor: pointer;
+        }
+        
+        .video-scrubber::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #0d6efd;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .video-scrubber::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #0d6efd;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .video-scrubber::-webkit-slider-track {
+            background: #dee2e6;
+            height: 8px;
+            border-radius: 4px;
+        }
+        
+        .video-scrubber::-moz-range-track {
+            background: #dee2e6;
+            height: 8px;
+            border-radius: 4px;
+            border: none;
+        }
+        
+        .scrubber-preview {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 2px solid #0d6efd;
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        
+        .scrubber-preview canvas {
+            display: block;
+            border-radius: 4px;
+        }
+        
+        .preview-time {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        
+        .time-display {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .clickable-timestamp {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            user-select: none;
+        }
+        
+        .clickable-timestamp:hover {
+            background-color: #0d6efd !important;
+            color: white !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .clickable-timestamp:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        
+        .word-timestamps .clickable-timestamp {
+            position: relative;
+        }
+        
+        .word-timestamps .clickable-timestamp::after {
+            content: "🎵";
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 0.6rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .word-timestamps .clickable-timestamp:hover::after {
+            opacity: 1;
+        }
+        
+        .key-moments-preview.show {
+            display: block;
+        }
+        
+        .key-moments-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 4px;
+        }
+        
+        .key-moment-item {
+            position: relative;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .key-moment-image {
+            width: 100%;
+            height: 60px;
+            object-fit: cover;
+        }
+        
+        /* Toast Notifications */
+        .toast-container {
+            z-index: 1050;
+        }
+        
+        .toast {
+            min-width: 300px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+        
+        .toast:not(.show) {
+            opacity: 0;
+        }
+        
+        .key-moment-time {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            font-size: 0.6rem;
+            padding: 2px 4px;
+            text-align: center;
+        }
+        
+        .thumbnail-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        
+        .thumbnail-size-label {
+            font-size: 0.7rem;
+            color: #666;
+            margin-top: 4px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 bg-dark text-white min-vh-100 p-4">
+                <h3 class="mb-4">
+                    <i class="fas fa-brain"></i> Multimedia Analysis
+                </h3>
+                <div class="mb-4">
+                    <h6>Core Analysis Features:</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-image text-primary"></i> Object Detection</li>
+                        <li><i class="fas fa-microphone text-success"></i> Audio Transcription</li>
+                        <li><i class="fas fa-video text-warning"></i> Video Analysis</li>
+                        <li><i class="fas fa-file-text text-info"></i> Text Summarization</li>
+                        <li><i class="fas fa-smile text-danger"></i> Sentiment Analysis</li>
+                        <li><i class="fas fa-tags text-primary"></i> Named Entity Recognition</li>
+                        <li><i class="fas fa-users text-secondary"></i> Speaker Diarization</li>
+                        <li><i class="fas fa-fingerprint text-warning"></i> Voice Print Recognition</li>
+                        <li><i class="fas fa-exclamation-triangle text-danger"></i> Profanity Detection</li>
+                        <li><i class="fas fa-search text-info"></i> Keyword Detection</li>
+                        <li><i class="fas fa-tags text-success"></i> Auto Tagging & Categorization</li>
+                    </ul>
+                </div>
+                <div class="mb-4">
+                    <h6>Supported Formats:</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success"></i> Images (JPG, PNG, GIF, BMP, WebP)</li>
+                        <li><i class="fas fa-check text-success"></i> Audio (MP3, WAV, M4A, AAC, OGG, FLAC)</li>
+                        <li><i class="fas fa-check text-success"></i> Video (MP4, AVI, MOV, WMV, FLV, WebM, MKV)</li>
+                        <li><i class="fas fa-check text-success"></i> Direct URLs & Streaming Platforms</li>
+                    </ul>
+                </div>
+                <div class="mb-4">
+                    <h6>Streaming Platforms:</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="fab fa-youtube text-danger"></i> YouTube</li>
+                        <li><i class="fab fa-instagram text-warning"></i> Instagram</li>
+                        <li><i class="fab fa-tiktok text-dark"></i> TikTok</li>
+                        <li><i class="fab fa-twitter text-info"></i> Twitter/X</li>
+                        <li><i class="fab fa-facebook text-primary"></i> Facebook</li>
+                        <li><i class="fab fa-vimeo text-success"></i> Vimeo</li>
+                        <li><i class="fab fa-twitch text-purple"></i> Twitch</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-4">
+                    <h6>Analysis Coverage:</h6>
+                    <div class="small">
+                        <div class="mb-2">
+                            <strong>Images:</strong> Object detection, text extraction, auto tagging
+                        </div>
+                        <div class="mb-2">
+                            <strong>Audio:</strong> Transcription, sentiment, entities, speakers, voice prints, profanity, keywords, auto tagging
+                        </div>
+                        <div class="mb-2">
+                            <strong>Video:</strong> All audio features + object detection, frame analysis, auto tagging
+                        </div>
+                        <div class="mb-2">
+                            <strong>URLs:</strong> Full feature support for all platforms including auto tagging
+                        </div>
+                        <div class="mb-2">
+                            <strong>All Content:</strong> Automatic content categorization and intelligent tagging
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-auto">
+                    <div class="card bg-secondary">
+                        <div class="card-body">
+                            <h6>API Status</h6>
+                            <div id="apiStatus">
+                                <span class="badge bg-warning">Checking...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 p-4">
+                <div class="row">
+                    <div class="col-12">
+                        <h2 class="mb-4">
+                            <i class="fas fa-upload"></i> Upload & Analyze
+                        </h2>
+                        
+                        <!-- Input Method Tabs -->
+                        <ul class="nav nav-tabs mb-4" id="inputTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="file-tab" data-bs-toggle="tab" data-bs-target="#file-tab-pane" type="button" role="tab">
+                                    <i class="fas fa-upload"></i> Upload File
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="url-tab" data-bs-toggle="tab" data-bs-target="#url-tab-pane" type="button" role="tab">
+                                    <i class="fas fa-link"></i> URL Input
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- Tab Content -->
+                        <div class="tab-content" id="inputTabsContent">
+                            <!-- File Upload Tab -->
+                            <div class="tab-pane fade show active" id="file-tab-pane" role="tabpanel">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="upload-area" id="uploadArea">
+                                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                            <h5>Drag & Drop files here</h5>
+                                            <p class="text-muted">or click to browse</p>
+                                            <input type="file" id="fileInput" class="d-none" accept="image/*,audio/*,video/*">
+                                            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                                                <i class="fas fa-folder-open"></i> Choose File
+                                            </button>
+                                        </div>
+                                        
+                                        <!-- File Preview -->
+                                        <div id="filePreview" class="mt-3" style="display: none;">
+                                            <div class="d-flex align-items-center">
+                                                <img id="previewImage" class="file-preview me-3" style="display: none;">
+                                                <div>
+                                                    <h6 id="fileName"></h6>
+                                                    <p class="text-muted mb-0" id="fileInfo"></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- URL Input Tab -->
+                            <div class="tab-pane fade" id="url-tab-pane" role="tabpanel">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="urlInput" class="form-label">
+                                                <i class="fas fa-link"></i> Multimedia URL
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="url" class="form-control" id="urlInput" 
+                                                       placeholder="https://example.com/image.jpg" 
+                                                       aria-describedby="urlHelp">
+                                                <button class="btn btn-primary" type="button" id="validateUrlBtn">
+                                                    <i class="fas fa-check"></i> Validate
+                                                </button>
+                                            </div>
+                                            <div class="form-text" id="urlHelp">
+                                                Enter a direct link to an image, audio, or video file, or a streaming platform URL. 
+                                                <br><strong>Supported formats:</strong> JPG, PNG, GIF, MP3, WAV, MP4, AVI, etc.
+                                                <br><strong>Supported platforms:</strong> YouTube, Instagram, TikTok, Twitter, Facebook, Vimeo, Twitch
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- URL Preview -->
+                                        <div id="urlPreview" class="mt-3" style="display: none;">
+                                            <div class="d-flex align-items-center">
+                                                <img id="urlPreviewImage" class="file-preview me-3" style="display: none;">
+                                                <div>
+                                                    <h6 id="urlFileName"></h6>
+                                                    <p class="text-muted mb-0" id="urlFileInfo"></p>
+                                                    <small class="text-success">
+                                                        <i class="fas fa-check-circle"></i> URL validated successfully
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Analysis Options -->
+                        <div id="analysisOptions" class="mt-4" style="display: none;">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-cogs"></i> Analysis Options</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="mb-3">Core Analysis Features</h6>
+                                            
+                                            <!-- Object Detection -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="enableObjectDetection" checked>
+                                                <label class="form-check-label" for="enableObjectDetection">
+                                                    <i class="fas fa-image text-primary"></i> Object Detection
+                                                    <small class="text-muted d-block">Detect objects, people, and scenes in images/videos</small>
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Audio Transcription -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="enableTranscription" checked>
+                                                <label class="form-check-label" for="enableTranscription">
+                                                    <i class="fas fa-microphone text-warning"></i> Audio Transcription
+                                                    <small class="text-muted d-block">Convert speech to text with timestamps</small>
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Video Analysis -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="enableVideoAnalysis" checked>
+                                                <label class="form-check-label" for="enableVideoAnalysis">
+                                                    <i class="fas fa-video text-danger"></i> Video Analysis
+                                                    <small class="text-muted d-block">Extract audio and analyze video frames</small>
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Text Summarization -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="enableSummarization" checked>
+                                                <label class="form-check-label" for="enableSummarization">
+                                                    <i class="fas fa-compress-alt text-secondary"></i> Text Summarization
+                                                    <small class="text-muted d-block">Generate concise summaries of transcribed content</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <h6 class="mb-3">Advanced Analysis Features</h6>
+                                            
+                                            <!-- Sentiment Analysis -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="enableSentimentAnalysis" checked>
+                                                <label class="form-check-label" for="enableSentimentAnalysis">
+                                                    <i class="fas fa-smile text-success"></i> Sentiment Analysis
+                                                    <small class="text-muted d-block">Analyze emotional tone and sentiment</small>
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Named Entity Recognition -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="enableNER" checked>
+                                                <label class="form-check-label" for="enableNER">
+                                                    <i class="fas fa-tags text-info"></i> Named Entity Recognition
+                                                    <small class="text-muted d-block">Extract people, places, organizations, etc.</small>
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Speaker Diarization -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="enableSpeakerDiarization" checked>
+                                                <label class="form-check-label" for="enableSpeakerDiarization">
+                                                    <i class="fas fa-users text-purple"></i> Speaker Diarization
+                                                    <small class="text-muted d-block">Identify different speakers in audio</small>
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Voice Print Recognition -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="enableVoicePrintRecognition" checked>
+                                                <label class="form-check-label" for="enableVoicePrintRecognition">
+                                                    <i class="fas fa-fingerprint text-warning"></i> Voice Print Recognition
+                                                    <small class="text-muted d-block">Recognize speakers across different recordings</small>
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Profanity Detection -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="enableProfanityDetection" checked>
+                                                <label class="form-check-label" for="enableProfanityDetection">
+                                                    <i class="fas fa-exclamation-triangle text-danger"></i> Profanity Detection
+                                                    <small class="text-muted d-block">Detect inappropriate language with severity levels</small>
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Keyword Detection -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="enableKeywordDetection" checked>
+                                                <label class="form-check-label" for="enableKeywordDetection">
+                                                    <i class="fas fa-search text-info"></i> Keyword Detection
+                                                    <small class="text-muted d-block">Identify important keywords and phrases</small>
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Thumbnail Generation -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="enableThumbnailGeneration" checked>
+                                                <label class="form-check-label" for="enableThumbnailGeneration">
+                                                    <i class="fas fa-image text-primary"></i> Thumbnail Generation
+                                                    <small class="text-muted d-block">Generate thumbnails and key moments for videos</small>
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- OCR Caption Extraction -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="enableOCRExtraction">
+                                                <label class="form-check-label" for="enableOCRExtraction">
+                                                    <i class="fas fa-font text-info"></i> OCR Caption Extraction
+                                                    <small class="text-muted d-block">Extract text from video frames with timestamps</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <hr>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="mb-3">Analysis Settings</h6>
+                                            
+                                            <!-- Transcription Provider -->
+                                            <div class="mb-3">
+                                                <label for="transcriptionProvider" class="form-label">Transcription Provider</label>
+                                                <select class="form-select" id="transcriptionProvider">
+                                                    <option value="google">Google Speech-to-Text (Recommended)</option>
+                                                    <option value="openai">OpenAI Whisper</option>
+                                                    <option value="auto">Auto-select (Google with OpenAI fallback)</option>
+                                                </select>
+                                                <small class="text-muted">Google provides better speaker diarization, OpenAI is faster</small>
+                                            </div>
+                                            
+                                            <!-- Object Detection Mode -->
+                                            <div class="mb-3">
+                                                <label for="objectDetectionMode" class="form-label">Object Detection Mode</label>
+                                                <select class="form-select" id="objectDetectionMode">
+                                                    <option value="enhanced">Enhanced (Detailed with bounding boxes)</option>
+                                                    <option value="basic">Basic (Simple object list)</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <!-- Profanity Detection Sensitivity -->
+                                            <div class="mb-3">
+                                                <label for="profanitySensitivity" class="form-label">Profanity Detection Sensitivity</label>
+                                                <select class="form-select" id="profanitySensitivity">
+                                                    <option value="strict">Strict (All profanity)</option>
+                                                    <option value="moderate" selected>Moderate (Common profanity)</option>
+                                                    <option value="lenient">Lenient (Severe profanity only)</option>
+                                                </select>
+                                                <small class="text-muted">Controls how sensitive the profanity detection is</small>
+                                            </div>
+                                            
+                                            <!-- Keyword Categories -->
+                                            <div class="mb-3">
+                                                <label for="keywordCategories" class="form-label">Keyword Categories</label>
+                                                <select class="form-select" id="keywordCategories">
+                                                    <option value="all" selected>All Categories</option>
+                                                    <option value="business">Business & Finance</option>
+                                                    <option value="technical">Technical Terms</option>
+                                                    <option value="names">Names & Places</option>
+                                                    <option value="custom">Custom Keywords</option>
+                                                </select>
+                                                <small class="text-muted">Choose which keyword categories to detect</small>
+                                            </div>
+                                            
+                                            <!-- Thumbnail Settings -->
+                                            <div class="mb-3">
+                                                <label for="thumbnailSize" class="form-label">Thumbnail Size</label>
+                                                <select class="form-select" id="thumbnailSize">
+                                                    <option value="200">Small (200px)</option>
+                                                    <option value="300" selected>Medium (300px)</option>
+                                                    <option value="400">Large (400px)</option>
+                                                    <option value="500">Extra Large (500px)</option>
+                                                </select>
+                                                <small class="text-muted">Main thumbnail size for videos</small>
+                                            </div>
+                                            
+                                            <!-- Key Moments Count -->
+                                            <div class="mb-3">
+                                                <label for="keyMomentsCount" class="form-label">Key Moments Count</label>
+                                                <select class="form-select" id="keyMomentsCount">
+                                                    <option value="3">3 moments</option>
+                                                    <option value="5" selected>5 moments</option>
+                                                    <option value="7">7 moments</option>
+                                                    <option value="10">10 moments</option>
+                                                </select>
+                                                <small class="text-muted">Number of key moments to extract from videos</small>
+                                            </div>
+                                            
+                                            <!-- OCR Frame Interval -->
+                                            <div class="mb-3">
+                                                <label for="ocrFrameInterval" class="form-label">OCR Frame Interval</label>
+                                                <select class="form-select" id="ocrFrameInterval">
+                                                    <option value="1">Every 1 second</option>
+                                                    <option value="2" selected>Every 2 seconds</option>
+                                                    <option value="3">Every 3 seconds</option>
+                                                    <option value="5">Every 5 seconds</option>
+                                                    <option value="10">Every 10 seconds</option>
+                                                </select>
+                                                <small class="text-muted">How often to extract frames for OCR processing</small>
+                                            </div>
+                                            
+                                            <!-- OCR Max Frames -->
+                                            <div class="mb-3">
+                                                <label for="ocrMaxFrames" class="form-label">OCR Max Frames</label>
+                                                <select class="form-select" id="ocrMaxFrames">
+                                                    <option value="15">15 frames</option>
+                                                    <option value="30" selected>30 frames</option>
+                                                    <option value="50">50 frames</option>
+                                                    <option value="100">100 frames</option>
+                                                </select>
+                                                <small class="text-muted">Maximum number of frames to process for OCR</small>
+                                            </div>
+                                            
+                                            <!-- OCR Confidence Threshold -->
+                                            <div class="mb-3">
+                                                <label for="ocrConfidenceThreshold" class="form-label">OCR Confidence Threshold</label>
+                                                <select class="form-select" id="ocrConfidenceThreshold">
+                                                    <option value="0.3">30% (More text, less accurate)</option>
+                                                    <option value="0.5" selected>50% (Balanced)</option>
+                                                    <option value="0.7">70% (High confidence)</option>
+                                                    <option value="0.9">90% (Very high confidence)</option>
+                                                </select>
+                                                <small class="text-muted">Minimum confidence level for text detection</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <h6 class="mb-3">Performance Options</h6>
+                                            
+                                            <!-- Analysis Priority -->
+                                            <div class="mb-3">
+                                                <label for="analysisPriority" class="form-label">Analysis Priority</label>
+                                                <select class="form-select" id="analysisPriority">
+                                                    <option value="balanced">Balanced (Recommended)</option>
+                                                    <option value="speed">Speed (Faster, less detailed)</option>
+                                                    <option value="accuracy">Accuracy (Slower, more detailed)</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <!-- Batch Processing -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="enableBatchProcessing">
+                                                <label class="form-check-label" for="enableBatchProcessing">
+                                                    <i class="fas fa-layer-group text-primary"></i> Enable Batch Processing
+                                                    <small class="text-muted d-block">Process multiple files sequentially</small>
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Save to Database -->
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="saveToDatabase" checked>
+                                                <label class="form-check-label" for="saveToDatabase">
+                                                    <i class="fas fa-database text-success"></i> Save Results to Database
+                                                    <small class="text-muted d-block">Store analysis results for future reference</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <div>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" id="resetOptionsBtn">
+                                                <i class="fas fa-undo"></i> Reset to Defaults
+                                            </button>
+                                            <button type="button" class="btn btn-outline-info btn-sm ms-2" id="showPresetsBtn">
+                                                <i class="fas fa-preset"></i> Presets
+                                            </button>
+                                        </div>
+                                        <div class="text-muted">
+                                            <small>Selected features will be applied to your analysis</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Analyze Button -->
+                        <div class="text-center mt-4" id="analyzeButtonContainer" style="display: none;">
+                            <button class="btn btn-success btn-lg" id="analyzeBtn">
+                                <i class="fas fa-play"></i> Start Analysis
+                            </button>
+                            <small class="d-block text-muted mt-2">Analysis will use only the selected features above</small>
+                        </div>
+
+                        <!-- Progress -->
+                        <div class="card mt-4" id="progressCard" style="display: none;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="spinner-border text-primary me-3" role="status" id="analysisSpinner">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-1" id="progressTitle">Initializing Analysis...</h6>
+                                        <p class="text-muted mb-0" id="progressText">Preparing to analyze your content</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="progress mb-3">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         role="progressbar" style="width: 0%" id="progressBar">
+                                        <span id="progressPercentage">0%</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="text-primary">Current Step</h6>
+                                        <div class="current-step-display">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-play-circle text-primary me-2"></i>
+                                                <span id="currentStep">Initializing...</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-success">Completed Steps</h6>
+                                        <div class="completed-steps" id="completedSteps">
+                                            <small class="text-muted">No steps completed yet</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <h6 class="text-info">Live Status</h6>
+                                    <div class="live-status-container" id="liveStatusContainer">
+                                        <div class="status-message">
+                                            <i class="fas fa-info-circle text-info me-2"></i>
+                                            <span id="liveStatus">System ready, waiting for analysis to begin...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3 text-center">
+                                    <button class="btn btn-outline-danger btn-sm" id="cancelAnalysisBtn" style="display: none;">
+                                        <i class="fas fa-stop"></i> Cancel Analysis
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Results -->
+                        <div id="results" class="mt-4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Video.js JavaScript -->
+    <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
+    
+    <script src="app.js?v=1.1"></script>
+</body>
+</html> 

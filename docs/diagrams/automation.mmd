@@ -1,0 +1,67 @@
+graph TD
+    A[Content Input] --> B{Content Type Detection}
+    
+    B -->|URL Detection| C[URL Analysis]
+    B -->|File Upload| D[File Analysis]
+    
+    C --> E{Platform Detection}
+    E -->|YouTube/Vimeo/TikTok| F[Platform Download]
+    E -->|Direct Media URL| G[Direct Download]
+    E -->|Image URL| H[Image Processing]
+    
+    D --> I{MIME Type Classification}
+    I -->|video/*| J[Video Processing]
+    I -->|audio/*| K[Audio Processing]
+    I -->|image/*| L[Image Processing]
+    
+    F --> M{File Category}
+    G --> M
+    H --> L
+    
+    M -->|Video| J
+    M -->|Audio| K
+    M -->|Image| L
+    
+    J --> N[Video Analysis Pipeline]
+    K --> O[Audio Analysis Pipeline]
+    L --> P[Image Analysis Pipeline]
+    
+    N --> Q[Extract Audio Track]
+    N --> R[Extract Video Frames]
+    N --> S[Generate Thumbnails]
+    N --> T[Video Metadata]
+    
+    Q --> U[Speech-to-Text Transcription]
+    R --> V[Object Detection]
+    R --> W[OCR Text Extraction]
+    S --> X[Key Moments Detection]
+    
+    O --> U
+    O --> Y[Audio Metadata]
+    
+    P --> V
+    P --> W
+    P --> Z[Image Description Generation]
+    
+    U --> AA[Speaker Diarization]
+    U --> BB[Voice Print Recognition]
+    U --> CC[Sentiment Analysis]
+    
+    V --> DD[Content Categorization]
+    W --> DD
+    Z --> DD
+    CC --> DD
+    
+    DD --> EE[Auto-Tag Generation]
+    DD --> FF[Summary Generation]
+    
+    AA --> GG[Database Storage]
+    BB --> GG
+    X --> GG
+    Y --> GG
+    T --> GG
+    EE --> GG
+    FF --> GG
+    
+    GG --> HH[Real-time Updates]
+    HH --> II[User Dashboard] 

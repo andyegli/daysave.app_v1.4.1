@@ -1,0 +1,36 @@
+'use strict';
+
+/** @type {import('sequelize-cli').Migration} */
+module.exports = {
+  async up (queryInterface, Sequelize) {
+    console.log('Starting: create roles table');
+    await queryInterface.createTable('roles', {
+      id: {
+        type: Sequelize.CHAR(36),
+        primaryKey: true,
+        allowNull: false
+      },
+      name: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        unique: true
+      },
+      description: {
+        type: Sequelize.STRING
+      },
+      createdAt: {
+        allowNull: false,
+        type: Sequelize.DATE
+      },
+      updatedAt: {
+        allowNull: false,
+        type: Sequelize.DATE
+      }
+    });
+    console.log('Finished: create roles table');
+  },
+
+  async down (queryInterface, Sequelize) {
+    await queryInterface.dropTable('roles');
+  }
+}; 

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    /* Custom icon styling to ensure consistent appearance */
+    .bi {
+      display: inline-block;
+      font-family: bootstrap-icons !important;
+      font-style: normal;
+      font-weight: normal !important;
+      font-variant: normal;
+      text-transform: none;
+      line-height: 1;
+      vertical-align: -0.125em;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* Ensure icons in buttons are properly aligned */
+    .btn .bi {
+      vertical-align: middle;
+    }
+    
+    /* Icon sizing utilities */
+    .bi-sm { font-size: 0.875rem; }
+    .bi-lg { font-size: 1.25rem; }
+    .bi-xl { font-size: 1.5rem; }
+    
+    /* Specific styling for content management icons */
+    .content-card .bi {
+      font-size: 1rem;
+    }
+    
+    /* Filter button icons */
+    .btn .bi-funnel,
+    .btn .bi-x-circle {
+      font-size: 0.9rem;
+    }
+    
+    /* Action button icons (edit, delete, share) */
+    .btn-sm .bi {
+      font-size: 0.875rem;
+    }
+    
+    /* Source logo icons */
+    .bi[style*="font-size: 1.1rem"] {
+      font-size: 1.1rem !important;
+    }
+    
+    /* File type icons */
+    .bi-file-earmark-text {
+      font-size: 2.5rem !important;
+    }
+    
+    /* Ensure proper spacing around icons */
+    .bi + span,
+    span + .bi {
+      margin-left: 0.25rem;
+    }
+    
+    /* Icon colors for different contexts */
+    .bi.text-primary { color: #0d6efd !important; }
+    .bi.text-success { color: #198754 !important; }
+    .bi.text-danger { color: #dc3545 !important; }
+    .bi.text-warning { color: #ffc107 !important; }
+    .bi.text-info { color: #0dcaf0 !important; }
+    .bi.text-secondary { color: #6c757d !important; }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">DaySave</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <% if (user && user.Role && user.Role.name === 'admin') { %>
+          <li class="nav-item">
+            <a class="nav-link" href="/admin/users">Admin</a>
+          </li>
+        <% } %>
+        <% if (user) { %>
+          <li class="nav-item">
+            <a class="nav-link" href="/dashboard">Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/profile">Profile</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/auth/logout">Logout</a>
+          </li>
+        <% } else { %>
+          <li class="nav-item">
+            <a class="nav-link" href="/auth/login">Login</a>
+          </li>
+        <% } %>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+</body>
+</html> 

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <!-- Bootstrap & Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+      .dashboard-card {
+        min-height: 260px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+      .dashboard-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+      }
+      @media (max-width: 767px) {
+        .dashboard-card { min-height: 180px; }
+      }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <img src="/images/logo1.png" alt="DaySave Logo" width="30" height="30" class="me-2">
+                <span>DaySave</span>
+            </a>
+            <div class="navbar-nav ms-auto">
+                <% if (user) { %>
+                    <a href="/dashboard" class="btn btn-outline-light me-2">Dashboard</a>
+                    <a href="/auth/logout" class="btn btn-outline-danger">Logout</a>
+                <% } else { %>
+                    <a href="/auth/login" class="btn btn-outline-light">Login</a>
+                <% } %>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-5">
+        <h1 class="mb-4">Welcome, <%= user.first_name ? user.first_name : user.username %>!</h1>
+        
+        <!-- Success Messages -->
+        <script>
+            // Check for success messages in URL params
+            const urlParams = new URLSearchParams(window.location.search);
+            const successType = urlParams.get('success');
+            
+            if (successType === 'account_linked') {
+                // Show success alert
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Account Linked Successfully!</strong> You can now use your social account to login.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('main').insertBefore(alertDiv, document.querySelector('h1').nextSibling);
+                
+                // Clean up URL
+                const newUrl = window.location.pathname;
+                history.replaceState({}, document.title, newUrl);
+            }
+        </script>
+        
+        <!-- Management Cards Row -->
+        <div class="row g-4 mb-4">
+            <!-- Social Integrations -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card dashboard-card h-100 text-center">
+                    <div class="dashboard-icon text-primary">
+                        <i class="fas fa-share-alt"></i>
+                    </div>
+                    <h5 class="card-title">Social Integrations</h5>
+                    <p class="card-text">Connect your social media accounts</p>
+                    <a href="#" class="btn btn-primary disabled" aria-disabled="true">Coming Soon</a>
+                </div>
+            </div>
+            <!-- File Management -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card dashboard-card h-100 text-center">
+                    <div class="dashboard-icon text-success">
+                        <i class="fas fa-file-upload"></i>
+                    </div>
+                    <h5 class="card-title">File Management</h5>
+                    <p class="card-text">Upload and organize your files</p>
+                    <a href="/files" class="btn btn-success">Upload Files</a>
+                </div>
+            </div>
+            <!-- Contacts -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card dashboard-card h-100 text-center">
+                    <div class="dashboard-icon text-info">
+                        <i class="fa fa-address-book"></i>
+                    </div>
+                    <h5 class="card-title">Contacts</h5>
+                    <p class="card-text">Manage your contacts and groups</p>
+                    <a href="/contacts" class="btn btn-info">Manage Contacts</a>
+                </div>
+            </div>
+            <!-- Content Management -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card dashboard-card h-100 text-center">
+                    <div class="dashboard-icon text-warning">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <h5 class="card-title">Content Management</h5>
+                    <p class="card-text">Manage your content and groups</p>
+                    <a href="/content" class="btn btn-warning">Manage Content</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Second Row of Management Cards -->
+        <div class="row g-4 mb-4">
+            <!-- API Key Management -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card dashboard-card h-100 text-center">
+                    <div class="dashboard-icon text-danger">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <h5 class="card-title">API Keys</h5>
+                    <p class="card-text">Manage your API keys and permissions</p>
+                    <a href="/api-keys" class="btn btn-danger">Manage API Keys</a>
+                </div>
+            </div>
+            <!-- Subscription Management -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card dashboard-card h-100 text-center">
+                    <div class="dashboard-icon text-warning">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <h5 class="card-title">Subscription</h5>
+                    <p class="card-text">Manage your subscription plan and billing</p>
+                    <div class="d-grid gap-2">
+                        <a href="/subscription/plans" class="btn btn-warning btn-sm">View Plans</a>
+                        <a href="/subscription/manage" class="btn btn-outline-warning btn-sm">Manage</a>
+                    </div>
+                </div>
+            </div>
+            <!-- Placeholder for future features -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card dashboard-card h-100 text-center">
+                    <div class="dashboard-icon text-muted">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h5 class="card-title">Analytics</h5>
+                    <p class="card-text">View your usage analytics</p>
+                    <a href="#" class="btn btn-outline-secondary disabled" aria-disabled="true">Coming Soon</a>
+                </div>
+            </div>
+            <!-- Placeholder for future features -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card dashboard-card h-100 text-center">
+                    <div class="dashboard-icon text-muted">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <h5 class="card-title">Notifications</h5>
+                    <p class="card-text">Manage your notifications</p>
+                    <a href="#" class="btn btn-outline-secondary disabled" aria-disabled="true">Coming Soon</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Account Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Username:</strong> <%= user.username %></p>
+                        <p><strong>Email:</strong> <%= user.email %></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Subscription:</strong> 
+                            <% if (subscription) { %>
+                                <span class="badge bg-<%= subscription.status === 'active' ? 'success' : 'warning' %>">
+                                    <%= subscription.subscriptionPlan.display_name %> - <%= subscription.status %>
+                                </span>
+                            <% } else { %>
+                                <span class="badge bg-secondary">No Subscription</span>
+                            <% } %>
+                        </p>
+                        <p><strong>Language:</strong> <%= user.language %></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Actions (if applicable) -->
+        <% if (user && user.roleName === 'admin') { %>
+        <div class="mb-4">
+            <a href="/admin/users" class="btn btn-danger">Admin User Management</a>
+        </div>
+        <% } %>
+
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 feature-card">
+                <div class="card-body text-center">
+                    <div class="feature-icon">
+                        <i class="fas fa-crown text-primary"></i>
+                    </div>
+                    <h5 class="card-title">Subscription</h5>
+                    <p class="card-text">Manage your subscription plan and billing</p>
+                    <div class="d-grid gap-2">
+                        <a href="/subscription/plans" class="btn btn-primary">
+                            <i class="fas fa-star me-2"></i>
+                            View Plans
+                        </a>
+                        <a href="/subscription/manage" class="btn btn-outline-primary">
+                            <i class="fas fa-cog me-2"></i>
+                            Manage Subscription
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
