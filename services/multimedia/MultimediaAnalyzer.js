@@ -1507,7 +1507,7 @@ Return only the extracted text, preserving line breaks and formatting where poss
   }
 
   /**
-   * Generate summary using OpenAI
+   * Generate summary using OpenAI with rate limit handling
    * @param {string} text - Text to summarize
    * @returns {Promise<string>} Summary text
    */
@@ -1515,25 +1515,54 @@ Return only the extracted text, preserving line breaks and formatting where poss
     try {
       if (!this.openai || !text) return '';
 
+      // Handle large transcriptions that might exceed token limits
+      // Approximate: 1 token ≈ 4 characters for English text
+      const estimatedTokens = Math.ceil(text.length / 4);
+      const maxInputTokens = 8000; // Leave room for system prompt and response tokens
+      
+      let processedText = text;
+      let truncated = false;
+      
+      if (estimatedTokens > maxInputTokens) {
+        // Truncate text to fit within token limits
+        const maxChars = maxInputTokens * 4;
+        processedText = text.substring(0, maxChars);
+        truncated = true;
+        
+        console.log(`⚠️ Transcription truncated for summary generation: ${text.length} → ${processedText.length} chars`);
+      }
+
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini', // More efficient model with higher rate limits
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful assistant that creates concise summaries of multimedia content.'
+            content: 'You are a helpful assistant that creates concise summaries of multimedia content. Focus on the main topics, key points, and important takeaways.'
           },
           {
             role: 'user',
-            content: `Please create a concise summary of the following content:\n\n${text}`
+            content: `Please create a comprehensive summary of the following content${truncated ? ' (note: this is a portion of a longer transcription)' : ''}:\n\n${processedText}`
           }
         ],
-        max_tokens: 200,
+        max_tokens: 300, // Increased for better summaries
         temperature: 0.3
       });
 
-      return response.choices[0].message.content.trim();
+      const summary = response.choices[0].message.content.trim();
+      
+      if (this.enableLogging && summary) {
+        console.log(`✅ Summary generated: ${summary.length} chars${truncated ? ' (from truncated text)' : ''}`);
+      }
+
+      return summary;
     } catch (error) {
-      console.error('❌ Summary generation failed:', error);
+      console.error('❌ Summary generation failed:', error.message);
+      
+      // If it's a rate limit error, provide more specific logging
+      if (error.code === 'rate_limit_exceeded') {
+        console.error('🚫 Rate limit exceeded - consider upgrading OpenAI plan or reducing content length');
+      }
+      
       return '';
     }
   }
