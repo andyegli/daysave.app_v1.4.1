@@ -50,6 +50,11 @@ module.exports = (sequelize, DataTypes) => {
     category: {
       type: DataTypes.STRING
     },
+    generated_title: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: 'AI-generated title for the content'
+    },
     location: {
       type: DataTypes.JSON
     }

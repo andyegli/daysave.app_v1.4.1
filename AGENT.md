@@ -11,6 +11,7 @@ You are a AI Agent assigned to assist in the development of the `DaySave.app` pr
 - Assist with extracting metadata, summaries, and AI tagging (via OpenAI, Google APIs).
 - Maintain multilingual consistency in all interfaces and outputs.
 - Respect UUID usage and database integrity via Sequelize ORM.
+- Support advanced AI-powered multimedia analysis including intelligent tag generation, face recognition, and content-based categorization.
 
 ## Project Tech Stack
 - **Backend**: Node.js, Express

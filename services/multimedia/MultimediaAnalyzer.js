@@ -3010,6 +3010,17 @@ Respond with just the description, no additional formatting or labels.`;
         updateData.auto_tags = results.auto_tags;
       }
       
+      // ✨ CRITICAL FIX: Update AI-generated title
+      if (results.generatedTitle && results.generatedTitle.trim()) {
+        updateData.generated_title = results.generatedTitle.trim();
+        console.log(`🎯 MultimediaAnalyzer: Saving AI-generated title: "${results.generatedTitle.trim()}"`);
+      }
+      
+      // ✨ ENHANCEMENT: Update AI-generated category
+      if (results.category) {
+        updateData.category = results.category;
+      }
+      
       // Update content record
       await Content.update(updateData, {
         where: { id: contentId }

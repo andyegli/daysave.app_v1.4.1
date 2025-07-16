@@ -152,9 +152,10 @@ async function triggerMultimediaAnalysis(content, user) {
       updateData.summary = formattedResults.summary;
     }
     
-    // Handle generated title
-    if (formattedResults.generatedTitle) {
-      updateData.generated_title = formattedResults.generatedTitle;
+    // Handle generated title - ENHANCED: Ensure AI titles are prioritized and saved
+    if (formattedResults.generatedTitle && formattedResults.generatedTitle.trim()) {
+      updateData.generated_title = formattedResults.generatedTitle.trim();
+      console.log(`🎯 Saving AI-generated title: "${formattedResults.generatedTitle.trim()}"`);
     }
     
     // Store sentiment analysis

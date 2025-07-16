@@ -430,17 +430,41 @@ class BackwardCompatibilityService {
 
       // Update linked content if provided
       if (options.content_id) {
-        await Content.update(
-          {
-            transcription: legacyResults.transcription,
-            metadata: {
-              ...legacyResults.metadata,
-              last_analyzed: new Date().toISOString(),
-              analysis_id: legacyResults.analysis_id
-            }
-          },
-          { where: { id: options.content_id, user_id: options.user_id } }
-        );
+        const updateData = {
+          transcription: legacyResults.transcription,
+          metadata: {
+            ...legacyResults.metadata,
+            last_analyzed: new Date().toISOString(),
+            analysis_id: legacyResults.analysis_id
+          }
+        };
+        
+        // ✨ CRITICAL FIX: Save AI-generated title to database
+        if (legacyResults.generatedTitle) {
+          updateData.generated_title = legacyResults.generatedTitle;
+        }
+        
+        // ✨ ENHANCEMENT: Save AI-generated summary
+        if (legacyResults.summary) {
+          updateData.summary = legacyResults.summary;
+        }
+        
+        // ✨ ENHANCEMENT: Save AI-generated sentiment
+        if (legacyResults.sentiment) {
+          updateData.sentiment = legacyResults.sentiment;
+        }
+        
+        // ✨ ENHANCEMENT: Save AI-powered tags (prioritize over generic ones)
+        if (legacyResults.auto_tags && legacyResults.auto_tags.length > 0) {
+          updateData.auto_tags = legacyResults.auto_tags;
+        }
+        
+        // ✨ ENHANCEMENT: Save AI-powered category
+        if (legacyResults.category) {
+          updateData.category = legacyResults.category;
+        }
+        
+        await Content.update(updateData, { where: { id: options.content_id, user_id: options.user_id } });
       }
 
     } catch (error) {
