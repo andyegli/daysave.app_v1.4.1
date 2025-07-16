@@ -2091,7 +2091,8 @@ Return only the extracted text, preserving line breaks and formatting where poss
           metadata.videoId = videoId;
           metadata.title = `YouTube Video ${videoId}`;
           metadata.description = 'YouTube video content';
-          metadata.thumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+          // Use hqdefault.jpg as it's more widely available than maxresdefault.jpg
+          metadata.thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
         }
       }
       

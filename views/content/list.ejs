@@ -188,11 +188,13 @@
                 <div class="flex-shrink-0 d-flex align-items-center justify-content-center bg-light" style="width: 90px;">
                   <% if (item.metadata && item.metadata.thumbnail) { %>
                     <a href="<%= item.url %>" target="_blank" rel="noopener noreferrer">
-                      <img src="<%= item.metadata.thumbnail %>" class="img-fluid" alt="Thumbnail">
+                      <img src="<%= item.metadata.thumbnail %>" class="img-fluid" alt="Thumbnail" 
+                           onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<i class=\'bi bi-file-earmark-text fs-1 text-secondary\'></i>';">
                     </a>
                   <% } else if (item.url && item.url.match(/\.(jpg|jpeg|png|gif)$/i)) { %>
                     <a href="<%= item.url %>" target="_blank" rel="noopener noreferrer">
-                      <img src="<%= item.url %>" class="img-fluid" alt="Thumbnail">
+                      <img src="<%= item.url %>" class="img-fluid" alt="Thumbnail"
+                           onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<i class=\'bi bi-file-earmark-text fs-1 text-secondary\'></i>';">
                     </a>
                   <% } else { %>
                     <a href="<%= item.url %>" target="_blank" rel="noopener noreferrer">
