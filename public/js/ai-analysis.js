@@ -683,24 +683,28 @@ function renderAIAnalysisModal(result) {
   console.log('🎨 Analysis object:', analysis);
   console.log('🎨 Media type extracted:', mediaType);
   
-  // Start with compact header
+  // Compact header with robot icon + Analysis Results + type
   let html = `
     <div class="ai-analysis-content">
-      <div class="d-flex align-items-center mb-4">
+      <div class="d-flex align-items-center mb-3">
         <i class="bi bi-robot me-2 text-primary" style="font-size: 1.5rem;"></i>
         <h5 class="fw-bold mb-0 me-2">Analysis Results</h5>
         <span class="badge bg-secondary">${mediaType?.toUpperCase() || 'UNKNOWN'}</span>
       </div>
   `;
 
-  // 1. SUMMARY (Priority #1)
+  // 1. SUMMARY AND SENTIMENT ANALYSIS (Priority #1)
   const summary = getSummaryFromResult(result);
   if (summary) {
+    const wordCount = summary.split(' ').length;
     html += `
       <div class="mb-4">
-        <h6 class="fw-bold">
-          <i class="bi bi-file-earmark-text me-2"></i>Summary
-        </h6>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold mb-0">
+            <i class="bi bi-file-earmark-text me-2"></i>Summary
+          </h6>
+          <span class="badge bg-light text-dark">${wordCount} words</span>
+        </div>
         <div class="border rounded p-3 bg-light">
           <p class="mb-0">${summary}</p>
         </div>
@@ -708,24 +712,61 @@ function renderAIAnalysisModal(result) {
     `;
   }
 
-  // 2. SENTIMENT ANALYSIS (Priority #2)
-  html += renderSentimentSection(analysis, result);
+  // Add sentiment right after summary
+  html += renderSentimentAnalysis(analysis, result);
 
-  // 3. TRANSCRIPTION (Priority #3)
-  html += renderTranscriptionSection(analysis, mediaType);
+  // 2. TRANSCRIPTION (Priority #2)
+  const transcriptionText = getTranscriptionFromResult(result);
+  if (transcriptionText && transcriptionText.trim()) {
+    html += renderTranscriptionSection(transcriptionText, 'Transcription', 'bi-soundwave');
+  }
 
-  // 4. CATEGORY & TAGS (Priority #4)
+  // 3. CATEGORY & TAGS (Priority #3)
   html += renderCategoryAndTagsSection(result);
 
-  // 5. REST OF AI PIPELINE OUTPUT
-  html += renderDetectedObjectsSection(analysis);
-  html += renderSpeakersSection(analysis, result);
-  html += renderOCRSection(analysis);
-  html += renderFacesSection(analysis);
-  html += renderColorsSection(analysis);
-  html += renderScenesSection(analysis);
-  html += renderThumbnailsSection(result);
+  // 4. REST OF AI PIPELINE OUTPUT
+  // Get all data sources
+  const objects = getObjectsFromResult(result);
+  const speakers = getSpeakersFromResult(result);
+  const ocrText = getOCRFromResult(result);
+  const faces = getFacesFromResult(result);
+  const colors = getColorsFromResult(result);
+  const thumbnails = getThumbnailsFromResult(result);
+  
+  // Detected Objects
+  if (objects && objects.length > 0) {
+    html += renderObjectsSection(objects);
+  }
+  
+  // Speakers
+  if (speakers && speakers.length > 0) {
+    html += renderSpeakersSection(speakers);
+  }
+  
+  // OCR Text
+  if (ocrText && ocrText.trim()) {
+    html += renderOCRSection(ocrText);
+  }
+  
+  // Faces
+  if (faces && faces.length > 0) {
+    html += renderFacesSection(faces);
+  }
+  
+  // Colors
+  if (colors && (colors.dominantColors || colors.palette)) {
+    html += renderColorsSection(colors);
+  }
+  
+  // Thumbnails
+  if (thumbnails && thumbnails.length > 0) {
+    html += renderThumbnailsSection(thumbnails);
+  }
+  
+  // Technical Information
   html += renderTechnicalInfoSection(analysis, result);
+  
+  // Processing Information
   html += renderProcessingInfoSection(analysis, result);
   
   html += '</div>';
@@ -755,6 +796,409 @@ function getSummaryFromResult(result) {
   }
   
   return null;
+}
+
+/**
+ * Get transcription from various sources
+ */
+function getTranscriptionFromResult(result) {
+  const analysis = result.analysis;
+  
+  if (analysis.transcription && analysis.transcription.trim()) {
+    return analysis.transcription;
+  }
+  
+  if (analysis.description && analysis.description.trim()) {
+    return analysis.description;
+  }
+  
+  if (result.transcription && result.transcription.trim()) {
+    return result.transcription;
+  }
+  
+  return '';
+}
+
+/**
+ * Get objects from various sources
+ */
+function getObjectsFromResult(result) {
+  const analysis = result.analysis;
+  
+  if (analysis.objects && Array.isArray(analysis.objects)) {
+    return analysis.objects;
+  }
+  
+  if (result.objects && Array.isArray(result.objects)) {
+    return result.objects;
+  }
+  
+  return [];
+}
+
+/**
+ * Get speakers from various sources
+ */
+function getSpeakersFromResult(result) {
+  if (result.speakers && Array.isArray(result.speakers)) {
+    return result.speakers;
+  }
+  
+  const analysis = result.analysis;
+  if (analysis.speakers && Array.isArray(analysis.speakers)) {
+    return analysis.speakers;
+  }
+  
+  return [];
+}
+
+/**
+ * Get OCR text from various sources
+ */
+function getOCRFromResult(result) {
+  if (result.ocr_captions && Array.isArray(result.ocr_captions)) {
+    return result.ocr_captions.map(c => c.text).join(' ');
+  }
+  
+  const analysis = result.analysis;
+  if (analysis.ocrText && analysis.ocrText.trim()) {
+    return analysis.ocrText;
+  }
+  
+  if (analysis.ocr_captions && Array.isArray(analysis.ocr_captions)) {
+    return analysis.ocr_captions.map(c => c.text).join(' ');
+  }
+  
+  return '';
+}
+
+/**
+ * Get faces from various sources
+ */
+function getFacesFromResult(result) {
+  const analysis = result.analysis;
+  
+  if (analysis.faces && Array.isArray(analysis.faces)) {
+    return analysis.faces;
+  }
+  
+  if (result.faces && Array.isArray(result.faces)) {
+    return result.faces;
+  }
+  
+  return [];
+}
+
+/**
+ * Get colors from various sources
+ */
+function getColorsFromResult(result) {
+  const analysis = result.analysis;
+  
+  if (analysis.colors) {
+    return analysis.colors;
+  }
+  
+  if (result.colors) {
+    return result.colors;
+  }
+  
+  return null;
+}
+
+/**
+ * Get thumbnails from various sources
+ */
+function getThumbnailsFromResult(result) {
+  if (result.thumbnails && Array.isArray(result.thumbnails)) {
+    return result.thumbnails;
+  }
+  
+  const analysis = result.analysis;
+  if (analysis.thumbnails && Array.isArray(analysis.thumbnails)) {
+    return analysis.thumbnails;
+  }
+  
+  return [];
+}
+
+/**
+ * Render sentiment analysis section
+ */
+function renderSentimentAnalysis(analysis, result) {
+  if (!analysis.sentiment) return '';
+  
+  const sentiment = analysis.sentiment;
+  let sentimentColor = 'secondary';
+  let sentimentIcon = 'bi-emoji-neutral';
+  
+  if (sentiment.sentiment === 'positive') {
+    sentimentColor = 'success';
+    sentimentIcon = 'bi-emoji-smile';
+  } else if (sentiment.sentiment === 'negative') {
+    sentimentColor = 'danger';
+    sentimentIcon = 'bi-emoji-frown';
+  }
+  
+  return `
+    <div class="mb-4">
+      <h6 class="fw-bold">
+        <i class="bi ${sentimentIcon} me-2"></i>Sentiment Analysis
+      </h6>
+      <div class="border rounded p-3">
+        <div class="row">
+          <div class="col-md-6">
+            <strong>Overall Sentiment:</strong><br>
+            <span class="badge bg-${sentimentColor} me-2">${sentiment.sentiment?.toUpperCase() || 'UNKNOWN'}</span>
+            ${sentiment.confidence ? `<small class="text-muted">(${Math.round(sentiment.confidence * 100)}% confidence)</small>` : ''}
+          </div>
+          ${sentiment.emotions && sentiment.emotions.length > 0 ? `
+          <div class="col-md-6">
+            <strong>Detected Emotions:</strong><br>
+            ${sentiment.emotions.map(emotion => `<span class="badge bg-light text-dark me-1">${emotion}</span>`).join('')}
+          </div>
+          ` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render category and tags section
+ */
+function renderCategoryAndTagsSection(result) {
+  const analysis = result.analysis;
+  let html = '';
+  
+  // Extract categories and tags from various sources
+  const category = analysis.category || result.category;
+  const tags = analysis.tags || result.tags || [];
+  const autoTags = analysis.autoTags || result.autoTags || [];
+  const userTags = analysis.userTags || result.userTags || [];
+  
+  if (category || tags.length > 0 || autoTags.length > 0 || userTags.length > 0) {
+    html += `
+      <div class="mb-4">
+        <h6 class="fw-bold">
+          <i class="bi bi-tag me-2"></i>Category & Tags
+        </h6>
+        <div class="border rounded p-3">
+    `;
+    
+    if (category) {
+      html += `
+        <div class="mb-3">
+          <strong>Category:</strong><br>
+          <span class="badge bg-primary">${category}</span>
+        </div>
+      `;
+    }
+    
+    if (autoTags.length > 0) {
+      html += `
+        <div class="mb-3">
+          <strong>AI Generated Tags:</strong><br>
+          ${autoTags.map(tag => `<span class="badge bg-success me-1 mb-1">${tag}</span>`).join('')}
+        </div>
+      `;
+    }
+    
+    if (userTags.length > 0) {
+      html += `
+        <div class="mb-3">
+          <strong>User Tags:</strong><br>
+          ${userTags.map(tag => `<span class="badge bg-warning text-dark me-1 mb-1">${tag}</span>`).join('')}
+        </div>
+      `;
+    }
+    
+    if (tags.length > 0 && tags !== autoTags && tags !== userTags) {
+      html += `
+        <div class="mb-0">
+          <strong>Other Tags:</strong><br>
+          ${tags.map(tag => `<span class="badge bg-secondary me-1 mb-1">${tag}</span>`).join('')}
+        </div>
+      `;
+    }
+    
+    html += `
+        </div>
+      </div>
+    `;
+  }
+  
+  return html;
+}
+
+/**
+ * Render colors section
+ */
+function renderColorsSection(colors) {
+  if (!colors || (!colors.dominantColors && !colors.palette)) return '';
+  
+  return `
+    <div class="mb-4">
+      <h6 class="fw-bold">
+        <i class="bi bi-palette me-2"></i>Color Analysis
+      </h6>
+      <div class="border rounded p-3">
+        <div class="row">
+          ${colors.dominantColors ? colors.dominantColors.map(color => `
+            <div class="col-auto mb-2">
+              <div class="d-flex align-items-center">
+                <div style="width: 30px; height: 30px; background-color: ${color.hex || color.value}; border: 1px solid #ccc; border-radius: 4px;" class="me-2"></div>
+                <small>${color.name || color.hex || 'Unknown'}</small>
+              </div>
+            </div>
+          `).join('') : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render technical information section
+ */
+function renderTechnicalInfoSection(analysis, result) {
+  let html = '';
+  let techInfo = [];
+  
+  // Collect technical information
+  if (analysis.duration) {
+    techInfo.push(`Duration: ${formatDuration(analysis.duration)}`);
+  }
+  
+  if (analysis.language && analysis.language !== 'unknown') {
+    techInfo.push(`Language: ${analysis.language}`);
+  }
+  
+  if (analysis.quality_score) {
+    techInfo.push(`Quality Score: ${Math.round(analysis.quality_score * 100)}%`);
+  }
+  
+  if (result.mediaType) {
+    techInfo.push(`Media Type: ${result.mediaType}`);
+  }
+  
+  if (analysis.fileSize || result.fileSize) {
+    const size = analysis.fileSize || result.fileSize;
+    techInfo.push(`File Size: ${formatFileSize(size)}`);
+  }
+  
+  if (analysis.metadata) {
+    const metadata = analysis.metadata;
+    if (metadata.width && metadata.height) {
+      techInfo.push(`Dimensions: ${metadata.width}x${metadata.height}`);
+    }
+    if (metadata.format) {
+      techInfo.push(`Format: ${metadata.format.toUpperCase()}`);
+    }
+    if (metadata.bitrate) {
+      techInfo.push(`Bitrate: ${metadata.bitrate}`);
+    }
+    if (metadata.fps) {
+      techInfo.push(`FPS: ${metadata.fps}`);
+    }
+  }
+  
+  if (techInfo.length > 0) {
+    html += `
+      <div class="mb-4">
+        <h6 class="fw-bold">
+          <i class="bi bi-gear me-2"></i>Technical Information
+        </h6>
+        <div class="border rounded p-3">
+          <div class="row">
+            ${techInfo.map(info => `
+              <div class="col-md-6 mb-1">
+                <small class="text-muted">${info}</small>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  return html;
+}
+
+/**
+ * Render processing information section
+ */
+function renderProcessingInfoSection(analysis, result) {
+  let html = '';
+  let processingInfo = [];
+  
+  // Collect processing information
+  if (analysis.processing_time) {
+    processingInfo.push(`Processing Time: ${analysis.processing_time}ms`);
+  }
+  
+  if (analysis.created_at) {
+    const date = new Date(analysis.created_at);
+    processingInfo.push(`Analyzed: ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`);
+  }
+  
+  if (result.status) {
+    processingInfo.push(`Status: ${result.status.toUpperCase()}`);
+  }
+  
+  // Add processing pipeline info
+  const pipelineSteps = [];
+  if (analysis.transcription) pipelineSteps.push('Speech-to-Text');
+  if (analysis.summary) pipelineSteps.push('Summarization');
+  if (analysis.sentiment) pipelineSteps.push('Sentiment Analysis');
+  if (getObjectsFromResult(result).length > 0) pipelineSteps.push('Object Detection');
+  if (getFacesFromResult(result).length > 0) pipelineSteps.push('Face Recognition');
+  if (getOCRFromResult(result)) pipelineSteps.push('OCR');
+  if (getThumbnailsFromResult(result).length > 0) pipelineSteps.push('Thumbnail Generation');
+  
+  if (pipelineSteps.length > 0) {
+    processingInfo.push(`Pipeline Steps: ${pipelineSteps.join(', ')}`);
+  }
+  
+  if (processingInfo.length > 0) {
+    html += `
+      <div class="mb-4">
+        <h6 class="fw-bold">
+          <i class="bi bi-cpu me-2"></i>Processing Information
+        </h6>
+        <div class="border rounded p-3">
+          <div class="row">
+            ${processingInfo.map(info => `
+              <div class="col-12 mb-1">
+                <small class="text-muted">${info}</small>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  return html;
+}
+
+/**
+ * Format duration in seconds to readable format
+ */
+function formatDuration(seconds) {
+  if (!seconds || seconds === 0) return '0s';
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${secs}s`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${secs}s`;
+  } else {
+    return `${secs}s`;
+  }
 }
 
 /**
