@@ -1085,3 +1085,18 @@ openssl rand -base64 32
 - [ ] Test subscription upgrade from Free to Unlimited plan
 - [ ] Verify that user authentication works properly with AJAX requests
 - [ ] Confirm subscription detection and proper endpoint selection (subscribe vs change)
+
+- [x] Fix tags modal population issue  
+  - [x] Identified root cause: HTML entity encoding breaking JSON.parse()
+  - [x] Changed from HTML entities (&quot;) to URL encoding for tags data
+  - [x] Updated JavaScript to use decodeURIComponent before JSON.parse  
+  - [x] Modal now properly displays all hidden tags when clicking "+5 more" badge
+  - [x] Fixed accessibility warning about aria-hidden on modal with focused button
+  - [x] Committed changes to git (commit c975755, 97888a2, 62f7f91)
+
+- [x] Remove yellow spinning processing indicator from content cards
+  - [x] Disabled displayProcessingIndicator function in ai-analysis.js
+  - [x] AI analysis now processes silently in the background  
+  - [x] No more yellow spinner with percentage showing on content cards
+  - [x] Processing still continues normally, just without visual indicator
+  - [x] Committed changes to git (commit 802d1e4)
