@@ -1,3 +1,18 @@
+- [x] Optimize content card layout for better title visibility
+  - [x] Reduced right info column width from 140px to 110-120px maximum
+  - [x] Reorganized action buttons into compact 2x2 grid layout to save space
+  - [x] Made button icons smaller (0.8rem) and added helpful tooltips
+  - [x] Added proper margin-right spacing to titles for better visual separation
+  - [x] Improved mobile responsiveness with smaller button sizes
+  - [x] Gives significantly more horizontal space for AI-generated titles to display
+  - [x] Committed changes to git (commit 3b68947)
+- [x] UI improvements: Move sentiment button behind tags and make +n more tags clickable
+  - [x] Moved sentiment badge from inside transcription summary to after tags section
+  - [x] Made "+n more" tags badge clickable to show remaining tags in a modal
+  - [x] Added "All Tags Modal" with proper styling for auto/user tags
+  - [x] Implemented JavaScript modal population logic
+  - [x] Improved content card layout and tag visibility
+  - [x] Committed changes to git (commit 7ed54f4)
 - [x] Create comprehensive Google services configuration documentation (docs/google_services_config.md)
   - [x] Detailed step-by-step setup for Google Cloud Project, OAuth, Gmail, and Cloud Storage
   - [x] Security best practices and credential management guidelines
@@ -1034,3 +1049,11 @@ openssl rand -base64 32
 ## Next Priority Development Tasks (v1.4.2+)
 
 ### **🔥 HIGH PRIORITY (Enhanced Modular Features)**
+- [x] Optimize content card layout for better title visibility
+  - [x] Reduced right info column width from 140px to 110-120px maximum
+  - [x] Reorganized action buttons into compact 2x2 grid layout to save space
+  - [x] Made button icons smaller (0.8rem) and added helpful tooltips
+  - [x] Added proper margin-right spacing to titles for better visual separation
+  - [x] Improved mobile responsiveness with smaller button sizes
+  - [x] Gives significantly more horizontal space for AI-generated titles to display
+  - [x] Committed changes to git (commit 3b68947)

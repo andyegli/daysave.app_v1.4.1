@@ -223,15 +223,63 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const modal = new bootstrap.Modal(document.getElementById('subscriptionModal'));
         const detailsDiv = document.getElementById('subscriptionDetails');
+        const modalLabel = document.getElementById('subscriptionModalLabel');
+        const confirmBtn = document.getElementById('confirmSubscription');
         
         const price = selectedBillingCycle === 'yearly' ? plan.price_yearly : plan.price_monthly;
         const billingText = selectedBillingCycle === 'yearly' ? 'per year' : 'per month';
         
+        // Determine subscription action type
+        const isUpgrade = currentSubscription && currentSubscription.subscription_plan_id !== plan.id;
+        const isNewSubscription = !currentSubscription;
+        const isSamePlan = currentSubscription && currentSubscription.subscription_plan_id === plan.id;
+        
+        let actionText, modalTitle, alertMessage, buttonText;
+        
+        if (isNewSubscription) {
+            actionText = 'Subscribe to';
+            modalTitle = 'Confirm Subscription';
+            buttonText = '<i class="fas fa-credit-card me-2"></i>Confirm Subscription';
+            alertMessage = 'This is a mock subscription system for demonstration purposes.';
+        } else if (isSamePlan) {
+            actionText = 'You are currently subscribed to';
+            modalTitle = 'Current Plan';
+            buttonText = '<i class="fas fa-check me-2"></i>Current Plan';
+            alertMessage = 'You are already subscribed to this plan.';
+        } else if (isUpgrade) {
+            const currentPlanPrice = currentSubscription.subscriptionPlan.price_monthly;
+            const newPlanPrice = plan.price_monthly;
+            const isUpgradeChange = newPlanPrice > currentPlanPrice;
+            
+            actionText = isUpgradeChange ? 'Upgrade to' : 'Change to';
+            modalTitle = isUpgradeChange ? 'Confirm Upgrade' : 'Confirm Plan Change';
+            buttonText = `<i class="fas fa-arrow-up me-2"></i>${isUpgradeChange ? 'Upgrade Plan' : 'Change Plan'}`;
+            alertMessage = isUpgradeChange ? 
+                'You will be charged a prorated amount for the plan upgrade.' :
+                'Your plan will be changed and billing adjusted accordingly.';
+        }
+        
+        // Update modal title and button text
+        modalLabel.textContent = modalTitle;
+        confirmBtn.innerHTML = buttonText;
+        confirmBtn.disabled = isSamePlan;
+        
         detailsDiv.innerHTML = `
             <div class="text-center mb-3">
-                <h4>${plan.display_name}</h4>
+                <h4>${actionText} ${plan.display_name}</h4>
                 <p class="text-muted">${plan.description}</p>
             </div>
+            
+            ${currentSubscription && !isNewSubscription ? `
+                <div class="current-plan-info mb-3">
+                    <div class="card bg-light">
+                        <div class="card-body p-3">
+                            <h6 class="card-title mb-1">Current Plan: ${currentSubscription.subscriptionPlan.display_name}</h6>
+                            <small class="text-muted">$${currentSubscription.billing_cycle === 'yearly' ? currentSubscription.subscriptionPlan.price_yearly : currentSubscription.subscriptionPlan.price_monthly} per ${currentSubscription.billing_cycle === 'yearly' ? 'year' : 'month'}</small>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
             
             <div class="pricing-summary text-center mb-4">
                 <h3 class="text-primary">$${price} <small class="text-muted">${billingText}</small></h3>
@@ -250,9 +298,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 </ul>
             </div>
             
-            <div class="alert alert-info">
+            <div class="alert ${isSamePlan ? 'alert-warning' : 'alert-info'}">
                 <i class="fas fa-info-circle me-2"></i>
-                This is a mock subscription system for demonstration purposes.
+                ${alertMessage}
             </div>
         `;
         
@@ -262,21 +310,49 @@ document.addEventListener('DOMContentLoaded', function() {
     async function handleSubscription() {
         if (!selectedPlan) return;
         
+        // Determine if this is a new subscription or an upgrade/downgrade
+        const isUpgrade = currentSubscription && currentSubscription.subscription_plan_id !== selectedPlan.id;
+        const isNewSubscription = !currentSubscription;
+        
         try {
             const confirmBtn = document.getElementById('confirmSubscription');
             confirmBtn.disabled = true;
             confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
             
-            const response = await fetch('/api/subscription/subscribe', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
+            let endpoint, method, requestBody, successMessage;
+            
+            if (isNewSubscription) {
+                // New subscription
+                endpoint = '/api/subscription/subscribe';
+                method = 'POST';
+                requestBody = {
                     planId: selectedPlan.id,
                     billingCycle: selectedBillingCycle,
                     paymentMethod: 'mock'
-                })
+                };
+                successMessage = 'Subscription created successfully!';
+            } else if (isUpgrade) {
+                // Upgrade/downgrade existing subscription
+                endpoint = '/api/subscription/change';
+                method = 'PUT';
+                requestBody = {
+                    planId: selectedPlan.id
+                };
+                const currentPlanPrice = currentSubscription.subscriptionPlan.price_monthly;
+                const newPlanPrice = selectedPlan.price_monthly;
+                const isUpgradeChange = newPlanPrice > currentPlanPrice;
+                successMessage = isUpgradeChange ? 'Subscription upgraded successfully!' : 'Subscription changed successfully!';
+            } else {
+                // Same plan selected
+                throw new Error('You are already subscribed to this plan');
+            }
+            
+            const response = await fetch(endpoint, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
             });
             
             if (response.ok) {
@@ -287,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 modal.hide();
                 
                 // Show success message
-                showSuccess('Subscription created successfully!');
+                showSuccess(successMessage);
                 
                 // Reload page to reflect changes
                 setTimeout(() => {
@@ -295,15 +371,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 1500);
             } else {
                 const error = await response.json();
-                throw new Error(error.error || 'Failed to create subscription');
+                throw new Error(error.error || `Failed to ${isNewSubscription ? 'create' : 'change'} subscription`);
             }
         } catch (error) {
-            console.error('Error creating subscription:', error);
-            showError(error.message || 'Failed to create subscription');
+            console.error('Error handling subscription:', error);
+            showError(error.message || 'Failed to process subscription');
         } finally {
             const confirmBtn = document.getElementById('confirmSubscription');
             confirmBtn.disabled = false;
-            confirmBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Confirm Subscription';
+            
+            // Reset button text based on subscription type
+            if (isNewSubscription) {
+                confirmBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Confirm Subscription';
+            } else if (currentSubscription && currentSubscription.subscription_plan_id === selectedPlan.id) {
+                confirmBtn.innerHTML = '<i class="fas fa-check me-2"></i>Current Plan';
+                confirmBtn.disabled = true;
+            } else {
+                const currentPlanPrice = currentSubscription.subscriptionPlan.price_monthly;
+                const newPlanPrice = selectedPlan.price_monthly;
+                const isUpgradeChange = newPlanPrice > currentPlanPrice;
+                confirmBtn.innerHTML = `<i class="fas fa-arrow-up me-2"></i>${isUpgradeChange ? 'Upgrade Plan' : 'Change Plan'}`;
+            }
         }
     }
 
