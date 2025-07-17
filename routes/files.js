@@ -117,6 +117,24 @@ async function triggerFileAnalysis(fileRecord, user) {
       fileMetadata
     );
 
+    console.log(`🎯 Orchestrator processing completed for ${fileRecord.id}`, {
+      user_id: user.id,
+      file_id: fileRecord.id,
+      job_id: processingResult.jobId,
+      media_type: processingResult.mediaType,
+      has_results: !!processingResult.results,
+      result_keys: processingResult.results ? Object.keys(processingResult.results) : 'none'
+    });
+
+    console.log('🔍 Full processing result structure:', {
+      jobId: processingResult.jobId,
+      mediaType: processingResult.mediaType,
+      processingTime: processingResult.processingTime,
+      resultsType: typeof processingResult.results,
+      resultsKeys: processingResult.results ? Object.keys(processingResult.results) : null,
+      dataKeys: processingResult.results?.data ? Object.keys(processingResult.results.data) : null
+    });
+
     // Extract results from orchestrator response
     const formattedResults = processingResult.results;
     
@@ -527,12 +545,17 @@ router.post('/upload', [
         // Trigger multimedia analysis if the file type is multimedia
         if (isMultimediaFile(file.mimetype)) {
           console.log(`🎬 Detected multimedia file, triggering analysis: ${file.originalname}`);
+          console.log(`🔍 File details: ID=${fileRecord.id}, MIME=${file.mimetype}, Path=${fileRecord.file_path}`);
+          
           // Run analysis in background (don't wait for it)
           setImmediate(async () => {
             try {
+              console.log(`🚀 Starting background analysis for file ${fileRecord.id}`);
               await triggerFileAnalysis(fileRecord, req.user);
+              console.log(`✅ Background analysis completed for file ${fileRecord.id}`);
             } catch (analysisError) {
               console.error(`❌ Background analysis failed for ${fileRecord.id}:`, analysisError);
+              console.error('Error details:', analysisError.stack);
               // Don't let analysis errors affect the upload response
             }
           });
