@@ -205,7 +205,7 @@
       <% if (contentItems && contentItems.length > 0) { %>
         <% contentItems.forEach(function(item) { %>
           <div class="col">
-            <div class="card h-100 shadow-sm content-card flex-row flex-wrap" data-id="<%= item.id %>" style="min-height:unset;">
+            <div class="card h-100 shadow-sm content-card flex-row flex-wrap" data-id="<%= item.id %>" data-item-type="<%= item.itemType %>" style="min-height:unset;">
               <div class="d-flex flex-row w-100">
                 <!-- Thumbnail -->
                 <div class="flex-shrink-0 d-flex align-items-center justify-content-center bg-light" style="width: 90px;">

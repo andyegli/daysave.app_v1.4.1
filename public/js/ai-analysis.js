@@ -44,8 +44,9 @@ function initializeAIIndicators() {
   const contentCards = document.querySelectorAll('.content-card');
   contentCards.forEach(card => {
     const contentId = card.getAttribute('data-id');
+    const itemType = card.getAttribute('data-item-type');
     if (contentId) {
-      loadAIIndicators(contentId);
+      loadAIIndicators(contentId, itemType);
     }
   });
 }
@@ -54,9 +55,13 @@ function initializeAIIndicators() {
  * Load and display AI analysis indicators for a content item
  * Updated to handle new unified result format
  */
-async function loadAIIndicators(contentId) {
+async function loadAIIndicators(contentId, itemType = 'content') {
   try {
-    const response = await fetch(`/content/${contentId}/analysis`, {
+    // Determine the correct endpoint based on item type
+    const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
+    console.log(`📞 Loading AI indicators for ${itemType} ${contentId} from ${endpoint}`);
+    
+    const response = await fetch(endpoint, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -68,14 +73,14 @@ async function loadAIIndicators(contentId) {
     
     // Handle authentication errors
     if (response.status === 401 || response.status === 403) {
-      console.log(`Authentication error for content ${contentId}, skipping AI indicators`);
+      console.log(`Authentication error for ${itemType} ${contentId}, skipping AI indicators`);
       return;
     }
     
     // Handle HTML responses (redirects to login)
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('text/html')) {
-      console.log(`HTML response received for content ${contentId}, likely redirected to login`);
+      console.log(`HTML response received for ${itemType} ${contentId}, likely redirected to login`);
       return;
     }
     
@@ -463,9 +468,15 @@ function setupAIAnalysisModal() {
                      e.target : e.target.closest('.ai-analysis-trigger');
       
       const contentId = trigger.getAttribute('data-content-id');
+      
+      // Find the parent content card to get the item type
+      const contentCard = trigger.closest('.content-card');
+      const itemType = contentCard ? contentCard.getAttribute('data-item-type') : 'content';
+      
       console.log('📊 Content ID from trigger:', contentId);
+      console.log('📊 Item type from card:', itemType);
       if (contentId) {
-        showAIAnalysisModal(contentId);
+        showAIAnalysisModal(contentId, itemType);
       }
     }
   });
@@ -483,11 +494,17 @@ function setupAIAnalysisModal() {
       e.stopPropagation();
       
       const contentId = aiAnalysisBtn.getAttribute('data-id');
+      
+      // Find the parent content card to get the item type
+      const contentCard = aiAnalysisBtn.closest('.content-card');
+      const itemType = contentCard ? contentCard.getAttribute('data-item-type') : 'content';
+      
       console.log('🧠 Content ID from button:', contentId);
+      console.log('🧠 Item type from card:', itemType);
       
       if (contentId) {
         console.log('🧠 Calling showAIAnalysisModal with contentId:', contentId);
-        showAIAnalysisModal(contentId);
+        showAIAnalysisModal(contentId, itemType);
       } else {
         console.error('❌ No content ID found on AI analysis button');
       }
@@ -544,9 +561,10 @@ function cleanupExistingModal() {
 /**
  * Show AI analysis modal with detailed results
  */
-async function showAIAnalysisModal(contentId) {
+async function showAIAnalysisModal(contentId, itemType = 'content') {
   console.log('🚀 === STARTING AI ANALYSIS MODAL ===');
   console.log('🚀 Content ID:', contentId);
+  console.log('🚀 Item Type:', itemType);
   console.log('🚀 Content ID type:', typeof contentId);
   console.log('🚀 Content ID length:', contentId?.length);
   
@@ -564,9 +582,11 @@ async function showAIAnalysisModal(contentId) {
     // Clean up any existing modal instances and DOM elements
     cleanupExistingModal();
     
-    console.log('📞 Making fetch request to:', `/content/${contentId}/analysis`);
+    // Determine the correct endpoint based on item type
+    const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
+    console.log('📞 Making fetch request to:', endpoint);
     
-    const response = await fetch(`/content/${contentId}/analysis`, {
+    const response = await fetch(endpoint, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -2251,7 +2271,12 @@ async function checkOngoingAnalysis() {
   
   for (const contentId of contentIds) {
     try {
-      const response = await fetch(`/content/${contentId}/analysis`, {
+      // Find the content card to determine item type
+      const contentCard = document.querySelector(`.content-card[data-id="${contentId}"]`);
+      const itemType = contentCard ? contentCard.getAttribute('data-item-type') : 'content';
+      const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
+      
+      const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -2264,7 +2289,7 @@ async function checkOngoingAnalysis() {
       
       if (result.success && result.status === 'completed') {
         // Analysis completed, update indicators and remove from tracking
-        loadAIIndicators(contentId);
+        loadAIIndicators(contentId, itemType);
         window.analyzingContent.delete(contentId);
         
         // Refresh content card with new data
@@ -2295,8 +2320,12 @@ async function refreshContentCard(contentId) {
   if (!contentCard) return;
   
   try {
+    // Determine the correct endpoint based on item type
+    const itemType = contentCard.getAttribute('data-item-type') || 'content';
+    const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
+    
     // Get updated content data from server
-    const response = await fetch(`/content/${contentId}/analysis`, {
+    const response = await fetch(endpoint, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -2353,8 +2382,9 @@ function setupContentAnalysisMonitoring() {
           
           contentCards.forEach(card => {
             const contentId = card.getAttribute('data-id');
+            const itemType = card.getAttribute('data-item-type');
             if (contentId) {
-              loadAIIndicators(contentId);
+              loadAIIndicators(contentId, itemType);
             }
           });
         }
