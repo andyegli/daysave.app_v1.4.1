@@ -35,17 +35,42 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function loadCurrentSubscription() {
         try {
+            console.log('🔄 Loading current subscription...');
             const response = await fetch('/api/subscription/current');
+            console.log('📡 Subscription response:', {
+                status: response.status,
+                ok: response.ok,
+                statusText: response.statusText
+            });
+            
             if (response.ok) {
                 const result = await response.json();
                 currentSubscription = result.data;
                 
+                console.log('✅ Current subscription loaded:', {
+                    hasSubscription: !!currentSubscription,
+                    planId: currentSubscription?.subscription_plan_id,
+                    planName: currentSubscription?.subscriptionPlan?.display_name,
+                    status: currentSubscription?.status
+                });
+                
                 if (currentSubscription) {
                     displayCurrentSubscription();
                 }
+            } else {
+                console.error('❌ Failed to load subscription:', response.status, response.statusText);
+                const errorText = await response.text();
+                console.error('❌ Error response:', errorText);
+                
+                // Handle authentication error
+                if (response.status === 401) {
+                    console.warn('🔑 User not authenticated, treating as new subscription');
+                    currentSubscription = null; // Ensure it's null for new subscription logic
+                    showAuthenticationError();
+                }
             }
         } catch (error) {
-            console.error('Error loading current subscription:', error);
+            console.error('💥 Error loading current subscription:', error);
         }
     }
 
@@ -310,9 +335,27 @@ document.addEventListener('DOMContentLoaded', function() {
     async function handleSubscription() {
         if (!selectedPlan) return;
         
+        // Reload current subscription to ensure we have the latest data
+        console.log('🔄 Reloading subscription data before processing...');
+        await loadCurrentSubscription();
+        
+        // Debug: Log subscription state
+        console.log('🔍 SUBSCRIPTION DEBUG:', {
+            currentSubscription: currentSubscription,
+            hasCurrentSubscription: !!currentSubscription,
+            selectedPlanId: selectedPlan.id,
+            currentPlanId: currentSubscription?.subscription_plan_id
+        });
+        
         // Determine if this is a new subscription or an upgrade/downgrade
         const isUpgrade = currentSubscription && currentSubscription.subscription_plan_id !== selectedPlan.id;
         const isNewSubscription = !currentSubscription;
+        
+        console.log('🎯 SUBSCRIPTION ACTION:', {
+            isNewSubscription,
+            isUpgrade,
+            isSamePlan: currentSubscription && currentSubscription.subscription_plan_id === selectedPlan.id
+        });
         
         try {
             const confirmBtn = document.getElementById('confirmSubscription');
@@ -331,6 +374,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     paymentMethod: 'mock'
                 };
                 successMessage = 'Subscription created successfully!';
+                console.log('📝 NEW SUBSCRIPTION:', { endpoint, method, requestBody });
             } else if (isUpgrade) {
                 // Upgrade/downgrade existing subscription
                 endpoint = '/api/subscription/change';
@@ -342,8 +386,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const newPlanPrice = selectedPlan.price_monthly;
                 const isUpgradeChange = newPlanPrice > currentPlanPrice;
                 successMessage = isUpgradeChange ? 'Subscription upgraded successfully!' : 'Subscription changed successfully!';
+                console.log('🔄 UPGRADE/CHANGE:', { endpoint, method, requestBody, isUpgradeChange });
             } else {
                 // Same plan selected
+                console.log('⚠️ SAME PLAN SELECTED');
                 throw new Error('You are already subscribed to this plan');
             }
             
@@ -434,5 +480,28 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             alert.remove();
         }, 8000);
+    }
+    
+    function showAuthenticationError() {
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-warning alert-dismissible fade show';
+        alert.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            You need to log in to manage your subscription. 
+            <a href="/auth/login" class="alert-link">Click here to log in</a>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.querySelector('.container-fluid').insertBefore(alert, document.querySelector('.container-fluid').firstChild);
+    }
+    
+    // Check if user is authenticated by trying to access a protected endpoint
+    async function checkAuthentication() {
+        try {
+            const response = await fetch('/api/subscription/current');
+            return response.status !== 401;
+        } catch (error) {
+            return false;
+        }
     }
 }); 
