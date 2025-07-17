@@ -1139,3 +1139,14 @@ openssl rand -base64 32
   - [x] **Debugging Enhanced**: Added comprehensive console logging for troubleshooting tag issues
   - [x] **Status**: Content tags modal now works properly for both content items and file items
   - [x] Committed changes to git (commits 3762ce6, d6b7071)
+
+- [x] Fix 404 errors for file analysis endpoints in unified content display 
+  - [x] **Root Cause Identified**: File IDs were calling `/content/{id}/analysis` instead of `/files/{id}/analysis` endpoints
+  - [x] **Added Item Type Detection**: Added `data-item-type` attribute to content cards to distinguish files from content
+  - [x] **Updated JavaScript Functions**: Modified `loadAIIndicators()` to use correct endpoint based on item type
+  - [x] **Fixed Modal Analysis**: Updated `showAIAnalysisModal()` to detect item type and call appropriate endpoint
+  - [x] **Comprehensive Endpoint Fix**: Updated all analysis endpoint calls throughout ai-analysis.js
+  - [x] **Background Processing**: Fixed `checkOngoingAnalysis()` and `refreshContentCard()` endpoint detection
+  - [x] **Browser Debugging**: Added comprehensive debugging to identify client-side vs server-side issues
+  - [x] **Status**: Resolved all 404 errors - files now properly call `/files/{id}/analysis` endpoints
+  - [x] Committed changes to git (commits d0acedf, 2ffc9f8)
