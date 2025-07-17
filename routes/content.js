@@ -232,16 +232,23 @@ router.get('/', isAuthenticated, async (req, res) => {
     
     if (from) where.createdAt = { ...(where.createdAt || {}), [Op.gte]: new Date(from) };
     if (to) where.createdAt = { ...(where.createdAt || {}), [Op.lte]: new Date(to) };
-    let contentItems = await Content.findAll({
-      where,
-      include: [{
-        model: require('../models').SocialAccount,
-        as: 'SocialAccount',
-        attributes: ['platform', 'handle'],
-        required: false // Make it a LEFT JOIN so it doesn't fail if no social account
-      }],
-      order: [['createdAt', 'DESC']]
-    });
+    // Fetch both content items and files for unified display
+    const [contentItems, fileItems] = await Promise.all([
+      Content.findAll({
+        where,
+        include: [{
+          model: require('../models').SocialAccount,
+          as: 'SocialAccount',
+          attributes: ['platform', 'handle'],
+          required: false // Make it a LEFT JOIN so it doesn't fail if no social account
+        }],
+        order: [['createdAt', 'DESC']]
+      }),
+      require('../models').File.findAll({
+        where: { user_id: req.user.id },
+        order: [['createdAt', 'DESC']]
+      })
+    ]);
 
     // Function to determine content source and get brand logo
     function getContentSourceInfo(url, socialAccount) {
@@ -352,25 +359,75 @@ router.get('/', isAuthenticated, async (req, res) => {
     }
 
     // Add source info and title to each content item
-    contentItems = contentItems.map(item => {
+    const processedContentItems = contentItems.map(item => {
       item.sourceInfo = getContentSourceInfo(item.url, item.SocialAccount);
       item.displayTitle = getContentTitle(item);
+      item.itemType = 'content';
       return item;
     });
+
+    // Function to normalize file items to content format
+    function normalizeFileItem(file) {
+      const fileType = file.metadata?.mimetype || '';
+      let sourceInfo = {
+        source: 'File Upload',
+        logo: 'bi-cloud-upload',
+        color: '#6c757d'
+      };
+
+      // Set specific icons and colors based on file type
+      if (fileType.startsWith('image/')) {
+        sourceInfo = { source: 'Image', logo: 'bi-image', color: '#fd7e14' };
+      } else if (fileType.startsWith('video/')) {
+        sourceInfo = { source: 'Video', logo: 'bi-camera-video', color: '#dc3545' };
+      } else if (fileType.startsWith('audio/')) {
+        sourceInfo = { source: 'Audio', logo: 'bi-music-note', color: '#20c997' };
+      }
+
+      return {
+        id: file.id,
+        itemType: 'file',
+        url: `/files/${file.id}`, // Link to file detail page
+        title: file.generated_title || file.filename,
+        displayTitle: file.generated_title || file.filename.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
+        user_comments: file.user_comments || '',
+        summary: file.summary || '',
+        transcription: file.transcription || '',
+        auto_tags: file.auto_tags || [],
+        user_tags: file.user_tags || [],
+        sentiment: file.sentiment,
+        createdAt: file.createdAt,
+        metadata: {
+          ...file.metadata,
+          thumbnail: file.metadata?.thumbnail || null,
+          fileId: file.id,
+          filename: file.filename,
+          isFile: true
+        },
+        sourceInfo
+      };
+    }
+
+    // Normalize file items and merge with content items
+    const processedFileItems = fileItems.map(normalizeFileItem);
+    let allItems = [...processedContentItems, ...processedFileItems];
+
+    // Sort all items by creation date (newest first)
+    allItems.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
 
     
 
     
-    // Apply tag filtering
+    // Apply tag filtering to all items
     if (tag) {
       const tagList = tag.split(/[,	\s]+/).map(t => t.trim().toLowerCase()).filter(Boolean);
-      contentItems = contentItems.filter(item => {
-        const allTags = [
+      allItems = allItems.filter(item => {
+        const itemTags = [
           ...(item.user_tags || []),
           ...(item.auto_tags || [])
         ].map(t => t.trim().toLowerCase());
-        return tagList.some(filterTag => allTags.some(t => t.includes(filterTag)));
+        return tagList.some(filterTag => itemTags.some(t => t.includes(filterTag)));
       });
     }
     const contentGroups = await ContentGroup.findAll({
@@ -380,22 +437,29 @@ router.get('/', isAuthenticated, async (req, res) => {
     const pagination = {
       currentPage: 1,
       totalPages: 1,
-      totalItems: contentItems.length
+      totalItems: allItems.length
     };
-    console.log(`DEBUG: Found ${contentItems.length} content items and ${contentGroups.length} groups for user ${req.user.id}`);
-    if (contentItems.length > 0) {
-      console.log('DEBUG: First content item:', JSON.stringify(contentItems[0], null, 2));
-      console.log('DEBUG: First content metadata:', contentItems[0].metadata);
-      console.log('DEBUG: First content URL:', contentItems[0].url);
+    
+    // Split items by type for debugging
+    const contentCount = allItems.filter(item => item.itemType === 'content').length;
+    const fileCount = allItems.filter(item => item.itemType === 'file').length;
+    
+    console.log(`DEBUG: Found ${allItems.length} total items (${contentCount} content + ${fileCount} files) and ${contentGroups.length} groups for user ${req.user.id}`);
+    if (allItems.length > 0) {
+      console.log('DEBUG: First item:', {
+        type: allItems[0].itemType,
+        title: allItems[0].displayTitle,
+        id: allItems[0].id,
+        sourceInfo: allItems[0].sourceInfo
+      });
     } else {
-      console.log('DEBUG: No content items found');
+      console.log('DEBUG: No items found');
     }
 
-    
-          res.render('content/list', {
+    res.render('content/list', {
         user: req.user,
         title: 'Content Management - DaySave',
-        contentItems,
+        contentItems: allItems, // Pass unified items array
         contentGroups,
         pagination,
         tag,
