@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function loadSubscriptionPlans() {
         try {
-            const response = await fetch('/api/subscription/plans', {
+            const response = await fetch('/api/subscription/api/plans', {
                 credentials: 'include'
             });
             if (!response.ok) {
