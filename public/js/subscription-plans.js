@@ -37,7 +37,9 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('DEBUG: Loading current subscription...');
             console.log('DEBUG: Browser timestamp:', new Date().toISOString());
-            const response = await fetch('/api/subscription/current');
+            const response = await fetch('/api/subscription/current', {
+                credentials: 'include'
+            });
             console.log('📡 Subscription response:', {
                 status: response.status,
                 ok: response.ok,
@@ -77,7 +79,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function loadSubscriptionPlans() {
         try {
-            const response = await fetch('/api/subscription/api/plans');
+            const response = await fetch('/api/subscription/plans', {
+                credentials: 'include'
+            });
             if (!response.ok) {
                 throw new Error('Failed to load subscription plans');
             }
@@ -399,6 +403,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify(requestBody)
             });
             
@@ -499,7 +504,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if user is authenticated by trying to access a protected endpoint
     async function checkAuthentication() {
         try {
-            const response = await fetch('/api/subscription/current');
+            const response = await fetch('/api/subscription/current', {
+                credentials: 'include'
+            });
             return response.status !== 401;
         } catch (error) {
             return false;
