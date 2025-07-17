@@ -1129,3 +1129,13 @@ openssl rand -base64 32
   - [x] **Known Issue**: AudioProcessor has extractAudioMetadata bug preventing full transcription
   - [x] **Status**: All andy.egli@gmail.com files reprocessed and integrated into unified content system
   - [x] Committed changes to git (commit 6d294e6)
+
+- [x] Fix content tags modal to show all tags instead of empty modal
+  - [x] **Root Cause Identified**: Modal was receiving only "hidden" tags instead of all tags, causing empty modals for items with few tags
+  - [x] **Enhanced Tag Handling**: Added robust null/undefined checking for auto_tags and user_tags arrays
+  - [x] **Improved Modal Display**: Modal now shows all tags organized by type (User Tags vs AI-Generated Tags) with counts
+  - [x] **Better Error Handling**: Enhanced JavaScript validation and informative error messages  
+  - [x] **Fixed File Integration**: Resolved issue where file items with null auto_tags caused modal errors
+  - [x] **Debugging Enhanced**: Added comprehensive console logging for troubleshooting tag issues
+  - [x] **Status**: Content tags modal now works properly for both content items and file items
+  - [x] Committed changes to git (commits 3762ce6, d6b7071)
