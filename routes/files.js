@@ -36,6 +36,8 @@ function isMultimediaFile(mimetype) {
  * @param {Object} user - User object
  */
 async function triggerFileAnalysis(fileRecord, user) {
+  let fileMetadata; // Declare in function scope for cleanup
+  
   try {
     console.log(`🎬 Starting enhanced file analysis for ${fileRecord.id}`, {
       user_id: user.id,
@@ -50,9 +52,35 @@ async function triggerFileAnalysis(fileRecord, user) {
     let filePath;
     
     if (fileRecord.file_path.startsWith('gs://')) {
-      // For Google Cloud Storage files, we need to download them first
-      // This is a temporary solution - in production, you might want to stream directly
-      throw new Error('Google Cloud Storage files not yet supported for orchestrated analysis');
+      // For Google Cloud Storage files, download them temporarily for analysis
+      console.log(`📥 Downloading GCS file for analysis: ${fileRecord.file_path}`);
+      
+      const tempDir = path.join(__dirname, '..', 'temp');
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      
+      const tempFileName = `temp_${fileRecord.id}_${Date.now()}_${fileRecord.filename}`;
+      filePath = path.join(tempDir, tempFileName);
+      
+      try {
+        // Download file from GCS using FileUploadService
+        const gcsPath = fileRecord.file_path.replace('gs://', '');
+        const [bucketName, ...pathParts] = gcsPath.split('/');
+        const objectName = pathParts.join('/');
+        
+        // Use FileUploadService to download the file
+        const downloadResult = await FileUploadService.downloadFromGCS(bucketName, objectName, filePath);
+        console.log(`✅ Downloaded GCS file to: ${filePath}`);
+        
+        // Set flag to clean up temp file after analysis
+        fileMetadata.cleanupTempFile = true;
+        fileMetadata.tempFilePath = filePath;
+        
+      } catch (downloadError) {
+        console.error(`❌ Failed to download GCS file: ${downloadError.message}`);
+        throw new Error(`Failed to download file from Google Cloud Storage: ${downloadError.message}`);
+      }
     } else {
       // For local files, convert the stored path to absolute path
       if (fileRecord.file_path.startsWith('/uploads/')) {
@@ -73,7 +101,7 @@ async function triggerFileAnalysis(fileRecord, user) {
     const fileBuffer = await fs.readFile(filePath);
     
     // Create metadata for orchestrator
-    const fileMetadata = {
+    fileMetadata = {
       filename: fileRecord.filename,
       fileId: fileRecord.id,
       userId: user.id,
@@ -280,6 +308,19 @@ async function triggerFileAnalysis(fileRecord, user) {
       stack: error.stack,
       orchestrator: true
     });
+  } finally {
+    // Clean up temporary file if it was downloaded from GCS
+    if (fileMetadata && fileMetadata.cleanupTempFile && fileMetadata.tempFilePath) {
+      try {
+        const fs = require('fs');
+        if (fs.existsSync(fileMetadata.tempFilePath)) {
+          fs.unlinkSync(fileMetadata.tempFilePath);
+          console.log(`🗑️ Cleaned up temporary file: ${fileMetadata.tempFilePath}`);
+        }
+      } catch (cleanupError) {
+        console.error(`⚠️ Failed to clean up temporary file: ${cleanupError.message}`);
+      }
+    }
   }
 }
 

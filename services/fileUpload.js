@@ -387,6 +387,40 @@ class FileUploadService {
   }
 
   /**
+   * Download file from Google Cloud Storage for local processing
+   * @param {string} bucketName - GCS bucket name
+   * @param {string} objectName - Object path in bucket
+   * @param {string} localPath - Local file path to save to
+   * @returns {Promise<void>}
+   */
+  async downloadFromGCS(bucketName, objectName, localPath) {
+    try {
+      if (!this.storage) {
+        throw new Error('Google Cloud Storage not initialized');
+      }
+
+      const bucket = this.storage.bucket(bucketName);
+      const file = bucket.file(objectName);
+
+      // Check if file exists
+      const [exists] = await file.exists();
+      if (!exists) {
+        throw new Error(`File not found in GCS: gs://${bucketName}/${objectName}`);
+      }
+
+      // Download file to local path
+      await file.download({ destination: localPath });
+      
+      console.log(`✅ Downloaded gs://${bucketName}/${objectName} to ${localPath}`);
+      return { success: true, localPath };
+      
+    } catch (error) {
+      console.error(`❌ GCS download failed:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Get upload statistics
    */
   async getUploadStats(userId = null) {
