@@ -288,8 +288,14 @@
                       <div class="d-flex flex-wrap gap-1 align-items-center">
                         <% 
                           let tags = [];
-                          if (item.auto_tags) tags = tags.concat(item.auto_tags.map(t => ({ tag: t, type: 'auto' })));
-                          if (item.user_tags) tags = tags.concat(item.user_tags.map(t => ({ tag: t, type: 'user' })));
+                          // Handle auto_tags - ensure it's an array and not null/undefined
+                          if (item.auto_tags && Array.isArray(item.auto_tags) && item.auto_tags.length > 0) {
+                            tags = tags.concat(item.auto_tags.map(t => ({ tag: t, type: 'auto' })));
+                          }
+                          // Handle user_tags - ensure it's an array and not null/undefined  
+                          if (item.user_tags && Array.isArray(item.user_tags) && item.user_tags.length > 0) {
+                            tags = tags.concat(item.user_tags.map(t => ({ tag: t, type: 'user' })));
+                          }
                           let shownTags = tags.slice(0, 4);
                           let moreTags = tags.length > 4 ? tags.length - 4 : 0;
                           let hiddenTags = tags.slice(4);
@@ -576,12 +582,25 @@
             button: button,
             contentId: contentId,
             contentTitle: contentTitle,
-            allTagsData: allTagsData ? allTagsData.substring(0, 100) + '...' : 'null'
+            allTagsData: allTagsData,
+            allTagsDataLength: allTagsData ? allTagsData.length : 'null',
+            allTagsDataPreview: allTagsData ? allTagsData.substring(0, 200) + '...' : 'null'
           });
           
           try {
-            const allTags = JSON.parse(decodeURIComponent(allTagsData));
-            console.log('✅ Parsed all tags:', allTags);
+            let allTags = [];
+            
+            // Parse and validate the tags data
+            if (allTagsData && allTagsData.trim() !== '') {
+              allTags = JSON.parse(decodeURIComponent(allTagsData));
+              console.log('✅ Parsed all tags:', allTags);
+            }
+            
+            // Ensure allTags is an array
+            if (!Array.isArray(allTags)) {
+              console.warn('⚠️ allTags is not an array:', allTags);
+              allTags = [];
+            }
             
             const modalTitle = document.getElementById('allTagsModalLabel');
             const modalBody = document.getElementById('allTagsModalBody');
@@ -594,15 +613,15 @@
             
             if (allTags.length > 0) {
               // Separate auto and user tags
-              const autoTags = allTags.filter(t => t.type === 'auto');
-              const userTags = allTags.filter(t => t.type === 'user');
+              const autoTags = allTags.filter(t => t && t.type === 'auto' && t.tag);
+              const userTags = allTags.filter(t => t && t.type === 'user' && t.tag);
               
               let modalContent = '';
               
               if (userTags.length > 0) {
                 modalContent += `
                   <div class="mb-3">
-                    <h6 class="text-muted mb-2">User Tags:</h6>
+                    <h6 class="text-muted mb-2">User Tags (${userTags.length}):</h6>
                     <div class="d-flex flex-wrap gap-2">
                       ${userTags.map(t => 
                         `<span class="badge bg-success tag-badge" data-tag="${t.tag}">
@@ -617,7 +636,7 @@
               if (autoTags.length > 0) {
                 modalContent += `
                   <div class="mb-3">
-                    <h6 class="text-muted mb-2">AI-Generated Tags:</h6>
+                    <h6 class="text-muted mb-2">AI-Generated Tags (${autoTags.length}):</h6>
                     <div class="d-flex flex-wrap gap-2">
                       ${autoTags.map(t => 
                         `<span class="badge bg-info tag-badge" data-tag="${t.tag}">
@@ -629,14 +648,19 @@
                 `;
               }
               
-              modalBody.innerHTML = modalContent;
+              if (modalContent) {
+                modalBody.innerHTML = modalContent;
+              } else {
+                modalBody.innerHTML = '<p class="text-muted">No valid tags found for this content item.</p>';
+              }
             } else {
               modalBody.innerHTML = '<p class="text-muted">No tags assigned to this content item.</p>';
             }
           } catch (error) {
             console.error('Error parsing tags data:', error);
+            console.error('Raw tags data:', allTagsData);
             document.getElementById('allTagsModalBody').innerHTML = 
-              '<p class="text-danger">Error loading tags. Please try again.</p>';
+              '<p class="text-danger">Error loading tags. Please try again.</p><small class="text-muted">Check console for details.</small>';
           }
         });
       }
