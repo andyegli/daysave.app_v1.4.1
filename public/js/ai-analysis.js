@@ -414,24 +414,13 @@ function displayIndicators(contentId, indicators) {
 }
 
 /**
- * Display processing indicator
+ * Display processing indicator - DISABLED
+ * Processing now happens silently in the background
  */
 function displayProcessingIndicator(contentId, result) {
-  const indicatorsContainer = document.getElementById(`ai-indicators-${contentId}`);
-  if (!indicatorsContainer) return;
-  
-  const progress = result.job ? result.job.progress : 0;
-  const stage = result.job ? result.job.currentStage : 'processing';
-  
-  indicatorsContainer.innerHTML = `
-    <span class="badge bg-warning text-dark d-flex align-items-center" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;" 
-          title="Analysis in progress: ${progress}% complete">
-      <div class="spinner-border spinner-border-sm me-1" role="status" style="width: 0.8rem; height: 0.8rem;">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-      ${progress}%
-    </span>
-  `;
+  // Yellow spinner button disabled per user request
+  // Processing continues silently in the background
+  return;
 }
 
 /**

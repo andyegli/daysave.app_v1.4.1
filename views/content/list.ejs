@@ -290,7 +290,7 @@
                           <span class="badge bg-secondary more-tags-badge" style="cursor: pointer;" 
                                 data-bs-toggle="modal" data-bs-target="#allTagsModal" 
                                 data-content-id="<%= item.id %>"
-                                data-all-tags="<%= JSON.stringify(hiddenTags).replace(/"/g, '&quot;') %>"
+                                data-all-tags="<%= encodeURIComponent(JSON.stringify(hiddenTags)) %>"
                                 title="Click to see all tags">
                             +<%= moreTags %> more
                           </span>
@@ -558,7 +558,7 @@
           const hiddenTagsData = button.getAttribute('data-all-tags');
           
           try {
-            const hiddenTags = JSON.parse(hiddenTagsData);
+            const hiddenTags = JSON.parse(decodeURIComponent(hiddenTagsData));
             const modalBody = document.getElementById('allTagsModalBody');
             
             // Clear previous content
