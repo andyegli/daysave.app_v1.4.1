@@ -557,8 +557,16 @@
           const contentId = button.getAttribute('data-content-id');
           const hiddenTagsData = button.getAttribute('data-all-tags');
           
+          console.log('🏷️ Tags Modal Debug:', {
+            button: button,
+            contentId: contentId,
+            hiddenTagsData: hiddenTagsData,
+            rawDataLength: hiddenTagsData ? hiddenTagsData.length : 'null'
+          });
+          
           try {
             const hiddenTags = JSON.parse(decodeURIComponent(hiddenTagsData));
+            console.log('✅ Parsed hidden tags:', hiddenTags);
             const modalBody = document.getElementById('allTagsModalBody');
             
             // Clear previous content
