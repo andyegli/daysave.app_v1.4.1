@@ -27,8 +27,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // Handle AI analysis modal
   setupAIAnalysisModal();
   
-  // Check for ongoing analysis every 5 seconds (more responsive)
-  setInterval(checkOngoingAnalysis, 5000);
+  // Check for ongoing analysis every 5 seconds - DISABLED
+  // setInterval(checkOngoingAnalysis, 5000);
   
   // Track content items that are being analyzed
   window.analyzingContent = new Set();
