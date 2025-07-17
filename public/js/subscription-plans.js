@@ -35,7 +35,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function loadCurrentSubscription() {
         try {
-            console.log('🔄 Loading current subscription...');
+            console.log('DEBUG: Loading current subscription...');
+            console.log('DEBUG: Browser timestamp:', new Date().toISOString());
             const response = await fetch('/api/subscription/current');
             console.log('📡 Subscription response:', {
                 status: response.status,
