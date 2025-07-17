@@ -568,6 +568,20 @@
   <!-- Tags Modal JavaScript -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // DEBUG: Check if "+more" badges exist on page load
+      const moreTagsBadges = document.querySelectorAll('.more-tags-badge');
+      console.log('🔍 PAGE LOAD DEBUG - Found +more badges:', moreTagsBadges.length);
+      moreTagsBadges.forEach((badge, index) => {
+        console.log(`Badge ${index + 1}:`, {
+          element: badge,
+          contentId: badge.getAttribute('data-content-id'),
+          contentTitle: badge.getAttribute('data-content-title'),
+          allTagsData: badge.getAttribute('data-all-tags'),
+          text: badge.textContent,
+          visible: badge.offsetParent !== null
+        });
+      });
+      
       // Handle click on "+n more" tags badge
       const allTagsModal = document.getElementById('allTagsModal');
       
@@ -578,13 +592,17 @@
           const contentTitle = button.getAttribute('data-content-title');
           const allTagsData = button.getAttribute('data-all-tags');
           
-          console.log('🏷️ Tags Modal Debug:', {
+          console.log('🏷️ Tags Modal Debug - FULL ANALYSIS:', {
+            event: event,
             button: button,
+            buttonHTML: button ? button.outerHTML : 'null',
             contentId: contentId,
             contentTitle: contentTitle,
-            allTagsData: allTagsData,
+            allTagsDataExists: !!allTagsData,
             allTagsDataLength: allTagsData ? allTagsData.length : 'null',
-            allTagsDataPreview: allTagsData ? allTagsData.substring(0, 200) + '...' : 'null'
+            allTagsDataRaw: allTagsData,
+            modalElement: document.getElementById('allTagsModal'),
+            modalBodyElement: document.getElementById('allTagsModalBody')
           });
           
           try {
