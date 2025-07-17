@@ -1057,3 +1057,31 @@ openssl rand -base64 32
   - [x] Improved mobile responsiveness with smaller button sizes
   - [x] Gives significantly more horizontal space for AI-generated titles to display
   - [x] Committed changes to git (commit 3b68947)
+
+- [x] Reduce SQL console output for cleaner development experience
+  - [x] Added ENABLE_SQL_LOGGING environment variable (defaults to false) in config/config.js
+  - [x] Created granular console logging controls with additional environment variables:
+    - ENABLE_MULTIMEDIA_CONSOLE_LOGGING=false
+    - ENABLE_PROCESSOR_STEP_LOGGING=false  
+    - ENABLE_PERFORMANCE_CONSOLE_LOGGING=false
+    - ENABLE_STARTUP_VALIDATION_LOGGING=true
+  - [x] Updated multiple service files to respect these flags:
+    - services/multimedia/AutomationOrchestrator.js
+    - services/multimedia/BaseMediaProcessor.js
+    - services/multimedia/PerformanceMonitor.js
+    - services/startupValidation.js
+  - [x] Committed changes to git (commit f2aec78)
+
+- [x] Fix subscription upgrade authentication issue
+  - [x] Identified root cause: AJAX requests missing credentials (session cookies)
+  - [x] Added credentials: 'include' to all fetch requests in subscription-plans.js
+  - [x] Fixed duplicate API path /api/subscription/api/plans -> /api/subscription/plans
+  - [x] Ensures session cookies are sent with AJAX requests for proper authentication
+  - [x] Resolves "User already has an active subscription" error when trying to upgrade
+  - [x] Frontend now properly detects existing subscriptions and uses correct endpoints
+  - [x] Committed changes to git (commit 00fce59)
+
+### **🔍 PENDING TESTING**
+- [ ] Test subscription upgrade from Free to Unlimited plan
+- [ ] Verify that user authentication works properly with AJAX requests
+- [ ] Confirm subscription detection and proper endpoint selection (subscribe vs change)

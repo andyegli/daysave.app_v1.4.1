@@ -54,7 +54,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     hasSubscription: !!currentSubscription,
                     planId: currentSubscription?.subscription_plan_id,
                     planName: currentSubscription?.subscriptionPlan?.display_name,
-                    status: currentSubscription?.status
+                    status: currentSubscription?.status,
+                    rawResponse: result,
+                    currentSubscriptionObject: currentSubscription
                 });
                 
                 if (currentSubscription) {
@@ -64,10 +66,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('❌ Failed to load subscription:', response.status, response.statusText);
                 const errorText = await response.text();
                 console.error('❌ Error response:', errorText);
+                console.error('❌ Request details:', {
+                    url: response.url,
+                    headers: Object.fromEntries(response.headers.entries()),
+                    credentials: 'include was set'
+                });
                 
                 // Handle authentication error
                 if (response.status === 401) {
                     console.warn('🔑 User not authenticated, treating as new subscription');
+                    console.warn('🔍 This means session cookies are not being sent or session has expired');
                     currentSubscription = null; // Ensure it's null for new subscription logic
                     showAuthenticationError();
                 }
@@ -251,10 +259,19 @@ document.addEventListener('DOMContentLoaded', function() {
     function showSubscriptionModal(plan) {
         selectedPlan = plan;
         
-        const modal = new bootstrap.Modal(document.getElementById('subscriptionModal'));
+        const modalElement = document.getElementById('subscriptionModal');
+        const modal = new bootstrap.Modal(modalElement);
         const detailsDiv = document.getElementById('subscriptionDetails');
         const modalLabel = document.getElementById('subscriptionModalLabel');
         const confirmBtn = document.getElementById('confirmSubscription');
+        
+        // Fix accessibility: Remove aria-hidden when modal is shown
+        modalElement.addEventListener('shown.bs.modal', function () {
+            modalElement.removeAttribute('aria-hidden');
+        });
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            modalElement.setAttribute('aria-hidden', 'true');
+        });
         
         const price = selectedBillingCycle === 'yearly' ? plan.price_yearly : plan.price_monthly;
         const billingText = selectedBillingCycle === 'yearly' ? 'per year' : 'per month';
@@ -339,6 +356,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function handleSubscription() {
         if (!selectedPlan) return;
+        
+        console.log('🚀 HANDLE SUBSCRIPTION STARTED');
+        console.log('📊 Initial state:', {
+            selectedPlan: selectedPlan,
+            currentSubscription: currentSubscription,
+            hasCurrentSubscription: !!currentSubscription,
+            currentPlanId: currentSubscription?.subscription_plan_id
+        });
         
         // Reload current subscription to ensure we have the latest data
         console.log('🔄 Reloading subscription data before processing...');
