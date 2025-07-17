@@ -303,7 +303,8 @@
                           <span class="badge bg-secondary more-tags-badge" style="cursor: pointer;" 
                                 data-bs-toggle="modal" data-bs-target="#allTagsModal" 
                                 data-content-id="<%= item.id %>"
-                                data-all-tags="<%= encodeURIComponent(JSON.stringify(hiddenTags)) %>"
+                                data-all-tags="<%= encodeURIComponent(JSON.stringify(tags)) %>"
+                                data-content-title="<%= (item.generated_title || item.title || 'Content').replace(/"/g, '&quot;') %>"
                                 title="Click to see all tags">
                             +<%= moreTags %> more
                           </span>
@@ -568,43 +569,74 @@
         allTagsModal.addEventListener('show.bs.modal', function(event) {
           const button = event.relatedTarget;
           const contentId = button.getAttribute('data-content-id');
-          const hiddenTagsData = button.getAttribute('data-all-tags');
+          const contentTitle = button.getAttribute('data-content-title');
+          const allTagsData = button.getAttribute('data-all-tags');
           
           console.log('🏷️ Tags Modal Debug:', {
             button: button,
             contentId: contentId,
-            hiddenTagsData: hiddenTagsData,
-            rawDataLength: hiddenTagsData ? hiddenTagsData.length : 'null'
+            contentTitle: contentTitle,
+            allTagsData: allTagsData ? allTagsData.substring(0, 100) + '...' : 'null'
           });
           
           try {
-            const hiddenTags = JSON.parse(decodeURIComponent(hiddenTagsData));
-            console.log('✅ Parsed hidden tags:', hiddenTags);
+            const allTags = JSON.parse(decodeURIComponent(allTagsData));
+            console.log('✅ Parsed all tags:', allTags);
+            
+            const modalTitle = document.getElementById('allTagsModalLabel');
             const modalBody = document.getElementById('allTagsModalBody');
+            
+            // Update modal title
+            modalTitle.textContent = `All Tags - ${contentTitle}`;
             
             // Clear previous content
             modalBody.innerHTML = '';
             
-            if (hiddenTags.length > 0) {
-              modalBody.innerHTML = `
-                <div class="mb-3">
-                  <h6 class="text-muted mb-2">Additional Tags:</h6>
-                  <div class="d-flex flex-wrap gap-2">
-                    ${hiddenTags.map(t => 
-                      `<span class="badge ${t.type === 'auto' ? 'bg-info' : 'bg-success'} tag-badge" data-tag="${t.tag}">
-                        ${t.tag}
-                      </span>`
-                    ).join('')}
+            if (allTags.length > 0) {
+              // Separate auto and user tags
+              const autoTags = allTags.filter(t => t.type === 'auto');
+              const userTags = allTags.filter(t => t.type === 'user');
+              
+              let modalContent = '';
+              
+              if (userTags.length > 0) {
+                modalContent += `
+                  <div class="mb-3">
+                    <h6 class="text-muted mb-2">User Tags:</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                      ${userTags.map(t => 
+                        `<span class="badge bg-success tag-badge" data-tag="${t.tag}">
+                          ${t.tag}
+                        </span>`
+                      ).join('')}
+                    </div>
                   </div>
-                </div>
-              `;
+                `;
+              }
+              
+              if (autoTags.length > 0) {
+                modalContent += `
+                  <div class="mb-3">
+                    <h6 class="text-muted mb-2">AI-Generated Tags:</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                      ${autoTags.map(t => 
+                        `<span class="badge bg-info tag-badge" data-tag="${t.tag}">
+                          ${t.tag}
+                        </span>`
+                      ).join('')}
+                    </div>
+                  </div>
+                `;
+              }
+              
+              modalBody.innerHTML = modalContent;
             } else {
-              modalBody.innerHTML = '<p class="text-muted">No additional tags to display.</p>';
+              modalBody.innerHTML = '<p class="text-muted">No tags assigned to this content item.</p>';
             }
           } catch (error) {
             console.error('Error parsing tags data:', error);
             document.getElementById('allTagsModalBody').innerHTML = 
-              '<p class="text-danger">Error loading tags.</p>';
+              '<p class="text-danger">Error loading tags. Please try again.</p>';
           }
         });
       }
