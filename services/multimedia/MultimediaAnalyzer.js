@@ -614,6 +614,35 @@ class MultimediaAnalyzer {
                 
                 // Add video-specific tags
                 results.auto_tags.push('video', 'social_media');
+                
+                // Generate thumbnails for Facebook video
+                if (analysisOptions.thumbnails && facebookResult.filePath) {
+                  try {
+                    if (user_id && content_id) {
+                      const logger = require('../../config/logger');
+                      logger.multimedia.progress(user_id, content_id, 'thumbnail_generation', 45);
+                    }
+                    
+                    console.log(`🖼️ Generating thumbnails for Facebook video: ${facebookResult.filePath}`);
+                    const thumbnailResults = await this.generateVideoThumbnails(
+                      user_id || 'unknown',
+                      facebookResult.filePath,
+                      {
+                        contentId: content_id,
+                        thumbnailSize: 300,
+                        keyMomentsCount: 3,
+                        keyMomentsSize: 200
+                      }
+                    );
+                    
+                    if (thumbnailResults && thumbnailResults.length > 0) {
+                      results.thumbnails = thumbnailResults;
+                      console.log(`✅ Generated ${thumbnailResults.length} thumbnails for Facebook video`);
+                    }
+                  } catch (thumbnailError) {
+                    console.error('❌ Failed to generate thumbnails for Facebook video:', thumbnailError);
+                  }
+                }
               } else if (facebookResult.type === 'image' && facebookResult.filePath) {
                 // Analyze downloaded image
                 const imageAnalysisResult = await this.analyzeImage(user_id, facebookResult.filePath, results, {
@@ -632,6 +661,29 @@ class MultimediaAnalyzer {
                       description_length: results.transcription.length,
                       objects_detected: imageAnalysisResult.objects?.length || 0
                     });
+                  }
+                }
+                
+                // Generate thumbnails for Facebook image
+                if (analysisOptions.thumbnails && facebookResult.filePath) {
+                  try {
+                    console.log(`🖼️ Generating thumbnails for Facebook image: ${facebookResult.filePath}`);
+                    const thumbnailResults = await this.generateImageThumbnails(
+                      user_id || 'unknown',
+                      facebookResult.filePath,
+                      {
+                        contentId: content_id,
+                        sizes: [150, 300, 500],
+                        quality: 'medium'
+                      }
+                    );
+                    
+                    if (thumbnailResults && thumbnailResults.length > 0) {
+                      results.thumbnails = thumbnailResults;
+                      console.log(`✅ Generated ${thumbnailResults.length} thumbnails for Facebook image`);
+                    }
+                  } catch (thumbnailError) {
+                    console.error('❌ Failed to generate thumbnails for Facebook image:', thumbnailError);
                   }
                 }
               }
@@ -2488,15 +2540,104 @@ Respond with only the title, no quotes or additional text.`;
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
-  // Placeholder methods for features to be implemented
-  async generateVideoThumbnails(userId, videoPath, options) {
-    // TODO: Implement video thumbnail generation
-    return null;
+  // Thumbnail generation methods using ThumbnailGenerator service
+  async generateVideoThumbnails(userId, videoPath, options = {}) {
+    try {
+      if (this.enableLogging) {
+        console.log('🎬 Starting video thumbnail generation:', {
+          userId,
+          videoPath: path.basename(videoPath),
+          options
+        });
+      }
+      
+      // Initialize ThumbnailGenerator if not already done
+      if (!this.thumbnailGenerator) {
+        const ThumbnailGenerator = require('./ThumbnailGenerator');
+        this.thumbnailGenerator = new ThumbnailGenerator({
+          enableLogging: this.enableLogging
+        });
+      }
+      
+      // Generate thumbnails using ThumbnailGenerator service
+      const results = await this.thumbnailGenerator.generateVideoThumbnails(
+        userId,
+        videoPath,
+        options.contentId || null,
+        options.fileId || null,
+        {
+          thumbnailSize: options.thumbnailSize || 300,
+          keyMomentsCount: options.keyMomentsCount || 3,
+          keyMomentsSize: options.keyMomentsSize || 200,
+          quality: options.quality || 'medium',
+          includeMainThumbnail: true,
+          includeKeyMoments: true
+        }
+      );
+      
+      if (this.enableLogging) {
+        console.log('✅ Video thumbnails generated:', {
+          mainThumbnail: !!results.mainThumbnail,
+          keyMoments: results.keyMoments.length,
+          totalThumbnails: results.metadata.totalThumbnails
+        });
+      }
+      
+      // Return array of all thumbnails for consistency
+      const allThumbnails = [];
+      if (results.mainThumbnail) allThumbnails.push(results.mainThumbnail);
+      if (results.keyMoments) allThumbnails.push(...results.keyMoments);
+      
+      return allThumbnails;
+    } catch (error) {
+      console.error('❌ Video thumbnail generation failed:', error);
+      throw error;
+    }
   }
 
-  async generateImageThumbnails(userId, imagePath, options) {
-    // TODO: Implement image thumbnail generation
-    return null;
+  async generateImageThumbnails(userId, imagePath, options = {}) {
+    try {
+      if (this.enableLogging) {
+        console.log('🖼️ Starting image thumbnail generation:', {
+          userId,
+          imagePath: path.basename(imagePath),
+          options
+        });
+      }
+      
+      // Initialize ThumbnailGenerator if not already done
+      if (!this.thumbnailGenerator) {
+        const ThumbnailGenerator = require('./ThumbnailGenerator');
+        this.thumbnailGenerator = new ThumbnailGenerator({
+          enableLogging: this.enableLogging
+        });
+      }
+      
+      // Generate thumbnails using ThumbnailGenerator service
+      const results = await this.thumbnailGenerator.generateImageThumbnails(
+        userId,
+        imagePath,
+        options.contentId || null,
+        options.fileId || null,
+        {
+          sizes: options.sizes || [150, 300, 500],
+          quality: options.quality || 'medium',
+          maintainAspectRatio: true
+        }
+      );
+      
+      if (this.enableLogging) {
+        console.log('✅ Image thumbnails generated:', {
+          thumbnailCount: results.thumbnails.length,
+          sizes: options.sizes || [150, 300, 500]
+        });
+      }
+      
+      return results.thumbnails;
+    } catch (error) {
+      console.error('❌ Image thumbnail generation failed:', error);
+      throw error;
+    }
   }
 
   async extractOCRCaptions(userId, videoPath, options) {
