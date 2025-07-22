@@ -1016,23 +1016,29 @@ Return only the extracted text, preserving original formatting and line breaks w
         console.log(`🤖 Sending image content to OpenAI for title generation (${contentToAnalyze.length} chars)`);
       }
 
-      const prompt = `Based on the following image description and analysis, create an engaging and descriptive title that tells a story about what's happening in the image.
+      const prompt = `Based on the following image description and analysis, create an engaging and descriptive title that follows proper narrative structure like professional video titles.
 
 The title should be:
-- Start with "In the image," or "The image shows" or "This image captures"
-- Be descriptive and storytelling (15-25 words)
-- Paint a vivid picture of the scene
-- Include key details about people, objects, actions, and setting
-- Be engaging and make the viewer want to see the image
-- Focus on the most interesting visual elements and what's happening
-- Use descriptive adjectives and action words
+- Follow a narrative structure with proper grammar and flow (NOT keyword lists or bullet points)
+- Be a complete, well-formed sentence or phrase that tells what the image is about
+- Use descriptive language that paints a picture of the scene
+- Focus on the main subject, action, or purpose shown in the image
+- Be professional and engaging like video content titles
+- Avoid comma-separated lists or tag-like structures
+- Create a cohesive narrative that flows naturally
 
 Image Analysis: ${contentToAnalyze}
 
-Examples of good titles:
-- "In the image, a young girl stands confidently on a colorful playground, her bright smile radiating joy as she poses for the camera"
-- "The image shows a bustling city street at sunset, with warm golden light illuminating the faces of people walking past vibrant storefronts"
-- "This image captures a peaceful mountain lake reflecting the snow-capped peaks, with a lone kayaker gliding across the crystal-clear water"
+Examples of good structured titles:
+- "Professional Energy Storage Solutions Showcase: Complete Equipment Layout and Components Display"
+- "Comprehensive Tutorial Setup: Step-by-Step Equipment Organization for Solar Installation"
+- "Modern Industrial Design: Clean Product Layout Featuring Advanced Energy Storage Technology"
+- "Educational Product Demonstration: Detailed Component Overview for Renewable Energy Systems"
+
+BAD examples to avoid:
+- "SunC New Energy Co, packing list, energy storage equipment" (keyword list)
+- "Inverter, batteries, pallet, manuals, plugs" (bullet points)
+- "Company name, product type, equipment list" (tag structure)
 
 Respond with only the title, no quotes or additional text.`;
 
@@ -1041,7 +1047,7 @@ Respond with only the title, no quotes or additional text.`;
         messages: [
           {
             role: 'system',
-            content: 'You are an expert content creator who specializes in writing engaging, descriptive titles for images. Create compelling titles that tell a story about what\'s happening in the image. Your titles should paint a vivid picture and make viewers feel like they can almost see the image just from reading the title. Focus on people, actions, emotions, settings, and interesting visual details. Always start with "In the image," "The image shows," or "This image captures" and be descriptive and storytelling.'
+            content: 'You are an expert content creator who specializes in writing professional, descriptive titles for visual content that match the quality and structure of video titles. Create compelling titles that follow proper narrative structure with complete sentences, not keyword lists or bullet points. Your titles should be well-formed, professional, and descriptive - similar to how video content is titled. Focus on the main subject, purpose, or theme of the image using proper grammar and cohesive language flow. Avoid comma-separated lists or tag-like structures.'
           },
           {
             role: 'user',
@@ -1083,55 +1089,74 @@ Respond with only the title, no quotes or additional text.`;
    * @returns {string} Fallback title
    */
   getFallbackTitle(context = {}) {
-    // Try to use first sentence of description with descriptive prefix
+    // Try to use first sentence of description - avoid keyword lists
     if (context.description && context.description.trim()) {
       const firstSentence = context.description.split('.')[0];
       if (firstSentence.length > 0 && firstSentence.length <= 120) {
-        // Add descriptive prefix if not already present
-        if (!firstSentence.toLowerCase().startsWith('in the image') && 
-            !firstSentence.toLowerCase().startsWith('the image shows') &&
-            !firstSentence.toLowerCase().startsWith('this image captures')) {
-          return `In the image, ${firstSentence.trim().toLowerCase()}`;
-        } else {
-          return firstSentence.trim();
-        }
+        // Create a proper sentence structure
+        return this.formatAsProfessionalTitle(firstSentence.trim());
       } else if (context.description.length <= 120) {
-        // Add descriptive prefix if not already present
-        if (!context.description.toLowerCase().startsWith('in the image') && 
-            !context.description.toLowerCase().startsWith('the image shows') &&
-            !context.description.toLowerCase().startsWith('this image captures')) {
-          return `In the image, ${context.description.trim().toLowerCase()}`;
-        } else {
-          return context.description.trim();
-        }
+        // Use full description if it's not too long
+        return this.formatAsProfessionalTitle(context.description.trim());
       } else {
+        // Truncate but maintain sentence structure
         const truncated = context.description.substring(0, 117).trim();
-        if (!truncated.toLowerCase().startsWith('in the image') && 
-            !truncated.toLowerCase().startsWith('the image shows') &&
-            !truncated.toLowerCase().startsWith('this image captures')) {
-          return `In the image, ${truncated.toLowerCase()}...`;
-        } else {
-          return truncated + '...';
-        }
+        return this.formatAsProfessionalTitle(truncated) + '...';
       }
     }
     
-    // Use top tags to create a descriptive title
+    // Create structured title from tags - avoid comma lists
     if (context.tags && Array.isArray(context.tags) && context.tags.length > 0) {
-      const topTags = context.tags.slice(0, 3).join(', ');
-      const tagTitle = topTags.length <= 120 ? topTags : topTags.substring(0, 117) + '...';
-      return `In the image, ${tagTitle.toLowerCase()}`;
+      const mainTag = context.tags[0];
+      const additionalTags = context.tags.slice(1, 3);
+      if (additionalTags.length > 0) {
+        return `${this.capitalizeFirst(mainTag)} Showcase: Featuring ${additionalTags.join(' and ')}`;
+      } else {
+        return `Professional ${this.capitalizeFirst(mainTag)} Display`;
+      }
     }
     
-    // Use object names as fallback
+    // Create structured title from objects - avoid comma lists
     if (context.objects && context.objects.length > 0) {
-      const objectNames = context.objects.slice(0, 3).map(obj => obj.name || obj).join(', ');
-      const objectTitle = objectNames.length <= 120 ? objectNames : objectNames.substring(0, 117) + '...';
-      return `The image shows ${objectTitle.toLowerCase()}`;
+      const mainObject = context.objects[0];
+      const objectName = mainObject.name || mainObject;
+      if (context.objects.length > 1) {
+        return `${this.capitalizeFirst(objectName)} and Equipment: Professional Product Layout`;
+      } else {
+        return `Professional ${this.capitalizeFirst(objectName)} Presentation`;
+      }
     }
     
-    // Final fallback
-    return 'In the image, various visual elements are captured';
+    // Final fallback with professional structure
+    return 'Professional Visual Content: Detailed Product and Information Display';
+  }
+
+  /**
+   * Format text as a professional title with proper structure
+   * @param {string} text - Text to format
+   * @returns {string} Professionally formatted title
+   */
+  formatAsProfessionalTitle(text) {
+    // Capitalize first letter and ensure proper sentence structure
+    const formatted = text.charAt(0).toUpperCase() + text.slice(1);
+    
+    // If it already has good structure, return as is
+    if (formatted.includes(':') || formatted.includes(' - ') || formatted.length > 40) {
+      return formatted;
+    }
+    
+    // Add professional structure for shorter phrases
+    return `Professional ${formatted}: Detailed Visual Overview`;
+  }
+
+  /**
+   * Capitalize the first letter of a string
+   * @param {string} str - String to capitalize
+   * @returns {string} Capitalized string
+   */
+  capitalizeFirst(str) {
+    if (!str || typeof str !== 'string') return 'Content';
+    return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
   /**

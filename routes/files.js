@@ -72,33 +72,39 @@ async function generateSophisticatedImageTitle(imageDescription, analysisData = 
 
     console.log(`🤖 Sending image content to OpenAI for title generation (${contentToAnalyze.length} chars)`);
 
-    const prompt = `Based on the following image description and analysis, create an engaging and descriptive title that tells a story about what's happening in the image.
+          const prompt = `Based on the following image description and analysis, create an engaging and descriptive title that follows proper narrative structure like professional video titles.
 
 The title should be:
-- Start with "In the image," or "The image shows" or "This image captures"
-- Be descriptive and storytelling (15-25 words)
-- Paint a vivid picture of the scene
-- Include key details about people, objects, actions, and setting
-- Be engaging and make the viewer want to see the image
-- Focus on the most interesting visual elements and what's happening
-- Use descriptive adjectives and action words
+- Follow a narrative structure with proper grammar and flow (NOT keyword lists or bullet points)
+- Be a complete, well-formed sentence or phrase that tells what the image is about
+- Use descriptive language that paints a picture of the scene
+- Focus on the main subject, action, or purpose shown in the image
+- Be professional and engaging like video content titles
+- Avoid comma-separated lists or tag-like structures
+- Create a cohesive narrative that flows naturally
 
 Image Analysis: ${contentToAnalyze}
 
-Examples of good titles:
-- "In the image, a young girl stands confidently on a colorful playground, her bright smile radiating joy as she poses for the camera"
-- "The image shows a bustling city street at sunset, with warm golden light illuminating the faces of people walking past vibrant storefronts"
-- "This image captures a peaceful mountain lake reflecting the snow-capped peaks, with a lone kayaker gliding across the crystal-clear water"
+Examples of good structured titles:
+- "Professional Energy Storage Solutions Showcase: Complete Equipment Layout and Components Display"
+- "Comprehensive Tutorial Setup: Step-by-Step Equipment Organization for Solar Installation"
+- "Modern Industrial Design: Clean Product Layout Featuring Advanced Energy Storage Technology"
+- "Educational Product Demonstration: Detailed Component Overview for Renewable Energy Systems"
+
+BAD examples to avoid:
+- "SunC New Energy Co, packing list, energy storage equipment" (keyword list)
+- "Inverter, batteries, pallet, manuals, plugs" (bullet points)
+- "Company name, product type, equipment list" (tag structure)
 
 Respond with only the title, no quotes or additional text.`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
-        {
-          role: 'system',
-          content: 'You are an expert content creator who specializes in writing engaging, descriptive titles for images. Create compelling titles that tell a story about what\'s happening in the image. Your titles should paint a vivid picture and make viewers feel like they can almost see the image just from reading the title. Focus on people, actions, emotions, settings, and interesting visual details. Always start with "In the image," "The image shows," or "This image captures" and be descriptive and storytelling.'
-        },
+                  {
+            role: 'system',
+            content: 'You are an expert content creator who specializes in writing professional, descriptive titles for visual content that match the quality and structure of video titles. Create compelling titles that follow proper narrative structure with complete sentences, not keyword lists or bullet points. Your titles should be well-formed, professional, and descriptive - similar to how video content is titled. Focus on the main subject, purpose, or theme of the image using proper grammar and cohesive language flow. Avoid comma-separated lists or tag-like structures.'
+          },
         {
           role: 'user',
           content: prompt
@@ -125,6 +131,24 @@ Respond with only the title, no quotes or additional text.`;
     console.error('❌ Sophisticated AI title generation failed:', error.message);
     return null;
   }
+}
+
+/**
+ * Format text as a professional title with proper structure
+ * @param {string} text - Text to format
+ * @returns {string} Professionally formatted title
+ */
+function formatAsProfessionalTitle(text) {
+  // Capitalize first letter and ensure proper sentence structure
+  const formatted = text.charAt(0).toUpperCase() + text.slice(1);
+  
+  // If it already has good structure, return as is
+  if (formatted.includes(':') || formatted.includes(' - ') || formatted.length > 40) {
+    return formatted;
+  }
+  
+  // Add professional structure for shorter phrases
+  return `Professional ${formatted}: Detailed Visual Overview`;
 }
 
 /**
@@ -457,75 +481,35 @@ async function triggerFileAnalysis(fileRecord, user) {
           if (aiTitle) {
             updateData.metadata.title = aiTitle;
             console.log(`🎯 Generated sophisticated AI title: "${aiTitle}"`);
-          } else {
-            // Final fallback to descriptive extraction
-            const firstSentence = updateData.summary.split('.')[0];
-            if (firstSentence.length > 0 && firstSentence.length <= 120) {
-              // Add descriptive prefix if not already present
-              if (!firstSentence.toLowerCase().startsWith('in the image') && 
-                  !firstSentence.toLowerCase().startsWith('the image shows') &&
-                  !firstSentence.toLowerCase().startsWith('this image captures')) {
-                updateData.metadata.title = `In the image, ${firstSentence.trim().toLowerCase()}`;
-              } else {
-                updateData.metadata.title = firstSentence.trim();
-              }
-              console.log(`🎯 Fallback title from summary: "${updateData.metadata.title}"`);
-            } else if (updateData.summary.length <= 120) {
-              // Add descriptive prefix if not already present
-              if (!updateData.summary.toLowerCase().startsWith('in the image') && 
-                  !updateData.summary.toLowerCase().startsWith('the image shows') &&
-                  !updateData.summary.toLowerCase().startsWith('this image captures')) {
-                updateData.metadata.title = `In the image, ${updateData.summary.trim().toLowerCase()}`;
-              } else {
-                updateData.metadata.title = updateData.summary.trim();
-              }
-              console.log(`🎯 Using full summary as title: "${updateData.metadata.title}"`);
-            } else {
-              const truncated = updateData.summary.substring(0, 117).trim();
-              if (!truncated.toLowerCase().startsWith('in the image') && 
-                  !truncated.toLowerCase().startsWith('the image shows') &&
-                  !truncated.toLowerCase().startsWith('this image captures')) {
-                updateData.metadata.title = `In the image, ${truncated.toLowerCase()}...`;
-              } else {
-                updateData.metadata.title = truncated + '...';
-              }
-              console.log(`🎯 Using truncated summary as title: "${updateData.metadata.title}"`);
-            }
-          }
+                      } else {
+             // Final fallback - create professional structured title
+             const firstSentence = updateData.summary.split('.')[0];
+             if (firstSentence.length > 0 && firstSentence.length <= 120) {
+               updateData.metadata.title = formatAsProfessionalTitle(firstSentence.trim());
+               console.log(`🎯 Professional fallback title from summary: "${updateData.metadata.title}"`);
+             } else if (updateData.summary.length <= 120) {
+               updateData.metadata.title = formatAsProfessionalTitle(updateData.summary.trim());
+               console.log(`🎯 Using full summary as professional title: "${updateData.metadata.title}"`);
+             } else {
+               const truncated = updateData.summary.substring(0, 117).trim();
+               updateData.metadata.title = formatAsProfessionalTitle(truncated) + '...';
+               console.log(`🎯 Using truncated summary as professional title: "${updateData.metadata.title}"`);
+             }
+           }
         } catch (titleError) {
           console.error(`⚠️ AI title generation failed: ${titleError.message}`);
-          // Fallback to descriptive extraction
+          // Fallback to professional structured title
           const firstSentence = updateData.summary.split('.')[0];
           if (firstSentence.length > 0 && firstSentence.length <= 120) {
-            // Add descriptive prefix if not already present
-            if (!firstSentence.toLowerCase().startsWith('in the image') && 
-                !firstSentence.toLowerCase().startsWith('the image shows') &&
-                !firstSentence.toLowerCase().startsWith('this image captures')) {
-              updateData.metadata.title = `In the image, ${firstSentence.trim().toLowerCase()}`;
-            } else {
-              updateData.metadata.title = firstSentence.trim();
-            }
-            console.log(`🎯 Fallback title from summary: "${updateData.metadata.title}"`);
+            updateData.metadata.title = formatAsProfessionalTitle(firstSentence.trim());
+            console.log(`🎯 Professional error fallback title: "${updateData.metadata.title}"`);
           } else if (updateData.summary.length <= 120) {
-            // Add descriptive prefix if not already present
-            if (!updateData.summary.toLowerCase().startsWith('in the image') && 
-                !updateData.summary.toLowerCase().startsWith('the image shows') &&
-                !updateData.summary.toLowerCase().startsWith('this image captures')) {
-              updateData.metadata.title = `In the image, ${updateData.summary.trim().toLowerCase()}`;
-            } else {
-              updateData.metadata.title = updateData.summary.trim();
-            }
-            console.log(`🎯 Using full summary as title: "${updateData.metadata.title}"`);
+            updateData.metadata.title = formatAsProfessionalTitle(updateData.summary.trim());
+            console.log(`🎯 Using full summary as professional title: "${updateData.metadata.title}"`);
           } else {
             const truncated = updateData.summary.substring(0, 117).trim();
-            if (!truncated.toLowerCase().startsWith('in the image') && 
-                !truncated.toLowerCase().startsWith('the image shows') &&
-                !truncated.toLowerCase().startsWith('this image captures')) {
-              updateData.metadata.title = `In the image, ${truncated.toLowerCase()}...`;
-            } else {
-              updateData.metadata.title = truncated + '...';
-            }
-            console.log(`🎯 Using truncated summary as title: "${updateData.metadata.title}"`);
+            updateData.metadata.title = formatAsProfessionalTitle(truncated) + '...';
+            console.log(`🎯 Using truncated summary as professional title: "${updateData.metadata.title}"`);
           }
         }
       }

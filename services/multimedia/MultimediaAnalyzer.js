@@ -2186,88 +2186,84 @@ Respond with only the title, no quotes or additional text.`;
    * @returns {string} Fallback image title
    */
   getFallbackImageTitle(results) {
-    // Try to use first sentence of description with descriptive prefix
+    // Try to use first sentence of description - create professional structure
     if (results.description && results.description.trim()) {
       const firstSentence = results.description.split('.')[0];
       if (firstSentence.length > 0 && firstSentence.length <= 120) {
-        // Add descriptive prefix if not already present
-        if (!firstSentence.toLowerCase().startsWith('in the image') && 
-            !firstSentence.toLowerCase().startsWith('the image shows') &&
-            !firstSentence.toLowerCase().startsWith('this image captures')) {
-          return `In the image, ${firstSentence.trim().toLowerCase()}`;
-        } else {
-          return firstSentence.trim();
-        }
+        return this.formatAsProfessionalTitle(firstSentence.trim());
       } else if (results.description.length <= 120) {
-        // Add descriptive prefix if not already present
-        if (!results.description.toLowerCase().startsWith('in the image') && 
-            !results.description.toLowerCase().startsWith('the image shows') &&
-            !results.description.toLowerCase().startsWith('this image captures')) {
-          return `In the image, ${results.description.trim().toLowerCase()}`;
-        } else {
-          return results.description.trim();
-        }
+        return this.formatAsProfessionalTitle(results.description.trim());
       } else {
         const truncated = results.description.substring(0, 117).trim();
-        if (!truncated.toLowerCase().startsWith('in the image') && 
-            !truncated.toLowerCase().startsWith('the image shows') &&
-            !truncated.toLowerCase().startsWith('this image captures')) {
-          return `In the image, ${truncated.toLowerCase()}...`;
-        } else {
-          return truncated + '...';
-        }
+        return this.formatAsProfessionalTitle(truncated) + '...';
       }
     }
     
-    // Use transcription if available with descriptive prefix
+    // Use transcription if available - create professional structure
     if (results.transcription && results.transcription.trim()) {
       const firstSentence = results.transcription.split('.')[0];
       if (firstSentence.length > 0 && firstSentence.length <= 120) {
-        // Add descriptive prefix if not already present
-        if (!firstSentence.toLowerCase().startsWith('in the image') && 
-            !firstSentence.toLowerCase().startsWith('the image shows') &&
-            !firstSentence.toLowerCase().startsWith('this image captures')) {
-          return `In the image, ${firstSentence.trim().toLowerCase()}`;
-        } else {
-          return firstSentence.trim();
-        }
+        return this.formatAsProfessionalTitle(firstSentence.trim());
       } else if (results.transcription.length <= 120) {
-        // Add descriptive prefix if not already present
-        if (!results.transcription.toLowerCase().startsWith('in the image') && 
-            !results.transcription.toLowerCase().startsWith('the image shows') &&
-            !results.transcription.toLowerCase().startsWith('this image captures')) {
-          return `In the image, ${results.transcription.trim().toLowerCase()}`;
-        } else {
-          return results.transcription.trim();
-        }
+        return this.formatAsProfessionalTitle(results.transcription.trim());
       } else {
         const truncated = results.transcription.substring(0, 117).trim();
-        if (!truncated.toLowerCase().startsWith('in the image') && 
-            !truncated.toLowerCase().startsWith('the image shows') &&
-            !truncated.toLowerCase().startsWith('this image captures')) {
-          return `In the image, ${truncated.toLowerCase()}...`;
-        } else {
-          return truncated + '...';
-        }
+        return this.formatAsProfessionalTitle(truncated) + '...';
       }
     }
     
-    // Use top tags to create a descriptive title
+    // Create structured title from tags - avoid comma lists
     if (results.tags && Array.isArray(results.tags) && results.tags.length > 0) {
-      const topTags = results.tags.slice(0, 3).join(', ');
-      const tagTitle = topTags.length <= 120 ? topTags : topTags.substring(0, 117) + '...';
-      return `In the image, ${tagTitle.toLowerCase()}`;
+      const mainTag = results.tags[0];
+      const additionalTags = results.tags.slice(1, 3);
+      if (additionalTags.length > 0) {
+        return `${this.capitalizeFirst(mainTag)} Showcase: Featuring ${additionalTags.join(' and ')}`;
+      } else {
+        return `Professional ${this.capitalizeFirst(mainTag)} Display`;
+      }
     }
     
-    // Use object names as fallback
+    // Create structured title from objects - avoid comma lists
     if (results.objects && results.objects.length > 0) {
-      const objectNames = results.objects.slice(0, 3).map(obj => obj.name || obj).join(', ');
-      const objectTitle = objectNames.length <= 120 ? objectNames : objectNames.substring(0, 117) + '...';
-      return `The image shows ${objectTitle.toLowerCase()}`;
+      const mainObject = results.objects[0];
+      const objectName = mainObject.name || mainObject;
+      if (results.objects.length > 1) {
+        return `${this.capitalizeFirst(objectName)} and Equipment: Professional Product Layout`;
+      } else {
+        return `Professional ${this.capitalizeFirst(objectName)} Presentation`;
+      }
     }
     
-    // Final fallback
-    return 'In the image, various visual elements are captured';
+    // Final fallback with professional structure
+    return 'Professional Visual Content: Detailed Product and Information Display';
+  }
+
+  /**
+   * Format text as a professional title with proper structure
+   * @param {string} text - Text to format
+   * @returns {string} Professionally formatted title
+   */
+  formatAsProfessionalTitle(text) {
+    // Capitalize first letter and ensure proper sentence structure
+    const formatted = text.charAt(0).toUpperCase() + text.slice(1);
+    
+    // If it already has good structure, return as is
+    if (formatted.includes(':') || formatted.includes(' - ') || formatted.length > 40) {
+      return formatted;
+    }
+    
+    // Add professional structure for shorter phrases
+    return `Professional ${formatted}: Detailed Visual Overview`;
+  }
+
+  /**
+   * Capitalize the first letter of a string
+   * @param {string} str - String to capitalize
+   * @returns {string} Capitalized string
+   */
+  capitalizeFirst(str) {
+    if (!str || typeof str !== 'string') return 'Content';
+    return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
   // Placeholder methods for features to be implemented
