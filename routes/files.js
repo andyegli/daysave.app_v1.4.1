@@ -8,6 +8,7 @@ const { body, param, query, validationResult } = require('express-validator');
 const logger = require('../config/logger');
 const { Op } = require('sequelize');
 const { AutomationOrchestrator } = require('../services/multimedia');
+const { ContentTypeDetector } = require('../scripts/populate-content-types');
 
 // Initialize automation orchestrator for file processing (singleton)
 const orchestrator = AutomationOrchestrator.getInstance();
@@ -1134,6 +1135,12 @@ router.post('/upload', [
           }
         });
 
+        // Detect content type before creation
+        const detector = new ContentTypeDetector();
+        const detected_content_type = detector.detectFromMimeType(uploadResult.mimetype) || 
+                                      detector.detectFromFilename(file.originalname) || 
+                                      'unknown';
+
         // Create file record in database
         const fileRecord = await File.create({
           user_id: req.user.id,
@@ -1147,7 +1154,8 @@ router.post('/upload', [
             publicUrl: uploadResult.publicUrl
           },
           user_comments: req.body.comments || '',
-          user_tags: req.body.tags ? req.body.tags.split(',').map(tag => tag.trim()) : []
+          user_tags: req.body.tags ? req.body.tags.split(',').map(tag => tag.trim()) : [],
+          content_type: detected_content_type
         });
 
         // Assign to groups if specified
@@ -1782,15 +1790,8 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     const hasTranscription = file.transcription && file.transcription.length > 0;
     const hasSummary = file.summary && file.summary.length > 0;
     
-    // Determine media type
-    const mimeType = file.metadata?.mimetype || '';
-    let mediaType = 'file';
-    if (videoAnalysis) mediaType = 'video';
-    else if (audioAnalysis) mediaType = 'audio';
-    else if (imageAnalysis) mediaType = 'image';
-    else if (mimeType.startsWith('image/')) mediaType = 'image';
-    else if (mimeType.startsWith('video/')) mediaType = 'video';
-    else if (mimeType.startsWith('audio/')) mediaType = 'audio';
+    // Use stored content type (much faster and more reliable)
+    let mediaType = file.content_type === 'unknown' ? 'file' : file.content_type;
     
     // If we have processing jobs, get the latest one
     const latestJob = processingJobs.length > 0 ? processingJobs[0] : null;

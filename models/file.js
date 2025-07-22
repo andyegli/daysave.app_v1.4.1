@@ -53,6 +53,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'AI-generated title for the file content'
     },
+    content_type: {
+      type: DataTypes.ENUM('video', 'audio', 'image', 'document', 'unknown'),
+      allowNull: false,
+      defaultValue: 'unknown',
+      comment: 'Detected media type for optimized querying and processing'
+    },
     location: {
       type: DataTypes.JSON
     }

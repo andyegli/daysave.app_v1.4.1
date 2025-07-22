@@ -403,6 +403,7 @@ class AutomationOrchestrator {
             console.log(`🔍 [JOB-${jobId}] Detecting media type...`);
             const mediaType = await this.detectMediaType(fileBuffer, metadata);
             job.mediaType = mediaType;
+            job.contentType = mediaType; // Store for database updates
             console.log(`   📝 Detected: ${mediaType.toUpperCase()} media`);
             
             // Create progress tracking job

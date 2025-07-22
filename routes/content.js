@@ -5,6 +5,7 @@ const { Content, ContentGroup, ContentGroupMember } = require('../models');
 const { Op } = require('sequelize');
 const { AutomationOrchestrator } = require('../services/multimedia');
 const BackwardCompatibilityService = require('../services/BackwardCompatibilityService');
+const { ContentTypeDetector } = require('../scripts/populate-content-types');
 const logger = require('../config/logger');
 
 // Initialize automation orchestrator (singleton)
@@ -670,11 +671,16 @@ router.post('/', [
       return res.status(400).json({ error: 'A valid URL is required.' });
     }
 
+    // Detect content type before creation
+    const detector = new ContentTypeDetector();
+    const detected_content_type = detector.detectFromUrl(url) || 'unknown';
+    
     const content = await Content.create({
       user_id: req.user.id,
       url,
       user_comments: user_comments || '',
-      user_tags: Array.isArray(user_tags) ? user_tags : []
+      user_tags: Array.isArray(user_tags) ? user_tags : [],
+      content_type: detected_content_type
     });
 
     // Log content creation

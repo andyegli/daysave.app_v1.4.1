@@ -514,51 +514,107 @@
 
   <!-- Add Content Modal -->
   <div class="modal fade" id="addContentModal" tabindex="-1" aria-labelledby="addContentModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <form class="modal-content" id="addContentForm">
+    <div class="modal-dialog modal-lg">
+      <form class="modal-content" id="addContentForm" enctype="multipart/form-data">
         <div class="modal-header">
           <h5 class="modal-title" id="addContentModalLabel">Add New Content</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <!-- Title Input -->
-          <div class="mb-3">
-            <label for="contentTitle" class="form-label">Title</label>
-            <input type="text" class="form-control" id="contentTitle" name="title" placeholder="Content Title">
-          </div>
-          <!-- URL Input -->
-          <div class="mb-3">
-            <label for="contentUrl" class="form-label">Content URL</label>
-            <input type="url" class="form-control" id="contentUrl" name="url" required placeholder="https://example.com/post">
-          </div>
-          <!-- User Comment -->
-          <div class="mb-3">
-            <label for="contentComment" class="form-label">Your Comment</label>
-            <textarea class="form-control" id="contentComment" name="user_comments" rows="2"></textarea>
+          <!-- Content Type Toggle -->
+          <div class="mb-4">
+            <div class="btn-group w-100" role="group" aria-label="Content type selection">
+              <input type="radio" class="btn-check" name="contentTypeToggle" id="urlContentType" checked>
+              <label class="btn btn-outline-primary" for="urlContentType">
+                <i class="bi bi-link-45deg"></i> Add URL
+              </label>
+              
+              <input type="radio" class="btn-check" name="contentTypeToggle" id="fileContentType">
+              <label class="btn btn-outline-primary" for="fileContentType">
+                <i class="bi bi-cloud-upload"></i> Upload File
+              </label>
+            </div>
           </div>
 
-
-
-
-          <!-- User Tags -->
-          <div class="mb-3">
-            <label for="contentTags" class="form-label">Tags (comma separated)</label>
-            <input type="text" class="form-control" id="contentTags" name="user_tags" placeholder="tag1, tag2">
+          <!-- URL Content Section -->
+          <div id="urlContentSection">
+            <!-- Title Input -->
+            <div class="mb-3">
+              <label for="contentTitle" class="form-label">Title (Optional)</label>
+              <input type="text" class="form-control" id="contentTitle" name="title" placeholder="Content Title (will be auto-generated if empty)">
+            </div>
+            <!-- URL Input -->
+            <div class="mb-3">
+              <label for="contentUrl" class="form-label">Content URL</label>
+              <input type="url" class="form-control" id="contentUrl" name="url" placeholder="https://example.com/post">
+            </div>
           </div>
-          <!-- Group Assignment -->
-          <div class="mb-3">
-            <label for="contentGroups" class="form-label">Assign to Groups</label>
-            <select class="form-select" id="contentGroups" name="group_ids" multiple>
-              <% (contentGroups || []).forEach(function(group) { %>
-                <option value="<%= group.id %>"><%= group.name %></option>
-              <% }); %>
-            </select>
-            <div class="form-text">Hold Ctrl/Cmd to select multiple groups.</div>
+
+          <!-- File Upload Section -->
+          <div id="fileContentSection" style="display: none;">
+            <!-- File Upload -->
+            <div class="mb-3">
+              <label for="contentFiles" class="form-label">Select Files</label>
+              <input type="file" class="form-control" id="contentFiles" name="files" multiple 
+                     accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt">
+              <div class="form-text">
+                <i class="bi bi-info-circle"></i> 
+                Supported: Images, Audio, Video, PDF, Word documents, Text files. Max 1GB per file.
+              </div>
+            </div>
+            <!-- Selected Files Preview -->
+            <div id="selectedFilesPreview" class="mb-3" style="display: none;">
+              <label class="form-label">Selected Files:</label>
+              <div id="filesList" class="border rounded p-2 bg-light">
+                <!-- File list will be populated by JavaScript -->
+              </div>
+            </div>
           </div>
+
+          <!-- Common Fields (for both URL and File content) -->
+          <div class="border-top pt-3">
+            <!-- User Comment -->
+            <div class="mb-3">
+              <label for="contentComment" class="form-label">Your Comment</label>
+              <textarea class="form-control" id="contentComment" name="user_comments" rows="2" 
+                        placeholder="Add your thoughts, notes, or description..."></textarea>
+            </div>
+
+            <!-- User Tags -->
+            <div class="mb-3">
+              <label for="contentTags" class="form-label">Tags (comma separated)</label>
+              <input type="text" class="form-control" id="contentTags" name="user_tags" placeholder="tag1, tag2, tag3">
+              <div class="form-text">Tags help organize and find your content later</div>
+            </div>
+
+            <!-- Group Assignment -->
+            <div class="mb-3">
+              <label for="contentGroups" class="form-label">Assign to Groups (Optional)</label>
+              <select class="form-select" id="contentGroups" name="group_ids" multiple>
+                <% (contentGroups || []).forEach(function(group) { %>
+                  <option value="<%= group.id %>"><%= group.name %></option>
+                <% }); %>
+              </select>
+              <div class="form-text">Hold Ctrl/Cmd to select multiple groups</div>
+            </div>
+          </div>
+
+          <!-- Progress Bar (for file uploads) -->
+          <div id="uploadProgressSection" class="mb-3" style="display: none;">
+            <label class="form-label">Upload Progress</label>
+            <div class="progress">
+              <div class="progress-bar" role="progressbar" style="width: 0%" id="uploadProgressBar">0%</div>
+            </div>
+          </div>
+
           <div id="addContentAlert" class="alert d-none mt-2"></div>
         </div>
         <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Add Content</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="addContentBtn">
+            <span id="urlBtnText"><i class="bi bi-plus-circle"></i> Add Content</span>
+            <span id="fileBtnText" style="display: none;"><i class="bi bi-cloud-upload"></i> Upload Files</span>
+          </button>
         </div>
       </form>
     </div>
@@ -662,6 +718,9 @@
   <script src="/js/content-filters.js?v=<%= Date.now() %>"></script>
   <script src="/js/ai-analysis.js?v=<%= Date.now() %>"></script>
   <script src="/js/content-tags-modal.js?v=<%= Date.now() %>"></script>
+  
+  <!-- Content Upload Toggle for Add Content Modal -->
+  <script src="/js/content-upload-toggle.js?v=<%= Date.now() %>"></script>
   
   <!-- Content List Enhancements moved to external file for CSP compliance -->
   <script src="/js/content-list-enhancements.js?v=<%= Date.now() %>"></script>

@@ -33,70 +33,301 @@ function showSubscriptionError(errorData) {
 
 // Handle Add Content Form Submission
 document.addEventListener('DOMContentLoaded', function() {
+  // Initialize content type toggle functionality
+  initializeContentTypeToggle();
+  
   const form = document.getElementById('addContentForm');
   if (form) {
     form.addEventListener('submit', async function(e) {
       e.preventDefault();
-      const formData = new FormData(form);
-      const data = {
-        url: formData.get('url'),
-        user_comments: formData.get('user_comments'),
-
-        user_tags: formData.get('user_tags') ? formData.get('user_tags').split(',').map(t => t.trim()).filter(Boolean) : [],
-        group_ids: Array.from(form.querySelector('#contentGroups').selectedOptions).map(opt => opt.value)
-      };
-      try {
-        const res = await fetch('/content', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        
-        // Handle subscription-related errors
-        if (res.status === 429 || res.status === 403 || res.status === 413) {
-          const errorResult = await res.json();
-          showSubscriptionError(errorResult);
-          return;
-        }
-        
-        const result = await res.json();
-        const alert = document.getElementById('addContentAlert');
-        if (result.success) {
-          alert.className = 'alert alert-success mt-2';
-          let message = 'Content added successfully!';
-          
-          // Check if multimedia analysis was triggered
-          if (result.multimedia_analysis && result.multimedia_analysis.status === 'started') {
-            message += ' AI analysis is running in the background and will update automatically when complete.';
-            
-            // Start monitoring the new content for analysis completion
-            if (result.content && result.content.id && typeof startMonitoringContentAnalysis === 'function') {
-              startMonitoringContentAnalysis(result.content.id);
-              console.log(`🎬 Started monitoring analysis for new content: ${result.content.id}`);
-            }
-            
-            // Reload page after a shorter delay to show the new content
-            setTimeout(() => { window.location.reload(); }, 1000);
-          } else {
-            // For non-multimedia content, reload immediately
-            setTimeout(() => { window.location.reload(); }, 1000);
-          }
-          
-          alert.textContent = message;
-          alert.classList.remove('d-none');
-        } else {
-          alert.className = 'alert alert-danger mt-2';
-          alert.textContent = result.error || 'Failed to add content.';
-          alert.classList.remove('d-none');
-        }
-      } catch (err) {
-        const alert = document.getElementById('addContentAlert');
-        alert.className = 'alert alert-danger mt-2';
-        alert.textContent = 'Error adding content: ' + err.message;
-        alert.classList.remove('d-none');
+      
+      // Check which content type is selected
+      const isFileUpload = document.getElementById('fileContentType').checked;
+      
+      if (isFileUpload) {
+        await handleFileUpload(form);
+      } else {
+        await handleUrlContent(form);
       }
     });
   }
+});
+
+// Initialize content type toggle functionality
+function initializeContentTypeToggle() {
+  const urlToggle = document.getElementById('urlContentType');
+  const fileToggle = document.getElementById('fileContentType');
+  const urlSection = document.getElementById('urlContentSection');
+  const fileSection = document.getElementById('fileContentSection');
+  const urlBtnText = document.getElementById('urlBtnText');
+  const fileBtnText = document.getElementById('fileBtnText');
+  const urlInput = document.getElementById('contentUrl');
+  const fileInput = document.getElementById('contentFiles');
+  
+  // Toggle between URL and File upload modes
+  function toggleContentType() {
+    if (fileToggle.checked) {
+      // Switch to file upload mode
+      urlSection.style.display = 'none';
+      fileSection.style.display = 'block';
+      urlBtnText.style.display = 'none';
+      fileBtnText.style.display = 'inline';
+      
+      // Remove required from URL input
+      urlInput.removeAttribute('required');
+      
+      // Clear any URL validation errors
+      urlInput.classList.remove('is-invalid');
+    } else {
+      // Switch to URL mode
+      urlSection.style.display = 'block';
+      fileSection.style.display = 'none';
+      urlBtnText.style.display = 'inline';
+      fileBtnText.style.display = 'none';
+      
+      // Make URL required in URL mode
+      urlInput.setAttribute('required', 'required');
+      
+      // Clear file selection
+      fileInput.value = '';
+      hideFilesPreview();
+    }
+  }
+  
+  // Add event listeners
+  if (urlToggle && fileToggle) {
+    urlToggle.addEventListener('change', toggleContentType);
+    fileToggle.addEventListener('change', toggleContentType);
+  }
+  
+  // File selection preview
+  if (fileInput) {
+    fileInput.addEventListener('change', showFilesPreview);
+  }
+}
+
+// Show selected files preview
+function showFilesPreview() {
+  const fileInput = document.getElementById('contentFiles');
+  const preview = document.getElementById('selectedFilesPreview');
+  const filesList = document.getElementById('filesList');
+  
+  if (fileInput.files.length > 0) {
+    let filesHtml = '';
+    for (let i = 0; i < fileInput.files.length; i++) {
+      const file = fileInput.files[i];
+      const fileSize = (file.size / 1024 / 1024).toFixed(2);
+      const fileIcon = getFileIcon(file.type);
+      
+      filesHtml += `
+        <div class="d-flex align-items-center mb-2 p-2 border rounded bg-white">
+          <i class="${fileIcon} me-2 text-primary"></i>
+          <div class="flex-grow-1">
+            <div class="fw-medium">${file.name}</div>
+            <small class="text-muted">${file.type} • ${fileSize} MB</small>
+          </div>
+        </div>
+      `;
+    }
+    
+    filesList.innerHTML = filesHtml;
+    preview.style.display = 'block';
+  } else {
+    hideFilesPreview();
+  }
+}
+
+// Hide files preview
+function hideFilesPreview() {
+  const preview = document.getElementById('selectedFilesPreview');
+  preview.style.display = 'none';
+}
+
+// Get appropriate icon for file type
+function getFileIcon(mimeType) {
+  if (mimeType.startsWith('image/')) {
+    return 'bi bi-image';
+  } else if (mimeType.startsWith('video/')) {
+    return 'bi bi-camera-video';
+  } else if (mimeType.startsWith('audio/')) {
+    return 'bi bi-music-note';
+  } else if (mimeType.includes('pdf')) {
+    return 'bi bi-file-pdf';
+  } else if (mimeType.includes('word') || mimeType.includes('document')) {
+    return 'bi bi-file-word';
+  } else if (mimeType.includes('text')) {
+    return 'bi bi-file-text';
+  } else {
+    return 'bi bi-file-earmark';
+  }
+}
+
+// Handle file upload submission
+async function handleFileUpload(form) {
+  const fileInput = document.getElementById('contentFiles');
+  const progressSection = document.getElementById('uploadProgressSection');
+  const progressBar = document.getElementById('uploadProgressBar');
+  const submitBtn = document.getElementById('addContentBtn');
+  const originalBtnText = submitBtn.innerHTML;
+  
+  // Validate files are selected
+  if (!fileInput.files || fileInput.files.length === 0) {
+    showAlert('Please select at least one file to upload.', 'warning');
+    return;
+  }
+  
+  // Prepare form data
+  const formData = new FormData();
+  
+  // Add files
+  for (let i = 0; i < fileInput.files.length; i++) {
+    formData.append('files', fileInput.files[i]);
+  }
+  
+  // Add common fields
+  formData.append('comments', form.querySelector('#contentComment').value);
+  formData.append('tags', form.querySelector('#contentTags').value);
+  
+  // Add group assignments
+  const groupSelections = Array.from(form.querySelector('#contentGroups').selectedOptions).map(opt => opt.value);
+  groupSelections.forEach(groupId => {
+    formData.append('group_ids', groupId);
+  });
+  
+  try {
+    // Show progress
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Uploading...';
+    progressSection.style.display = 'block';
+    
+    // Create XMLHttpRequest for progress tracking
+    const xhr = new XMLHttpRequest();
+    
+    // Track upload progress
+    xhr.upload.addEventListener('progress', function(e) {
+      if (e.lengthComputable) {
+        const percentComplete = (e.loaded / e.total) * 100;
+        progressBar.style.width = percentComplete + '%';
+        progressBar.textContent = Math.round(percentComplete) + '%';
+      }
+    });
+    
+    // Handle response
+    const response = await new Promise((resolve, reject) => {
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(JSON.parse(xhr.responseText));
+        } else {
+          reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+        }
+      };
+      
+      xhr.onerror = function() {
+        reject(new Error('Network error occurred'));
+      };
+      
+      xhr.open('POST', '/files/upload');
+      xhr.send(formData);
+    });
+    
+    if (response.success) {
+      showAlert(`Successfully uploaded ${response.uploaded.length} file(s)! They will appear in your content list.`, 'success');
+      
+      // Close modal and refresh page
+      const modal = bootstrap.Modal.getInstance(document.getElementById('addContentModal'));
+      modal.hide();
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } else {
+      throw new Error(response.message || 'Upload failed');
+    }
+    
+  } catch (error) {
+    console.error('File upload error:', error);
+    showAlert(`Upload failed: ${error.message}`, 'danger');
+  } finally {
+    // Reset UI
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalBtnText;
+    progressSection.style.display = 'none';
+    progressBar.style.width = '0%';
+    progressBar.textContent = '0%';
+  }
+}
+
+// Handle URL content submission (existing functionality)
+async function handleUrlContent(form) {
+  const formData = new FormData(form);
+  const data = {
+    url: formData.get('url'),
+    user_comments: formData.get('user_comments'),
+    user_tags: formData.get('user_tags') ? formData.get('user_tags').split(',').map(t => t.trim()).filter(Boolean) : [],
+    group_ids: Array.from(form.querySelector('#contentGroups').selectedOptions).map(opt => opt.value)
+  };
+  
+  try {
+    const res = await fetch('/content', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    
+    // Handle subscription-related errors
+    if (res.status === 429 || res.status === 403 || res.status === 413) {
+      const errorResult = await res.json();
+      showSubscriptionError(errorResult);
+      return;
+    }
+    
+    const result = await res.json();
+    const alert = document.getElementById('addContentAlert');
+    if (result.success) {
+      alert.className = 'alert alert-success mt-2';
+      let message = 'Content added successfully!';
+      
+      // Check if multimedia analysis was triggered
+      if (result.multimedia_analysis && result.multimedia_analysis.status === 'started') {
+        message += ' AI analysis is running in the background and will update automatically when complete.';
+        
+        // Start monitoring the new content for analysis completion
+        if (result.content && result.content.id && typeof startMonitoringContentAnalysis === 'function') {
+          startMonitoringContentAnalysis(result.content.id);
+          console.log(`🎬 Started monitoring analysis for new content: ${result.content.id}`);
+        }
+        
+        // Reload page after a shorter delay to show the new content
+        setTimeout(() => { window.location.reload(); }, 1000);
+      } else {
+        // For non-multimedia content, reload immediately
+        setTimeout(() => { window.location.reload(); }, 1000);
+      }
+      
+      alert.textContent = message;
+      alert.classList.remove('d-none');
+    } else {
+      alert.className = 'alert alert-danger mt-2';
+      alert.textContent = result.error || 'Failed to add content.';
+      alert.classList.remove('d-none');
+    }
+  } catch (err) {
+    const alert = document.getElementById('addContentAlert');
+    alert.className = 'alert alert-danger mt-2';
+    alert.textContent = 'Error adding content: ' + err.message;
+    alert.classList.remove('d-none');
+  }
+}
+
+// Helper function to show alerts (for file upload feedback)
+function showAlert(message, type = 'info') {
+  const alert = document.getElementById('addContentAlert');
+  if (alert) {
+    alert.className = `alert alert-${type} mt-2`;
+    alert.textContent = message;
+    alert.classList.remove('d-none');
+  }
+}
   
   // Handle delete content buttons (updated to handle both content and file items)
   document.querySelectorAll('.delete-content-btn').forEach(btn => {
