@@ -56,16 +56,16 @@ function initializeContentUploadToggle() {
       singleUrlBtnText.style.display = 'inline';
       urlInput.setAttribute('required', 'required');
       
-      // Reset form for content submission
-      addContentForm.removeAttribute('action');
-      addContentForm.removeAttribute('method');
+      // Set form for normal content submission
+      addContentForm.setAttribute('action', '/content');
+      addContentForm.setAttribute('method', 'POST');
       
     } else if (bulkUrlToggle.checked) {
       // Bulk URL mode
       bulkUrlSection.style.display = 'block';
       bulkUrlBtnText.style.display = 'inline';
       
-      // Reset form for bulk URL submission
+      // Remove form action for bulk URL submission (handled by JS)
       addContentForm.removeAttribute('action');
       addContentForm.removeAttribute('method');
       
@@ -151,7 +151,11 @@ function initializeContentUploadToggle() {
   
   // Override form submission for different modes
   addContentForm.addEventListener('submit', function(e) {
-    if (bulkUrlToggle.checked) {
+    if (singleUrlToggle.checked) {
+      // Let normal form submission proceed for single URL mode
+      console.log('🔗 Single URL mode - allowing normal form submission');
+      return true;
+    } else if (bulkUrlToggle.checked) {
       e.preventDefault();
       handleBulkUrlSubmission();
     } else if (fileToggle.checked) {
@@ -162,7 +166,6 @@ function initializeContentUploadToggle() {
         handleFileUploadSubmission();
       }
     }
-    // Let normal content submission proceed for single URL mode
   });
 }
 
