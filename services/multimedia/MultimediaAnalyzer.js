@@ -580,6 +580,117 @@ class MultimediaAnalyzer {
               });
             }
           }
+        } else if (url.includes('facebook.com') && analysisOptions.transcription) {
+          // For Facebook URLs, attempt to download and analyze content using yt-dlp
+          try {
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.progress(user_id, content_id, 'facebook_download_start', 30, {
+                provider: 'yt-dlp'
+              });
+            }
+            
+            // Try to download Facebook content via yt-dlp
+            const facebookResult = await this.getFacebookContent(url);
+            
+            if (facebookResult && facebookResult.success) {
+              // Process downloaded content based on type
+              if (facebookResult.type === 'video' && facebookResult.filePath) {
+                // Extract audio and transcribe for videos
+                const transcriptionResult = await this.transcribeVideoFile(facebookResult.filePath);
+                if (transcriptionResult && transcriptionResult.text) {
+                  results.transcription = transcriptionResult.text;
+                  const wordCount = transcriptionResult.text.split(' ').length;
+                  
+                  if (user_id && content_id) {
+                    const logger = require('../../config/logger');
+                    logger.multimedia.transcription(user_id, content_id, 'facebook_video', wordCount);
+                    logger.multimedia.progress(user_id, content_id, 'transcription_complete', 50, {
+                      wordCount,
+                      transcriptionLength: transcriptionResult.text.length
+                    });
+                  }
+                }
+                
+                // Add video-specific tags
+                results.auto_tags.push('video', 'social_media');
+              } else if (facebookResult.type === 'image' && facebookResult.filePath) {
+                // Analyze downloaded image
+                const imageAnalysisResult = await this.analyzeImage(user_id, facebookResult.filePath, results, {
+                  enableObjectDetection: true,
+                  enableImageDescription: true,
+                  enableOCRExtraction: true
+                });
+                
+                if (imageAnalysisResult && imageAnalysisResult.description) {
+                  results.transcription = imageAnalysisResult.description;
+                  results.auto_tags.push('image', 'post');
+                  
+                  if (user_id && content_id) {
+                    const logger = require('../../config/logger');
+                    logger.multimedia.progress(user_id, content_id, 'image_analysis_complete', 50, {
+                      description_length: results.transcription.length,
+                      objects_detected: imageAnalysisResult.objects?.length || 0
+                    });
+                  }
+                }
+              }
+              
+              // Generate summary and perform sentiment analysis if we have content
+              if (analysisOptions.enableSummarization && results.transcription) {
+                if (user_id && content_id) {
+                  const logger = require('../../config/logger');
+                  logger.multimedia.progress(user_id, content_id, 'summary_generation', 60);
+                }
+                
+                results.summary = await this.generateSummary(results.transcription);
+              }
+              
+              if (analysisOptions.enableSentimentAnalysis && results.transcription) {
+                if (user_id && content_id) {
+                  const logger = require('../../config/logger');
+                  logger.multimedia.progress(user_id, content_id, 'sentiment_analysis', 70);
+                }
+                
+                results.sentiment = await this.analyzeSentiment(results.transcription);
+              }
+              
+              // Clean up downloaded file
+              if (facebookResult.filePath && require('fs').existsSync(facebookResult.filePath)) {
+                require('fs').unlinkSync(facebookResult.filePath);
+              }
+              
+              if (this.enableLogging) {
+                console.log('✅ Facebook content analysis completed:', {
+                  type: facebookResult.type,
+                  contentLength: results.transcription.length
+                });
+              }
+            } else {
+              // Fallback if download failed
+              results.transcription = 'Facebook content could not be accessed. Content may be private or protected.';
+              results.auto_tags.push('private', 'access_restricted');
+              
+              if (user_id && content_id) {
+                const logger = require('../../config/logger');
+                logger.multimedia.progress(user_id, content_id, 'facebook_access_failed', 40, {
+                  reason: 'download_failed_or_private'
+                });
+              }
+            }
+          } catch (facebookError) {
+            console.error('❌ Facebook content analysis failed:', facebookError);
+            results.transcription = 'Facebook content analysis failed. This may be due to privacy settings or access restrictions.';
+            results.auto_tags.push('analysis_failed', 'access_error');
+            
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.error(user_id, content_id, facebookError, {
+                step: 'facebook_analysis',
+                url
+              });
+            }
+          }
         } else if (this.isLocalImageFile(url) && analysisOptions.transcription) {
           // Handle local image file analysis - generate description instead of transcription
           try {
@@ -2855,6 +2966,117 @@ Respond with only the title, no quotes or additional text.`;
     } catch (setupError) {
       if (this.enableLogging) {
         console.error('❌ Instagram download setup failed:', setupError);
+      }
+      return { success: false, error: setupError.message };
+    }
+  }
+
+  /**
+   * Download and analyze Facebook content using yt-dlp to bypass popups
+   * 
+   * @param {string} url - Facebook URL (video or photo post)
+   * @returns {Promise<Object>} Download and analysis result
+   */
+  async getFacebookContent(url) {
+    try {
+      if (this.enableLogging) {
+        console.log('📘 Attempting to download Facebook content:', url);
+      }
+      
+      const { exec } = require('child_process');
+      const fs = require('fs');
+      const path = require('path');
+      
+      const timestamp = Date.now();
+      const outputDir = path.join(__dirname, '../../uploads/temp');
+      
+      // Ensure temp directory exists
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+      
+      const outputTemplate = path.join(outputDir, `facebook_${timestamp}.%(ext)s`);
+      
+      // Use yt-dlp to download Facebook content with various fallback options
+      // --no-check-certificates: Bypass SSL issues
+      // --ignore-errors: Continue on errors  
+      // --user-agent: Use a regular browser user agent
+      // --format "best[height<=720]/best": Get reasonable quality video
+      const command = `yt-dlp --no-check-certificates --ignore-errors --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --format "best[height<=720]/best" -o "${outputTemplate}" "${url}"`;
+      
+      if (this.enableLogging) {
+        console.log('📘 Executing Facebook download command:', command);
+      }
+      
+      return new Promise((resolve) => {
+        exec(command, { maxBuffer: 100 * 1024 * 1024, timeout: 60000 }, (error, stdout, stderr) => {
+          try {
+            if (error) {
+              if (this.enableLogging) {
+                console.log('⚠️ Facebook download failed (this is common due to privacy restrictions):', error.message);
+              }
+              resolve({ success: false, error: error.message });
+              return;
+            }
+            
+            // Find downloaded files
+            const files = fs.readdirSync(outputDir).filter(file => 
+              file.startsWith(`facebook_${timestamp}`) && 
+              !file.endsWith('.part') && // Exclude partial downloads
+              (file.includes('.mp4') || file.includes('.jpg') || file.includes('.jpeg') || file.includes('.png') || file.includes('.webp'))
+            );
+            
+            if (files.length === 0) {
+              if (this.enableLogging) {
+                console.log('⚠️ No Facebook files downloaded - content may be private or restricted');
+              }
+              resolve({ success: false, error: 'No files downloaded' });
+              return;
+            }
+            
+            // Process the first downloaded file
+            const downloadedFile = files[0];
+            const filePath = path.join(outputDir, downloadedFile);
+            const fileStats = fs.statSync(filePath);
+            
+            // Determine content type based on file extension
+            const isVideo = downloadedFile.includes('.mp4');
+            const isImage = downloadedFile.includes('.jpg') || downloadedFile.includes('.jpeg') || 
+                           downloadedFile.includes('.png') || downloadedFile.includes('.webp');
+            
+            if (this.enableLogging) {
+              console.log(`✅ Facebook content downloaded:`, {
+                file: downloadedFile,
+                size: fileStats.size,
+                type: isVideo ? 'video' : 'image'
+              });
+            }
+            
+            resolve({
+              success: true,
+              filePath: filePath,
+              type: isVideo ? 'video' : 'image',
+              filename: downloadedFile,
+              size: fileStats.size,
+              downloadInfo: {
+                url: url,
+                timestamp: timestamp,
+                method: 'yt-dlp'
+              }
+            });
+            
+          } catch (parseError) {
+            if (this.enableLogging) {
+              console.error('❌ Error processing Facebook download:', parseError);
+            }
+            resolve({ success: false, error: parseError.message });
+          }
+        });
+      });
+      
+    } catch (setupError) {
+      if (this.enableLogging) {
+        console.error('❌ Facebook download setup failed:', setupError);
       }
       return { success: false, error: setupError.message };
     }
