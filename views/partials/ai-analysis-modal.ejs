@@ -1,0 +1,767 @@
+<!-- AI Analysis Report Modal -->
+<div class="modal fade" id="aiAnalysisModal" tabindex="-1" aria-labelledby="aiAnalysisModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="aiAnalysisModalLabel">
+          <i class="fas fa-robot me-2"></i>
+          AI Analysis Report
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <!-- Loading State -->
+        <div id="analysisLoading" class="text-center p-5">
+          <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">Loading analysis...</span>
+          </div>
+          <p class="text-muted">Loading comprehensive AI analysis...</p>
+        </div>
+
+        <!-- Analysis Content -->
+        <div id="analysisContent" class="d-none">
+          <!-- Analysis Header -->
+          <div class="bg-light border-bottom p-4">
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <h6 class="mb-1" id="analysisTitle">Analysis Results</h6>
+                <p class="text-muted mb-0" id="analysisSubtitle">Comprehensive AI-powered multimedia analysis</p>
+              </div>
+              <div class="col-md-4 text-end">
+                <span class="badge bg-success fs-6" id="analysisStatus">
+                  <i class="fas fa-check-circle me-1"></i>
+                  Complete
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Navigation Tabs -->
+          <ul class="nav nav-tabs border-0 px-4 pt-3" id="analysisNavTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                <i class="fas fa-chart-line me-1"></i>Overview
+              </button>
+            </li>
+            <li class="nav-item" role="presentation" id="content-tab-nav" style="display: none;">
+              <button class="nav-link" id="content-tab" data-bs-toggle="tab" data-bs-target="#content-analysis" type="button" role="tab">
+                <i class="fas fa-file-text me-1"></i>Content
+              </button>
+            </li>
+            <li class="nav-item" role="presentation" id="objects-tab-nav" style="display: none;">
+              <button class="nav-link" id="objects-tab" data-bs-toggle="tab" data-bs-target="#objects" type="button" role="tab">
+                <i class="fas fa-eye me-1"></i>Objects
+              </button>
+            </li>
+            <li class="nav-item" role="presentation" id="speakers-tab-nav" style="display: none;">
+              <button class="nav-link" id="speakers-tab" data-bs-toggle="tab" data-bs-target="#speakers" type="button" role="tab">
+                <i class="fas fa-microphone me-1"></i>Speakers
+              </button>
+            </li>
+            <li class="nav-item" role="presentation" id="quality-tab-nav" style="display: none;">
+              <button class="nav-link" id="quality-tab" data-bs-toggle="tab" data-bs-target="#quality" type="button" role="tab">
+                <i class="fas fa-star me-1"></i>Quality
+              </button>
+            </li>
+            <li class="nav-item" role="presentation" id="performance-tab-nav">
+              <button class="nav-link" id="performance-tab" data-bs-toggle="tab" data-bs-target="#performance" type="button" role="tab">
+                <i class="fas fa-tachometer-alt me-1"></i>Performance
+              </button>
+            </li>
+          </ul>
+
+          <!-- Tab Content -->
+          <div class="tab-content" id="analysisTabContent">
+            <!-- Overview Tab -->
+            <div class="tab-pane fade show active p-4" id="overview" role="tabpanel">
+              <div class="row">
+                <!-- Key Metrics -->
+                <div class="col-md-6">
+                  <div class="card h-100">
+                    <div class="card-header">
+                      <i class="fas fa-info-circle me-2"></i>Key Information
+                    </div>
+                    <div class="card-body">
+                      <div id="keyMetrics">
+                        <!-- Dynamic content will be inserted here -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- AI Features Used -->
+                <div class="col-md-6">
+                  <div class="card h-100">
+                    <div class="card-header">
+                      <i class="fas fa-cogs me-2"></i>AI Features Applied
+                    </div>
+                    <div class="card-body">
+                      <div id="aiFeatures">
+                        <!-- Dynamic content will be inserted here -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Generated Title & Summary -->
+              <div class="row mt-4" id="titleSummarySection" style="display: none;">
+                <div class="col-12">
+                  <div class="card">
+                    <div class="card-header">
+                      <i class="fas fa-heading me-2"></i>AI-Generated Content
+                    </div>
+                    <div class="card-body">
+                      <div id="generatedTitle" class="mb-3">
+                        <!-- AI-generated title -->
+                      </div>
+                      <div id="generatedSummary">
+                        <!-- AI-generated summary -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tags & Categories -->
+              <div class="row mt-4" id="tagsSection" style="display: none;">
+                <div class="col-12">
+                  <div class="card">
+                    <div class="card-header">
+                      <i class="fas fa-tags me-2"></i>Tags & Classification
+                    </div>
+                    <div class="card-body">
+                      <div id="autoTags" class="mb-3">
+                        <!-- Auto-generated tags -->
+                      </div>
+                      <div id="categoryInfo">
+                        <!-- Category information -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Content Analysis Tab -->
+            <div class="tab-pane fade p-4" id="content-analysis" role="tabpanel">
+              <!-- Transcription -->
+              <div id="transcriptionSection" class="mb-4" style="display: none;">
+                <div class="card">
+                  <div class="card-header">
+                    <i class="fas fa-file-text me-2"></i>Transcription
+                    <span class="badge bg-info ms-2" id="transcriptionLanguage"></span>
+                  </div>
+                  <div class="card-body">
+                    <div id="transcriptionText" class="border p-3 rounded bg-light" style="max-height: 300px; overflow-y: auto;">
+                      <!-- Transcription content -->
+                    </div>
+                    <div id="transcriptionStats" class="mt-3 text-muted small">
+                      <!-- Transcription statistics -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- OCR Text -->
+              <div id="ocrSection" class="mb-4" style="display: none;">
+                <div class="card">
+                  <div class="card-header">
+                    <i class="fas fa-search-plus me-2"></i>Extracted Text (OCR)
+                  </div>
+                  <div class="card-body">
+                    <div id="ocrText" class="border p-3 rounded bg-light" style="max-height: 200px; overflow-y: auto;">
+                      <!-- OCR content -->
+                    </div>
+                    <div id="ocrStats" class="mt-3 text-muted small">
+                      <!-- OCR statistics -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- AI Description -->
+              <div id="descriptionSection" class="mb-4" style="display: none;">
+                <div class="card">
+                  <div class="card-header">
+                    <i class="fas fa-robot me-2"></i>AI Description
+                  </div>
+                  <div class="card-body">
+                    <div id="aiDescription" class="border p-3 rounded bg-light">
+                      <!-- AI description -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sentiment Analysis -->
+              <div id="sentimentSection" class="mb-4" style="display: none;">
+                <div class="card">
+                  <div class="card-header">
+                    <i class="fas fa-smile me-2"></i>Sentiment Analysis
+                  </div>
+                  <div class="card-body">
+                    <div id="sentimentResults">
+                      <!-- Sentiment analysis results -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Objects Tab -->
+            <div class="tab-pane fade p-4" id="objects" role="tabpanel">
+              <div id="objectsContent">
+                <!-- Object detection results will be inserted here -->
+              </div>
+            </div>
+
+            <!-- Speakers Tab -->
+            <div class="tab-pane fade p-4" id="speakers" role="tabpanel">
+              <div id="speakersContent">
+                <!-- Speaker analysis results will be inserted here -->
+              </div>
+            </div>
+
+            <!-- Quality Tab -->
+            <div class="tab-pane fade p-4" id="quality" role="tabpanel">
+              <div id="qualityContent">
+                <!-- Quality assessment results will be inserted here -->
+              </div>
+            </div>
+
+            <!-- Performance Tab -->
+            <div class="tab-pane fade p-4" id="performance" role="tabpanel">
+              <div class="row">
+                <!-- Processing Metrics -->
+                <div class="col-md-6">
+                  <div class="card">
+                    <div class="card-header">
+                      <i class="fas fa-clock me-2"></i>Processing Metrics
+                    </div>
+                    <div class="card-body">
+                      <div id="processingMetrics">
+                        <!-- Processing performance metrics -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Job Information -->
+                <div class="col-md-6">
+                  <div class="card">
+                    <div class="card-header">
+                      <i class="fas fa-cog me-2"></i>Job Information
+                    </div>
+                    <div class="card-body">
+                      <div id="jobInformation">
+                        <!-- Job details and configuration -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Warnings & Errors -->
+              <div class="row mt-4">
+                <div class="col-12">
+                  <div class="card" id="warningsErrorsCard" style="display: none;">
+                    <div class="card-header">
+                      <i class="fas fa-exclamation-triangle me-2"></i>Warnings & Issues
+                    </div>
+                    <div class="card-body">
+                      <div id="warningsErrors">
+                        <!-- Warnings and errors -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="analysisError" class="text-center p-5 d-none">
+          <div class="text-danger mb-3">
+            <i class="fas fa-exclamation-circle fa-3x"></i>
+          </div>
+          <h6>Analysis Not Available</h6>
+          <p class="text-muted" id="errorMessage">Unable to load analysis data.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Close
+        </button>
+        <button type="button" class="btn btn-primary" id="exportAnalysisBtn">
+          <i class="fas fa-download me-1"></i>Export Report
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI Analysis JavaScript -->
+<script>
+class AIAnalysisModal {
+  constructor() {
+    this.modal = new bootstrap.Modal(document.getElementById('aiAnalysisModal'));
+    this.currentFileId = null;
+    this.analysisData = null;
+    
+    // Bind event listeners
+    this.bindEvents();
+  }
+
+  bindEvents() {
+    // Export button
+    document.getElementById('exportAnalysisBtn').addEventListener('click', () => {
+      this.exportReport();
+    });
+  }
+
+  async show(fileId) {
+    this.currentFileId = fileId;
+    this.modal.show();
+    
+    // Show loading state
+    this.showLoadingState();
+    
+    try {
+      // Fetch analysis data
+      const response = await fetch(`/files/${fileId}/analysis`);
+      const data = await response.json();
+      
+      if (data.success) {
+        this.analysisData = data;
+        this.renderAnalysis(data);
+      } else {
+        this.showErrorState(data.message || 'Analysis data not available');
+      }
+    } catch (error) {
+      console.error('Error loading analysis:', error);
+      this.showErrorState('Failed to load analysis data');
+    }
+  }
+
+  showLoadingState() {
+    document.getElementById('analysisLoading').classList.remove('d-none');
+    document.getElementById('analysisContent').classList.add('d-none');
+    document.getElementById('analysisError').classList.add('d-none');
+  }
+
+  showErrorState(message) {
+    document.getElementById('analysisLoading').classList.add('d-none');
+    document.getElementById('analysisContent').classList.add('d-none');
+    document.getElementById('analysisError').classList.remove('d-none');
+    document.getElementById('errorMessage').textContent = message;
+  }
+
+  renderAnalysis(data) {
+    // Hide loading, show content
+    document.getElementById('analysisLoading').classList.add('d-none');
+    document.getElementById('analysisContent').classList.remove('d-none');
+    
+    // Update header
+    document.getElementById('analysisTitle').textContent = data.analysis?.title || 'AI Analysis Report';
+    document.getElementById('analysisSubtitle').textContent = 
+      `${data.mediaType.charAt(0).toUpperCase() + data.mediaType.slice(1)} Analysis • ${data.status}`;
+    
+    // Update status badge
+    const statusBadge = document.getElementById('analysisStatus');
+    statusBadge.innerHTML = `<i class="fas fa-check-circle me-1"></i>${data.status}`;
+    
+    // Render overview tab
+    this.renderOverview(data);
+    
+    // Show/hide and render specific tabs based on available data
+    this.renderContentTab(data);
+    this.renderObjectsTab(data);
+    this.renderSpeakersTab(data);
+    this.renderQualityTab(data);
+    this.renderPerformanceTab(data);
+  }
+
+  renderOverview(data) {
+    // Key metrics
+    const keyMetrics = document.getElementById('keyMetrics');
+    const metrics = [];
+    
+    if (data.analysis?.duration) {
+      metrics.push(`<strong>Duration:</strong> ${this.formatDuration(data.analysis.duration)}`);
+    }
+    if (data.mediaType) {
+      metrics.push(`<strong>Media Type:</strong> ${data.mediaType.charAt(0).toUpperCase() + data.mediaType.slice(1)}`);
+    }
+    if (data.analysis?.metadata?.format) {
+      metrics.push(`<strong>Format:</strong> ${data.analysis.metadata.format}`);
+    }
+    if (data.analysis?.metadata?.fileSize) {
+      metrics.push(`<strong>File Size:</strong> ${this.formatFileSize(data.analysis.metadata.fileSize)}`);
+    }
+    
+    keyMetrics.innerHTML = metrics.map(metric => `<div class="mb-2">${metric}</div>`).join('');
+    
+    // AI features
+    const aiFeatures = document.getElementById('aiFeatures');
+    const features = [];
+    
+    if (data.analysis?.transcription) features.push('<span class="badge bg-primary me-1 mb-1"><i class="fas fa-file-text me-1"></i>Transcription</span>');
+    if (data.analysis?.objects?.length > 0) features.push('<span class="badge bg-success me-1 mb-1"><i class="fas fa-eye me-1"></i>Object Detection</span>');
+    if (data.analysis?.sentiment) features.push('<span class="badge bg-info me-1 mb-1"><i class="fas fa-smile me-1"></i>Sentiment Analysis</span>');
+    if (data.analysis?.description) features.push('<span class="badge bg-warning me-1 mb-1"><i class="fas fa-robot me-1"></i>AI Description</span>');
+    if (data.speakers?.length > 0) features.push('<span class="badge bg-secondary me-1 mb-1"><i class="fas fa-microphone me-1"></i>Speaker Detection</span>');
+    if (data.thumbnails?.length > 0) features.push('<span class="badge bg-dark me-1 mb-1"><i class="fas fa-image me-1"></i>Thumbnails</span>');
+    if (data.ocr_captions?.length > 0) features.push('<span class="badge bg-light text-dark me-1 mb-1"><i class="fas fa-search-plus me-1"></i>OCR</span>');
+    
+    aiFeatures.innerHTML = features.join('');
+    
+    // Generated title and summary
+    if (data.analysis?.title || data.analysis?.summary) {
+      document.getElementById('titleSummarySection').style.display = 'block';
+      
+      if (data.analysis.title) {
+        document.getElementById('generatedTitle').innerHTML = 
+          `<h6><i class="fas fa-heading me-2 text-primary"></i>Generated Title</h6>
+           <p class="mb-0">${data.analysis.title}</p>`;
+      }
+      
+      if (data.analysis.summary) {
+        document.getElementById('generatedSummary').innerHTML = 
+          `<h6><i class="fas fa-file-text me-2 text-info"></i>Summary</h6>
+           <p class="mb-0">${data.analysis.summary}</p>`;
+      }
+    }
+    
+    // Tags and categories
+    if (data.auto_tags?.length > 0 || data.user_tags?.length > 0 || data.analysis?.category) {
+      document.getElementById('tagsSection').style.display = 'block';
+      
+      let tagsHtml = '';
+      if (data.auto_tags?.length > 0) {
+        tagsHtml += `<h6><i class="fas fa-robot me-2 text-primary"></i>AI-Generated Tags</h6>
+                     <div class="mb-3">${data.auto_tags.map(tag => `<span class="badge bg-primary me-1">${tag}</span>`).join('')}</div>`;
+      }
+      
+      if (data.user_tags?.length > 0) {
+        tagsHtml += `<h6><i class="fas fa-user me-2 text-success"></i>User Tags</h6>
+                     <div class="mb-3">${data.user_tags.map(tag => `<span class="badge bg-success me-1">${tag}</span>`).join('')}</div>`;
+      }
+      
+      document.getElementById('autoTags').innerHTML = tagsHtml;
+      
+      if (data.analysis?.category) {
+        document.getElementById('categoryInfo').innerHTML = 
+          `<h6><i class="fas fa-folder me-2 text-warning"></i>Category</h6>
+           <span class="badge bg-warning text-dark">${data.analysis.category}</span>`;
+      }
+    }
+  }
+
+  renderContentTab(data) {
+    const hasContent = data.analysis?.transcription || data.analysis?.ocrText || data.analysis?.description || data.analysis?.sentiment;
+    
+    if (hasContent) {
+      document.getElementById('content-tab-nav').style.display = 'block';
+      
+      // Transcription
+      if (data.analysis.transcription) {
+        document.getElementById('transcriptionSection').style.display = 'block';
+        document.getElementById('transcriptionText').textContent = data.analysis.transcription;
+        
+        if (data.analysis.language) {
+          document.getElementById('transcriptionLanguage').textContent = data.analysis.language;
+        }
+        
+        // Transcription stats
+        const wordCount = data.analysis.transcription.split(' ').length;
+        document.getElementById('transcriptionStats').innerHTML = 
+          `<i class="fas fa-info-circle me-1"></i>Word count: ${wordCount}`;
+      }
+      
+      // OCR Text
+      if (data.analysis.ocrText) {
+        document.getElementById('ocrSection').style.display = 'block';
+        document.getElementById('ocrText').textContent = data.analysis.ocrText;
+        
+        const charCount = data.analysis.ocrText.length;
+        document.getElementById('ocrStats').innerHTML = 
+          `<i class="fas fa-info-circle me-1"></i>Characters extracted: ${charCount}`;
+      }
+      
+      // AI Description
+      if (data.analysis.description) {
+        document.getElementById('descriptionSection').style.display = 'block';
+        document.getElementById('aiDescription').textContent = data.analysis.description;
+      }
+      
+      // Sentiment Analysis
+      if (data.analysis.sentiment) {
+        document.getElementById('sentimentSection').style.display = 'block';
+        this.renderSentiment(data.analysis.sentiment);
+      }
+    }
+  }
+
+  renderSentiment(sentiment) {
+    const sentimentResults = document.getElementById('sentimentResults');
+    
+    let sentimentClass = 'bg-secondary';
+    let sentimentIcon = 'fas fa-meh';
+    
+    if (sentiment.label) {
+      switch (sentiment.label.toLowerCase()) {
+        case 'positive':
+          sentimentClass = 'bg-success';
+          sentimentIcon = 'fas fa-smile';
+          break;
+        case 'negative':
+          sentimentClass = 'bg-danger';
+          sentimentIcon = 'fas fa-frown';
+          break;
+        case 'neutral':
+          sentimentClass = 'bg-secondary';
+          sentimentIcon = 'fas fa-meh';
+          break;
+      }
+    }
+    
+    const confidence = sentiment.confidence ? Math.round(sentiment.confidence * 100) : 0;
+    
+    sentimentResults.innerHTML = `
+      <div class="d-flex align-items-center">
+        <div class="me-3">
+          <span class="badge ${sentimentClass} fs-6">
+            <i class="${sentimentIcon} me-1"></i>
+            ${sentiment.label || 'Unknown'}
+          </span>
+        </div>
+        <div class="flex-grow-1">
+          <div class="progress" style="height: 20px;">
+            <div class="progress-bar ${sentimentClass.replace('bg-', 'bg-')}" 
+                 role="progressbar" 
+                 style="width: ${confidence}%"
+                 aria-valuenow="${confidence}" 
+                 aria-valuemin="0" 
+                 aria-valuemax="100">
+              ${confidence}% confidence
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  renderObjectsTab(data) {
+    if (data.analysis?.objects?.length > 0) {
+      document.getElementById('objects-tab-nav').style.display = 'block';
+      
+      const objectsContent = document.getElementById('objectsContent');
+      const objects = data.analysis.objects;
+      
+      let objectsHtml = `
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-eye me-2"></i>Detected Objects (${objects.length})
+          </div>
+          <div class="card-body">
+            <div class="row">
+      `;
+      
+      objects.forEach(obj => {
+        const confidence = obj.confidence ? Math.round(obj.confidence * 100) : 0;
+        objectsHtml += `
+          <div class="col-md-4 mb-3">
+            <div class="border rounded p-3">
+              <h6 class="mb-2">${obj.name || 'Unknown Object'}</h6>
+              <div class="progress mb-2" style="height: 8px;">
+                <div class="progress-bar bg-primary" 
+                     style="width: ${confidence}%"></div>
+              </div>
+              <small class="text-muted">${confidence}% confidence</small>
+            </div>
+          </div>
+        `;
+      });
+      
+      objectsHtml += `
+            </div>
+          </div>
+        </div>
+      `;
+      
+      objectsContent.innerHTML = objectsHtml;
+    }
+  }
+
+  renderSpeakersTab(data) {
+    if (data.speakers?.length > 0) {
+      document.getElementById('speakers-tab-nav').style.display = 'block';
+      
+      const speakersContent = document.getElementById('speakersContent');
+      const speakers = data.speakers;
+      
+      let speakersHtml = `
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-microphone me-2"></i>Identified Speakers (${speakers.length})
+          </div>
+          <div class="card-body">
+      `;
+      
+      speakers.forEach((speaker, index) => {
+        const confidence = speaker.confidence ? Math.round(speaker.confidence * 100) : 0;
+        speakersHtml += `
+          <div class="border rounded p-3 mb-3">
+            <div class="row align-items-center">
+              <div class="col-md-6">
+                <h6 class="mb-1">${speaker.name || `Speaker ${index + 1}`}</h6>
+                <small class="text-muted">
+                  ${speaker.gender || 'Unknown gender'} • ${speaker.language || 'Unknown language'}
+                </small>
+              </div>
+              <div class="col-md-6">
+                <div class="progress mb-1" style="height: 8px;">
+                  <div class="progress-bar bg-success" style="width: ${confidence}%"></div>
+                </div>
+                <small class="text-muted">${confidence}% confidence</small>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      speakersHtml += `
+          </div>
+        </div>
+      `;
+      
+      speakersContent.innerHTML = speakersHtml;
+    }
+  }
+
+  renderQualityTab(data) {
+    if (data.analysis?.quality) {
+      document.getElementById('quality-tab-nav').style.display = 'block';
+      
+      const qualityContent = document.getElementById('qualityContent');
+      const quality = data.analysis.quality;
+      
+      qualityContent.innerHTML = `
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-star me-2"></i>Quality Assessment
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <h6>Overall Quality Score</h6>
+                <div class="progress mb-3" style="height: 25px;">
+                  <div class="progress-bar bg-primary" 
+                       style="width: ${quality.qualityScore || 0}%">
+                    ${quality.qualityScore || 0}%
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <h6>Quality Grade</h6>
+                <span class="badge bg-primary fs-6">${quality.overallQuality || 'Unknown'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  renderPerformanceTab(data) {
+    // Processing metrics
+    const processingMetrics = document.getElementById('processingMetrics');
+    const metrics = [];
+    
+    if (data.job?.processingTime) {
+      metrics.push(`<strong>Processing Time:</strong> ${this.formatDuration(data.job.processingTime / 1000)}`);
+    }
+    if (data.analysis?.processing_time) {
+      metrics.push(`<strong>Analysis Time:</strong> ${this.formatDuration(data.analysis.processing_time / 1000)}`);
+    }
+    
+    processingMetrics.innerHTML = metrics.map(metric => `<div class="mb-2">${metric}</div>`).join('') || 
+      '<div class="text-muted">No performance data available</div>';
+    
+    // Job information
+    const jobInformation = document.getElementById('jobInformation');
+    const jobInfo = [];
+    
+    if (data.job?.id) {
+      jobInfo.push(`<strong>Job ID:</strong> <code class="small">${data.job.id}</code>`);
+    }
+    if (data.job?.status) {
+      jobInfo.push(`<strong>Status:</strong> ${data.job.status}`);
+    }
+    if (data.job?.progress) {
+      jobInfo.push(`<strong>Progress:</strong> ${data.job.progress}%`);
+    }
+    
+    jobInformation.innerHTML = jobInfo.map(info => `<div class="mb-2">${info}</div>`).join('') || 
+      '<div class="text-muted">No job information available</div>';
+  }
+
+  formatDuration(seconds) {
+    if (!seconds) return 'N/A';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  }
+
+  formatFileSize(bytes) {
+    if (!bytes) return 'N/A';
+    
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  exportReport() {
+    if (!this.analysisData) return;
+    
+    // Create a comprehensive report object
+    const report = {
+      title: 'AI Analysis Report',
+      fileId: this.currentFileId,
+      generatedAt: new Date().toISOString(),
+      mediaType: this.analysisData.mediaType,
+      analysis: this.analysisData.analysis,
+      speakers: this.analysisData.speakers,
+      thumbnails: this.analysisData.thumbnails,
+      auto_tags: this.analysisData.auto_tags,
+      user_tags: this.analysisData.user_tags,
+      job: this.analysisData.job
+    };
+    
+    // Create and download JSON file
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-analysis-report-${this.currentFileId}-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+}
+
+// Initialize AI Analysis Modal
+window.aiAnalysisModal = new AIAnalysisModal();
+</script> 

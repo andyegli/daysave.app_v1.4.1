@@ -187,6 +187,20 @@
                   <li><a class="dropdown-item" href="/files/<%= file.id %>">
                     <i class="fas fa-eye"></i> View Details
                   </a></li>
+                  <% 
+                  // Check if file is multimedia and could have AI analysis
+                  let isMultimedia = false;
+                  if (file.metadata && file.metadata.mimetype) {
+                    isMultimedia = file.metadata.mimetype.startsWith('image/') || 
+                                   file.metadata.mimetype.startsWith('audio/') || 
+                                   file.metadata.mimetype.startsWith('video/');
+                  }
+                  %>
+                  <% if (isMultimedia) { %>
+                  <li><a class="dropdown-item text-primary" href="#" onclick="showAIAnalysis('<%= file.id %>')">
+                    <i class="fas fa-robot"></i> AI Analysis Report
+                  </a></li>
+                  <% } %>
                   <li><a class="dropdown-item" href="#" onclick="editFile('<%= file.id %>')">
                     <i class="fas fa-edit"></i> Edit
                   </a></li>
@@ -375,7 +389,21 @@
   </div>
 </div>
 
+<!-- AI Analysis Modal -->
+<%- include('../partials/ai-analysis-modal') %>
+
 <!-- File Management JavaScript -->
 <script src="/js/file-management.js"></script>
+
+<!-- AI Analysis JavaScript -->
+<script>
+function showAIAnalysis(fileId) {
+  if (window.aiAnalysisModal) {
+    window.aiAnalysisModal.show(fileId);
+  } else {
+    console.error('AI Analysis Modal not initialized');
+  }
+}
+</script>
 
 <%- include('../partials/footer') %> 
