@@ -27,7 +27,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 // Security middleware (apply first)
 app.use(securityHeaders());
-app.use(require('./middleware').logAllHeaders);
+// app.use(require('./middleware').logAllHeaders); // Disabled - too verbose for normal operation
 app.use(corsMiddleware);
 
 // Request logging middleware
