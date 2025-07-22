@@ -44,17 +44,15 @@ async function reprocessImagesWithoutAI() {
                             { filename: { [Op.like]: '%.bmp' } }
                         ]
                     },
-                    // Missing AI analysis data
+                    // Missing AI analysis data (check existing fields only)
                     {
                         [Op.or]: [
                             { summary: { [Op.is]: null } },
                             { summary: '' },
-                            { description: { [Op.is]: null } },
-                            { description: '' },
-                            { generated_title: { [Op.is]: null } },
-                            { generated_title: '' },
-                            { ai_tags: { [Op.is]: null } },
-                            { ai_tags: '' }
+                            { transcription: { [Op.is]: null } },
+                            { transcription: '' },
+                            { auto_tags: { [Op.is]: null } },
+                            { auto_tags: '' }
                         ]
                     }
                 ]
@@ -214,31 +212,30 @@ async function processFileWithAI(fileRecord, user) {
         // Build enhanced AI content for the file
         let enhancedContent = '';
         let aiTags = [];
-        let generatedTitle = '';
         
         if (aiResults.aiDescription) {
             enhancedContent = aiResults.aiDescription;
-            generatedTitle = generateTitleFromDescription(aiResults.aiDescription);
         }
         
         if (aiResults.tags && Array.isArray(aiResults.tags)) {
             aiTags = aiResults.tags;
         }
         
-        // Update the file record with AI analysis results
+        // Update the file record with AI analysis results (using correct File model fields)
         const updatedMetadata = {
             ...metadata,
             ...(aiResults.objects && { objects: aiResults.objects }),
             ...(aiResults.quality && { quality: aiResults.quality }),
+            ...(aiResults.aiDescription && { aiDescription: aiResults.aiDescription }),
+            ...(aiResults.tags && { tags: aiResults.tags }),
             analysis_version: '1.4.2',
             reprocessed_at: new Date().toISOString()
         };
 
         const updateData = {
-            description: enhancedContent || null,
-            summary: enhancedContent || null,
-            generated_title: generatedTitle || null,
-            ai_tags: aiTags.length > 0 ? JSON.stringify(aiTags) : null,
+            transcription: enhancedContent || null,  // Use transcription field for AI description
+            summary: enhancedContent || null,        // Also populate summary
+            auto_tags: aiTags.length > 0 ? aiTags : null,  // Store tags as JSON array (not stringified)
             category: 'image',
             metadata: JSON.stringify(updatedMetadata)
         };
@@ -267,29 +264,14 @@ async function processFileWithAI(fileRecord, user) {
     }
 }
 
-// Generate a title from AI description
-function generateTitleFromDescription(description) {
-    if (!description || description.length < 10) return null;
-    
-    // Extract first sentence or first 60 characters
-    const firstSentence = description.split('.')[0].trim();
-    if (firstSentence.length > 10 && firstSentence.length <= 60) {
-        return firstSentence;
-    }
-    
-    // Truncate to 60 characters
-    return description.substring(0, 57).trim() + (description.length > 57 ? '...' : '');
-}
-
 // Helper function to check if analysis is needed
 function needsAIAnalysis(file) {
-    // Check if any AI-generated fields are missing
-    const hasTitle = file.generated_title && file.generated_title.trim().length > 0;
-    const hasDescription = file.description && file.description.trim().length > 0; 
+    // Check if any AI-generated fields are missing (using correct File model fields)
+    const hasTranscription = file.transcription && file.transcription.trim().length > 0;
     const hasSummary = file.summary && file.summary.trim().length > 0;
-    const hasTags = file.ai_tags && file.ai_tags.trim().length > 0;
+    const hasTags = file.auto_tags && (Array.isArray(file.auto_tags) ? file.auto_tags.length > 0 : false);
     
-    return !(hasTitle || hasDescription || hasSummary || hasTags);
+    return !(hasTranscription || hasSummary || hasTags);
 }
 
 // Run the script if called directly
