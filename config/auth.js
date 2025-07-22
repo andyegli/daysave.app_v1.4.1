@@ -54,12 +54,12 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
   try {
-    logAuthEvent('USER_DESERIALIZE_START', { userId: id });
+    // logAuthEvent('USER_DESERIALIZE_START', { userId: id }); // Disabled - too verbose
     const user = await User.findByPk(id, { include: [Role] });
     if (user) {
-      logAuthEvent('USER_DESERIALIZE_SUCCESS', { userId: id, username: user.username });
+      // logAuthEvent('USER_DESERIALIZE_SUCCESS', { userId: id, username: user.username }); // Disabled - too verbose
     } else {
-      logAuthEvent('USER_DESERIALIZE_NOT_FOUND', { userId: id });
+      logAuthEvent('USER_DESERIALIZE_NOT_FOUND', { userId: id }); // Keep this - it's important for debugging
     }
     done(null, user);
   } catch (error) {

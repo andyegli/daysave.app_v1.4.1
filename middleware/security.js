@@ -99,11 +99,11 @@ const securityHeaders = () => helmet({
 const requestLogger = (req, res, next) => {
   const clientDetails = getClientDetails(req);
   
-  logSecurityEvent('REQUEST_LOG', {
-    ...clientDetails,
-    userId: req.user?.id || 'unauthenticated',
-    timestamp: new Date().toISOString()
-  });
+  // logSecurityEvent('REQUEST_LOG', {
+  //   ...clientDetails,
+  //   userId: req.user?.id || 'unauthenticated',
+  //   timestamp: new Date().toISOString()
+  // }); // Disabled - too verbose for normal operation
   
   next();
 };

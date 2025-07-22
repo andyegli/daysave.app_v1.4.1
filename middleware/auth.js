@@ -44,11 +44,11 @@ const isAuthenticated = (req, res, next) => {
   const clientDetails = getClientDetails(req);
   
   if (req.isAuthenticated()) {
-    logAuthEvent('AUTH_CHECK_SUCCESS', {
-      ...clientDetails,
-      userId: req.user.id,
-      username: req.user.username
-    });
+    // logAuthEvent('AUTH_CHECK_SUCCESS', {
+    //   ...clientDetails,
+    //   userId: req.user.id,
+    //   username: req.user.username
+    // }); // Disabled - too verbose for normal operation
     return next();
   }
   
