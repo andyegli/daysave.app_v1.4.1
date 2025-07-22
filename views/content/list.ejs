@@ -280,8 +280,8 @@
                       <% if (item.summary) { %>
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>">
                         <div class="position-relative">
-                          <div class="transcription-preview bg-light p-2 rounded" style="font-size: 0.85rem; min-width: 0; flex: 1;">
-                            <div class="transcription-text text-dark force-four-lines" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.4 !important; max-height: none !important; white-space: normal !important; min-width: 0 !important; word-break: break-word !important;">
+                          <div class="transcription-preview bg-light p-2 rounded" style="font-size: 0.85rem; min-width: 0; flex: 1; background-color: #f8f9fa !important; border: 2px solid #007bff;">
+                            <div class="transcription-text text-dark force-four-lines" style="display: block !important; white-space: normal !important; word-wrap: break-word !important; overflow-wrap: break-word !important; line-height: 1.4 !important; min-width: 0 !important; width: 100% !important; background-color: #fff3cd; border: 1px solid #856404; padding: 5px;">
                               <%= item.summary %>
                             </div>
                           </div>
