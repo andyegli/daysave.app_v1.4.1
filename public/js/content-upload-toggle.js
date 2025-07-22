@@ -3,6 +3,14 @@
  * Handles the toggle between URL and file upload in the Add Content modal
  */
 
+// Helper function to fix localhost SSL protocol issues
+function getCorrectUrl(path) {
+  if (window.location.hostname === 'localhost') {
+    return `http://localhost:${window.location.port || 3000}${path}`;
+  }
+  return path;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   initializeContentUploadToggle();
 });
@@ -335,7 +343,13 @@ async function handleFileUploadSubmission() {
       
       // Configure request
       xhr.timeout = 300000; // 5 minute timeout
-      xhr.open('POST', '/files/upload');
+      
+      // Ensure correct protocol for localhost (fix SSL errors)
+      const uploadUrl = window.location.hostname === 'localhost' ? 
+        `http://localhost:${window.location.port || 3000}/files/upload` : 
+        '/files/upload';
+      
+      xhr.open('POST', uploadUrl);
       xhr.send(formData);
     });
     
@@ -640,7 +654,7 @@ async function handleBulkUrlSubmission() {
                reject(new Error('Network error'));
              };
              
-             xhr.open('POST', '/content');
+             xhr.open('POST', getCorrectUrl('/content'));
              xhr.setRequestHeader('Content-Type', 'application/json');
              xhr.send(JSON.stringify({
                url: url,
@@ -783,7 +797,7 @@ async function handleFilePathSubmission() {
       };
       
       xhr.timeout = 120000; // 2 minute timeout
-      xhr.open('POST', '/files/import-paths');
+      xhr.open('POST', getCorrectUrl('/files/import-paths'));
       xhr.send(formData);
     });
     
@@ -1144,6 +1158,6 @@ function testUploadEndpoint() {
   };
   
   xhr.timeout = 5000; // 5 second timeout for test
-  xhr.open('GET', '/files/api/settings'); // Test a simpler endpoint first
+        xhr.open('GET', getCorrectUrl('/files/api/settings')); // Test a simpler endpoint first
   xhr.send();
 } 

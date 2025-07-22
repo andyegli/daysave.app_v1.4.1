@@ -226,7 +226,12 @@ async function handleFileUpload(form) {
         reject(new Error('Network error occurred'));
       };
       
-      xhr.open('POST', '/files/upload');
+      // Ensure correct protocol for localhost (fix SSL errors)
+      const uploadUrl = window.location.hostname === 'localhost' ? 
+        `http://localhost:${window.location.port || 3000}/files/upload` : 
+        '/files/upload';
+      
+      xhr.open('POST', uploadUrl);
       xhr.send(formData);
     });
     

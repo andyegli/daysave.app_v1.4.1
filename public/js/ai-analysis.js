@@ -16,6 +16,14 @@
  * - Real-time status updates for ongoing analysis
  */
 
+// Helper function to fix localhost SSL protocol issues
+function getCorrectUrl(path) {
+  if (window.location.hostname === 'localhost') {
+    return `http://localhost:${window.location.port || 3000}${path}`;
+  }
+  return path;
+}
+
 console.log('🔴 AI ANALYSIS SCRIPT LOADED - Enhanced Comprehensive Version');
 
 // AI Analysis functionality
@@ -90,7 +98,7 @@ async function loadAIIndicators(contentId, itemType = 'content') {
       };
       
       xhr.timeout = 10000; // 10 second timeout
-      xhr.open('GET', endpoint);
+      xhr.open('GET', getCorrectUrl(endpoint));
       xhr.setRequestHeader('Accept', 'application/json');
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.send();
@@ -214,7 +222,7 @@ async function showComprehensiveAnalysisModal(contentId, itemType = 'content') {
       };
       
       xhr.timeout = 30000; // 30 second timeout for modal data
-      xhr.open('GET', endpoint);
+      xhr.open('GET', getCorrectUrl(endpoint));
       xhr.setRequestHeader('Accept', 'application/json');
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.send();
