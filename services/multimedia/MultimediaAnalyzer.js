@@ -469,6 +469,117 @@ class MultimediaAnalyzer {
               });
             }
           }
+        } else if (url.includes('instagram.com') && analysisOptions.transcription) {
+          // For Instagram URLs, attempt to download and analyze content using yt-dlp
+          try {
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.progress(user_id, content_id, 'instagram_download_start', 30, {
+                provider: 'yt-dlp'
+              });
+            }
+            
+            // Try to download Instagram content via yt-dlp
+            const instagramResult = await this.getInstagramContent(url);
+            
+            if (instagramResult && instagramResult.success) {
+              // Process downloaded content based on type
+              if (instagramResult.type === 'video' && instagramResult.filePath) {
+                // Extract audio and transcribe for videos
+                const transcriptionResult = await this.transcribeVideoFile(instagramResult.filePath);
+                if (transcriptionResult && transcriptionResult.text) {
+                  results.transcription = transcriptionResult.text;
+                  const wordCount = transcriptionResult.text.split(' ').length;
+                  
+                  if (user_id && content_id) {
+                    const logger = require('../../config/logger');
+                    logger.multimedia.transcription(user_id, content_id, 'instagram_video', wordCount);
+                    logger.multimedia.progress(user_id, content_id, 'transcription_complete', 50, {
+                      wordCount,
+                      transcriptionLength: transcriptionResult.text.length
+                    });
+                  }
+                }
+                
+                // Add video-specific tags
+                results.auto_tags.push('video', 'reel');
+              } else if (instagramResult.type === 'image' && instagramResult.filePath) {
+                // Analyze downloaded image
+                const imageAnalysisResult = await this.analyzeImage(user_id, instagramResult.filePath, results, {
+                  enableObjectDetection: true,
+                  enableImageDescription: true,
+                  enableOCRExtraction: true
+                });
+                
+                if (imageAnalysisResult && imageAnalysisResult.description) {
+                  results.transcription = imageAnalysisResult.description;
+                  results.auto_tags.push('image', 'post');
+                  
+                  if (user_id && content_id) {
+                    const logger = require('../../config/logger');
+                    logger.multimedia.progress(user_id, content_id, 'image_analysis_complete', 50, {
+                      description_length: results.transcription.length,
+                      objects_detected: imageAnalysisResult.objects?.length || 0
+                    });
+                  }
+                }
+              }
+              
+              // Generate summary and perform sentiment analysis if we have content
+              if (analysisOptions.enableSummarization && results.transcription) {
+                if (user_id && content_id) {
+                  const logger = require('../../config/logger');
+                  logger.multimedia.progress(user_id, content_id, 'summary_generation', 60);
+                }
+                
+                results.summary = await this.generateSummary(results.transcription);
+              }
+              
+              if (analysisOptions.enableSentimentAnalysis && results.transcription) {
+                if (user_id && content_id) {
+                  const logger = require('../../config/logger');
+                  logger.multimedia.progress(user_id, content_id, 'sentiment_analysis', 70);
+                }
+                
+                results.sentiment = await this.analyzeSentiment(results.transcription);
+              }
+              
+              // Clean up downloaded file
+              if (instagramResult.filePath && require('fs').existsSync(instagramResult.filePath)) {
+                require('fs').unlinkSync(instagramResult.filePath);
+              }
+              
+              if (this.enableLogging) {
+                console.log('✅ Instagram content analysis completed:', {
+                  type: instagramResult.type,
+                  contentLength: results.transcription.length
+                });
+              }
+            } else {
+              // Fallback if download failed
+              results.transcription = 'Instagram content could not be accessed. Content may be private or protected.';
+              results.auto_tags.push('private', 'access_restricted');
+              
+              if (user_id && content_id) {
+                const logger = require('../../config/logger');
+                logger.multimedia.progress(user_id, content_id, 'instagram_access_failed', 40, {
+                  reason: 'download_failed_or_private'
+                });
+              }
+            }
+          } catch (instagramError) {
+            console.error('❌ Instagram content analysis failed:', instagramError);
+            results.transcription = 'Instagram content analysis failed. This may be due to privacy settings or access restrictions.';
+            results.auto_tags.push('analysis_failed', 'access_error');
+            
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.error(user_id, content_id, instagramError, {
+                step: 'instagram_analysis',
+                url
+              });
+            }
+          }
         } else if (this.isLocalImageFile(url) && analysisOptions.transcription) {
           // Handle local image file analysis - generate description instead of transcription
           try {
@@ -2636,6 +2747,253 @@ Respond with only the title, no quotes or additional text.`;
     }
     
     return Math.max(1, estimatedSpeakers);
+  }
+
+  /**
+   * Download and analyze Instagram content using yt-dlp to bypass popups
+   * 
+   * @param {string} url - Instagram URL (post or reel)
+   * @returns {Promise<Object>} Download and analysis result
+   */
+  async getInstagramContent(url) {
+    try {
+      if (this.enableLogging) {
+        console.log('📱 Attempting to download Instagram content:', url);
+      }
+      
+      const { exec } = require('child_process');
+      const fs = require('fs');
+      const path = require('path');
+      
+      const timestamp = Date.now();
+      const outputDir = path.join(__dirname, '../../uploads/temp');
+      
+      // Ensure temp directory exists
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+      
+      const outputTemplate = path.join(outputDir, `instagram_${timestamp}.%(ext)s`);
+      
+      // Use yt-dlp to download Instagram content with various fallback options
+      // --no-check-certificates: Bypass SSL issues
+      // --ignore-errors: Continue on errors  
+      // --cookies-from-browser: Use browser cookies to access logged-in content
+      // --user-agent: Use a regular browser user agent
+      const command = `yt-dlp --no-check-certificates --ignore-errors --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --format "best[height<=720]/best" -o "${outputTemplate}" "${url}"`;
+      
+      if (this.enableLogging) {
+        console.log('📱 Executing Instagram download command:', command);
+      }
+      
+      return new Promise((resolve) => {
+        exec(command, { maxBuffer: 100 * 1024 * 1024, timeout: 60000 }, (error, stdout, stderr) => {
+          try {
+            if (error) {
+              if (this.enableLogging) {
+                console.log('⚠️ Instagram download failed (this is common due to privacy restrictions):', error.message);
+              }
+              resolve({ success: false, error: error.message });
+              return;
+            }
+            
+            // Find downloaded files
+            const files = fs.readdirSync(outputDir).filter(file => 
+              file.startsWith(`instagram_${timestamp}`) && 
+              !file.endsWith('.part') && // Exclude partial downloads
+              (file.includes('.mp4') || file.includes('.jpg') || file.includes('.jpeg') || file.includes('.png') || file.includes('.webp'))
+            );
+            
+            if (files.length === 0) {
+              if (this.enableLogging) {
+                console.log('⚠️ No Instagram files downloaded - content may be private or restricted');
+              }
+              resolve({ success: false, error: 'No files downloaded' });
+              return;
+            }
+            
+            // Process the first downloaded file
+            const downloadedFile = files[0];
+            const filePath = path.join(outputDir, downloadedFile);
+            const fileStats = fs.statSync(filePath);
+            
+            // Determine content type based on file extension
+            const isVideo = downloadedFile.includes('.mp4');
+            const isImage = downloadedFile.includes('.jpg') || downloadedFile.includes('.jpeg') || 
+                           downloadedFile.includes('.png') || downloadedFile.includes('.webp');
+            
+            if (this.enableLogging) {
+              console.log(`✅ Instagram content downloaded:`, {
+                file: downloadedFile,
+                size: fileStats.size,
+                type: isVideo ? 'video' : 'image'
+              });
+            }
+            
+            resolve({
+              success: true,
+              filePath: filePath,
+              type: isVideo ? 'video' : 'image',
+              filename: downloadedFile,
+              size: fileStats.size,
+              downloadInfo: {
+                url: url,
+                timestamp: timestamp,
+                method: 'yt-dlp'
+              }
+            });
+            
+          } catch (parseError) {
+            if (this.enableLogging) {
+              console.error('❌ Error processing Instagram download:', parseError);
+            }
+            resolve({ success: false, error: parseError.message });
+          }
+        });
+      });
+      
+    } catch (setupError) {
+      if (this.enableLogging) {
+        console.error('❌ Instagram download setup failed:', setupError);
+      }
+      return { success: false, error: setupError.message };
+    }
+  }
+
+  /**
+   * Transcribe video file (used for Instagram videos)
+   * 
+   * @param {string} videoPath - Path to video file
+   * @returns {Promise<Object>} Transcription result
+   */
+  async transcribeVideoFile(videoPath) {
+    try {
+      if (this.enableLogging) {
+        console.log('🎵 Extracting audio from video for transcription:', path.basename(videoPath));
+      }
+      
+      const fs = require('fs');
+      const path = require('path');
+      const { exec } = require('child_process');
+      
+      // Extract audio from video using ffmpeg
+      const audioPath = videoPath.replace(/\.[^/.]+$/, '.wav');
+      
+      return new Promise((resolve, reject) => {
+        // Use ffmpeg to extract audio
+        const ffmpegCommand = `ffmpeg -i "${videoPath}" -ac 1 -ar 16000 -y "${audioPath}"`;
+        
+        exec(ffmpegCommand, (error, stdout, stderr) => {
+          if (error) {
+            if (this.enableLogging) {
+              console.error('❌ Audio extraction failed:', error.message);
+            }
+            reject(error);
+            return;
+          }
+          
+          // Transcribe the extracted audio
+          this.transcribeAudioFile(audioPath).then(result => {
+            // Clean up audio file
+            if (fs.existsSync(audioPath)) {
+              fs.unlinkSync(audioPath);
+            }
+            resolve(result);
+          }).catch(transcribeError => {
+            // Clean up audio file even on error
+            if (fs.existsSync(audioPath)) {
+              fs.unlinkSync(audioPath);
+            }
+            reject(transcribeError);
+          });
+        });
+      });
+      
+    } catch (error) {
+      if (this.enableLogging) {
+        console.error('❌ Video transcription failed:', error);
+      }
+      return { text: '', confidence: 0, error: error.message };
+    }
+  }
+
+  /**
+   * Transcribe audio file using available services
+   * 
+   * @param {string} audioPath - Path to audio file
+   * @returns {Promise<Object>} Transcription result
+   */
+  async transcribeAudioFile(audioPath) {
+    try {
+      // Try OpenAI Whisper first
+      if (this.openai) {
+        try {
+          const fs = require('fs');
+          const transcription = await this.openai.audio.transcriptions.create({
+            file: fs.createReadStream(audioPath),
+            model: "whisper-1",
+          });
+          
+          return {
+            text: transcription.text || '',
+            confidence: 0.9,
+            provider: 'openai-whisper'
+          };
+        } catch (openaiError) {
+          if (this.enableLogging) {
+            console.log('⚠️ OpenAI transcription failed, trying Google Speech:', openaiError.message);
+          }
+        }
+      }
+      
+      // Fallback to Google Speech-to-Text if available
+      if (this.speechClient) {
+        try {
+          const fs = require('fs');
+          const audioBuffer = fs.readFileSync(audioPath);
+          
+          const [response] = await this.speechClient.recognize({
+            audio: { content: audioBuffer.toString('base64') },
+            config: {
+              encoding: 'LINEAR16',
+              sampleRateHertz: 16000,
+              languageCode: 'en-US',
+            },
+          });
+          
+          const transcription = response.results
+            .map(result => result.alternatives[0].transcript)
+            .join('\n');
+          
+          return {
+            text: transcription || '',
+            confidence: 0.8,
+            provider: 'google-speech'
+          };
+        } catch (googleError) {
+          if (this.enableLogging) {
+            console.log('⚠️ Google Speech transcription failed:', googleError.message);
+          }
+        }
+      }
+      
+      // No transcription service available
+      return {
+        text: 'Audio transcription service not available',
+        confidence: 0,
+        provider: 'none'
+      };
+      
+    } catch (error) {
+      if (this.enableLogging) {
+        console.error('❌ Audio transcription failed:', error);
+      }
+      return {
+        text: '',
+        confidence: 0,
+        error: error.message
+      };
+    }
   }
 
   /**
