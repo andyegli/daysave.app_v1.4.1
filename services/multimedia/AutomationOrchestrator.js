@@ -785,6 +785,14 @@ class AutomationOrchestrator {
      * Format processing results for unified output
      */
     async formatResults(results, mediaType, jobId) {
+        console.log(`🔧 DEBUG: formatResults() received for ${mediaType}:`, {
+            resultKeys: Object.keys(results),
+            hasResults: !!results.results,
+            resultsKeys: results.results ? Object.keys(results.results) : [],
+            hasMetadata: !!results.metadata,
+            structure: typeof results
+        });
+        
         const formatted = {
             jobId,
             mediaType,
@@ -793,30 +801,34 @@ class AutomationOrchestrator {
             data: {}
         };
         
-        // Core results that all processors should provide
+        // Handle both direct results and nested results structure
+        const actualResults = results.results || results;
+        
+        // Core results that all processors should provide  
         if (results.metadata) formatted.data.metadata = results.metadata;
-        if (results.quality) formatted.data.quality = results.quality;
-        if (results.thumbnails) formatted.data.thumbnails = results.thumbnails;
+        if (actualResults.quality) formatted.data.quality = actualResults.quality;
+        if (actualResults.thumbnails) formatted.data.thumbnails = actualResults.thumbnails;
         
         // Type-specific results
         switch (mediaType) {
             case 'video':
-                if (results.ocrCaptions) formatted.data.ocrCaptions = results.ocrCaptions;
-                if (results.videoAnalysis) formatted.data.videoAnalysis = results.videoAnalysis;
+                if (actualResults.ocrCaptions) formatted.data.ocrCaptions = actualResults.ocrCaptions;
+                if (actualResults.videoAnalysis) formatted.data.videoAnalysis = actualResults.videoAnalysis;
                 break;
                 
             case 'audio':
-                if (results.transcription) formatted.data.transcription = results.transcription;
-                if (results.speakers) formatted.data.speakers = results.speakers;
-                if (results.voicePrints) formatted.data.voicePrints = results.voicePrints;
-                if (results.sentiment) formatted.data.sentiment = results.sentiment;
+                if (actualResults.transcription) formatted.data.transcription = actualResults.transcription;
+                if (actualResults.speakers) formatted.data.speakers = actualResults.speakers;
+                if (actualResults.voicePrints) formatted.data.voicePrints = actualResults.voicePrints;
+                if (actualResults.sentiment) formatted.data.sentiment = actualResults.sentiment;
                 break;
                 
             case 'image':
-                if (results.objects) formatted.data.objects = results.objects;
-                if (results.ocrText) formatted.data.ocrText = results.ocrText;
-                if (results.aiDescription) formatted.data.aiDescription = results.aiDescription;
-                if (results.tags) formatted.data.tags = results.tags;
+                if (actualResults.objects) formatted.data.objects = actualResults.objects;
+                if (actualResults.ocrText) formatted.data.ocrText = actualResults.ocrText;
+                if (actualResults.description) formatted.data.aiDescription = actualResults.description; // FIX: Map description to aiDescription
+                if (actualResults.transcription) formatted.data.transcription = actualResults.transcription; // Also include transcription
+                if (actualResults.tags) formatted.data.tags = actualResults.tags;
                 break;
         }
         
@@ -824,6 +836,17 @@ class AutomationOrchestrator {
         if (results.pluginResults) {
             formatted.data.pluginResults = results.pluginResults;
         }
+        
+        console.log(`🔧 DEBUG: formatResults() returning for ${mediaType}:`, {
+            dataKeys: Object.keys(formatted.data),
+            hasAiDescription: !!formatted.data.aiDescription,
+            hasObjects: !!formatted.data.objects,
+            hasTags: !!formatted.data.tags,
+            hasTranscription: !!formatted.data.transcription,
+            objectCount: formatted.data.objects?.length || 0,
+            tagCount: formatted.data.tags?.length || 0,
+            descriptionLength: formatted.data.aiDescription?.length || 0
+        });
         
         return formatted;
     }
