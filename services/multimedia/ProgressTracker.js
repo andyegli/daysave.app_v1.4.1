@@ -57,13 +57,15 @@ class ProgressTracker extends EventEmitter {
         // Image processing stages
         this.stages.set('image', [
             { name: 'validation', label: 'Validating image file', weight: 5 },
-            { name: 'metadata_extraction', label: 'Extracting metadata', weight: 10 },
-            { name: 'thumbnail_generation', label: 'Generating thumbnails', weight: 15 },
-            { name: 'object_detection', label: 'Detecting objects', weight: 25 },
-            { name: 'ocr_processing', label: 'Extracting text content', weight: 20 },
+            { name: 'metadata_extraction', label: 'Extracting metadata', weight: 8 },
+            { name: 'thumbnail_generation', label: 'Generating thumbnails', weight: 12 },
+            { name: 'object_detection', label: 'Detecting objects', weight: 20 },
+            { name: 'ocr_processing', label: 'Extracting text content', weight: 15 },
             { name: 'ai_description', label: 'Generating AI description', weight: 15 },
-            { name: 'quality_analysis', label: 'Analyzing image quality', weight: 5 },
-            { name: 'database_storage', label: 'Storing results', weight: 5 }
+            { name: 'tag_generation', label: 'Generating content tags', weight: 10 },
+            { name: 'title_generation', label: 'Creating sophisticated title', weight: 10 },
+            { name: 'quality_analysis', label: 'Analyzing image quality', weight: 3 },
+            { name: 'database_storage', label: 'Storing results', weight: 2 }
         ]);
     }
 

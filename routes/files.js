@@ -72,17 +72,23 @@ async function generateSophisticatedImageTitle(imageDescription, analysisData = 
 
     console.log(`🤖 Sending image content to OpenAI for title generation (${contentToAnalyze.length} chars)`);
 
-    const prompt = `Based on the following image description and analysis, create an engaging and descriptive title.
+    const prompt = `Based on the following image description and analysis, create an engaging and descriptive title that tells a story about what's happening in the image.
 
 The title should be:
-- Concise (5-10 words maximum)
-- Descriptive of the main subject or scene
-- Engaging and clickable
-- Professional and appropriate
-- Capture the essence of the visual content
-- Focus on the most interesting or unique aspect
+- Start with "In the image," or "The image shows" or "This image captures"
+- Be descriptive and storytelling (15-25 words)
+- Paint a vivid picture of the scene
+- Include key details about people, objects, actions, and setting
+- Be engaging and make the viewer want to see the image
+- Focus on the most interesting visual elements and what's happening
+- Use descriptive adjectives and action words
 
 Image Analysis: ${contentToAnalyze}
+
+Examples of good titles:
+- "In the image, a young girl stands confidently on a colorful playground, her bright smile radiating joy as she poses for the camera"
+- "The image shows a bustling city street at sunset, with warm golden light illuminating the faces of people walking past vibrant storefronts"
+- "This image captures a peaceful mountain lake reflecting the snow-capped peaks, with a lone kayaker gliding across the crystal-clear water"
 
 Respond with only the title, no quotes or additional text.`;
 
@@ -91,7 +97,7 @@ Respond with only the title, no quotes or additional text.`;
       messages: [
         {
           role: 'system',
-          content: 'You are an expert content creator who specializes in writing engaging titles for visual content. Create compelling titles that capture the essence of images and make viewers want to see them. Focus on the most interesting visual elements and create titles that are descriptive yet concise.'
+          content: 'You are an expert content creator who specializes in writing engaging, descriptive titles for images. Create compelling titles that tell a story about what\'s happening in the image. Your titles should paint a vivid picture and make viewers feel like they can almost see the image just from reading the title. Focus on people, actions, emotions, settings, and interesting visual details. Always start with "In the image," "The image shows," or "This image captures" and be descriptive and storytelling.'
         },
         {
           role: 'user',
@@ -99,7 +105,7 @@ Respond with only the title, no quotes or additional text.`;
         }
       ],
       temperature: 0.7,
-      max_tokens: 50
+      max_tokens: 80
     });
 
     let generatedTitle = response.choices[0].message.content.trim();
@@ -107,9 +113,9 @@ Respond with only the title, no quotes or additional text.`;
     // Clean up title (remove quotes if present)
     generatedTitle = generatedTitle.replace(/^["']|["']$/g, '');
     
-    // Ensure title isn't too long
-    if (generatedTitle.length > 60) {
-      generatedTitle = generatedTitle.substring(0, 57) + '...';
+    // Ensure title isn't too long (allow for more descriptive titles)
+    if (generatedTitle.length > 150) {
+      generatedTitle = generatedTitle.substring(0, 147) + '...';
     }
     
     console.log(`✅ Generated sophisticated AI title: "${generatedTitle}"`);
@@ -437,41 +443,90 @@ async function triggerFileAnalysis(fileRecord, user) {
       }
     }
     
-    // 🚀 ENHANCED: Generate sophisticated AI title if no enhanced title available
-    if ((!enhancedResults || !enhancedResults.generatedTitle) && updateData.summary && !updateData.metadata.title) {
-      try {
-        console.log(`🎯 Generating sophisticated AI title for image...`);
-        const aiTitle = await generateSophisticatedImageTitle(updateData.summary, formattedResults.data);
-        if (aiTitle) {
-          updateData.metadata.title = aiTitle;
-          console.log(`🎯 Generated sophisticated AI title: "${aiTitle}"`);
-        } else {
-          // Fallback to simple extraction
+    // 🚀 ENHANCED: Use core pipeline's sophisticated AI title or generate one
+    if ((!enhancedResults || !enhancedResults.generatedTitle) && !updateData.metadata.title) {
+      // Check if core pipeline generated a title
+      if (formattedResults.data && formattedResults.data.generatedTitle) {
+        updateData.metadata.title = formattedResults.data.generatedTitle;
+        console.log(`🎯 Using core pipeline AI title: "${formattedResults.data.generatedTitle}"`);
+      } else if (updateData.summary) {
+        // Fallback: Generate title using the same function as core pipeline
+        try {
+          console.log(`🎯 Generating sophisticated AI title as fallback...`);
+          const aiTitle = await generateSophisticatedImageTitle(updateData.summary, formattedResults.data);
+          if (aiTitle) {
+            updateData.metadata.title = aiTitle;
+            console.log(`🎯 Generated sophisticated AI title: "${aiTitle}"`);
+          } else {
+            // Final fallback to descriptive extraction
+            const firstSentence = updateData.summary.split('.')[0];
+            if (firstSentence.length > 0 && firstSentence.length <= 120) {
+              // Add descriptive prefix if not already present
+              if (!firstSentence.toLowerCase().startsWith('in the image') && 
+                  !firstSentence.toLowerCase().startsWith('the image shows') &&
+                  !firstSentence.toLowerCase().startsWith('this image captures')) {
+                updateData.metadata.title = `In the image, ${firstSentence.trim().toLowerCase()}`;
+              } else {
+                updateData.metadata.title = firstSentence.trim();
+              }
+              console.log(`🎯 Fallback title from summary: "${updateData.metadata.title}"`);
+            } else if (updateData.summary.length <= 120) {
+              // Add descriptive prefix if not already present
+              if (!updateData.summary.toLowerCase().startsWith('in the image') && 
+                  !updateData.summary.toLowerCase().startsWith('the image shows') &&
+                  !updateData.summary.toLowerCase().startsWith('this image captures')) {
+                updateData.metadata.title = `In the image, ${updateData.summary.trim().toLowerCase()}`;
+              } else {
+                updateData.metadata.title = updateData.summary.trim();
+              }
+              console.log(`🎯 Using full summary as title: "${updateData.metadata.title}"`);
+            } else {
+              const truncated = updateData.summary.substring(0, 117).trim();
+              if (!truncated.toLowerCase().startsWith('in the image') && 
+                  !truncated.toLowerCase().startsWith('the image shows') &&
+                  !truncated.toLowerCase().startsWith('this image captures')) {
+                updateData.metadata.title = `In the image, ${truncated.toLowerCase()}...`;
+              } else {
+                updateData.metadata.title = truncated + '...';
+              }
+              console.log(`🎯 Using truncated summary as title: "${updateData.metadata.title}"`);
+            }
+          }
+        } catch (titleError) {
+          console.error(`⚠️ AI title generation failed: ${titleError.message}`);
+          // Fallback to descriptive extraction
           const firstSentence = updateData.summary.split('.')[0];
-          if (firstSentence.length > 0 && firstSentence.length <= 60) {
-            updateData.metadata.title = firstSentence.trim();
+          if (firstSentence.length > 0 && firstSentence.length <= 120) {
+            // Add descriptive prefix if not already present
+            if (!firstSentence.toLowerCase().startsWith('in the image') && 
+                !firstSentence.toLowerCase().startsWith('the image shows') &&
+                !firstSentence.toLowerCase().startsWith('this image captures')) {
+              updateData.metadata.title = `In the image, ${firstSentence.trim().toLowerCase()}`;
+            } else {
+              updateData.metadata.title = firstSentence.trim();
+            }
             console.log(`🎯 Fallback title from summary: "${updateData.metadata.title}"`);
-          } else if (updateData.summary.length <= 60) {
-            updateData.metadata.title = updateData.summary.trim();
+          } else if (updateData.summary.length <= 120) {
+            // Add descriptive prefix if not already present
+            if (!updateData.summary.toLowerCase().startsWith('in the image') && 
+                !updateData.summary.toLowerCase().startsWith('the image shows') &&
+                !updateData.summary.toLowerCase().startsWith('this image captures')) {
+              updateData.metadata.title = `In the image, ${updateData.summary.trim().toLowerCase()}`;
+            } else {
+              updateData.metadata.title = updateData.summary.trim();
+            }
             console.log(`🎯 Using full summary as title: "${updateData.metadata.title}"`);
           } else {
-            updateData.metadata.title = updateData.summary.substring(0, 57).trim() + '...';
+            const truncated = updateData.summary.substring(0, 117).trim();
+            if (!truncated.toLowerCase().startsWith('in the image') && 
+                !truncated.toLowerCase().startsWith('the image shows') &&
+                !truncated.toLowerCase().startsWith('this image captures')) {
+              updateData.metadata.title = `In the image, ${truncated.toLowerCase()}...`;
+            } else {
+              updateData.metadata.title = truncated + '...';
+            }
             console.log(`🎯 Using truncated summary as title: "${updateData.metadata.title}"`);
           }
-        }
-      } catch (titleError) {
-        console.error(`⚠️ AI title generation failed: ${titleError.message}`);
-        // Fallback to simple extraction
-        const firstSentence = updateData.summary.split('.')[0];
-        if (firstSentence.length > 0 && firstSentence.length <= 60) {
-          updateData.metadata.title = firstSentence.trim();
-          console.log(`🎯 Fallback title from summary: "${updateData.metadata.title}"`);
-        } else if (updateData.summary.length <= 60) {
-          updateData.metadata.title = updateData.summary.trim();
-          console.log(`🎯 Using full summary as title: "${updateData.metadata.title}"`);
-        } else {
-          updateData.metadata.title = updateData.summary.substring(0, 57).trim() + '...';
-          console.log(`🎯 Using truncated summary as title: "${updateData.metadata.title}"`);
         }
       }
     }

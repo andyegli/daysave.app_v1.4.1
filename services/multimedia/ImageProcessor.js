@@ -227,13 +227,34 @@ class ImageProcessor extends BaseMediaProcessor {
           });
           console.log(`🏷️ DEBUG: Tags generated:`, tags);
           results.results.tags = tags;
-          this.updateProgress(95, 'Content tags generated');
+          this.updateProgress(90, 'Content tags generated');
         } catch (error) {
           console.log(`❌ DEBUG: Tag generation failed:`, error);
           this.addWarning(results, 'Failed to generate tags', 'tag_generation');
         }
       } else {
         console.log(`⚠️ DEBUG: Tag generation skipped - enableTagGeneration: ${options.enableTagGeneration}, openai: ${!!this.openai}, description: ${!!results.results.description}`);
+      }
+
+      // ✨ Generate sophisticated AI title (if enabled and description available)
+      if (options.enableTitleGeneration && this.openai && results.results.description) {
+        console.log(`🎯 DEBUG: Starting sophisticated AI title generation...`);
+        try {
+          const generatedTitle = await this.generateSophisticatedTitle({
+            description: results.results.description,
+            objects: results.results.objects,
+            tags: results.results.tags,
+            ocrText: results.results.ocrText
+          });
+          console.log(`🎯 DEBUG: Sophisticated title generated:`, generatedTitle);
+          results.results.generatedTitle = generatedTitle;
+          this.updateProgress(95, 'AI title generated');
+        } catch (error) {
+          console.log(`❌ DEBUG: Sophisticated title generation failed:`, error);
+          this.addWarning(results, 'Failed to generate AI title', 'title_generation');
+        }
+      } else {
+        console.log(`⚠️ DEBUG: Sophisticated title generation skipped - enableTitleGeneration: ${options.enableTitleGeneration}, openai: ${!!this.openai}, description: ${!!results.results.description}`);
       }
 
       this.updateProgress(100, 'Image processing completed');
@@ -356,6 +377,7 @@ class ImageProcessor extends BaseMediaProcessor {
         qualityAnalysis: true,
         metadataExtraction: true,
         tagGeneration: !!this.openai,
+        titleGeneration: !!this.openai, // ✨ NEW: Sophisticated AI title generation
         formatConversion: false // TODO: Implement
       },
       visionProviders: [
@@ -372,7 +394,8 @@ class ImageProcessor extends BaseMediaProcessor {
         thumbnails: ['jpg', 'png', 'webp'],
         descriptions: ['text', 'json'],
         objects: ['json'],
-        ocr: ['text', 'json']
+        ocr: ['text', 'json'],
+        titles: ['text'] // ✨ NEW: AI-generated titles
       }
     };
   }
@@ -942,6 +965,144 @@ Return only the extracted text, preserving original formatting and line breaks w
       }
       return [];
     }
+  }
+
+  /**
+   * Generate sophisticated AI title for images using OpenAI (matching video quality)
+   * 
+   * @param {Object} context - Analysis context containing description, objects, tags, and OCR text
+   * @returns {Promise<string>} Generated sophisticated title
+   */
+  async generateSophisticatedTitle(context = {}) {
+    try {
+      if (!this.openai) {
+        throw new Error('OpenAI client not initialized');
+      }
+
+      if (this.enableLogging) {
+        console.log('🎯 Starting sophisticated AI title generation for image');
+      }
+
+      // Prepare enhanced content for analysis
+      let contentToAnalyze = '';
+      
+      if (context.description) {
+        contentToAnalyze = context.description.trim();
+      }
+      
+      // Enhance with additional context from analysis data
+      if (context.objects && context.objects.length > 0) {
+        const objectNames = context.objects.map(obj => obj.name || obj).join(', ');
+        contentToAnalyze += `\n\nDetected objects: ${objectNames}`;
+      }
+      
+      if (context.tags && context.tags.length > 0) {
+        const tagList = context.tags.slice(0, 5).join(', '); // Top 5 tags
+        contentToAnalyze += `\n\nKey themes: ${tagList}`;
+      }
+
+      if (context.ocrText && context.ocrText.trim()) {
+        contentToAnalyze += `\n\nVisible text: "${context.ocrText.trim()}"`;
+      }
+
+      if (!contentToAnalyze || contentToAnalyze.length < 10) {
+        if (this.enableLogging) {
+          console.log('⚠️ Insufficient content for AI title generation');
+        }
+        return this.getFallbackTitle(context);
+      }
+
+      if (this.enableLogging) {
+        console.log(`🤖 Sending image content to OpenAI for title generation (${contentToAnalyze.length} chars)`);
+      }
+
+      const prompt = `Based on the following image description and analysis, create an engaging and descriptive title.
+
+The title should be:
+- Concise (5-10 words maximum)
+- Descriptive of the main subject or scene
+- Engaging and clickable
+- Professional and appropriate
+- Capture the essence of the visual content
+- Focus on the most interesting or unique aspect
+
+Image Analysis: ${contentToAnalyze}
+
+Respond with only the title, no quotes or additional text.`;
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert content creator who specializes in writing engaging titles for visual content. Create compelling titles that capture the essence of images and make viewers want to see them. Focus on the most interesting visual elements and create titles that are descriptive yet concise.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 50
+      });
+
+      let generatedTitle = response.choices[0].message.content.trim();
+      
+      // Clean up title (remove quotes if present)
+      generatedTitle = generatedTitle.replace(/^["']|["']$/g, '');
+      
+      // Ensure title isn't too long
+      if (generatedTitle.length > 60) {
+        generatedTitle = generatedTitle.substring(0, 57) + '...';
+      }
+      
+      if (this.enableLogging) {
+        console.log(`✅ Generated sophisticated AI title: "${generatedTitle}"`);
+      }
+      
+      return generatedTitle;
+      
+    } catch (error) {
+      if (this.enableLogging) {
+        console.error('❌ Sophisticated AI title generation failed:', error.message);
+      }
+      return this.getFallbackTitle(context);
+    }
+  }
+
+  /**
+   * Generate fallback title when AI generation fails
+   * 
+   * @param {Object} context - Analysis context
+   * @returns {string} Fallback title
+   */
+  getFallbackTitle(context = {}) {
+    // Try to use first sentence of description
+    if (context.description && context.description.trim()) {
+      const firstSentence = context.description.split('.')[0];
+      if (firstSentence.length > 0 && firstSentence.length <= 60) {
+        return firstSentence.trim();
+      } else if (context.description.length <= 60) {
+        return context.description.trim();
+      } else {
+        return context.description.substring(0, 57).trim() + '...';
+      }
+    }
+    
+    // Use top tags to create a descriptive title
+    if (context.tags && Array.isArray(context.tags) && context.tags.length > 0) {
+      const topTags = context.tags.slice(0, 3).join(', ');
+      return topTags.length <= 60 ? topTags : topTags.substring(0, 57) + '...';
+    }
+    
+    // Use object names as fallback
+    if (context.objects && context.objects.length > 0) {
+      const objectNames = context.objects.slice(0, 3).map(obj => obj.name || obj).join(', ');
+      return objectNames.length <= 60 ? objectNames : objectNames.substring(0, 57) + '...';
+    }
+    
+    // Final fallback
+    return 'Image Content';
   }
 
   /**

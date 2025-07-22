@@ -242,7 +242,7 @@ class MultimediaAnalyzer {
       results.tags = await this.generateTags(results);
       results.category = await this.generateCategory(results);
 
-      // Generate title based on summary/content
+      // Generate title based on summary/content (enhanced for all media types)
       if (this.openai && (results.summary || results.transcription)) {
         results.generatedTitle = await this.generateTitle(results);
       }
@@ -956,6 +956,38 @@ class MultimediaAnalyzer {
           }
         } catch (error) {
           console.error('❌ Failed to generate category:', error);
+        }
+      }
+
+      // ✨ Generate sophisticated AI title for images (matching video approach)
+      if (this.openai && (results.description || results.transcription)) {
+        try {
+          if (this.enableLogging) {
+            console.log('🎯 Generating sophisticated AI title for image');
+          }
+          
+          // Create context for title generation
+          const titleContext = {
+            summary: results.description || results.transcription,
+            transcription: results.transcription || results.description,
+            objects: results.objects,
+            ocrText: results.ocrText,
+            platform: 'image_upload',
+            metadata: {
+              fileCategory: 'image'
+            }
+          };
+          
+          results.generatedTitle = await this.generateTitle(titleContext);
+          
+          if (this.enableLogging) {
+            console.log(`🎯 Generated sophisticated title: "${results.generatedTitle}"`);
+          }
+        } catch (titleError) {
+          if (this.enableLogging) {
+            console.error('❌ Image title generation failed:', titleError);
+          }
+          results.generatedTitle = this.getFallbackImageTitle(results);
         }
       }
 
@@ -2145,6 +2177,53 @@ Respond with only the title, no quotes or additional text.`;
     } else {
       return 'Multimedia Content';
     }
+  }
+
+  /**
+   * Generate fallback title specifically for images when AI generation fails
+   * 
+   * @param {Object} results - Image analysis results
+   * @returns {string} Fallback image title
+   */
+  getFallbackImageTitle(results) {
+    // Try to use first sentence of description
+    if (results.description && results.description.trim()) {
+      const firstSentence = results.description.split('.')[0];
+      if (firstSentence.length > 0 && firstSentence.length <= 60) {
+        return firstSentence.trim();
+      } else if (results.description.length <= 60) {
+        return results.description.trim();
+      } else {
+        return results.description.substring(0, 57).trim() + '...';
+      }
+    }
+    
+    // Use transcription if available
+    if (results.transcription && results.transcription.trim()) {
+      const firstSentence = results.transcription.split('.')[0];
+      if (firstSentence.length > 0 && firstSentence.length <= 60) {
+        return firstSentence.trim();
+      } else if (results.transcription.length <= 60) {
+        return results.transcription.trim();
+      } else {
+        return results.transcription.substring(0, 57).trim() + '...';
+      }
+    }
+    
+    // Use top tags to create a descriptive title
+    if (results.tags && Array.isArray(results.tags) && results.tags.length > 0) {
+      const topTags = results.tags.slice(0, 3).join(', ');
+      return topTags.length <= 60 ? topTags : topTags.substring(0, 57) + '...';
+    }
+    
+    // Use object names as fallback
+    if (results.objects && results.objects.length > 0) {
+      const objectNames = results.objects.slice(0, 3).map(obj => obj.name || obj).join(', ');
+      return objectNames.length <= 60 ? objectNames : objectNames.substring(0, 57) + '...';
+    }
+    
+    // Final fallback
+    return 'Image Content';
   }
 
   // Placeholder methods for features to be implemented

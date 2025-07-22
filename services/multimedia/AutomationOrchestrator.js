@@ -754,9 +754,10 @@ class AutomationOrchestrator {
                 if (config.enableQualityAnalysis !== undefined) {
                     mappedOptions.enableQualityAnalysis = config.enableQualityAnalysis && features.plugins.qualityAnalysis;
                 }
-                // Enable thumbnail and tag generation by default for images
+                // Enable thumbnail, tag, and title generation by default for images
                 mappedOptions.enableThumbnailGeneration = config.enableThumbnailGeneration !== false;
                 mappedOptions.enableTagGeneration = config.enableTagGeneration !== false && features.plugins.aiDescription;
+                mappedOptions.enableTitleGeneration = config.enableTitleGeneration !== false && features.plugins.aiDescription;
                 break;
                 
             case 'video':
