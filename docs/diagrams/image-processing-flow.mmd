@@ -1,0 +1,111 @@
+graph TD
+    A[Image Input] --> B{Content Source}
+    B -->|URL Upload| C[Image URL Analysis]
+    B -->|File Upload| D[File Upload]
+    
+    C --> E[Platform Detection]
+    E -->|Imgur/Flickr/Pinterest| F[Image Download]
+    E -->|Direct Image URL| G[Direct Download]
+    E -->|Social Media Images| H[Social Platform Extract]
+    
+    D --> I[Google Cloud Storage]
+    F --> I
+    G --> I
+    H --> I
+    
+    I --> J[Image Processing Pipeline]
+    
+    J --> K[Image Validation]
+    K --> L[Format & Size Check]
+    L -->|Valid| M[Metadata Extraction]
+    L -->|Invalid| N[Format Conversion]
+    N --> M
+    
+    M --> O[Image Quality Assessment]
+    O --> P[Parallel Processing - 6 Streams]
+    
+    P --> Q1[Object Detection Stream]
+    P --> Q2[OCR Text Extraction Stream]
+    P --> Q3[AI Description Stream]
+    P --> Q4[Thumbnail Generation Stream]
+    P --> Q5[Quality Analysis Stream]
+    P --> Q6[Face Detection Stream]
+    
+    Q1 --> R1{Provider Selection}
+    R1 -->|Primary| S1[Google Vision AI]
+    R1 -->|Fallback| T1[OpenAI Vision API]
+    
+    S1 --> U1[Object Confidence Scoring]
+    T1 --> U1
+    U1 --> V1[Scene Analysis]
+    V1 --> W1[Landmark Detection]
+    
+    Q2 --> R2[Google Vision OCR]
+    R2 --> S2[OpenAI Vision Fallback]
+    S2 --> T2[Text Confidence Scoring]
+    T2 --> U2[Language Detection]
+    U2 --> V2[Handwriting Detection]
+    
+    Q3 --> R3[OpenAI GPT-4 Vision]
+    R3 --> S3[Comprehensive Description]
+    S3 --> T3[Scene Context Analysis]
+    T3 --> U3[Mood & Atmosphere]
+    U3 --> V3[Color Analysis]
+    
+    Q4 --> R4[ThumbnailGenerator Service]
+    R4 --> S4[Multiple Size Generation]
+    S4 --> T4[150px, 300px, 500px, 800px]
+    T4 --> U4[Quality Optimization]
+    U4 --> V4[Format Conversion]
+    
+    Q5 --> R5[Resolution Analysis]
+    R5 --> S5[Aspect Ratio Check]
+    S5 --> T5[Color Space Analysis]
+    T5 --> U5[File Size Assessment]
+    U5 --> V5[Overall Quality Score]
+    
+    Q6 --> R6[Face Detection API]
+    R6 --> S6[Face Encoding]
+    S6 --> T6[Face Recognition]
+    T6 --> U6[Identity Confidence]
+    
+    W1 --> X[AI Enhancement Layer]
+    V2 --> X
+    V3 --> X
+    V4 --> X
+    V5 --> X
+    U6 --> X
+    
+    X --> Y1[OpenAI Content Analysis]
+    X --> Y2[Sentiment from Description]
+    X --> Y3[Category Classification]
+    X --> Y4[Context-Based Tagging]
+    X --> Y5[Title Generation]
+    X --> Y6[Content Summarization]
+    
+    Y1 --> Z[Database Storage]
+    Y2 --> Z
+    Y3 --> Z
+    Y4 --> Z
+    Y5 --> Z
+    Y6 --> Z
+    
+    Z --> AA[ImageAnalysis Table]
+    Z --> BB[Thumbnail Table]
+    Z --> CC[Face Table]
+    Z --> DD[ProcessingJob Table]
+    
+    AA --> EE[Content Management UI]
+    BB --> EE
+    CC --> EE
+    DD --> EE
+    
+    EE --> FF[Image Gallery View]
+    EE --> GG[Description Display]
+    EE --> HH[Tag Cloud Interface]
+    EE --> II[Content Cards]
+    
+    FF --> JJ[User Dashboard]
+    GG --> JJ
+    HH --> JJ
+    II --> JJ 

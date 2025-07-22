@@ -31,6 +31,79 @@ function isMultimediaFile(mimetype) {
 }
 
 /**
+ * Fallback function to copy AI data from analysis tables to File record
+ * @param {string} fileId - File ID to fix
+ * @param {string} userId - User ID
+ */
+async function copyAnalysisToFileRecord(fileId, userId) {
+  try {
+    console.log(`🔧 FALLBACK: Copying analysis data to File record for ${fileId}`);
+    
+    const [file, imageAnalysis, videoAnalysis, audioAnalysis] = await Promise.all([
+      File.findOne({ where: { id: fileId, user_id: userId } }),
+      require('../models').ImageAnalysis?.findOne({ where: { file_id: fileId, user_id: userId } }),
+      require('../models').VideoAnalysis?.findOne({ where: { file_id: fileId, user_id: userId } }),
+      require('../models').AudioAnalysis?.findOne({ where: { file_id: fileId, user_id: userId } })
+    ]);
+    
+    if (!file) {
+      console.log(`❌ FALLBACK: File not found: ${fileId}`);
+      return false;
+    }
+    
+    const analysis = imageAnalysis || videoAnalysis || audioAnalysis;
+    if (!analysis) {
+      console.log(`❌ FALLBACK: No analysis found for ${fileId}`);
+      return false;
+    }
+    
+    const updateData = {};
+    
+    // Copy AI description/transcription
+    if (imageAnalysis?.ai_description) {
+      updateData.summary = typeof imageAnalysis.ai_description === 'string' 
+        ? imageAnalysis.ai_description 
+        : imageAnalysis.ai_description.description || imageAnalysis.ai_description.text;
+    } else if (videoAnalysis?.transcription_results?.fullText) {
+      updateData.summary = videoAnalysis.transcription_results.fullText;
+    } else if (audioAnalysis?.transcription_results?.fullText) {
+      updateData.summary = audioAnalysis.transcription_results.fullText;
+    }
+    
+    // Generate title from summary
+    if (updateData.summary) {
+      const words = updateData.summary.split(' ');
+      updateData.generated_title = words.slice(0, 8).join(' ') + (words.length > 8 ? '...' : '');
+    }
+    
+    // Copy tags from object detection
+    if (imageAnalysis?.object_detection?.objects) {
+      updateData.auto_tags = imageAnalysis.object_detection.objects
+        .filter(obj => obj.confidence > 0.7)
+        .map(obj => obj.name.toLowerCase())
+        .slice(0, 8);
+    } else if (videoAnalysis?.object_detection?.objects) {
+      updateData.auto_tags = videoAnalysis.object_detection.objects
+        .filter(obj => obj.confidence > 0.7)
+        .map(obj => obj.name.toLowerCase())
+        .slice(0, 8);
+    }
+    
+    // Update file record
+    if (Object.keys(updateData).length > 0) {
+      await File.update(updateData, { where: { id: fileId, user_id: userId } });
+      console.log(`✅ FALLBACK: Updated File record with ${Object.keys(updateData).length} fields`);
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error(`❌ FALLBACK: Failed to copy analysis data:`, error);
+    return false;
+  }
+}
+
+/**
  * Generate sophisticated AI title for images using OpenAI (same approach as videos)
  * @param {string} imageDescription - AI description of the image
  * @param {Object} analysisData - Additional analysis data (objects, tags, etc.)
@@ -1072,16 +1145,68 @@ router.post('/upload', [
           console.log(`🎬 Detected multimedia file, triggering analysis: ${file.originalname}`);
           console.log(`🔍 File details: ID=${fileRecord.id}, MIME=${file.mimetype}, Path=${fileRecord.file_path}`);
           
-          // Run analysis in background (don't wait for it)
+          // Run analysis in background with enhanced error handling
           setImmediate(async () => {
             try {
-              console.log(`🚀 Starting background analysis for file ${fileRecord.id}`);
+              console.log(`🚀 Starting background analysis for file ${fileRecord.id} (${fileRecord.filename})`);
+              console.log(`🔧 File record details:`, {
+                id: fileRecord.id,
+                filename: fileRecord.filename,
+                file_path: fileRecord.file_path,
+                mimetype: fileRecord.metadata?.mimetype,
+                user_id: fileRecord.user_id
+              });
+              
               await triggerFileAnalysis(fileRecord, req.user);
+              
               console.log(`✅ Background analysis completed for file ${fileRecord.id}`);
+              
+              // Verify the update worked by checking the file record
+              const updatedFile = await File.findOne({ where: { id: fileRecord.id } });
+              console.log(`🔍 Post-analysis file state:`, {
+                hasSummary: !!updatedFile.summary,
+                hasTitle: !!updatedFile.generated_title,
+                hasTags: !!updatedFile.auto_tags
+              });
+              
             } catch (analysisError) {
-              console.error(`❌ Background analysis failed for ${fileRecord.id}:`, analysisError);
-              console.error('Error details:', analysisError.stack);
-              // Don't let analysis errors affect the upload response
+              console.error(`❌ CRITICAL: Background analysis failed for ${fileRecord.id}:`, {
+                error: analysisError.message,
+                stack: analysisError.stack,
+                filename: fileRecord.filename,
+                mimetype: file.mimetype,
+                user_id: req.user.id
+              });
+              
+              // Try to save the error details to the file record for debugging
+              try {
+                await File.update({
+                  metadata: {
+                    ...fileRecord.metadata,
+                    lastAnalysisError: analysisError.message,
+                    lastAnalysisErrorTime: new Date().toISOString()
+                  }
+                }, {
+                  where: { id: fileRecord.id }
+                });
+              } catch (metaUpdateError) {
+                console.error(`❌ Failed to save error metadata:`, metaUpdateError);
+              }
+              
+              // Try fallback method after a short delay
+              setTimeout(async () => {
+                try {
+                  console.log(`🔄 Attempting fallback analysis copy for ${fileRecord.id}`);
+                  const fallbackSuccess = await copyAnalysisToFileRecord(fileRecord.id, req.user.id);
+                  if (fallbackSuccess) {
+                    console.log(`✅ Fallback analysis copy succeeded for ${fileRecord.id}`);
+                  } else {
+                    console.log(`❌ Fallback analysis copy failed for ${fileRecord.id}`);
+                  }
+                } catch (fallbackError) {
+                  console.error(`❌ Fallback analysis error:`, fallbackError);
+                }
+              }, 5000); // Wait 5 seconds for analysis to complete
             }
           });
         } else {

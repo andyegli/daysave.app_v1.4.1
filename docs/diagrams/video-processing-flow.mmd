@@ -1,0 +1,92 @@
+graph TD
+    A[Video Input] --> B{Content Source}
+    B -->|URL Upload| C[URL Analysis]
+    B -->|File Upload| D[File Upload]
+    
+    C --> E[Platform Detection]
+    E -->|YouTube/Vimeo/TikTok| F[Video Download]
+    E -->|Direct Video URL| G[Direct Download]
+    
+    D --> H[Google Cloud Storage]
+    F --> H
+    G --> H
+    
+    H --> I[Video Processing Pipeline]
+    
+    I --> J[Video Analysis Record Creation]
+    J --> K[FFmpeg Metadata Extraction]
+    K --> L[Video Quality Assessment]
+    
+    I --> M[Parallel Processing - 8 Streams]
+    
+    M --> N1[Audio Track Extraction]
+    M --> N2[Video Frame Extraction]
+    M --> N3[Thumbnail Generation]
+    M --> N4[OCR Caption Extraction]
+    M --> N5[Motion Analysis]
+    M --> N6[Scene Detection]
+    M --> N7[Chapter Detection]
+    M --> N8[Quality Analysis]
+    
+    N1 --> O1[Google Speech-to-Text]
+    O1 --> P1[OpenAI Whisper Fallback]
+    P1 --> Q1[Speaker Diarization]
+    Q1 --> R1[Voice Print Recognition]
+    
+    N2 --> O2[Google Vision AI]
+    O2 --> P2[Object Detection]
+    P2 --> Q2[Scene Analysis]
+    
+    N3 --> O3[Key Moments Detection]
+    O3 --> P3[Thumbnail Sizes: 150px, 300px, 500px]
+    P3 --> Q3[Main Thumbnail + Key Moments]
+    
+    N4 --> O4[Frame Interval Processing]
+    O4 --> P4[Text Confidence Scoring]
+    P4 --> Q4[OCR Database Storage]
+    
+    N5 --> O5[Motion Vector Analysis]
+    N6 --> O6[Scene Change Detection]
+    N7 --> O7[Chapter Boundary Detection]
+    N8 --> O8[Bitrate/Resolution Assessment]
+    
+    R1 --> S[AI Enhancement Layer]
+    Q2 --> S
+    Q3 --> S
+    Q4 --> S
+    O5 --> S
+    O6 --> S
+    O7 --> S
+    O8 --> S
+    
+    S --> T1[OpenAI GPT-4 Summary Generation]
+    S --> T2[Sentiment Analysis]
+    S --> T3[AI-Powered Tag Generation]
+    S --> T4[Category Classification]
+    S --> T5[Title Generation]
+    
+    T1 --> U[Database Storage]
+    T2 --> U
+    T3 --> U
+    T4 --> U
+    T5 --> U
+    
+    U --> V[VideoAnalysis Table]
+    U --> W[Thumbnail Table]
+    U --> X[OCRCaption Table]
+    U --> Y[Speaker Table]
+    U --> Z[ProcessingJob Table]
+    
+    V --> AA[Content Management UI]
+    W --> AA
+    X --> AA
+    Y --> AA
+    Z --> AA
+    
+    AA --> BB[Real-time Updates Every 10s]
+    AA --> CC[AI Analysis Modal]
+    AA --> DD[Content Cards with Indicators]
+    
+    BB --> EE[User Dashboard]
+    CC --> EE
+    DD --> EE 

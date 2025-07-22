@@ -1,0 +1,97 @@
+graph TD
+    A[Audio Input] --> B{Content Source}
+    B -->|URL Upload| C[Audio URL Analysis]
+    B -->|File Upload| D[File Upload]
+    
+    C --> E[Platform Detection]
+    E -->|SoundCloud/Spotify| F[Audio Download]
+    E -->|YouTube Audio| G[YouTube-DL Audio Extract]
+    E -->|Direct Audio URL| H[Direct Download]
+    
+    D --> I[Google Cloud Storage]
+    F --> I
+    G --> I
+    H --> I
+    
+    I --> J[Audio Processing Pipeline]
+    
+    J --> K[Audio Validation]
+    K --> L[Format Support Check]
+    L -->|Supported| M[Metadata Extraction]
+    L -->|Unsupported| N[FFmpeg Conversion]
+    N --> M
+    
+    M --> O[Audio Quality Assessment]
+    O --> P[Parallel Processing - 5 Streams]
+    
+    P --> Q1[Transcription Stream]
+    P --> Q2[Speaker Analysis Stream]
+    P --> Q3[Voice Print Stream]
+    P --> Q4[Quality Analysis Stream]
+    P --> Q5[Enhancement Stream]
+    
+    Q1 --> R1{File Duration Check}
+    R1 -->|< 30 seconds| S1[Google Speech-to-Text]
+    R1 -->|> 30 seconds| T1[OpenAI Whisper]
+    
+    S1 --> U1[Speaker Diarization]
+    T1 --> U1
+    U1 --> V1[Transcription Confidence]
+    V1 --> W1[Language Detection]
+    
+    Q2 --> R2[Speaker Segmentation]
+    R2 --> S2[Speaker Count Detection]
+    S2 --> T2[Speaker Timestamps]
+    T2 --> U2[Speaker Confidence Scoring]
+    
+    Q3 --> R3[Voice Print Extraction]
+    R3 --> S3[VoicePrintDatabase Matching]
+    S3 --> T3[Speaker Identification]
+    T3 --> U3[Recognition Confidence]
+    
+    Q4 --> R4[Sample Rate Analysis]
+    R4 --> S4[Bitrate Assessment]
+    S4 --> T4[Noise Level Detection]
+    T4 --> U4[Audio Clarity Scoring]
+    
+    Q5 --> R5[Volume Normalization]
+    R5 --> S5[Noise Reduction]
+    S5 --> T5[Format Optimization]
+    
+    W1 --> X[AI Analysis Layer]
+    U2 --> X
+    U3 --> X
+    U4 --> X
+    T5 --> X
+    
+    X --> Y1[OpenAI GPT-4 Summary]
+    X --> Y2[Sentiment Analysis]
+    X --> Y3[Content Categorization]
+    X --> Y4[Topic Extraction]
+    X --> Y5[AI Tag Generation]
+    X --> Y6[Title Generation]
+    
+    Y1 --> Z[Database Storage]
+    Y2 --> Z
+    Y3 --> Z
+    Y4 --> Z
+    Y5 --> Z
+    Y6 --> Z
+    
+    Z --> AA[AudioAnalysis Table]
+    Z --> BB[Speaker Table]
+    Z --> CC[ProcessingJob Table]
+    
+    AA --> DD[Content Management UI]
+    BB --> DD
+    CC --> DD
+    
+    DD --> EE[Audio Player Integration]
+    DD --> FF[Transcript Display]
+    DD --> GG[Speaker Timeline]
+    DD --> HH[Content Cards]
+    
+    EE --> II[User Dashboard]
+    FF --> II
+    GG --> II
+    HH --> II 
