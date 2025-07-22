@@ -383,21 +383,12 @@ async function triggerFileAnalysis(fileRecord, user) {
       result_keys: processingResult.results ? Object.keys(processingResult.results) : 'none'
     });
 
-    console.log('🔍 Full processing result structure:', {
-      jobId: processingResult.jobId,
-      mediaType: processingResult.mediaType,
-      processingTime: processingResult.processingTime,
-      resultsType: typeof processingResult.results,
-      resultsKeys: processingResult.results ? Object.keys(processingResult.results) : null,
-      dataKeys: processingResult.results?.data ? Object.keys(processingResult.results.data) : null
-    });
-    
-    // Log critical data structure (summary only)
+    // Log only essential processing results
     if (processingResult.results?.data) {
       const hasAiDescription = !!processingResult.results.data.aiDescription;
       const objectCount = processingResult.results.data.objects?.length || 0;
       const tagCount = processingResult.results.data.tags?.length || 0;
-      console.log(`📊 Analysis data: AI description: ${hasAiDescription}, Objects: ${objectCount}, Tags: ${tagCount}`);
+      console.log(`📊 Analysis completed: AI description: ${hasAiDescription}, Objects: ${objectCount}, Tags: ${tagCount}`);
     }
 
     // Extract results from orchestrator response
@@ -424,10 +415,8 @@ async function triggerFileAnalysis(fileRecord, user) {
     if (formattedResults.data.aiDescription) {
       if (typeof formattedResults.data.aiDescription === 'string') {
         contentForAI = formattedResults.data.aiDescription;
-        console.log(`🎨 Found AI description (string): ${contentForAI.length} characters`);
       } else if (formattedResults.data.aiDescription.description) {
         contentForAI = formattedResults.data.aiDescription.description;
-        console.log(`🎨 Found AI description (object): ${contentForAI.length} characters`);
       }
     }
     
@@ -436,10 +425,7 @@ async function triggerFileAnalysis(fileRecord, user) {
       contentForAI = contentForAI ? 
         `${contentForAI}\n\nExtracted Text: ${formattedResults.data.ocrText.fullText}` : 
         `Extracted Text: ${formattedResults.data.ocrText.fullText}`;
-      console.log(`📝 Added OCR text, total content length: ${contentForAI.length} characters`);
     }
-    
-    console.log(`🤖 Content for AI enhancement: ${contentForAI.length} characters`);
     
     // Enhanced AI analysis using our improved system
     let enhancedResults = null;
@@ -750,7 +736,6 @@ async function triggerFileAnalysis(fileRecord, user) {
       lastAnalyzed: new Date().toISOString(),
       aiVersion: '2.0'
     };
-    console.log(`📊 Added metadata to update`);
     
     // Handle transcription results based on media type
     if (formattedResults.data.transcription) {
@@ -759,7 +744,6 @@ async function triggerFileAnalysis(fileRecord, user) {
       } else if (typeof formattedResults.data.transcription === 'string') {
         updateData.transcription = formattedResults.data.transcription;
       }
-      console.log(`📝 Added transcription to update: ${updateData.transcription?.length} characters`);
     }
     
     // Handle AI descriptions for images (enhanced with better structure detection)
@@ -768,21 +752,15 @@ async function triggerFileAnalysis(fileRecord, user) {
       let aiDescription = '';
       if (typeof formattedResults.data.aiDescription === 'string') {
         aiDescription = formattedResults.data.aiDescription;
-        console.log(`🎨 Found AI description as string: ${aiDescription.length} characters`);
       } else if (formattedResults.data.aiDescription.description) {
         aiDescription = formattedResults.data.aiDescription.description;
-        console.log(`🎨 Found AI description as object.description: ${aiDescription.length} characters`);
       } else if (formattedResults.data.aiDescription.text) {
         aiDescription = formattedResults.data.aiDescription.text;
-        console.log(`🎨 Found AI description as object.text: ${aiDescription.length} characters`);
       }
       
       if (aiDescription && aiDescription.length > 0) {
         updateData.summary = aiDescription;
-        console.log(`🎨 Added AI description to summary: ${updateData.summary.length} characters`);
       }
-    } else {
-      console.log(`⚠️ No AI description found in formattedResults.data`);
     }
     
     // Handle OCR text for images/videos
@@ -1933,16 +1911,7 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     
     const { VideoAnalysis, AudioAnalysis, ImageAnalysis, ProcessingJob, Thumbnail, OCRCaption, Speaker } = models;
     
-    // Debug: Check if models are available
-    console.log('📊 Target models availability:', {
-      VideoAnalysis: !!VideoAnalysis,
-      AudioAnalysis: !!AudioAnalysis, 
-      ImageAnalysis: !!ImageAnalysis,
-      ProcessingJob: !!ProcessingJob,
-      Thumbnail: !!Thumbnail,
-      OCRCaption: !!OCRCaption,
-      Speaker: !!Speaker
-    });
+    // Initialize models for analysis
     
     // Function to get proper title
     function getFileTitle(fileRecord) {
@@ -1959,13 +1928,11 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     // Look for processing jobs for this file
     let processingJobs = [];
     try {
-      console.log('🔍 Querying processing jobs...');
       processingJobs = await ProcessingJob.findAll({
         where: { file_id: fileId, user_id: userId },
         order: [['createdAt', 'DESC']],
         limit: 5
       });
-      console.log(`📊 Found ${processingJobs.length} processing jobs`);
     } catch (jobError) {
       console.error('❌ Error querying processing jobs:', jobError);
       // Continue without processing jobs data
@@ -1974,17 +1941,11 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     // Look for analysis records
     let videoAnalysis, audioAnalysis, imageAnalysis;
     try {
-      console.log('🔍 Querying analysis records...');
       [videoAnalysis, audioAnalysis, imageAnalysis] = await Promise.all([
         VideoAnalysis ? VideoAnalysis.findOne({ where: { file_id: fileId, user_id: userId } }) : Promise.resolve(null),
         AudioAnalysis ? AudioAnalysis.findOne({ where: { file_id: fileId, user_id: userId } }) : Promise.resolve(null),
         ImageAnalysis ? ImageAnalysis.findOne({ where: { file_id: fileId, user_id: userId } }) : Promise.resolve(null)
       ]);
-      console.log(`📊 Analysis records found:`, {
-        video: !!videoAnalysis,
-        audio: !!audioAnalysis,
-        image: !!imageAnalysis
-      });
     } catch (analysisError) {
       console.error('❌ Error querying analysis records:', analysisError);
       // Continue without analysis records
@@ -2077,7 +2038,6 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     
     try {
       if (videoAnalysis && Thumbnail && OCRCaption) {
-        console.log('🔍 Querying video-related data...');
         // Get video-specific related data
         [thumbnails, ocrCaptions] = await Promise.all([
           Thumbnail.findAll({
@@ -2091,29 +2051,24 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
             limit: 20
           })
         ]);
-        console.log(`📊 Video data: ${thumbnails.length} thumbnails, ${ocrCaptions.length} OCR captions`);
       }
       
       if (audioAnalysis && Speaker) {
-        console.log('🔍 Querying audio-related data...');
         // Get audio-specific related data
         speakers = await Speaker.findAll({
           where: { user_id: userId, audio_analysis_id: audioAnalysis.id },
           order: [['confidence_score', 'DESC']],
           limit: 5
         });
-        console.log(`📊 Audio data: ${speakers.length} speakers`);
       }
       
       if (imageAnalysis && Thumbnail) {
-        console.log('🔍 Querying image-related data...');
         // Get image-specific related data
         thumbnails = await Thumbnail.findAll({
           where: { file_id: fileId, user_id: userId },
           order: [['createdAt', 'ASC']],
           limit: 5
         });
-        console.log(`📊 Image data: ${thumbnails.length} thumbnails`);
       }
     } catch (relatedDataError) {
       console.error('❌ Error querying related data:', relatedDataError);

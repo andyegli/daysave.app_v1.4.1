@@ -222,13 +222,9 @@ async function triggerMultimediaAnalysis(content, user) {
 
 // Main content management page with real data and debugging
 router.get('/', isAuthenticated, async (req, res) => {
-  console.log('DEBUG: /content route hit by user:', req.user ? req.user.id : 'NO USER');
   try {
-    // Debug: Check if models are available
+    // Initialize models
     const models = require('../models');
-    console.log('DEBUG: Available models:', Object.keys(models));
-    console.log('DEBUG: SocialAccount model exists:', !!models.SocialAccount);
-    console.log('DEBUG: Content model exists:', !!models.Content);
     
     // ✨ ENHANCED PAGINATION: Get pagination parameters with user-configurable limit
     const page = parseInt(req.query.page) || 1;
@@ -845,16 +841,7 @@ router.get('/', isAuthenticated, async (req, res) => {
     const fileCount = paginatedItems.filter(item => item.itemType === 'file').length;
     
     console.log(`📊 Found ${paginatedItems.length} items on page ${page} (${contentCount} content + ${fileCount} files) of ${totalItems} total for user ${req.user.id}`);
-    if (paginatedItems.length > 0) {
-      console.log('DEBUG: First item on page:', {
-        type: paginatedItems[0].itemType,
-        title: paginatedItems[0].displayTitle,
-        id: paginatedItems[0].id,
-        sourceInfo: paginatedItems[0].sourceInfo
-      });
-    } else {
-      console.log('DEBUG: No items found for current filters/page');
-    }
+    // Render the content list page
 
     res.render('content/list', {
         user: req.user,
@@ -1058,16 +1045,9 @@ async function handleBulkUrlSubmission(req, res) {
 router.post('/', [
   isAuthenticated
 ], async (req, res) => {
-  console.log('DEBUG: POST /content route hit by user:', req.user ? req.user.id : 'NO USER');
-  console.log('DEBUG: Request method:', req.method);
-  console.log('DEBUG: Request headers:', req.headers['content-type']);
-  console.log('DEBUG: Request body type:', typeof req.body);
-  console.log('DEBUG: Request body:', req.body);
-  
   try {
     // Check if this is a bulk URL submission
     if (req.body.content_type === 'bulk_urls') {
-      console.log('DEBUG: Bulk URL submission detected');
       return await handleBulkUrlSubmission(req, res);
     }
     
@@ -1081,11 +1061,8 @@ router.post('/', [
     });
     
     const { url, user_comments, user_tags, group_ids } = req.body;
-    console.log('DEBUG: Creating content with URL:', url);
-    console.log('DEBUG: Request body:', JSON.stringify(req.body, null, 2));
 
     if (!url || typeof url !== 'string' || url.length < 5) {
-      console.log('DEBUG: URL validation failed:', url);
       return res.status(400).json({ error: 'A valid URL is required.' });
     }
 
@@ -1112,8 +1089,8 @@ router.post('/', [
       });
     });
 
-    console.log('DEBUG: Content created successfully:', content.id);
-    console.log('DEBUG: Created content data:', JSON.stringify(content.toJSON(), null, 2));
+    // Log content creation
+    logger.user.contentAdd(req.user.id, content.id, url, isMultimediaURL(url) ? 'multimedia' : 'standard');
 
     if (Array.isArray(group_ids) && group_ids.length > 0) {
       const groupMemberships = group_ids.map(group_id => ({
@@ -1121,12 +1098,10 @@ router.post('/', [
         group_id
       }));
       await ContentGroupMember.bulkCreate(groupMemberships);
-      console.log('DEBUG: Group memberships created for content:', content.id);
     }
 
     // Check if URL contains multimedia content and trigger analysis
     if (isMultimediaURL(url)) {
-      console.log('DEBUG: Multimedia URL detected, triggering analysis for content:', content.id);
       
       // Trigger multimedia analysis in background (don't wait for it)
       setImmediate(async () => {
@@ -1191,7 +1166,6 @@ router.post('/', [
         }
       });
     } else {
-      console.log('DEBUG: Non-multimedia URL, skipping analysis for content:', content.id);
       res.json({ success: true, content });
     }
   } catch (error) {
@@ -1202,7 +1176,6 @@ router.post('/', [
 
 // Test route to verify POST is working
 router.post('/test', isAuthenticated, (req, res) => {
-  console.log('DEBUG: POST /content/test route hit');
   res.json({ success: true, message: 'POST route is working' });
 });
 
@@ -1300,15 +1273,13 @@ router.put('/:id', isAuthenticated, async (req, res) => {
 router.delete('/:id', isAuthenticated, async (req, res) => {
   const contentId = req.params.id;
   const userId = req.user.id;
-  console.log('DEBUG: DELETE /content/:id called', { contentId, userId });
+  
   try {
     const content = await Content.findOne({ where: { id: contentId, user_id: userId } });
     if (!content) {
-      console.log('DEBUG: Content not found for delete', { contentId, userId });
       return res.status(404).json({ error: 'Content not found or already deleted.' });
     }
     await content.destroy();
-    console.log('DEBUG: Content deleted successfully', { contentId, userId });
     res.json({ success: true });
   } catch (error) {
     console.error('ERROR deleting content:', error);
