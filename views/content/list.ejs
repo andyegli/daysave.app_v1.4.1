@@ -613,13 +613,18 @@
         console.log(`📝 Original text length: ${originalText.length}`);
         console.log(`📝 Text preview: "${originalText.substring(0, 100)}..."`);
         
-        // Force remove any existing line-clamp CSS
-        element.style.display = 'block';
-        element.style.webkitLineClamp = 'unset';
-        element.style.webkitBoxOrient = 'unset';
-        container.style.display = 'block';
-        container.style.webkitLineClamp = 'unset';
-        container.style.webkitBoxOrient = 'unset';
+        // AGGRESSIVELY remove any existing line-clamp CSS from all related elements
+        const allRelatedElements = [element, container, element.parentElement, element.parentElement?.parentElement];
+        allRelatedElements.forEach(el => {
+          if (el) {
+            el.style.display = 'block';
+            el.style.webkitLineClamp = 'unset';
+            el.style.webkitBoxOrient = 'unset';
+            el.style.webkitBox = 'unset';
+            el.style.textOverflow = 'unset';
+            el.classList.remove('line-clamp-2', 'line-clamp-1', 'line-clamp-3');
+          }
+        });
         
         // Set up the container with proper styling
         const lineHeight = 22; // 1.6 * 13.6px (0.85rem)
@@ -714,11 +719,7 @@
       -webkit-box-orient: unset !important;
     }
     
-    /* Debug border to visualize the container */
-    .force-4-lines {
-      border: 2px solid red !important;
-      background-color: yellow !important;
-    }
+    /* Clean styling - no debug borders */
   </style>
 </body>
 </html> 

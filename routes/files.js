@@ -385,10 +385,204 @@ async function triggerFileAnalysis(fileRecord, user) {
       console.log(`⚠️ Insufficient content for AI enhancement (${contentForAI.length} chars)`);
     }
     
-    // Update file record with enhanced structured results
-    const updateData = {};
+    // ✨ ENHANCED DATABASE STORAGE: Store ALL AI outputs in dedicated analysis tables
+    console.log(`💾 Building comprehensive database storage for all AI outputs...`);
     
-    console.log(`💾 Building update data...`);
+    // Create processing job record first
+    const { ProcessingJob } = require('../models');
+    const processingJob = await ProcessingJob.create({
+      user_id: user.id,
+      file_id: fileRecord.id,
+      job_type: `${formattedResults.mediaType}_analysis`,
+      media_type: formattedResults.mediaType,
+      status: 'completed',
+      progress: 100,
+      job_config: {
+        features: Object.keys(formattedResults.data),
+        orchestrator: true,
+        version: '2.0'
+      },
+      input_metadata: fileMetadata,
+      processing_results: formattedResults.data,
+      performance_metrics: {
+        processingTime: processingResult.processingTime,
+        jobId: processingResult.jobId,
+        features: Object.keys(formattedResults.data).length,
+        warnings: processingResult.warnings?.length || 0
+      },
+      started_at: new Date(Date.now() - (processingResult.processingTime || 0)),
+      completed_at: new Date(),
+      duration_ms: processingResult.processingTime || 0
+    });
+    
+    console.log(`✅ Created processing job record: ${processingJob.id}`);
+    
+    // Store media-specific analysis in dedicated tables
+    let analysisRecord = null;
+    if (formattedResults.mediaType === 'video') {
+      const { VideoAnalysis } = require('../models');
+      analysisRecord = await VideoAnalysis.create({
+        user_id: user.id,
+        file_id: fileRecord.id,
+        processing_job_id: processingJob.id,
+        duration: formattedResults.data.metadata?.duration || 0,
+        video_metadata: formattedResults.data.metadata || {},
+        objects_detected: formattedResults.data.objects ? {
+          totalObjects: formattedResults.data.objects.length,
+          objects: formattedResults.data.objects,
+          averageConfidence: formattedResults.data.objects.reduce((sum, obj) => sum + (obj.confidence || 0), 0) / formattedResults.data.objects.length
+        } : null,
+        frame_analysis: formattedResults.data.frameAnalysis || null,
+        scene_detection: formattedResults.data.sceneDetection || null,
+        motion_analysis: formattedResults.data.motionAnalysis || null,
+        quality_assessment: formattedResults.data.qualityAssessment || null,
+        content_analysis: formattedResults.data.contentAnalysis || null,
+        processing_stats: {
+          processingTime: processingResult.processingTime,
+          features: Object.keys(formattedResults.data),
+          warnings: processingResult.warnings
+        },
+        analysis_method: 'hybrid',
+        status: 'ready',
+        progress: 100,
+        started_at: processingJob.started_at,
+        completed_at: processingJob.completed_at,
+        analysis_version: '2.0'
+      });
+      console.log(`📹 Created video analysis record: ${analysisRecord.id}`);
+    } else if (formattedResults.mediaType === 'audio') {
+      const { AudioAnalysis } = require('../models');
+      analysisRecord = await AudioAnalysis.create({
+        user_id: user.id,
+        file_id: fileRecord.id,
+        processing_job_id: processingJob.id,
+        duration: formattedResults.data.metadata?.duration || 0,
+        audio_metadata: formattedResults.data.metadata || {},
+        transcription_results: formattedResults.data.transcription ? {
+          fullText: formattedResults.data.transcription.fullText || formattedResults.data.transcription,
+          segments: formattedResults.data.transcription.segments || [],
+          language: formattedResults.data.transcription.language || 'unknown',
+          statistics: formattedResults.data.transcription.statistics || {}
+        } : null,
+        speaker_analysis: formattedResults.data.speakers ? {
+          totalSpeakers: formattedResults.data.speakers.length,
+          speakers: formattedResults.data.speakers
+        } : null,
+        voice_print_data: formattedResults.data.voicePrints || null,
+        sentiment_analysis: formattedResults.data.sentiment || null,
+        quality_assessment: formattedResults.data.qualityAssessment || null,
+        language_detection: formattedResults.data.languageDetection || null,
+        content_analysis: formattedResults.data.contentAnalysis || null,
+        processing_stats: {
+          processingTime: processingResult.processingTime,
+          features: Object.keys(formattedResults.data),
+          warnings: processingResult.warnings
+        },
+        analysis_method: 'hybrid',
+        status: 'ready',
+        progress: 100,
+        started_at: processingJob.started_at,
+        completed_at: processingJob.completed_at,
+        analysis_version: '2.0'
+      });
+      console.log(`🎵 Created audio analysis record: ${analysisRecord.id}`);
+    } else if (formattedResults.mediaType === 'image') {
+      const { ImageAnalysis } = require('../models');
+      analysisRecord = await ImageAnalysis.create({
+        user_id: user.id,
+        file_id: fileRecord.id,
+        processing_job_id: processingJob.id,
+        image_metadata: formattedResults.data.metadata || {},
+        object_detection: formattedResults.data.objects ? {
+          totalObjects: formattedResults.data.objects.length,
+          objects: formattedResults.data.objects,
+          averageConfidence: formattedResults.data.objects.reduce((sum, obj) => sum + (obj.confidence || 0), 0) / formattedResults.data.objects.length
+        } : null,
+        ocr_results: formattedResults.data.ocrText || null,
+        ai_description: formattedResults.data.aiDescription || null,
+        face_detection: formattedResults.data.faces || null,
+        color_analysis: formattedResults.data.colorAnalysis || null,
+        quality_assessment: formattedResults.data.qualityAssessment || null,
+        label_detection: formattedResults.data.labels || null,
+        content_analysis: formattedResults.data.contentAnalysis || null,
+        processing_stats: {
+          processingTime: processingResult.processingTime,
+          features: Object.keys(formattedResults.data),
+          warnings: processingResult.warnings
+        },
+        analysis_method: 'hybrid',
+        status: 'ready',
+        progress: 100,
+        started_at: processingJob.started_at,
+        completed_at: processingJob.completed_at,
+        analysis_version: '2.0'
+      });
+      console.log(`🖼️ Created image analysis record: ${analysisRecord.id}`);
+    }
+    
+    // Store supporting data in specialized tables
+    if (formattedResults.data.thumbnails && formattedResults.data.thumbnails.length > 0) {
+      const { Thumbnail } = require('../models');
+      for (const thumb of formattedResults.data.thumbnails) {
+        await Thumbnail.create({
+          user_id: user.id,
+          file_id: fileRecord.id,
+          video_analysis_id: formattedResults.mediaType === 'video' ? analysisRecord?.id : null,
+          image_analysis_id: formattedResults.mediaType === 'image' ? analysisRecord?.id : null,
+          file_path: thumb.url || thumb.path,
+          timestamp_seconds: thumb.timestamp || 0,
+          size: thumb.size || 'medium',
+          width: thumb.width,
+          height: thumb.height,
+          metadata: {
+            originalUrl: thumb.url,
+            generatedAt: new Date().toISOString(),
+            quality: thumb.quality || 'standard'
+          }
+        });
+      }
+      console.log(`🖼️ Created ${formattedResults.data.thumbnails.length} thumbnail records`);
+    }
+    
+    if (formattedResults.data.ocrCaptions && formattedResults.data.ocrCaptions.length > 0) {
+      const { OCRCaption } = require('../models');
+      for (const caption of formattedResults.data.ocrCaptions) {
+        await OCRCaption.create({
+          user_id: user.id,
+          file_id: fileRecord.id,
+          video_analysis_id: formattedResults.mediaType === 'video' ? analysisRecord?.id : null,
+          text: caption.text,
+          timestamp_seconds: caption.timestamp || 0,
+          confidence: caption.confidence || 0,
+          bounding_box: caption.boundingBox || null,
+          language: caption.language || 'unknown'
+        });
+      }
+      console.log(`📝 Created ${formattedResults.data.ocrCaptions.length} OCR caption records`);
+    }
+    
+    if (formattedResults.data.speakers && formattedResults.data.speakers.length > 0) {
+      const { Speaker } = require('../models');
+      for (const speaker of formattedResults.data.speakers) {
+        await Speaker.create({
+          user_id: user.id,
+          audio_analysis_id: formattedResults.mediaType === 'audio' ? analysisRecord?.id : null,
+          name: speaker.name || `Speaker ${speaker.id}`,
+          voice_fingerprint: speaker.voiceFingerprint || null,
+          confidence_score: speaker.confidence || 0,
+          gender: speaker.gender || 'unknown',
+          language: speaker.language || 'unknown',
+          total_speaking_time: speaker.totalSpeakingTime || 0,
+          first_appearance: speaker.firstAppearance || 0,
+          last_appearance: speaker.lastAppearance || 0,
+          characteristics: speaker.characteristics || {}
+        });
+      }
+      console.log(`👥 Created ${formattedResults.data.speakers.length} speaker records`);
+    }
+    
+    // Update file record with legacy fields for backward compatibility
+    const updateData = {};
     
     // Store basic metadata - ensure proper parsing and merging
     let existingMetadata = {};
@@ -409,8 +603,10 @@ async function triggerFileAnalysis(fileRecord, user) {
     updateData.metadata = {
       ...existingMetadata,
       ...(formattedResults.data.metadata || {}),
-      processingJobId: processingResult.jobId,
-      lastAnalyzed: new Date().toISOString()
+      processingJobId: processingJob.id,
+      analysisId: analysisRecord?.id,
+      lastAnalyzed: new Date().toISOString(),
+      aiVersion: '2.0'
     };
     console.log(`📊 Added metadata to update`);
     

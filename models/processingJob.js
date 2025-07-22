@@ -3,17 +3,16 @@ const { v4: uuidv4 } = require('uuid');
 /**
  * Processing Job Model
  * 
- * Stores information about orchestrated multimedia processing jobs,
- * including progress tracking, error isolation, and performance metrics.
- * This model coordinates with the AutomationOrchestrator system.
+ * Tracks multimedia analysis processing jobs including status, progress, metadata,
+ * and performance metrics. This model enables detailed monitoring and management
+ * of AI processing workflows across the entire DaySave platform.
  * 
  * Features:
  * - Job status and progress tracking
- * - Stage-based processing monitoring
- * - Error isolation and circuit breaker data
- * - Performance metrics and timing
- * - Plugin usage and configuration tracking
- * - Resource usage monitoring
+ * - Processing metadata and configuration
+ * - Performance metrics and timing data
+ * - Error handling and retry capabilities
+ * - Job queue management
  * 
  * @param {Object} sequelize - Sequelize instance
  * @param {Object} DataTypes - Sequelize data types
@@ -77,12 +76,22 @@ module.exports = (sequelize, DataTypes) => {
 
     /**
      * Job Type
-     * Type of multimedia processing job
+     * Type of processing job being executed
      */
     job_type: {
-      type: DataTypes.ENUM('video', 'audio', 'image', 'batch'),
+      type: DataTypes.ENUM('video_analysis', 'audio_analysis', 'image_analysis', 'url_analysis', 'batch_processing'),
       allowNull: false,
-      comment: 'Type of multimedia processing job'
+      comment: 'Type of processing job being executed'
+    },
+
+    /**
+     * Media Type
+     * Type of media being processed
+     */
+    media_type: {
+      type: DataTypes.ENUM('video', 'audio', 'image', 'document', 'url'),
+      allowNull: false,
+      comment: 'Type of media being processed'
     },
 
     /**
@@ -90,25 +99,15 @@ module.exports = (sequelize, DataTypes) => {
      * Current status of the processing job
      */
     status: {
-      type: DataTypes.ENUM('queued', 'processing', 'completed', 'failed', 'cancelled', 'paused'),
+      type: DataTypes.ENUM('pending', 'processing', 'completed', 'failed', 'cancelled', 'retrying'),
       allowNull: false,
-      defaultValue: 'queued',
+      defaultValue: 'pending',
       comment: 'Current status of the processing job'
     },
 
     /**
-     * Current Stage
-     * Current processing stage
-     */
-    current_stage: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      comment: 'Current processing stage name'
-    },
-
-    /**
      * Progress Percentage
-     * Overall progress of the job (0-100)
+     * Current progress of the job (0-100)
      */
     progress: {
       type: DataTypes.INTEGER,
@@ -118,156 +117,103 @@ module.exports = (sequelize, DataTypes) => {
         min: 0,
         max: 100
       },
-      comment: 'Overall progress of the job (0-100)'
+      comment: 'Current progress of the job (0-100)'
     },
 
     /**
-     * Stage Progress
-     * Progress within the current stage (0-100)
+     * Current Stage
+     * Current processing stage
      */
-    stage_progress: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-      validate: {
-        min: 0,
-        max: 100
-      },
-      comment: 'Progress within the current stage (0-100)'
-    },
-
-    /**
-     * Stages Data
-     * Information about processing stages
-     * Structure: [
-     *   {
-     *     name: string,
-     *     label: string,
-     *     status: string,
-     *     progress: number,
-     *     startTime: timestamp,
-     *     endTime: timestamp,
-     *     duration: number,
-     *     error: object,
-     *     warnings: array,
-     *     metadata: object
-     *   }
-     * ]
-     */
-    stages_data: {
-      type: DataTypes.JSON,
+    current_stage: {
+      type: DataTypes.STRING,
       allowNull: true,
-      comment: 'Information about processing stages'
+      comment: 'Current processing stage'
+    },
+
+    /**
+     * Total Stages
+     * Total number of processing stages
+     */
+    total_stages: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: 'Total number of processing stages'
     },
 
     /**
      * Job Configuration
-     * Configuration used for this processing job
-     * Structure: {
-     *   processors: object,
-     *   plugins: object,
-     *   features: object,
-     *   options: object
-     * }
+     * Configuration and options for the processing job
      */
     job_config: {
       type: DataTypes.JSON,
       allowNull: true,
-      comment: 'Configuration used for this processing job'
+      comment: 'Configuration and options for the processing job'
     },
 
     /**
      * Input Metadata
-     * Metadata about the input file/content
-     * Structure: {
-     *   filename: string,
-     *   fileSize: number,
-     *   mimeType: string,
-     *   duration: number,
-     *   dimensions: object,
-     *   format: string
-     * }
+     * Metadata about the input file or URL
      */
     input_metadata: {
       type: DataTypes.JSON,
       allowNull: true,
-      comment: 'Metadata about the input file/content'
+      comment: 'Metadata about the input file or URL'
+    },
+
+    /**
+     * Processing Results
+     * Results and outputs from processing stages
+     */
+    processing_results: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Results and outputs from processing stages'
     },
 
     /**
      * Performance Metrics
-     * Performance tracking data
-     * Structure: {
-     *   processingSpeed: number,
-     *   memoryUsage: object,
-     *   cpuUsage: object,
-     *   diskUsage: object,
-     *   networkUsage: object,
-     *   estimatedTimeRemaining: number,
-     *   averageStageTime: number
-     * }
+     * Performance data and timing information
      */
     performance_metrics: {
       type: DataTypes.JSON,
       allowNull: true,
-      comment: 'Performance tracking data'
+      comment: 'Performance data and timing information'
     },
 
     /**
-     * Plugin Usage
-     * Information about plugins used in this job
-     * Structure: {
-     *   pluginsUsed: array,
-     *   fallbacksUsed: array,
-     *   apiCalls: object,
-     *   costs: object,
-     *   tokens: object
-     * }
+     * Error Details
+     * Error information if job failed
      */
-    plugin_usage: {
+    error_details: {
       type: DataTypes.JSON,
       allowNull: true,
-      comment: 'Information about plugins used in this job'
+      comment: 'Error information if job failed'
     },
 
     /**
-     * Error Data
-     * Error information and isolation data
-     * Structure: {
-     *   errors: array,
-     *   warnings: array,
-     *   retryAttempts: number,
-     *   circuitBreakerEvents: array,
-     *   recoveryAttempts: array
-     * }
+     * Retry Count
+     * Number of times job has been retried
      */
-    error_data: {
-      type: DataTypes.JSON,
-      allowNull: true,
-      comment: 'Error information and isolation data'
+    retry_count: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      comment: 'Number of times job has been retried'
     },
 
     /**
-     * Result Summary
-     * Summary of processing results
-     * Structure: {
-     *   audioAnalysisId: string,
-     *   videoAnalysisId: string,
-     *   imageAnalysisId: string,
-     *   thumbnailCount: number,
-     *   ocrResultCount: number,
-     *   speakerCount: number,
-     *   objectCount: number
-     * }
+     * Max Retries
+     * Maximum number of retry attempts
      */
-    result_summary: {
-      type: DataTypes.JSON,
-      allowNull: true,
-      comment: 'Summary of processing results'
+    max_retries: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 3,
+      comment: 'Maximum number of retry attempts'
     },
 
     /**
-     * Priority Level
+     * Priority
      * Job priority for queue management
      */
     priority: {
@@ -278,17 +224,7 @@ module.exports = (sequelize, DataTypes) => {
         min: 1,
         max: 10
       },
-      comment: 'Job priority for queue management (1=highest, 10=lowest)'
-    },
-
-    /**
-     * Queue Position
-     * Position in the processing queue
-     */
-    queue_position: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      comment: 'Position in the processing queue'
+      comment: 'Job priority for queue management (1-10, higher is more priority)'
     },
 
     /**
@@ -312,16 +248,6 @@ module.exports = (sequelize, DataTypes) => {
     },
 
     /**
-     * Duration
-     * Total processing duration in milliseconds
-     */
-    duration_ms: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      comment: 'Total processing duration in milliseconds'
-    },
-
-    /**
      * Estimated Completion
      * Estimated completion time
      */
@@ -332,13 +258,13 @@ module.exports = (sequelize, DataTypes) => {
     },
 
     /**
-     * Last Activity
-     * Timestamp of last activity/update
+     * Duration (milliseconds)
+     * Total processing duration in milliseconds
      */
-    last_activity: {
-      type: DataTypes.DATE,
+    duration_ms: {
+      type: DataTypes.BIGINT,
       allowNull: true,
-      comment: 'Timestamp of last activity/update'
+      comment: 'Total processing duration in milliseconds'
     },
 
     /**
@@ -349,53 +275,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
       comment: 'Identifier of the worker processing this job'
-    },
-
-    /**
-     * Retry Count
-     * Number of retry attempts for this job
-     */
-    retry_count: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-      comment: 'Number of retry attempts for this job'
-    },
-
-    /**
-     * Max Retries
-     * Maximum number of retry attempts allowed
-     */
-    max_retries: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 3,
-      comment: 'Maximum number of retry attempts allowed'
-    },
-
-    /**
-     * Error Message
-     * Error message if job failed
-     */
-    error_message: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'Error message if job failed'
-    },
-
-    /**
-     * Version
-     * Version of the processing system used
-     */
-    processing_version: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      comment: 'Version of the processing system used'
     }
   }, {
     tableName: 'processing_jobs',
     timestamps: true,
-    comment: 'Stores orchestrated multimedia processing job information and progress',
+    comment: 'Tracks multimedia analysis processing jobs and their status',
     
     indexes: [
       {
@@ -415,32 +299,16 @@ module.exports = (sequelize, DataTypes) => {
         fields: ['status']
       },
       {
-        name: 'idx_processing_jobs_type',
+        name: 'idx_processing_jobs_job_type',
         fields: ['job_type']
       },
       {
         name: 'idx_processing_jobs_priority',
-        fields: ['priority', 'createdAt']
+        fields: ['priority']
       },
       {
-        name: 'idx_processing_jobs_queue',
-        fields: ['status', 'queue_position']
-      },
-      {
-        name: 'idx_processing_jobs_worker',
-        fields: ['worker_id', 'status']
-      },
-      {
-        name: 'idx_processing_jobs_progress',
-        fields: ['progress']
-      },
-      {
-        name: 'idx_processing_jobs_activity',
-        fields: ['last_activity']
-      },
-      {
-        name: 'idx_processing_jobs_completion',
-        fields: ['completed_at']
+        name: 'idx_processing_jobs_status_priority',
+        fields: ['status', 'priority']
       }
     ]
   });
@@ -474,7 +342,7 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE'
     });
 
-    // ProcessingJob can have related analysis records
+    // ProcessingJob has analysis results
     ProcessingJob.hasOne(models.VideoAnalysis, { 
       foreignKey: 'processing_job_id',
       as: 'videoAnalysis',
@@ -511,15 +379,152 @@ module.exports = (sequelize, DataTypes) => {
     if (job.status === 'processing' && !job.started_at) {
       job.started_at = new Date();
     }
-
-    // Update duration if job is completed
-    if (job.completed_at && job.started_at) {
+    
+    // Calculate duration if both timestamps exist
+    if (job.started_at && job.completed_at && !job.duration_ms) {
       job.duration_ms = job.completed_at - job.started_at;
     }
-
-    // Update last activity
-    job.last_activity = new Date();
   });
+
+  /**
+   * Instance Methods
+   */
+
+  /**
+   * Update job progress
+   * @param {number} progress - Progress percentage (0-100)
+   * @param {string} stage - Optional current stage
+   */
+  ProcessingJob.prototype.updateProgress = function(progress, stage = null) {
+    this.progress = Math.min(100, Math.max(0, progress));
+    if (stage) this.current_stage = stage;
+    
+    if (progress >= 100) {
+      this.status = 'completed';
+      this.completed_at = new Date();
+    }
+    
+    return this.save();
+  };
+
+  /**
+   * Mark job as failed
+   * @param {string|Object} error - Error message or error object
+   */
+  ProcessingJob.prototype.markAsFailed = function(error) {
+    this.status = 'failed';
+    this.completed_at = new Date();
+    
+    if (typeof error === 'string') {
+      this.error_details = { message: error, timestamp: new Date().toISOString() };
+    } else {
+      this.error_details = {
+        message: error.message || 'Unknown error',
+        stack: error.stack,
+        timestamp: new Date().toISOString(),
+        ...error
+      };
+    }
+    
+    return this.save();
+  };
+
+  /**
+   * Get processing duration in seconds
+   * @returns {number|null} Duration in seconds
+   */
+  ProcessingJob.prototype.getDurationSeconds = function() {
+    if (!this.duration_ms) return null;
+    return Math.round(this.duration_ms / 1000);
+  };
+
+  /**
+   * Get formatted duration
+   * @returns {string} Formatted duration (HH:MM:SS)
+   */
+  ProcessingJob.prototype.getFormattedDuration = function() {
+    const seconds = this.getDurationSeconds();
+    if (!seconds) return 'N/A';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  /**
+   * Check if job can be retried
+   * @returns {boolean} True if job can be retried
+   */
+  ProcessingJob.prototype.canRetry = function() {
+    return this.status === 'failed' && this.retry_count < this.max_retries;
+  };
+
+  /**
+   * Class Methods
+   */
+
+  /**
+   * Get pending jobs for processing
+   * @param {number} limit - Maximum number of jobs to return
+   * @returns {Promise<Array>} Pending jobs ordered by priority
+   */
+  ProcessingJob.getPendingJobs = async function(limit = 10) {
+    return await this.findAll({
+      where: { status: 'pending' },
+      order: [
+        ['priority', 'DESC'],
+        ['createdAt', 'ASC']
+      ],
+      limit
+    });
+  };
+
+  /**
+   * Get job statistics
+   * @param {string} userId - Optional user ID to filter by
+   * @returns {Promise<Object>} Job statistics
+   */
+  ProcessingJob.getStatistics = async function(userId = null) {
+    const where = userId ? { user_id: userId } : {};
+    
+    const jobs = await this.findAll({ where });
+    
+    const stats = {
+      total: jobs.length,
+      byStatus: {},
+      byType: {},
+      byMediaType: {},
+      averageDuration: 0,
+      totalDuration: 0
+    };
+    
+    let totalDuration = 0;
+    let completedJobs = 0;
+    
+    jobs.forEach(job => {
+      // Count by status
+      stats.byStatus[job.status] = (stats.byStatus[job.status] || 0) + 1;
+      
+      // Count by type
+      stats.byType[job.job_type] = (stats.byType[job.job_type] || 0) + 1;
+      
+      // Count by media type
+      stats.byMediaType[job.media_type] = (stats.byMediaType[job.media_type] || 0) + 1;
+      
+      // Calculate duration
+      if (job.duration_ms) {
+        totalDuration += job.duration_ms;
+        completedJobs++;
+      }
+    });
+    
+    stats.totalDuration = totalDuration;
+    stats.averageDuration = completedJobs > 0 ? Math.round(totalDuration / completedJobs) : 0;
+    
+    return stats;
+  };
 
   return ProcessingJob;
 }; 
