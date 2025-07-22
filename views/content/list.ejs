@@ -257,6 +257,23 @@
           </div>
         </div>
         
+        <!-- Items per page -->
+        <div class="col-md-2">
+          <label for="filterLimit" class="form-label mb-0">Items per page</label>
+          <div class="input-group">
+            <select class="form-select" id="filterLimit" name="limit" onchange="this.form.submit()">
+              <option value="5" <%= (pagination && pagination.limit === 5) ? 'selected' : '' %>>5 items</option>
+              <option value="10" <%= (pagination && pagination.limit === 10) ? 'selected' : '' %>>10 items</option>
+              <option value="20" <%= (pagination && pagination.limit === 20) ? 'selected' : '' %>>20 items</option>
+              <option value="50" <%= (pagination && pagination.limit === 50) ? 'selected' : '' %>>50 items</option>
+              <option value="100" <%= (pagination && pagination.limit === 100) ? 'selected' : '' %>>100 items</option>
+            </select>
+            <button class="btn btn-outline-secondary clear-filter-btn" type="button" data-target="#filterLimit" title="Reset to 10">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
+        </div>
+        
         <div class="col-md-1">
           <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Filter</button>
         </div>
@@ -485,7 +502,7 @@
               <ul class="pagination mb-0">
                 <!-- Previous button -->
                 <li class="page-item <%= !pagination.hasPrev ? 'disabled' : '' %>">
-                  <a class="page-link" href="<%= pagination.hasPrev ? `?page=${pagination.prevPage}${tag ? '&tag=' + encodeURIComponent(tag) : ''}${from ? '&from=' + from : ''}${to ? '&to=' + to : ''}${search ? '&search=' + encodeURIComponent(search) : ''}${content_type && content_type !== 'all' ? '&content_type=' + encodeURIComponent(content_type) : ''}${status && status !== 'all' ? '&status=' + encodeURIComponent(status) : ''}` : '#' %>" 
+                                     <a class="page-link" href="<%= pagination.hasPrev ? pagination.buildUrl(pagination.prevPage) : '#' %>" 
                      aria-label="Previous" <%= !pagination.hasPrev ? 'tabindex="-1"' : '' %>>
                     <span aria-hidden="true">&laquo;</span>
                   </a>

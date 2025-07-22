@@ -229,10 +229,18 @@ router.get('/', isAuthenticated, async (req, res) => {
     console.log('DEBUG: SocialAccount model exists:', !!models.SocialAccount);
     console.log('DEBUG: Content model exists:', !!models.Content);
     
-    // ✨ ENHANCED PAGINATION: Get pagination parameters
+    // ✨ ENHANCED PAGINATION: Get pagination parameters with user-configurable limit
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10; // Show 10 items per page
+    let limit = parseInt(req.query.limit) || 10;
+    
+    // Validate and constrain limit to reasonable values
+    const allowedLimits = [5, 10, 20, 50, 100];
+    if (!allowedLimits.includes(limit)) {
+      limit = 10; // Default fallback
+    }
+    
     const offset = (page - 1) * limit;
+    console.log(`📄 Pagination settings: page=${page}, limit=${limit}, offset=${offset}`);
     
     // ✨ ENHANCED FILTERING: Get filter parameters
     let { tag, from, to, search, content_type, status } = req.query;
@@ -756,6 +764,19 @@ router.get('/', isAuthenticated, async (req, res) => {
         search: search || '',
         content_type: content_type || 'all',
         status: status || 'all'
+      },
+      // Helper function to build pagination URLs
+      buildUrl: function(pageNum) {
+        const params = new URLSearchParams();
+        params.set('page', pageNum);
+        if (tag) params.set('tag', tag);
+        if (from) params.set('from', from);
+        if (to) params.set('to', to);
+        if (search) params.set('search', search);
+        if (content_type && content_type !== 'all') params.set('content_type', content_type);
+        if (status && status !== 'all') params.set('status', status);
+        if (limit && limit !== 10) params.set('limit', limit);
+        return '?' + params.toString();
       }
     };
     

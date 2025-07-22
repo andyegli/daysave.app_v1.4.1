@@ -41,6 +41,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const tagInput = document.getElementById('filterTag');
   const fromDate = document.getElementById('filterFrom');
   const toDate = document.getElementById('filterTo');
+  const searchInput = document.getElementById('filterSearch');
+  const contentTypeSelect = document.getElementById('filterContentType');
+  const statusSelect = document.getElementById('filterStatus');
+  const limitSelect = document.getElementById('filterLimit');
   
   console.log('DEBUG: Tag input element:', tagInput);
   console.log('DEBUG: From date element:', fromDate);
@@ -108,12 +112,26 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('DEBUG: Clear All Filters button clicked');
       
       // Clear all filter inputs
-      const filterInputs = ['#filterTag', '#filterFrom', '#filterTo'];
+      const filterInputs = ['#filterTag', '#filterFrom', '#filterTo', '#filterSearch'];
       filterInputs.forEach(selector => {
         const input = document.querySelector(selector);
         if (input) {
           input.value = '';
           console.log('DEBUG: Cleared input:', selector);
+        }
+      });
+      
+      // Reset select dropdowns to default values
+      const selectInputs = [
+        { selector: '#filterContentType', value: 'all' },
+        { selector: '#filterStatus', value: 'all' },
+        { selector: '#filterLimit', value: '10' }
+      ];
+      selectInputs.forEach(({ selector, value }) => {
+        const select = document.querySelector(selector);
+        if (select) {
+          select.value = value;
+          console.log('DEBUG: Reset select:', selector, 'to:', value);
         }
       });
       
@@ -124,6 +142,71 @@ document.addEventListener('DOMContentLoaded', function() {
   } else {
     console.log('DEBUG: Clear All Filters button not found');
   }
+  
+  // ✨ ITEMS PER PAGE: Handle limit changes with user feedback
+  if (limitSelect) {
+    console.log('DEBUG: Setting up limit select functionality');
+    
+    limitSelect.addEventListener('change', function() {
+      console.log('DEBUG: Items per page changed to:', this.value);
+      
+      // Show loading indicator
+      const form = document.getElementById('filterForm');
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      
+      // Provide user feedback
+      submitBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Loading...';
+      submitBtn.disabled = true;
+      
+      // Add CSS animation for loading
+      submitBtn.style.transition = 'all 0.3s ease';
+      
+      // Reset to page 1 when changing items per page (users expect to see the first page)
+      const pageInput = form.querySelector('input[name="page"]');
+      if (pageInput) {
+        pageInput.value = '1';
+        console.log('DEBUG: Reset to page 1 due to limit change');
+      }
+      
+      // Submit form after a brief delay for better UX
+      setTimeout(() => {
+        console.log('DEBUG: Submitting form with new limit');
+        form.submit();
+      }, 100);
+    });
+  } else {
+    console.log('DEBUG: Limit select element not found');
+  }
+  
+  // Individual filter reset buttons (for specific filters)
+  document.addEventListener('click', function(e) {
+    const clearBtn = e.target.closest('.clear-filter-btn');
+    if (!clearBtn) return;
+    
+    e.preventDefault();
+    const targetSelector = clearBtn.getAttribute('data-target');
+    const targetElement = document.querySelector(targetSelector);
+    
+    if (targetElement) {
+      console.log('DEBUG: Clearing individual filter:', targetSelector);
+      
+      if (targetElement.tagName === 'SELECT') {
+        // Handle select dropdowns with appropriate default values
+        if (targetSelector === '#filterLimit') {
+          targetElement.value = '10';
+        } else if (targetSelector === '#filterContentType' || targetSelector === '#filterStatus') {
+          targetElement.value = 'all';
+        }
+      } else {
+        // Handle input fields
+        targetElement.value = '';
+      }
+      
+      // Auto-submit form for instant feedback
+      targetElement.dispatchEvent(new Event('change'));
+    }
+  });
   
   console.log('DEBUG: Content filters setup complete');
 }); 
