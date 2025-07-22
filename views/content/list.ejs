@@ -100,12 +100,12 @@
     
     /* Transcription text flow improvements */
     .transcription-text {
-      display: block;
       width: 100%;
       white-space: normal;
       word-wrap: break-word;
       overflow-wrap: break-word;
       hyphens: auto;
+      /* Note: display is handled inline for line-clamp functionality */
     }
     
     /* Brain icon styling */
@@ -260,7 +260,7 @@
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>">
                         <div class="position-relative">
                           <div class="transcription-preview bg-light p-2 rounded small">
-                            <div class="transcription-text text-dark" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4;">
+                            <div class="transcription-text text-dark" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; max-height: 5.6em;">
                               <%= item.summary %>
                             </div>
                           </div>
