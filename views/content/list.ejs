@@ -637,10 +637,20 @@
         container.style.lineHeight = '1.6';
         container.style.fontSize = '0.85rem';
         
-        element.style.lineHeight = '1.6';
-        element.style.fontSize = '0.85rem';
-        element.style.height = 'auto';
-        element.style.display = 'block';
+        // Completely reset the text element to allow natural flow
+        element.style.cssText = `
+          display: block !important;
+          line-height: 1.6 !important;
+          font-size: 0.85rem !important;
+          height: auto !important;
+          max-height: none !important;
+          overflow: visible !important;
+          white-space: normal !important;
+          word-wrap: break-word !important;
+          text-overflow: unset !important;
+          -webkit-line-clamp: unset !important;
+          -webkit-box-orient: unset !important;
+        `;
         
         console.log(`📏 Container height set to: ${maxHeight}px`);
         console.log(`📏 Element scrollHeight: ${element.scrollHeight}px`);
