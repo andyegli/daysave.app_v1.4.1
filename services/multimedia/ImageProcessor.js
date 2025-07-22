@@ -135,13 +135,18 @@ class ImageProcessor extends BaseMediaProcessor {
 
       // Object detection (if enabled)
       if (options.enableObjectDetection) {
+        console.log(`🔍 DEBUG: Starting object detection...`);
         try {
           const objects = await this.detectObjects(filePath, options.objectDetectionOptions || this.config.objectDetectionOptions);
+          console.log(`🔍 DEBUG: Object detection completed - found ${objects.length} objects:`, objects);
           results.results.objects = objects;
           this.updateProgress(40, `Found ${objects.length} objects`);
         } catch (error) {
+          console.log(`❌ DEBUG: Object detection failed:`, error);
           this.addWarning(results, 'Failed to detect objects', 'object_detection');
         }
+      } else {
+        console.log(`⚠️ DEBUG: Object detection skipped - enableObjectDetection: ${options.enableObjectDetection}`);
       }
 
       // OCR text extraction (if enabled)
@@ -157,17 +162,23 @@ class ImageProcessor extends BaseMediaProcessor {
 
       // Generate comprehensive image description (if enabled)
       if (options.enableDescriptionGeneration && this.openai) {
+        console.log(`🤖 DEBUG: Starting AI description generation...`);
+        console.log(`🤖 DEBUG: OpenAI client available:`, !!this.openai);
         try {
           const description = await this.generateImageDescription(filePath, {
             objects: results.results.objects,
             ocrText: results.results.ocrText
           });
+          console.log(`🤖 DEBUG: AI description generated:`, description);
           results.results.description = description;
           results.results.transcription = description; // For consistency with other content types
           this.updateProgress(75, 'Image description generated');
         } catch (error) {
+          console.log(`❌ DEBUG: AI description generation failed:`, error);
           this.addWarning(results, 'Failed to generate description', 'description_generation');
         }
+      } else {
+        console.log(`⚠️ DEBUG: AI description skipped - enableDescriptionGeneration: ${options.enableDescriptionGeneration}, openai: ${!!this.openai}`);
       }
 
       // Generate thumbnails (if enabled)
@@ -198,20 +209,38 @@ class ImageProcessor extends BaseMediaProcessor {
 
       // Generate content tags (if enabled and description available)
       if (options.enableTagGeneration && this.openai && results.results.description) {
+        console.log(`🏷️ DEBUG: Starting tag generation...`);
         try {
           const tags = await this.generateContentTags({
             objects: results.results.objects,
             description: results.results.description,
             ocrText: results.results.ocrText
           });
+          console.log(`🏷️ DEBUG: Tags generated:`, tags);
           results.results.tags = tags;
           this.updateProgress(95, 'Content tags generated');
         } catch (error) {
+          console.log(`❌ DEBUG: Tag generation failed:`, error);
           this.addWarning(results, 'Failed to generate tags', 'tag_generation');
         }
+      } else {
+        console.log(`⚠️ DEBUG: Tag generation skipped - enableTagGeneration: ${options.enableTagGeneration}, openai: ${!!this.openai}, description: ${!!results.results.description}`);
       }
 
       this.updateProgress(100, 'Image processing completed');
+      
+      console.log(`🔧 DEBUG: Final ImageProcessor results:`, {
+        hasObjects: !!results.results.objects,
+        objectCount: results.results.objects?.length || 0,
+        hasDescription: !!results.results.description,
+        descriptionLength: results.results.description?.length || 0,
+        hasTags: !!results.results.tags,
+        tagCount: results.results.tags?.length || 0,
+        hasOcrText: !!results.results.ocrText,
+        ocrTextLength: results.results.ocrText?.length || 0,
+        resultKeys: Object.keys(results.results)
+      });
+      
       return this.finalizeResults(results);
 
     } catch (error) {
@@ -778,7 +807,7 @@ Return only the extracted text, preserving original formatting and line breaks w
           user_id: userId,
           file_path: thumbnailPath,
           file_name: path.basename(thumbnailPath), // FIX: Add required file_name field
-          thumbnail_type: 'image',
+          thumbnail_type: 'main',
           thumbnail_size: size,
           created_at: new Date(),
           expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
