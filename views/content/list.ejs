@@ -240,7 +240,7 @@
                       <% if (item.metadata && item.metadata.thumbnail) { %>
                         <img src="<%= item.metadata.thumbnail %>" class="img-fluid" alt="<%= item.displayTitle %>" 
                              style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;"
-                             onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<i class=\'<%= item.sourceInfo.logo %> fs-1\' style=\'color: <%= item.sourceInfo.color %>\'></i>';">
+                             data-fallback="true" data-fallback-icon="<%= item.sourceInfo.logo %>" data-fallback-color="<%= item.sourceInfo.color %>">
                       <% } else { %>
                         <i class="<%= item.sourceInfo.logo %> fs-1" style="color: <%= item.sourceInfo.color %>"></i>
                       <% } %>
@@ -250,12 +250,12 @@
                     <% if (item.metadata && item.metadata.thumbnail) { %>
                       <a href="<%= item.url %>" target="_blank" rel="noopener noreferrer">
                         <img src="<%= item.metadata.thumbnail %>" class="img-fluid" alt="Thumbnail" 
-                             onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<i class=\'bi bi-file-earmark-text fs-1 text-secondary\'></i>';">
+                             data-fallback="true" data-fallback-icon="bi-file-earmark-text" data-fallback-color="#6c757d">
                       </a>
                     <% } else if (item.url && item.url.match(/\.(jpg|jpeg|png|gif)$/i)) { %>
                       <a href="<%= item.url %>" target="_blank" rel="noopener noreferrer">
                         <img src="<%= item.url %>" class="img-fluid" alt="Thumbnail"
-                             onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<i class=\'bi bi-file-earmark-text fs-1 text-secondary\'></i>';">
+                             data-fallback="true" data-fallback-icon="bi-file-earmark-text" data-fallback-color="#6c757d">
                       </a>
                     <% } else { %>
                       <a href="<%= item.url %>" target="_blank" rel="noopener noreferrer">
@@ -663,106 +663,8 @@
   <script src="/js/ai-analysis.js?v=<%= Date.now() %>"></script>
   <script src="/js/content-tags-modal.js?v=<%= Date.now() %>"></script>
   
-  <script>
-    // Force 4-line text display with JavaScript fallback
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('🔧 4-line fix script started');
-      
-      const transcriptionTexts = document.querySelectorAll('.force-4-lines .text-content');
-      console.log('🔍 Found transcription texts:', transcriptionTexts.length);
-      
-      transcriptionTexts.forEach(function(element, index) {
-        console.log(`🎯 Processing element ${index + 1}:`, element);
-        
-        const originalText = element.textContent.trim();
-        const container = element.parentElement;
-        
-        console.log(`📝 Original text length: ${originalText.length}`);
-        console.log(`📝 Text preview: "${originalText.substring(0, 100)}..."`);
-        
-        // AGGRESSIVELY remove any existing line-clamp CSS from all related elements
-        const allRelatedElements = [element, container, element.parentElement, element.parentElement?.parentElement];
-        allRelatedElements.forEach(el => {
-          if (el) {
-            el.style.display = 'block';
-            el.style.webkitLineClamp = 'unset';
-            el.style.webkitBoxOrient = 'unset';
-            el.style.webkitBox = 'unset';
-            el.style.textOverflow = 'unset';
-            el.classList.remove('line-clamp-2', 'line-clamp-1', 'line-clamp-3');
-          }
-        });
-        
-        // Set up the container with proper styling
-        const lineHeight = 22; // 1.6 * 13.6px (0.85rem)
-        const maxHeight = lineHeight * 4; // 88px for 4 lines
-        
-        container.style.height = maxHeight + 'px';
-        container.style.minHeight = maxHeight + 'px';
-        container.style.maxHeight = maxHeight + 'px';
-        container.style.overflow = 'hidden';
-        container.style.lineHeight = '1.6';
-        container.style.fontSize = '0.85rem';
-        
-        // Completely reset the text element to allow natural flow
-        element.style.cssText = `
-          display: block !important;
-          line-height: 1.6 !important;
-          font-size: 0.85rem !important;
-          height: auto !important;
-          max-height: none !important;
-          overflow: visible !important;
-          white-space: normal !important;
-          word-wrap: break-word !important;
-          text-overflow: unset !important;
-          -webkit-line-clamp: unset !important;
-          -webkit-box-orient: unset !important;
-        `;
-        
-        console.log(`📏 Container height set to: ${maxHeight}px`);
-        console.log(`📏 Element scrollHeight: ${element.scrollHeight}px`);
-        
-        if (element.scrollHeight > maxHeight) {
-          console.log(`✂️ Text needs truncation. ScrollHeight: ${element.scrollHeight}px > MaxHeight: ${maxHeight}px`);
-          
-          // Text is longer than 4 lines, we need to truncate
-          let testText = originalText;
-          let lastGoodText = originalText;
-          let iterations = 0;
-          const maxIterations = 50;
-          
-          // Binary search to find the maximum text that fits in 4 lines
-          while (testText.length > 0 && iterations < maxIterations) {
-            iterations++;
-            element.textContent = testText + '...';
-            
-            console.log(`🔄 Iteration ${iterations}: Testing text length ${testText.length}, scrollHeight: ${element.scrollHeight}px`);
-            
-            if (element.scrollHeight <= maxHeight) {
-              lastGoodText = testText + '...';
-              console.log(`✅ Found good text at length: ${testText.length}`);
-              break;
-            }
-            
-            // Remove words from the end
-            const words = testText.split(' ');
-            if (words.length <= 1) break;
-            words.pop();
-            testText = words.join(' ');
-          }
-          
-          element.textContent = lastGoodText;
-          console.log(`🎯 Final text set: "${lastGoodText.substring(0, 100)}..."`);
-        } else {
-          console.log(`✅ Text fits in ${maxHeight}px without truncation`);
-        }
-        
-        console.log(`📊 Final element scrollHeight: ${element.scrollHeight}px`);
-      });
-      
-      console.log('✅ 4-line fix script completed');
-    });
-  </script>
+  <!-- Content List Enhancements moved to external file for CSP compliance -->
+  <script src="/js/content-list-enhancements.js?v=<%= Date.now() %>"></script>
   
   <style>
     /* ULTRA-AGGRESSIVE 4-line forcing CSS with maximum specificity */
