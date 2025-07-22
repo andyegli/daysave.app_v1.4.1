@@ -4,264 +4,509 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>File Management - DaySave</title>
+  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    .content-card {
+      transition: box-shadow 0.2s;
+      border-radius: 1rem;
+      overflow: hidden;
+      min-height: 180px;
+      background: #fff;
+    }
+    .content-card:hover {
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    .content-card .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+      max-width: 100%;
+      margin-right: 8px;
+    }
+    .content-card .card-title:hover {
+      color: #0d6efd;
+    }
+    .content-card .card-text {
+      font-size: 0.95rem;
+    }
+    .content-card .badge {
+      font-size: 0.85rem;
+      margin-right: 0.2rem;
+    }
+    
+    /* Compact button styling */
+    .content-card .btn-sm {
+      padding: 0.2rem 0.4rem;
+      font-size: 0.8rem;
+      border-width: 1px;
+      min-width: 28px;
+      height: 28px;
+    }
+    
+    @media (max-width: 768px) {
+      .content-card .card-title { 
+        -webkit-line-clamp: 3;
+        font-size: 1rem;
+        margin-right: 4px;
+      }
+      .content-card { min-height: 140px; }
+      .content-card .btn-sm {
+        min-width: 24px;
+        height: 24px;
+        padding: 0.1rem 0.3rem;
+      }
+    }
+    .content-card .flex-shrink-0 {
+      min-width: 60px;
+      max-width: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .content-card .img-fluid {
+      border-radius: 0.5rem;
+      max-height: 80px;
+      object-fit: cover;
+    }
+    
+    /* Transcription Summary Styles */
+    .transcription-summary {
+      border-left: 3px solid #0d6efd;
+      padding-left: 8px;
+      margin-left: 4px;
+    }
+    
+    .transcription-preview {
+      background-color: #f8f9fa !important;
+      border: 1px solid #e9ecef;
+      font-size: 0.85rem;
+    }
+    
+    .transcription-preview:hover {
+      background-color: #e9ecef !important;
+    }
+    
+    /* Transcription text flow improvements */
+    .transcription-text {
+      width: 100% !important;
+      white-space: normal !important;
+      word-wrap: break-word !important;
+      overflow-wrap: break-word !important;
+      hyphens: auto !important;
+    }
+
+    /* Force 4-line display for transcription text */
+    .transcription-text[style*="-webkit-line-clamp"] {
+      display: -webkit-box !important;
+      -webkit-box-orient: vertical !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+
+    /* Ultra-specific 4-line class - highest priority with ID specificity */
+    .content-card .transcription-preview .transcription-text,
+    .content-card .transcription-text.force-4-lines,
+    div[id*="transcription-summary"] .transcription-text {
+      display: -webkit-box !important;
+      -webkit-line-clamp: 4 !important;
+      -webkit-box-orient: vertical !important;
+      overflow: hidden !important;
+      line-height: 1.6 !important;
+      min-height: 88px !important;
+      max-height: 88px !important;
+      white-space: normal !important;
+      text-overflow: ellipsis !important;
+      word-wrap: break-word !important;
+      font-size: 0.85rem !important;
+      height: 88px !important;
+    }
+    
+    /* AI Analysis button styling */
+    .ai-analysis-btn .bi-brain {
+      font-size: 1rem;
+      color: #6f42c1;
+    }
+    
+    .ai-analysis-btn:hover .bi-brain {
+      color: #fff;
+    }
+    
+    .ai-analysis-btn.btn-info .bi-brain {
+      color: #fff;
+    }
+  </style>
 </head>
 <body>
   <%- include('../partials/header', {title: title}) %>
 
-<div class="container-fluid mt-4">
-  <div class="row">
-    <div class="col-12">
-      <!-- Page Header -->
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h2><i class="fas fa-folder-open text-primary"></i> File Management</h2>
-          <p class="text-muted mb-0">Upload, organize, and manage your files</p>
-        </div>
-        <div>
-          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
-            <i class="fas fa-cloud-upload-alt"></i> Upload Files
-          </button>
-        </div>
-      </div>
+<div class="container mt-5">
+  <h2 class="fw-bold mb-4">File Management</h2>
 
-      <!-- Statistics Cards -->
-      <div class="row mb-4">
-        <div class="col-md-3">
-          <div class="card bg-primary text-white">
-            <div class="card-body">
-              <div class="d-flex justify-content-between">
-                <div>
-                  <h5 class="card-title">Total Files</h5>
-                  <h3 class="mb-0"><%= stats.totalFiles || 0 %></h3>
-                </div>
-                <div class="align-self-center">
-                  <i class="fas fa-file fa-2x opacity-50"></i>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card bg-success text-white">
-            <div class="card-body">
-              <div class="d-flex justify-content-between">
-                <div>
-                  <h5 class="card-title">Total Size</h5>
-                  <h3 class="mb-0"><%= ((stats.totalSize || 0) / 1024 / 1024).toFixed(1) %> MB</h3>
-                </div>
-                <div class="align-self-center">
-                  <i class="fas fa-hdd fa-2x opacity-50"></i>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card bg-info text-white">
-            <div class="card-body">
-              <div class="d-flex justify-content-between">
-                <div>
-                  <h5 class="card-title">Cloud Files</h5>
-                  <h3 class="mb-0"><%= stats.cloudFiles || 0 %></h3>
-                </div>
-                <div class="align-self-center">
-                  <i class="fas fa-cloud fa-2x opacity-50"></i>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card bg-warning text-white">
-            <div class="card-body">
-              <div class="d-flex justify-content-between">
-                <div>
-                  <h5 class="card-title">Local Files</h5>
-                  <h3 class="mb-0"><%= stats.localFiles || 0 %></h3>
-                </div>
-                <div class="align-self-center">
-                  <i class="fas fa-server fa-2x opacity-50"></i>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+  <!-- Upload Button -->
+  <div class="mb-3">
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadModal">
+      <i class="bi bi-cloud-upload"></i> Upload Files
+    </button>
+  </div>
 
-      <!-- Upload Success/Error Messages -->
-      <% if (typeof uploadSuccess !== 'undefined' && uploadSuccess) { %>
-      <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="fas fa-check-circle"></i> <%= uploadSuccess %>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-      <% } %>
-
-      <% if (typeof uploadErrors !== 'undefined' && uploadErrors && uploadErrors.length > 0) { %>
-      <div class="alert alert-warning alert-dismissible fade show" role="alert">
-        <i class="fas fa-exclamation-triangle"></i> Some files failed to upload:
-        <ul class="mb-0 mt-2">
-          <% uploadErrors.forEach(error => { %>
-          <li><strong><%= error.filename %>:</strong> <%= error.errors.join(', ') %></li>
-          <% }) %>
-        </ul>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-      <% } %>
-
-      <!-- Search and Filter Bar -->
-      <div class="card mb-4">
+  <!-- Statistics Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card bg-primary text-white">
         <div class="card-body">
-          <form method="GET" action="/files" class="row g-3">
-            <div class="col-md-6">
-              <label for="search" class="form-label">Search Files</label>
-              <div class="input-group">
-                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                <input type="text" class="form-control" id="search" name="search" 
-                       placeholder="Search by filename or comments..." value="<%= search %>">
-              </div>
+          <div class="d-flex justify-content-between">
+            <div>
+              <h5 class="card-title">Total Files</h5>
+              <h3 class="mb-0"><%= stats.totalFiles || 0 %></h3>
             </div>
-            <div class="col-md-3">
-              <label for="type" class="form-label">File Type</label>
-              <select class="form-select" id="type" name="type">
-                <option value="">All Types</option>
-                <option value="image" <%= selectedType === 'image' ? 'selected' : '' %>>Images</option>
-                <option value="audio" <%= selectedType === 'audio' ? 'selected' : '' %>>Audio</option>
-                <option value="video" <%= selectedType === 'video' ? 'selected' : '' %>>Video</option>
-                <option value="application" <%= selectedType === 'application' ? 'selected' : '' %>>Documents</option>
-              </select>
-            </div>
-            <div class="col-md-3 d-flex align-items-end">
-              <button type="submit" class="btn btn-outline-primary me-2">
-                <i class="fas fa-filter"></i> Filter
-              </button>
-              <a href="/files" class="btn btn-outline-secondary">
-                <i class="fas fa-times"></i> Clear
-              </a>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <!-- Files Grid -->
-      <% if (files && files.length > 0) { %>
-      <div class="row">
-        <% files.forEach(file => { %>
-        <div class="col-md-4 col-lg-3 mb-4">
-          <div class="card h-100" data-item-type="file" data-content-id="<%= file.id %>">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <div class="d-flex align-items-center">
-                <% 
-                let icon = 'fas fa-file';
-                let iconColor = 'text-secondary';
-                if (file.metadata && file.metadata.mimetype) {
-                  if (file.metadata.mimetype.startsWith('image/')) {
-                    icon = 'fas fa-image';
-                    iconColor = 'text-success';
-                  } else if (file.metadata.mimetype.startsWith('audio/')) {
-                    icon = 'fas fa-music';
-                    iconColor = 'text-primary';
-                  } else if (file.metadata.mimetype.startsWith('video/')) {
-                    icon = 'fas fa-video';
-                    iconColor = 'text-danger';
-                  } else if (file.metadata.mimetype.includes('pdf')) {
-                    icon = 'fas fa-file-pdf';
-                    iconColor = 'text-danger';
-                  } else if (file.metadata.mimetype.includes('text')) {
-                    icon = 'fas fa-file-alt';
-                    iconColor = 'text-info';
-                  }
-                }
-                %>
-                <i class="<%= icon %> <%= iconColor %> me-2"></i>
-                <span class="text-truncate" style="max-width: 150px;" title="<%= file.filename %>">
-                  <%= file.filename %>
-                </span>
-              </div>
-              <div class="dropdown">
-                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
-                        data-bs-toggle="dropdown">
-                  <i class="fas fa-ellipsis-v"></i>
-                </button>
-                <ul class="dropdown-menu">
-                  <li><a class="dropdown-item" href="/files/<%= file.id %>">
-                    <i class="fas fa-eye"></i> View Details
-                  </a></li>
-                  <% 
-                  // Check if file is multimedia and could have AI analysis
-                  let isMultimedia = false;
-                  if (file.metadata && file.metadata.mimetype) {
-                    isMultimedia = file.metadata.mimetype.startsWith('image/') || 
-                                   file.metadata.mimetype.startsWith('audio/') || 
-                                   file.metadata.mimetype.startsWith('video/');
-                  }
-                  %>
-                  <% if (isMultimedia) { %>
-                  <li><a class="dropdown-item text-primary" href="#" onclick="showAIAnalysis('<%= file.id %>')">
-                    <i class="fas fa-robot"></i> AI Analysis Report
-                  </a></li>
-                  <% } %>
-                  <li><a class="dropdown-item" href="#" onclick="editFile('<%= file.id %>')">
-                    <i class="fas fa-edit"></i> Edit
-                  </a></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item text-danger delete-file-btn" href="#" data-file-id="<%= file.id %>" data-filename="<%= file.filename %>">
-                    <i class="fas fa-trash"></i> Delete
-                  </a></li>
-                </ul>
-              </div>
-            </div>
-            <div class="card-body">
-              <% if (file.metadata && file.metadata.mimetype && file.metadata.mimetype.startsWith('image/')) { %>
-              <div class="text-center mb-3">
-                <div class="file-preview bg-light rounded" style="height: 120px; display: flex; align-items: center; justify-content: center;">
-                  <i class="fas fa-image fa-3x text-muted"></i>
-                </div>
-              </div>
-              <% } %>
-              
-              <div class="small text-muted mb-2">
-                <div><strong>Size:</strong> <%= file.metadata && file.metadata.size ? (file.metadata.size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown' %></div>
-                <div><strong>Type:</strong> <%= file.metadata && file.metadata.mimetype ? file.metadata.mimetype : 'Unknown' %></div>
-                <div><strong>Storage:</strong> 
-                  <% if (file.metadata && file.metadata.storage === 'gcs') { %>
-                    <span class="badge bg-primary">Cloud</span>
-                  <% } else { %>
-                    <span class="badge bg-secondary">Local</span>
-                  <% } %>
-                </div>
-                <div><strong>Uploaded:</strong> <%= new Date(file.createdAt).toLocaleDateString() %></div>
-              </div>
-
-              <% if (file.user_tags && file.user_tags.length > 0) { %>
-              <div class="mb-2">
-                <% file.user_tags.forEach(tag => { %>
-                <span class="badge bg-info me-1"><%= tag %></span>
-                <% }) %>
-              </div>
-              <% } %>
-
-              <% if (file.user_comments) { %>
-              <div class="small text-muted">
-                <strong>Comments:</strong> 
-                <span class="text-truncate d-block" title="<%= file.user_comments %>">
-                  <%= file.user_comments.length > 50 ? file.user_comments.substring(0, 50) + '...' : file.user_comments %>
-                </span>
-              </div>
-              <% } %>
+            <div class="align-self-center">
+              <i class="bi bi-files fa-2x opacity-50"></i>
             </div>
           </div>
         </div>
-        <% }) %>
       </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-success text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h5 class="card-title">Total Size</h5>
+              <h3 class="mb-0"><%= ((stats.totalSize || 0) / 1024 / 1024).toFixed(1) %> MB</h3>
+            </div>
+            <div class="align-self-center">
+              <i class="bi bi-hdd fa-2x opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-info text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h5 class="card-title">Cloud Files</h5>
+              <h3 class="mb-0"><%= stats.cloudFiles || 0 %></h3>
+            </div>
+            <div class="align-self-center">
+              <i class="bi bi-cloud fa-2x opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-warning text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h5 class="card-title">Local Files</h5>
+              <h3 class="mb-0"><%= stats.localFiles || 0 %></h3>
+            </div>
+            <div class="align-self-center">
+              <i class="bi bi-server fa-2x opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-      <!-- Pagination -->
-      <% if (pagination.total > 1) { %>
+  <!-- Upload Success/Error Messages -->
+  <% if (typeof uploadSuccess !== 'undefined' && uploadSuccess) { %>
+  <div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle"></i> <%= uploadSuccess %>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  <% } %>
+
+  <% if (typeof uploadErrors !== 'undefined' && uploadErrors && uploadErrors.length > 0) { %>
+  <div class="alert alert-warning alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle"></i> Some files failed to upload:
+    <ul class="mb-0 mt-2">
+      <% uploadErrors.forEach(error => { %>
+      <li><strong><%= error.filename %>:</strong> <%= error.errors.join(', ') %></li>
+      <% }) %>
+    </ul>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  <% } %>
+
+  <!-- Search and Filter Bar -->
+  <div class="card mb-4 p-3">
+    <form method="GET" action="/files" class="row g-2 align-items-end">
+      <div class="col-md-6">
+        <label for="search" class="form-label mb-0">Search Files</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control" id="search" name="search" 
+                 placeholder="Search by filename or comments..." value="<%= search %>">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label for="type" class="form-label mb-0">File Type</label>
+        <select class="form-select" id="type" name="type">
+          <option value="">All Types</option>
+          <option value="image" <%= selectedType === 'image' ? 'selected' : '' %>>Images</option>
+          <option value="audio" <%= selectedType === 'audio' ? 'selected' : '' %>>Audio</option>
+          <option value="video" <%= selectedType === 'video' ? 'selected' : '' %>>Video</option>
+          <option value="application" <%= selectedType === 'application' ? 'selected' : '' %>>Documents</option>
+        </select>
+      </div>
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-outline-primary">
+          <i class="bi bi-funnel"></i> Filter
+        </button>
+        <a href="/files" class="btn btn-outline-secondary">
+          <i class="bi bi-x-circle"></i> Clear
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Files Grid with Content Card Style -->
+  <% if (files && files.length > 0) { %>
+  <div class="row row-cols-1 g-4" id="fileCardsGrid">
+    <% files.forEach(function(file) { 
+      // Function to get file source info
+      function getFileSourceInfo(file) {
+        const fileType = file.metadata?.mimetype || '';
+        let sourceInfo = { source: 'File Upload', logo: 'bi-cloud-upload', color: '#6c757d' };
+
+        if (fileType.startsWith('image/')) {
+          sourceInfo = { source: 'Image', logo: 'bi-image', color: '#fd7e14' };
+        } else if (fileType.startsWith('video/')) {
+          sourceInfo = { source: 'Video', logo: 'bi-camera-video', color: '#dc3545' };
+        } else if (fileType.startsWith('audio/')) {
+          sourceInfo = { source: 'Audio', logo: 'bi-music-note', color: '#20c997' };
+        } else if (fileType.includes('pdf')) {
+          sourceInfo = { source: 'PDF', logo: 'bi-file-pdf', color: '#dc3545' };
+        } else if (fileType.includes('text')) {
+          sourceInfo = { source: 'Text', logo: 'bi-file-text', color: '#0dcaf0' };
+        }
+        return sourceInfo;
+      }
+
+      // Function to get display title
+      function getFileTitle(file) {
+        if (file.generated_title && file.generated_title.trim()) {
+          return file.generated_title;
+        }
+        if (file.metadata && file.metadata.title) {
+          return file.metadata.title;
+        }
+        return file.filename.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      }
+
+      const sourceInfo = getFileSourceInfo(file);
+      const displayTitle = getFileTitle(file);
+      const isMultimedia = file.metadata?.mimetype && 
+        (file.metadata.mimetype.startsWith('image/') || 
+         file.metadata.mimetype.startsWith('audio/') || 
+         file.metadata.mimetype.startsWith('video/'));
+    %>
+    <div class="col">
+      <div class="card h-100 shadow-sm content-card flex-row flex-wrap" data-id="<%= file.id %>" data-item-type="file" style="min-height:unset;">
+        
+        <!-- Thumbnail -->
+        <div class="flex-shrink-0 d-flex align-items-center justify-content-center bg-light" style="width: 90px; height: 90px; overflow: hidden;">
+          <a href="/files/<%= file.id %>" target="_blank" rel="noopener noreferrer" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+            <% if (file.metadata?.mimetype?.startsWith('image/')) { %>
+              <img src="/files/serve/<%= file.user_id %>/<%= encodeURIComponent(file.filename) %>" class="img-fluid" alt="<%= displayTitle %>" 
+                   style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;"
+                   data-fallback="true" data-fallback-icon="<%= sourceInfo.logo %>" data-fallback-color="<%= sourceInfo.color %>">
+            <% } else { %>
+              <i class="<%= sourceInfo.logo %> fs-1" style="color: <%= sourceInfo.color %>"></i>
+            <% } %>
+          </a>
+        </div>
+
+        <!-- Card Body -->
+        <div class="flex-grow-1 d-flex flex-row p-3 align-items-stretch">
+          <!-- Main Content (title, comment, summary) -->
+          <div class="flex-grow-1 d-flex flex-column justify-content-between" style="min-width: 0; flex: 1 1 auto; max-width: calc(100% - 220px);">
+            <div>
+              <h5 class="card-title mb-1" title="<%= displayTitle %>"
+                data-bs-toggle="modal" data-bs-target="#viewFileModal" data-id="<%= file.id %>">
+                <%= displayTitle %>
+              </h5>
+              <% const comment = file.user_comments || ''; %>
+              <p class="card-text mb-2 text-muted small" style="white-space:normal; overflow-wrap:break-word;" title="<%= comment %>">
+                <%= comment.length > 200 ? comment.slice(0, 200) + '...' : comment %>
+                <% if (comment.length > 200) { %>
+                  <a href="#" class="show-full-comment" data-id="<%= file.id %>">Show more</a>
+                <% } %>
+              </p>
+              
+              <!-- AI Summary Section -->
+              <% if (file.summary) { %>
+              <div class="transcription-summary mb-2" id="transcription-summary-<%= file.id %>">
+                <div class="position-relative">
+                  <div class="transcription-preview bg-light p-2 rounded" style="font-size: 0.85rem; width: 100%; min-width: 250px;">
+                    <div class="transcription-text text-dark force-4-lines" style="height: 88px !important; min-height: 88px !important; max-height: 88px !important; line-height: 1.6 !important; font-size: 0.85rem !important; overflow: hidden !important; white-space: normal !important; word-wrap: break-word !important; position: relative;">
+                      <span class="text-content" style="display: block; overflow: hidden;">
+                        <%= file.summary %>
+                      </span>
+                    </div>
+                  </div>
+                  <button class="btn btn-sm btn-outline-primary position-absolute top-0 end-0 mt-1 me-1 py-0 px-2 copy-summary-btn" data-content-id="<%= file.id %>" title="Copy Summary" style="z-index: 10;">
+                    <i class="bi bi-clipboard" style="font-size: 0.7rem;"></i>
+                  </button>
+                </div>
+              </div>
+              <% } else if (isMultimedia) { %>
+              <div class="transcription-summary mb-2" id="transcription-summary-<%= file.id %>" style="display: none;">
+                <div class="position-relative">
+                  <div class="transcription-preview bg-light p-2 rounded small">
+                    <div class="transcription-text text-muted force-4-lines" style="height: 88px !important; min-height: 88px !important; max-height: 88px !important; line-height: 1.6 !important; font-size: 0.85rem !important; overflow: hidden !important; white-space: normal !important; word-wrap: break-word !important; position: relative;">
+                      <span class="text-content" style="display: block; overflow: hidden;">Loading AI analysis...</span>
+                    </div>
+                  </div>
+                  <button class="btn btn-sm btn-outline-primary position-absolute top-0 end-0 mt-1 me-1 py-0 px-2 copy-summary-btn" data-content-id="<%= file.id %>" title="Copy Summary" style="z-index: 10;">
+                    <i class="bi bi-clipboard" style="font-size: 0.7rem;"></i>
+                  </button>
+                </div>
+              </div>
+              <% } %>
+            </div>
+            
+            <!-- Tags and Sentiment -->
+            <div class="mt-auto">
+              <!-- Tags -->
+              <div class="d-flex flex-wrap gap-1 align-items-center">
+                <% 
+                  let tags = [];
+                  // Handle auto_tags - ensure it's an array and not null/undefined
+                  if (file.auto_tags && Array.isArray(file.auto_tags) && file.auto_tags.length > 0) {
+                    tags = tags.concat(file.auto_tags.map(t => ({ tag: t, type: 'auto' })));
+                  }
+                  // Handle user_tags - ensure it's an array and not null/undefined  
+                  if (file.user_tags && Array.isArray(file.user_tags) && file.user_tags.length > 0) {
+                    tags = tags.concat(file.user_tags.map(t => ({ tag: t, type: 'user' })));
+                  }
+                  let shownTags = tags.slice(0, 4);
+                  let moreTags = tags.length > 4 ? tags.length - 4 : 0;
+                  let hiddenTags = tags.slice(4);
+                %>
+                <% shownTags.forEach(function(t) { %>
+                  <span class="badge <%= t.type === 'auto' ? 'bg-info' : 'bg-success' %> tag-badge" data-tag="<%= t.tag %>">
+                    <%= t.tag %>
+                  </span>
+                <% }); %>
+                <% if (moreTags) { %>
+                  <span class="badge bg-secondary more-tags-badge" style="cursor: pointer;" 
+                        data-bs-toggle="modal" data-bs-target="#allTagsModal" 
+                        data-content-id="<%= file.id %>"
+                        data-all-tags="<%= encodeURIComponent(JSON.stringify(tags)) %>"
+                        data-content-title="<%= displayTitle.replace(/"/g, '&quot;') %>"
+                        title="Click to see all tags">
+                    +<%= moreTags %> more
+                  </span>
+                <% } %>
+                
+                <!-- Sentiment Badge -->
+                <% if (file.sentiment) { %>
+                  <% 
+                    let sentimentData = file.sentiment;
+                    if (typeof sentimentData === 'string') {
+                      try {
+                        sentimentData = JSON.parse(sentimentData);
+                      } catch (e) {
+                        sentimentData = null;
+                      }
+                    }
+                    if (sentimentData && (sentimentData.label || sentimentData.sentiment)) {
+                      const sentimentLabel = sentimentData.label || sentimentData.sentiment;
+                      const confidence = sentimentData.confidence || 0;
+                      let badgeClass = 'bg-secondary';
+                      if (sentimentLabel === 'positive') badgeClass = 'bg-success';
+                      else if (sentimentLabel === 'negative') badgeClass = 'bg-danger';
+                      else if (sentimentLabel === 'neutral') badgeClass = 'bg-info';
+                  %>
+                    <span class="badge <%= badgeClass %> small ms-2">
+                      <%= sentimentLabel %> (<%= Math.round(confidence * 100) %>%)
+                    </span>
+                  <% } %>
+                <% } %>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right Info Column -->
+          <div class="d-flex flex-column align-items-end justify-content-between ms-3" style="min-width: 110px; max-width: 120px;">
+            <div class="text-end">
+              <div class="d-flex align-items-center justify-content-end mb-1">
+                <i class="<%= sourceInfo.logo %> me-1" style="color: <%= sourceInfo.color %>; font-size: 1rem;"></i>
+                <span class="fw-semibold small"><%= sourceInfo.source %></span>
+              </div>
+
+              <div class="text-muted small"><%= new Date(file.createdAt).toLocaleDateString() %></div>
+              <div class="text-muted small">
+                <% if (file.metadata && file.metadata.size) { %>
+                  <%= (file.metadata.size / 1024 / 1024).toFixed(1) %> MB
+                <% } %>
+              </div>
+              
+              <!-- AI Analysis Indicators -->
+              <div class="mt-2">
+                <div class="d-flex flex-wrap gap-1" id="ai-indicators-<%= file.id %>">
+                  <!-- Indicators will be populated by JavaScript -->
+                </div>
+              </div>
+            </div>
+            
+            <!-- Compact Action Buttons -->
+            <div class="d-flex flex-column gap-1 mt-2">
+              <div class="d-flex gap-1">
+                <a href="/files/<%= file.id %>" class="btn btn-outline-primary btn-sm" title="View Details">
+                  <i class="bi bi-eye" style="font-size: 0.8rem;"></i>
+                </a>
+                <% if (isMultimedia) { %>
+                <button class="btn btn-outline-info btn-sm ai-analysis-btn" data-id="<%= file.id %>" data-bs-toggle="modal" data-bs-target="#aiAnalysisModal" title="AI Analysis">
+                  <i class="bi bi-brain" style="font-size: 0.8rem;"></i>
+                </button>
+                <% } %>
+              </div>
+              <div class="d-flex gap-1">
+                <button class="btn btn-outline-success btn-sm share-file-btn" data-id="<%= file.id %>" title="Share">
+                  <i class="bi bi-share" style="font-size: 0.8rem;"></i>
+                </button>
+                <button class="btn btn-outline-danger btn-sm delete-file-btn" data-id="<%= file.id %>" data-filename="<%= file.filename %>" title="Delete">
+                  <i class="bi bi-trash" style="font-size: 0.8rem;"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div class="mt-1">
+              <input type="checkbox" class="form-check-input file-select-checkbox" data-id="<%= file.id %>">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <% }); %>
+  </div>
+
+  <!-- Pagination -->
+  <% if (pagination && pagination.total > 1) { %>
+  <div class="row mt-4">
+    <div class="col-12">
       <nav aria-label="File pagination">
         <ul class="pagination justify-content-center">
           <li class="page-item <%= !pagination.hasPrev ? 'disabled' : '' %>">
             <a class="page-link" href="/files?page=<%= pagination.current - 1 %>&search=<%= encodeURIComponent(search) %>&type=<%= selectedType %>">
-              <i class="fas fa-chevron-left"></i> Previous
+              <i class="bi bi-chevron-left"></i> Previous
             </a>
           </li>
           
@@ -275,113 +520,76 @@
           
           <li class="page-item <%= !pagination.hasNext ? 'disabled' : '' %>">
             <a class="page-link" href="/files?page=<%= pagination.current + 1 %>&search=<%= encodeURIComponent(search) %>&type=<%= selectedType %>">
-              Next <i class="fas fa-chevron-right"></i>
+              Next <i class="bi bi-chevron-right"></i>
             </a>
           </li>
         </ul>
       </nav>
-      <% } %>
-
-      <% } else { %>
-      <!-- No Files State -->
-      <div class="text-center py-5">
-        <div class="mb-4">
-          <i class="fas fa-folder-open fa-5x text-muted"></i>
-        </div>
-        <h4 class="text-muted">No files found</h4>
-        <p class="text-muted mb-4">
-          <% if (search || selectedType) { %>
-            No files match your current search criteria. Try adjusting your filters.
-          <% } else { %>
-            Start by uploading your first file to get organized!
-          <% } %>
-        </p>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
-          <i class="fas fa-cloud-upload-alt"></i> Upload Your First File
-        </button>
-      </div>
-      <% } %>
     </div>
   </div>
+  <% } %>
+
+  <% } else { %>
+  <!-- No Files State -->
+  <div class="text-center py-5">
+    <div class="mb-4">
+      <i class="bi bi-folder-x fa-5x text-muted" style="font-size: 5rem;"></i>
+    </div>
+    <h4 class="text-muted">No files found</h4>
+    <p class="text-muted mb-4">
+      <% if (search || selectedType) { %>
+        No files match your current search criteria. Try adjusting your filters.
+      <% } else { %>
+        Start by uploading your first file to get organized!
+      <% } %>
+    </p>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+      <i class="bi bi-cloud-upload"></i> Upload Your First File
+    </button>
+  </div>
+  <% } %>
 </div>
 
 <!-- Upload Modal -->
-<div class="modal fade" id="uploadModal" tabindex="-1">
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="fas fa-cloud-upload-alt"></i> Upload Files
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title" id="uploadModalLabel">Upload Files</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="uploadForm" enctype="multipart/form-data">
+      <form id="uploadForm" method="POST" action="/files/upload" enctype="multipart/form-data">
         <div class="modal-body">
-          <!-- Upload Area -->
-          <div class="upload-area border border-dashed border-2 rounded p-4 text-center mb-4" id="uploadArea">
-            <div class="upload-instructions">
-              <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-              <h5>Drag & Drop Files Here</h5>
-              <p class="text-muted">or click to browse</p>
-              <input type="file" class="d-none" id="fileInput" name="files" multiple 
-                     accept="image/*,audio/*,video/*,application/pdf,text/plain,.doc,.docx">
-              <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
-                <i class="fas fa-folder-open"></i> Choose Files
-              </button>
+          <div class="mb-3">
+            <label for="files" class="form-label">Select Files</label>
+            <input type="file" class="form-control" id="files" name="files" multiple accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt">
+            <div class="form-text">
+              Supported: Images, Audio, Video, PDF, Word documents, Text files. Max 1GB per file.
             </div>
           </div>
-
-          <!-- Selected Files List -->
-          <div id="selectedFilesList" class="mb-4" style="display: none;">
-            <h6>Selected Files:</h6>
-            <div id="filesList"></div>
+          <div class="mb-3">
+            <label for="comments" class="form-label">Comments (Optional)</label>
+            <textarea class="form-control" id="comments" name="comments" rows="2" placeholder="Add any comments about these files..."></textarea>
           </div>
-
-          <!-- Upload Options -->
-          <div class="row">
-            <div class="col-md-6">
-              <label for="uploadComments" class="form-label">Comments (Optional)</label>
-              <textarea class="form-control" id="uploadComments" name="comments" rows="3" 
-                        placeholder="Add any comments about these files..."></textarea>
-            </div>
-            <div class="col-md-6">
-              <label for="uploadTags" class="form-label">Tags (Optional)</label>
-              <input type="text" class="form-control" id="uploadTags" name="tags" 
-                     placeholder="Enter tags separated by commas">
-              <small class="form-text text-muted">Example: work, important, project-alpha</small>
-            </div>
+          <div class="mb-3">
+            <label for="tags" class="form-label">Tags (Optional)</label>
+            <input type="text" class="form-control" id="tags" name="tags" placeholder="tag1, tag2, tag3">
+            <div class="form-text">Separate tags with commas</div>
           </div>
-
-          <% if (groups && groups.length > 0) { %>
-          <div class="mt-3">
-            <label for="uploadGroups" class="form-label">Assign to Groups (Optional)</label>
-            <select class="form-select" id="uploadGroups" name="group_ids" multiple>
-              <% groups.forEach(group => { %>
-              <option value="<%= group.id %>"><%= group.name %></option>
-              <% }) %>
+          <div class="mb-3">
+            <label for="group_ids" class="form-label">Assign to Groups (Optional)</label>
+            <select class="form-select" id="group_ids" name="group_ids" multiple>
+              <% (groups || []).forEach(function(group) { %>
+                <option value="<%= group.id %>"><%= group.name %></option>
+              <% }); %>
             </select>
-            <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple groups</small>
+            <div class="form-text">Hold Ctrl/Cmd to select multiple groups</div>
           </div>
-          <% } %>
-
-          <!-- Upload Progress -->
-          <div id="uploadProgress" class="mt-4" style="display: none;">
-            <div class="d-flex justify-content-between mb-2">
-              <span>Uploading files...</span>
-              <span id="progressText">0%</span>
-            </div>
-            <div class="progress">
-              <div class="progress-bar" role="progressbar" style="width: 0%" id="progressBar"></div>
-            </div>
-          </div>
-
-          <!-- Upload Results -->
-          <div id="uploadResults" class="mt-4" style="display: none;"></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="uploadButton" disabled>
-            <i class="fas fa-upload"></i> Upload Files
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-cloud-upload"></i> Upload Files
           </button>
         </div>
       </form>
@@ -389,12 +597,69 @@
   </div>
 </div>
 
-<!-- AI Analysis Modal -->
-<%- include('../partials/ai-analysis-modal') %>
+<!-- AI Analysis Modal (matching content modal) -->
+<div class="modal fade" id="aiAnalysisModal" tabindex="-1" aria-labelledby="aiAnalysisModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="aiAnalysisModalLabel">AI Analysis Report</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="aiAnalysisModalBody">
+        <div class="d-flex justify-content-center">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- All Tags Modal -->
+<div class="modal fade" id="allTagsModal" tabindex="-1" aria-labelledby="allTagsModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="allTagsModalLabel">All Tags</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="allTagsModalBody">
+        <!-- Tags will be populated by JavaScript -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View File Modal -->
+<div class="modal fade" id="viewFileModal" tabindex="-1" aria-labelledby="viewFileModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="viewFileModalLabel">File Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="viewFileModalBody">
+        <!-- File details will be filled by JS -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- File Management JavaScript -->
-<script src="/js/file-management.js"></script>
+<script src="/js/file-management.js?v=<%= Date.now() %>"></script>
+<script src="/js/ai-analysis.js?v=<%= Date.now() %>"></script>
+<script src="/js/content-tags-modal.js?v=<%= Date.now() %>"></script>
 
-<!-- AI Analysis JavaScript moved to external file -->
+<!-- Content List Enhancements for Files -->
+<script src="/js/content-list-enhancements.js?v=<%= Date.now() %>"></script>
 
-<%- include('../partials/footer') %> 
+</body>
+</html> 
