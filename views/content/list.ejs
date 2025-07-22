@@ -114,6 +114,20 @@
       overflow: hidden !important;
       text-overflow: ellipsis !important;
     }
+
+    /* Ultra-specific 4-line class - highest priority */
+    .content-card .transcription-preview .transcription-text.force-four-lines {
+      display: -webkit-box !important;
+      -webkit-line-clamp: 4 !important;
+      -webkit-box-orient: vertical !important;
+      overflow: hidden !important;
+      line-height: 1.4 !important;
+      max-height: none !important;
+      white-space: normal !important;
+      text-overflow: ellipsis !important;
+      word-wrap: break-word !important;
+      height: auto !important;
+    }
     
     /* Brain icon styling */
     .ai-analysis-btn .bi-brain {
@@ -267,7 +281,7 @@
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>">
                         <div class="position-relative">
                           <div class="transcription-preview bg-light p-2 rounded" style="font-size: 0.85rem;">
-                            <div class="transcription-text text-dark" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.4 !important; max-height: none !important; white-space: normal !important;">
+                            <div class="transcription-text text-dark force-four-lines" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.4 !important; max-height: none !important; white-space: normal !important;">
                               <%= item.summary %>
                             </div>
                           </div>
