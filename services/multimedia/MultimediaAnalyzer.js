@@ -3090,13 +3090,13 @@ Respond with only the title, no quotes or additional text.`;
    */
   async transcribeVideoFile(videoPath) {
     try {
-      if (this.enableLogging) {
-        console.log('🎵 Extracting audio from video for transcription:', path.basename(videoPath));
-      }
-      
       const fs = require('fs');
       const path = require('path');
       const { exec } = require('child_process');
+      
+      if (this.enableLogging) {
+        console.log('🎵 Extracting audio from video for transcription:', path.basename(videoPath));
+      }
       
       // Extract audio from video using ffmpeg
       const audioPath = videoPath.replace(/\.[^/.]+$/, '.wav');
