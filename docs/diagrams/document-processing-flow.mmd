@@ -1,0 +1,113 @@
+graph TD
+    A[Document Input] --> B{Content Source}
+    B -->|File Upload| C[Document File Upload]
+    B -->|URL Upload| D[Document URL Analysis]
+    
+    C --> E[File Type Detection]
+    D --> F[URL Content Extraction]
+    
+    E --> G{Document Format}
+    G -->|PDF| H[PDF Processing]
+    G -->|TXT| I[Text Processing]
+    G -->|CSV| J[CSV Processing]
+    G -->|DOC/DOCX| K[Office Document Processing]
+    G -->|Unknown| L[Binary Analysis]
+    
+    F --> M[Content Type Detection]
+    M --> N{Detected Format}
+    N -->|PDF URL| H
+    N -->|Text Content| I
+    N -->|Structured Data| J
+    N -->|Office Format| K
+    
+    H --> O[Google Cloud Storage]
+    I --> O
+    J --> O
+    K --> O
+    L --> O
+    
+    O --> P[Document Processing Pipeline]
+    
+    P --> Q[Document Validation]
+    Q --> R[Format Verification]
+    R --> S[Size & Security Check]
+    S --> T[Metadata Extraction]
+    
+    T --> U[Parallel Processing - 4 Streams]
+    
+    U --> V1[Text Extraction Stream]
+    U --> V2[Structure Analysis Stream]
+    U --> V3[Content Analysis Stream]
+    U --> V4[Security Scan Stream]
+    
+    V1 --> W1{Text Extraction Method}
+    W1 -->|PDF| X1[PDF Text Extraction]
+    W1 -->|Office| Y1[Office Text Extraction]
+    W1 -->|Plain Text| Z1[Direct Text Reading]
+    W1 -->|OCR Required| AA1[Google Vision OCR]
+    
+    X1 --> BB1[Text Cleaning]
+    Y1 --> BB1
+    Z1 --> BB1
+    AA1 --> BB1
+    BB1 --> CC1[Encoding Detection]
+    CC1 --> DD1[Language Detection]
+    
+    V2 --> W2[Document Structure]
+    W2 --> X2[Page/Section Detection]
+    X2 --> Y2[Header/Footer Extraction]
+    Y2 --> Z2[Table Detection]
+    Z2 --> AA2[Image Extraction]
+    AA2 --> BB2[Hyperlink Extraction]
+    
+    V3 --> W3[Content Classification]
+    W3 --> X3[Topic Detection]
+    X3 --> Y3[Keyword Extraction]
+    Y3 --> Z3[Entity Recognition]
+    Z3 --> AA3[Document Type Classification]
+    
+    V4 --> W4[Security Scanning]
+    W4 --> X4[Malware Detection]
+    X4 --> Y4[Privacy Information Detection]
+    Y4 --> Z4[Sensitive Data Classification]
+    
+    DD1 --> EE[AI Analysis Layer]
+    BB2 --> EE
+    AA3 --> EE
+    Z4 --> EE
+    
+    EE --> FF1[OpenAI Document Analysis]
+    EE --> FF2[Content Summarization]
+    EE --> FF3[Key Point Extraction]
+    EE --> FF4[Category Classification]
+    EE --> FF5[Tag Generation]
+    EE --> FF6[Title Generation]
+    
+    FF1 --> GG[Database Storage]
+    FF2 --> GG
+    FF3 --> GG
+    FF4 --> GG
+    FF5 --> GG
+    FF6 --> GG
+    
+    GG --> HH[File Table Enhancement]
+    GG --> II[ProcessingJob Table]
+    GG --> JJ[DocumentAnalysis Table]
+    
+    HH --> KK[Content Management UI]
+    II --> KK
+    JJ --> KK
+    
+    KK --> LL[Document Viewer]
+    KK --> MM[Summary Display]
+    KK --> NN[Search Integration]
+    KK --> OO[Content Cards]
+    
+    LL --> PP[User Dashboard]
+    MM --> PP
+    NN --> PP
+    OO --> PP
+    
+    PP --> QQ[Download Integration]
+    PP --> RR[Sharing Features]
+    PP --> SS[Version Management] 

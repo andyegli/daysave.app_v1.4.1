@@ -1,0 +1,139 @@
+graph TD
+    A[DaySave Application Entry Point] --> B[Content Input Router]
+    
+    B --> C{Input Type Detection}
+    C -->|Video Content| D[Video Processing Pipeline]
+    C -->|Audio Content| E[Audio Processing Pipeline]
+    C -->|Image Content| F[Image Processing Pipeline]
+    C -->|Document Content| G[Document Processing Pipeline]
+    
+    D --> H[AutomationOrchestrator]
+    E --> H
+    F --> H
+    G --> H
+    
+    H --> I[Media Type Detection Engine]
+    I --> J{Processor Selection}
+    
+    J -->|video/mp4, avi, mov, etc| K[VideoProcessor]
+    J -->|audio/mp3, wav, m4a, etc| L[AudioProcessor]
+    J -->|image/jpg, png, gif, etc| M[ImageProcessor]
+    J -->|application/pdf, text/*, etc| N[DocumentProcessor]
+    
+    K --> O[BaseMediaProcessor Interface]
+    L --> O
+    M --> O
+    N --> O
+    
+    O --> P[Common Processing Features]
+    P --> Q1[Progress Tracking]
+    P --> Q2[Error Handling]
+    P --> Q3[Retry Logic]
+    P --> Q4[Resource Management]
+    P --> Q5[Temp File Cleanup]
+    
+    K --> R1[Video-Specific Features]
+    R1 --> S1[FFmpeg Integration]
+    R1 --> S2[Audio Track Extraction]
+    R1 --> S3[Frame Analysis]
+    R1 --> S4[Scene Detection]
+    
+    L --> R2[Audio-Specific Features]
+    R2 --> S5[Speech-to-Text]
+    R2 --> S6[Speaker Diarization]
+    R2 --> S7[Voice Print Analysis]
+    R2 --> S8[Audio Quality Assessment]
+    
+    M --> R3[Image-Specific Features]
+    R3 --> S9[Object Detection]
+    R3 --> S10[OCR Text Extraction]
+    R3 --> S11[AI Description Generation]
+    R3 --> S12[Face Recognition]
+    
+    N --> R4[Document-Specific Features]
+    R4 --> S13[Text Extraction]
+    R4 --> S14[Structure Analysis]
+    R4 --> S15[Content Classification]
+    R4 --> S16[Security Scanning]
+    
+    S1 --> T[Unified AI Enhancement Layer]
+    S2 --> T
+    S3 --> T
+    S4 --> T
+    S5 --> T
+    S6 --> T
+    S7 --> T
+    S8 --> T
+    S9 --> T
+    S10 --> T
+    S11 --> T
+    S12 --> T
+    S13 --> T
+    S14 --> T
+    S15 --> T
+    S16 --> T
+    
+    T --> U[AI Services Integration]
+    U --> V1[OpenAI GPT-4]
+    U --> V2[Google Cloud Vision]
+    U --> V3[Google Speech-to-Text]
+    U --> V4[Google Cloud Storage]
+    
+    V1 --> W[Common AI Operations]
+    V2 --> W
+    V3 --> W
+    V4 --> W
+    
+    W --> X1[Content Summarization]
+    W --> X2[Sentiment Analysis]
+    W --> X3[Tag Generation]
+    W --> X4[Category Classification]
+    W --> X5[Title Generation]
+    W --> X6[Quality Assessment]
+    
+    X1 --> Y[ResultFormatter]
+    X2 --> Y
+    X3 --> Y
+    X4 --> Y
+    X5 --> Y
+    X6 --> Y
+    
+    Y --> Z[Unified Database Storage]
+    Z --> AA1[Content Table]
+    Z --> AA2[Files Table]
+    Z --> AA3[VideoAnalysis Table]
+    Z --> AA4[AudioAnalysis Table]
+    Z --> AA5[ImageAnalysis Table]
+    Z --> AA6[ProcessingJob Table]
+    Z --> AA7[Thumbnail Table]
+    Z --> AA8[Speaker Table]
+    Z --> AA9[Face Table]
+    
+    AA1 --> BB[Content Management Interface]
+    AA2 --> BB
+    AA3 --> BB
+    AA4 --> BB
+    AA5 --> BB
+    AA6 --> BB
+    AA7 --> BB
+    AA8 --> BB
+    AA9 --> BB
+    
+    BB --> CC[Unified User Dashboard]
+    CC --> DD1[Content Cards Display]
+    CC --> DD2[AI Analysis Modal]
+    CC --> DD3[Real-time Progress]
+    CC --> DD4[Search & Filter]
+    CC --> DD5[File Management]
+    
+    DD1 --> EE[User Experience Features]
+    DD2 --> EE
+    DD3 --> EE
+    DD4 --> EE
+    DD5 --> EE
+    
+    EE --> FF1[Copy to Clipboard]
+    EE --> FF2[Download & Share]
+    EE --> FF3[Edit Summaries]
+    EE --> FF4[Tag Management]
+    EE --> FF5[Content Organization] 

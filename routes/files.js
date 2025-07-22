@@ -76,18 +76,57 @@ async function copyAnalysisToFileRecord(fileId, userId) {
       updateData.generated_title = words.slice(0, 8).join(' ') + (words.length > 8 ? '...' : '');
     }
     
-    // Copy tags from object detection
-    if (imageAnalysis?.object_detection?.objects) {
-      updateData.auto_tags = imageAnalysis.object_detection.objects
-        .filter(obj => obj.confidence > 0.7)
-        .map(obj => obj.name.toLowerCase())
-        .slice(0, 8);
-    } else if (videoAnalysis?.object_detection?.objects) {
-      updateData.auto_tags = videoAnalysis.object_detection.objects
-        .filter(obj => obj.confidence > 0.7)
-        .map(obj => obj.name.toLowerCase())
-        .slice(0, 8);
-    }
+         // Enhanced tag extraction from multiple sources
+     let extractedTags = [];
+     
+     // From object detection (images and videos)
+     if (imageAnalysis?.object_detection?.objects) {
+       const objectTags = imageAnalysis.object_detection.objects
+         .filter(obj => obj.confidence > 0.7)
+         .map(obj => obj.name.toLowerCase());
+       extractedTags.push(...objectTags);
+     } else if (videoAnalysis?.object_detection?.objects) {
+       const objectTags = videoAnalysis.object_detection.objects
+         .filter(obj => obj.confidence > 0.7)
+         .map(obj => obj.name.toLowerCase());
+       extractedTags.push(...objectTags);
+     }
+     
+     // From label detection (Google Vision API)
+     if (imageAnalysis?.label_detection?.labels) {
+       const labelTags = imageAnalysis.label_detection.labels
+         .filter(label => label.confidence > 0.7)
+         .map(label => label.name.toLowerCase());
+       extractedTags.push(...labelTags);
+     }
+     
+     // From AI description keywords (fallback when no objects detected)
+     if (extractedTags.length === 0 && updateData.summary) {
+       const keywords = updateData.summary.toLowerCase()
+         .replace(/[^\w\s]/g, ' ')
+         .split(/\s+/)
+         .filter(word => word.length > 3 && word.length < 15)
+         .filter(word => !['this', 'that', 'with', 'from', 'they', 'were', 'been', 'have', 'will', 'would', 'could', 'should', 'featuring', 'displays', 'shows', 'includes', 'image', 'photo', 'picture'].includes(word));
+       
+       // Get most frequent keywords
+       const wordCounts = {};
+       keywords.forEach(word => {
+         wordCounts[word] = (wordCounts[word] || 0) + 1;
+       });
+       
+       const topKeywords = Object.entries(wordCounts)
+         .sort(([,a], [,b]) => b - a)
+         .slice(0, 5)
+         .map(([word]) => word);
+       
+       extractedTags.push(...topKeywords);
+       console.log(`🏷️ Generated tags from AI description keywords: ${topKeywords.join(', ')}`);
+     }
+     
+     // Set final tags (remove duplicates and limit)
+     if (extractedTags.length > 0) {
+       updateData.auto_tags = [...new Set(extractedTags)].slice(0, 8);
+     }
     
     // Update file record
     if (Object.keys(updateData).length > 0) {
