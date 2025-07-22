@@ -1165,5 +1165,5 @@ openssl rand -base64 32
   - [x] **Status**: Image upload and AI analysis pipeline now fully functional for both local and GCS storage with proper thumbnail generation and deletion
   - [x] **Deletion Routing Fix**: Fixed content/file deletion routing issue - content items now route to `/content/:id`, file items to `/files/:id` with proper data-item-type attributes and endpoint detection
   - [x] **Status**: Complete image upload, AI analysis, thumbnail generation, and deletion pipeline now fully functional for both local and GCS storage with proper content type handling
-  - [x] **Image Summary Display Fix**: Fixed image summary truncation to show 4 lines like videos - removed conflicting CSS `display: block` that was overriding `-webkit-line-clamp: 4` functionality
+  - [x] **Image Summary Display Fix**: Fixed image summary truncation to show 4 lines like videos - removed fixed `height: 100px` and `overflow-y: auto` from `.transcription-preview` CSS that was creating scrollable container instead of allowing `-webkit-line-clamp: 4` to work
   - [x] **Status**: Complete image upload, AI analysis, thumbnail generation, deletion, and display pipeline now fully functional for both local and GCS storage with proper content type handling and UI consistency
