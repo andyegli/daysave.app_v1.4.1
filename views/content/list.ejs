@@ -257,6 +257,21 @@
           </div>
         </div>
         
+        <!-- Sort By -->
+        <div class="col-md-2">
+          <label for="filterSort" class="form-label mb-0">Sort by</label>
+          <div class="input-group">
+            <select class="form-select" id="filterSort" name="sort" onchange="this.form.submit()">
+              <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>📅 Newest First</option>
+              <option value="oldest" <%= sort === 'oldest' ? 'selected' : '' %>>📅 Oldest First</option>
+              <option value="channel" <%= sort === 'channel' ? 'selected' : '' %>>📺 By Channel</option>
+            </select>
+            <button class="btn btn-outline-secondary clear-filter-btn" type="button" data-target="#filterSort" title="Reset to Newest">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
+        </div>
+
         <!-- Items per page -->
         <div class="col-md-2">
           <label for="filterLimit" class="form-label mb-0">Items per page</label>

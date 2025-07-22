@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const searchInput = document.getElementById('filterSearch');
   const contentTypeSelect = document.getElementById('filterContentType');
   const statusSelect = document.getElementById('filterStatus');
+  const sortSelect = document.getElementById('filterSort');
   const limitSelect = document.getElementById('filterLimit');
   
   console.log('DEBUG: Tag input element:', tagInput);
@@ -125,6 +126,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const selectInputs = [
         { selector: '#filterContentType', value: 'all' },
         { selector: '#filterStatus', value: 'all' },
+        { selector: '#filterSort', value: 'newest' },
         { selector: '#filterLimit', value: '10' }
       ];
       selectInputs.forEach(({ selector, value }) => {
@@ -179,6 +181,42 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('DEBUG: Limit select element not found');
   }
   
+  // ✨ SORT BY: Handle sort changes with user feedback
+  if (sortSelect) {
+    console.log('DEBUG: Setting up sort select functionality');
+    
+    sortSelect.addEventListener('change', function() {
+      console.log('DEBUG: Sort order changed to:', this.value);
+      
+      // Show loading indicator
+      const form = document.getElementById('filterForm');
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      
+      // Provide user feedback
+      submitBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Sorting...';
+      submitBtn.disabled = true;
+      
+      // Add CSS animation for loading
+      submitBtn.style.transition = 'all 0.3s ease';
+      
+      // Reset to page 1 when changing sort order (users expect to see the first page)
+      const pageInput = form.querySelector('input[name="page"]');
+      if (pageInput) {
+        pageInput.value = '1';
+        console.log('DEBUG: Reset to page 1 due to sort change');
+      }
+      
+      // Submit form after a brief delay for better UX
+      setTimeout(() => {
+        console.log('DEBUG: Submitting form with new sort order');
+        form.submit();
+      }, 100);
+    });
+  } else {
+    console.log('DEBUG: Sort select element not found');
+  }
+  
   // Individual filter reset buttons (for specific filters)
   document.addEventListener('click', function(e) {
     const clearBtn = e.target.closest('.clear-filter-btn');
@@ -195,6 +233,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Handle select dropdowns with appropriate default values
         if (targetSelector === '#filterLimit') {
           targetElement.value = '10';
+        } else if (targetSelector === '#filterSort') {
+          targetElement.value = 'newest';
         } else if (targetSelector === '#filterContentType' || targetSelector === '#filterStatus') {
           targetElement.value = 'all';
         }

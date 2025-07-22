@@ -242,9 +242,9 @@ router.get('/', isAuthenticated, async (req, res) => {
     const offset = (page - 1) * limit;
     console.log(`📄 Pagination settings: page=${page}, limit=${limit}, offset=${offset}`);
     
-    // ✨ ENHANCED FILTERING: Get filter parameters
-    let { tag, from, to, search, content_type, status } = req.query;
-    console.log('🔍 Filter parameters:', { tag, from, to, search, content_type, status, page, limit });
+    // ✨ ENHANCED FILTERING: Get filter parameters including sort
+    let { tag, from, to, search, content_type, status, sort } = req.query;
+    console.log('🔍 Filter parameters:', { tag, from, to, search, content_type, status, sort, page, limit });
     
     // Build where clauses for both content and files
     const contentWhere = { user_id: req.user.id };
@@ -391,6 +391,34 @@ router.get('/', isAuthenticated, async (req, res) => {
     console.log('🔍 Content WHERE clause:', JSON.stringify(contentWhere, null, 2));
     console.log('🔍 File WHERE clause:', JSON.stringify(fileWhere, null, 2));
     
+    // ✨ SORT HANDLING: Determine sort order based on user selection
+    let orderClause = [['createdAt', 'DESC']]; // Default: newest first
+    let sortDisplayName = 'Newest First';
+    
+    if (sort) {
+      console.log('🔄 Applying sort:', sort);
+      
+      switch (sort) {
+        case 'oldest':
+          orderClause = [['createdAt', 'ASC']];
+          sortDisplayName = 'Oldest First';
+          break;
+        case 'channel':
+          // For content, sort by platform/source, then by date
+          // For files, sort by filename, then by date
+          orderClause = [['createdAt', 'DESC']]; // Will be handled differently for channel sorting
+          sortDisplayName = 'By Channel';
+          break;
+        case 'newest':
+        default:
+          orderClause = [['createdAt', 'DESC']];
+          sortDisplayName = 'Newest First';
+          break;
+      }
+    }
+    
+    console.log('📊 Sort order:', { sort, orderClause, sortDisplayName });
+    
     // ✨ CORRECTED PAGINATION: Fetch items with proper server-side pagination
     // First, get total counts for both content and files (without pagination)
     const [totalContentCount, totalFileCount] = await Promise.all([
@@ -411,7 +439,11 @@ router.get('/', isAuthenticated, async (req, res) => {
           attributes: ['platform', 'handle'],
           required: false
         }],
-        order: [['createdAt', 'DESC']],
+        order: sort === 'channel' ? 
+          [
+            [{ model: require('../models').SocialAccount, as: 'SocialAccount' }, 'platform', 'ASC'],
+            ['createdAt', 'DESC']
+          ] : orderClause,
         limit: Math.max(0, limit * 2), // Get more items to ensure we have enough after merging
         offset: 0 // We'll handle pagination after merging
       }),
@@ -425,7 +457,8 @@ router.get('/', isAuthenticated, async (req, res) => {
             status: 'ready'
           }
         }],
-        order: [['createdAt', 'DESC']],
+        order: sort === 'channel' ? 
+          [['filename', 'ASC'], ['createdAt', 'DESC']] : orderClause,
         limit: Math.max(0, limit * 2), // Get more items to ensure we have enough after merging
         offset: 0 // We'll handle pagination after merging
       })
@@ -731,8 +764,32 @@ router.get('/', isAuthenticated, async (req, res) => {
     const processedFileItems = fileItems.map(normalizeFileItem);
     let allItems = [...processedContentItems, ...processedFileItems];
 
-    // Sort all items by creation date (newest first)
-    allItems.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // ✨ DYNAMIC SORTING: Apply user-selected sort order
+    if (sort === 'oldest') {
+      // Sort by creation date (oldest first)
+      allItems.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      console.log('📊 Applied sort: Oldest First');
+    } else if (sort === 'channel') {
+      // Sort by channel/source, then by creation date (newest first within each channel)
+      allItems.sort((a, b) => {
+        // First, sort by source name
+        const sourceA = a.sourceInfo?.source || 'Unknown';
+        const sourceB = b.sourceInfo?.source || 'Unknown';
+        const sourceCompare = sourceA.localeCompare(sourceB);
+        
+        if (sourceCompare !== 0) {
+          return sourceCompare;
+        }
+        
+        // If same source, sort by creation date (newest first)
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+      console.log('📊 Applied sort: By Channel');
+    } else {
+      // Default: Sort by creation date (newest first)
+      allItems.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      console.log('📊 Applied sort: Newest First (default)');
+    }
     
     // ✨ PROPER SERVER-SIDE PAGINATION: Apply pagination to the merged and sorted items
     const paginatedItems = allItems.slice(offset, offset + limit);
@@ -763,7 +820,8 @@ router.get('/', isAuthenticated, async (req, res) => {
         to: to || '',
         search: search || '',
         content_type: content_type || 'all',
-        status: status || 'all'
+        status: status || 'all',
+        sort: sort || 'newest'
       },
       // Helper function to build pagination URLs
       buildUrl: function(pageNum) {
@@ -775,6 +833,7 @@ router.get('/', isAuthenticated, async (req, res) => {
         if (search) params.set('search', search);
         if (content_type && content_type !== 'all') params.set('content_type', content_type);
         if (status && status !== 'all') params.set('status', status);
+        if (sort && sort !== 'newest') params.set('sort', sort);
         if (limit && limit !== 10) params.set('limit', limit);
         return '?' + params.toString();
       }
@@ -809,6 +868,7 @@ router.get('/', isAuthenticated, async (req, res) => {
         search: search || '',
         content_type: content_type || 'all',
         status: status || 'all',
+        sort: sort || 'newest',
         debugInfo: {
           userId: req.user.id,
           contentCount: totalContentCount,
