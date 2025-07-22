@@ -33,7 +33,7 @@ class ContentTypeDetector {
       /facebook\.com\/watch/i,
       /facebook\.com\/share\/v\//i,
       /facebook\.com\/share\/p\//i,
-      /facebook\.com\/video\//i,
+      /facebook\.com\/video/i,
       /facebook\.com\/.*\/videos\//i,
       /facebook\.com\/.*\/posts\//i,
       /facebook\.com\/.*\/photos\//i,
@@ -41,7 +41,9 @@ class ContentTypeDetector {
       /m\.facebook\.com\/video\//i,
       /fb\.com\//i,
       /twitter\.com\/.*\/status/i,
-      /x\.com\/.*\/status/i
+      /x\.com\/.*\/status/i,
+      /twitch\.tv\/videos/i,
+      /dailymotion\.com\/video/i
     ];
     
     // Audio platforms
@@ -55,14 +57,17 @@ class ContentTypeDetector {
     const imagePatterns = [
       /imgur\.com\//i,
       /flickr\.com\//i,
-      /pinterest\.com\//i
+      /pinterest\.com\/pin\//i,
+      /unsplash\.com\//i,
+      /pixabay\.com\//i,
+      /pexels\.com\//i
     ];
     
     // Direct file patterns
     const videoFilePatterns = /\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)(\?|$)/i;
     const audioFilePatterns = /\.(mp3|wav|flac|aac|ogg|wma|m4a)(\?|$)/i;
     const imageFilePatterns = /\.(jpg|jpeg|png|gif|bmp|webp|svg|tiff)(\?|$)/i;
-    const documentFilePatterns = /\.(pdf|txt|csv|doc|docx)(\?|$)/i;
+    const documentFilePatterns = /\.(pdf|txt|csv|doc|docx|xls|xlsx|ppt|pptx)(\?|$)/i;
     
     // Check patterns
     if (videoPatterns.some(pattern => pattern.test(url)) || videoFilePatterns.test(url)) {
@@ -93,7 +98,12 @@ class ContentTypeDetector {
     if (mimeType.startsWith('application/pdf') || 
         mimeType.startsWith('text/') || 
         mimeType.includes('document') ||
-        mimeType.includes('spreadsheet')) return 'document';
+        mimeType.includes('spreadsheet') ||
+        mimeType.includes('presentation') ||
+        mimeType.includes('excel') ||
+        mimeType.includes('powerpoint') ||
+        mimeType.includes('msword') ||
+        mimeType.includes('officedocument')) return 'document';
     
     return null;
   }
@@ -109,7 +119,7 @@ class ContentTypeDetector {
     const videoExts = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', 'm4v'];
     const audioExts = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a'];
     const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tiff'];
-    const documentExts = ['pdf', 'txt', 'csv', 'doc', 'docx'];
+    const documentExts = ['pdf', 'txt', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
     
     if (videoExts.includes(ext)) return 'video';
     if (audioExts.includes(ext)) return 'audio';

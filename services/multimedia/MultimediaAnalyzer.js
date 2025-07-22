@@ -3282,16 +3282,32 @@ Respond with only the title, no quotes or additional text.`;
       return 'tiktok';
     } else if (urlLower.includes('twitter.com') || urlLower.includes('x.com')) {
       return 'twitter';
-    } else if (urlLower.includes('facebook.com')) {
+    } else if (urlLower.includes('facebook.com') || urlLower.includes('fb.com')) {
       return 'facebook';
     } else if (urlLower.includes('vimeo.com')) {
       return 'vimeo';
     } else if (urlLower.includes('twitch.tv')) {
       return 'twitch';
+    } else if (urlLower.includes('dailymotion.com')) {
+      return 'dailymotion';
     } else if (urlLower.includes('soundcloud.com')) {
       return 'soundcloud';
     } else if (urlLower.includes('spotify.com')) {
       return 'spotify';
+    } else if (urlLower.includes('anchor.fm')) {
+      return 'anchor';
+    } else if (urlLower.includes('imgur.com')) {
+      return 'imgur';
+    } else if (urlLower.includes('flickr.com')) {
+      return 'flickr';
+    } else if (urlLower.includes('pinterest.com')) {
+      return 'pinterest';
+    } else if (urlLower.includes('unsplash.com')) {
+      return 'unsplash';
+    } else if (urlLower.includes('pixabay.com')) {
+      return 'pixabay';
+    } else if (urlLower.includes('pexels.com')) {
+      return 'pexels';
     } else {
       return 'unknown';
     }
@@ -3309,15 +3325,15 @@ Respond with only the title, no quotes or additional text.`;
       /youtube\.com\/shorts/i,
       /youtu\.be\//i,
       /vimeo\.com\//i,
-      /dailymotion\.com\//i,
-      /twitch\.tv\//i,
+      /dailymotion\.com\/video/i,
+      /twitch\.tv\/videos/i,
       /tiktok\.com\//i,
       /instagram\.com\/p\//i,
       /instagram\.com\/reel\//i,
       /facebook\.com\/watch/i,
       /facebook\.com\/share\/v\//i,
       /facebook\.com\/share\/p\//i,
-      /facebook\.com\/video\//i,
+      /facebook\.com\/video/i,
       /facebook\.com\/.*\/videos\//i,
       /facebook\.com\/.*\/posts\//i,
       /facebook\.com\/.*\/photos\//i,
@@ -3332,10 +3348,18 @@ Respond with only the title, no quotes or additional text.`;
       /spotify\.com\//i,
       /anchor\.fm\//i,
       
+      // Image platforms
+      /imgur\.com\//i,
+      /flickr\.com\//i,
+      /pinterest\.com\/pin\//i,
+      /unsplash\.com\//i,
+      /pixabay\.com\//i,
+      /pexels\.com\//i,
+      
       // Direct files
       /\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)(\?|$)/i,
       /\.(mp3|wav|flac|aac|ogg|wma|m4a)(\?|$)/i,
-      /\.(jpg|jpeg|png|gif|bmp|webp)(\?|$)/i
+      /\.(jpg|jpeg|png|gif|bmp|webp|svg|tiff)(\?|$)/i
     ];
     
     return multimediaPatterns.some(pattern => pattern.test(url));

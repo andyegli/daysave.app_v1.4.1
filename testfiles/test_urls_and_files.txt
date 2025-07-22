@@ -1,0 +1,59 @@
+Images
+JPEG: https://file-examples.com/wp-content/uploads/2017/10/file_example_JPG_1MB.jpg
+JPG: https://file-examples.com/wp-content/uploads/2017/10/file_example_JPG_100kB.jpg
+PNG: https://file-examples.com/wp-content/uploads/2017/08/file_example_PNG_1MB.png
+GIF: https://file-examples.com/wp-content/uploads/2017/10/file_example_GIF_1MB.gif
+BMP: https://file-examples.com/wp-content/uploads/2017/10/file_example_BMP_1MB.bmp
+WebP: https://file-examples.com/wp-content/uploads/2017/10/file_example_WEBP_1500kB.webp
+SVG: https://file-examples.com/wp-content/uploads/2017/10/file_example_SVG_30kB.svg
+TIFF: https://file-examples.com/wp-content/uploads/2017/10/file_example_TIFF_1MB.tiff
+Videos
+MP4: https://file-examples.com/wp-content/uploads/2017/04/file_example_MP4_1280_10MG.mp4
+AVI: https://file-examples.com/wp-content/uploads/2018/04/file_example_AVI_1280_1_5MG.avi
+MOV: https://file-examples.com/wp-content/uploads/2017/11/file_example_MOV_1280_1_4MB.mov
+WMV: https://file-examples.com/wp-content/uploads/2017/11/file_example_WMV_1280_1_3MG.wmv
+FLV: https://file-examples.com/wp-content/uploads/2018/04/file_example_FLV_1280_1_5MG.flv
+WebM: https://file-examples.com/wp-content/uploads/2017/11/file_example_WEBM_1280_1_4MB.webm
+MKV: https://file-examples.com/wp-content/uploads/2017/11/file_example_MKV_1280_1_5MG.mkv
+M4V: https://file-examples.com/wp-content/uploads/2018/04/file_example_M4V_1280_10MG.m4v
+Audio
+MP3: https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_1MG.mp3
+WAV: https://file-examples.com/wp-content/uploads/2017/11/file_example_WAV_1MG.wav
+FLAC: https://file-examples.com/wp-content/uploads/2017/11/file_example_FLAC_1MG.flac
+AAC: https://file-examples.com/wp-content/uploads/2017/11/file_example_AAC_1MG.aac
+OGG: https://file-examples.com/wp-content/uploads/2017/11/file_example_OGG_1MG.ogg
+WMA: https://file-examples.com/wp-content/uploads/2017/11/file_example_WMA_1MG.wma
+M4A: https://file-examples.com/wp-content/uploads/2017/11/file_example_M4A_1MG.m4a
+Documents
+PDF: https://file-examples.com/wp-content/uploads/2017/02/file-sample_150kB.pdf
+Word (.doc): https://file-examples.com/wp-content/uploads/2017/02/file-sample_100kB.doc
+Word (.docx): https://file-examples.com/wp-content/uploads/2017/02/file-sample_100kB.docx
+Excel (.xls): https://file-examples.com/wp-content/uploads/2017/02/file-sample_XLS_50kB.xls
+Excel (.xlsx): https://file-examples.com/wp-content/uploads/2017/02/file-sample_XLSX_50kB.xlsx
+PowerPoint (.ppt): https://file-examples.com/wp-content/uploads/2017/02/file-sample_PPT_250kB.ppt
+PowerPoint (.pptx): https://file-examples.com/wp-content/uploads/2017/02/file-sample_PPTX_250kB.pptx
+Text files (.txt): https://file-examples.com/wp-content/uploads/2017/02/text-sample.txt
+Video Platforms
+YouTube (youtube.com/watch): https://www.youtube.com/watch?v=9bZkp7q19f0
+YouTube (youtube.com/shorts): https://www.youtube.com/shorts/Y1VVha1WlqY
+YouTube (youtu.be): https://youtu.be/9bZkp7q19f0
+TikTok (tiktok.com): https://www.tiktok.com/@zachking/video/6758991202411228422
+Instagram (instagram.com/p/): https://www.instagram.com/p/C7dPZWVI_r9/
+Instagram (instagram.com/reel/): https://www.instagram.com/reel/C5dPZWVI_r9/
+Facebook (facebook.com/watch): https://www.facebook.com/watch?v=10153231379946729
+Facebook (facebook.com/video/): https://www.facebook.com/video.php?v=10153231379946729
+Facebook (fb.com): https://fb.com/watch?v=10153231379946729
+Twitter/X (twitter.com/status): https://twitter.com/NASA/status/1815078073718927756
+Twitter/X (x.com/status): https://x.com/NASA/status/1815078073718927756
+Vimeo (vimeo.com): https://vimeo.com/169599296
+Twitch (twitch.tv): https://www.twitch.tv/videos/1513178670
+Dailymotion (dailymotion.com): https://www.dailymotion.com/video/x8l2yvq
+Audio Platforms
+SoundCloud (soundcloud.com): https://soundcloud.com/marshmellomusic/alone
+Spotify (spotify.com): https://open.spotify.com/track/7n2wTmyj2whHutko2I7r7h
+Anchor.fm (anchor.fm): https://anchor.fm/switchedonpop/episodes/How-Taylor-Swift-writes-melodies-e1p1j6a
+Image Platforms
+Imgur (imgur.com): https://imgur.com/gallery/Gej2cI0
+Flickr (flickr.com): https://www.flickr.com/photos/nasahqphoto/51785097368
+Pinterest (pinterest.com/pin/): https://www.pinterest.com/pin/1451708755431407
+Unsplash (unsplash.com): https://unsplash.com/photos/person-in-blue-denim-jeans-and-black-and-white-adidas-sneakers-jumping-on-gray-concrete-pavement-during-daytime-0gKwRiDTGn0
