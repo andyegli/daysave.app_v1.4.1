@@ -114,6 +114,14 @@ class ImageProcessor extends BaseMediaProcessor {
   async process(userId, filePath, options = {}) {
     const results = this.initializeResults(userId, filePath, 'image');
     
+    console.log(`🔧 DEBUG: ImageProcessor.process() received options:`, JSON.stringify(options, null, 2));
+    console.log(`🔧 DEBUG: AI Analysis options:`, {
+      enableObjectDetection: options.enableObjectDetection,
+      enableDescriptionGeneration: options.enableDescriptionGeneration,
+      enableOCRExtraction: options.enableOCRExtraction,
+      enableTagGeneration: options.enableTagGeneration
+    });
+    
     try {
       // Validate image file
       await this.validate(filePath, 'image');
@@ -769,6 +777,7 @@ Return only the extracted text, preserving original formatting and line breaks w
           id: uuidv4(),
           user_id: userId,
           file_path: thumbnailPath,
+          file_name: path.basename(thumbnailPath), // FIX: Add required file_name field
           thumbnail_type: 'image',
           thumbnail_size: size,
           created_at: new Date(),
@@ -869,8 +878,26 @@ Return only the extracted text, preserving original formatting and line breaks w
         temperature: 0.3
       });
 
-      const tags = JSON.parse(response.choices[0].message.content);
-      return Array.isArray(tags) ? tags : [];
+      const content = response.choices[0].message.content;
+      
+      try {
+        // Clean up markdown code blocks if present
+        let cleanContent = content;
+        if (content.includes('```json') || content.includes('```')) {
+          cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        }
+        
+        const tags = JSON.parse(cleanContent);
+        return Array.isArray(tags) ? tags : [];
+      } catch (parseError) {
+        if (this.enableLogging) {
+          console.error('Error parsing tag generation response:', parseError);
+          console.error('Raw response:', content);
+        }
+        
+        // Fallback: return empty array if parsing fails
+        return [];
+      }
     } catch (error) {
       if (this.enableLogging) {
         console.error('❌ Tag generation failed:', error);

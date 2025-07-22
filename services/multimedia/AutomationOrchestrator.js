@@ -438,6 +438,8 @@ class AutomationOrchestrator {
             // Process the content with performance optimization
             const processingOptions = this.buildProcessingOptions(mediaType, metadata, availableFeatures);
             
+            console.log(`🔧 DEBUG: Processing options for ${mediaType}:`, JSON.stringify(processingOptions, null, 2));
+            
             // Enhanced processing with progress tracking
             const results = await this.processWithDetailedTracking(
                 processor, 
