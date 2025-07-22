@@ -117,9 +117,10 @@ function initializeContentUploadToggle() {
   if (fileSelectMethod) fileSelectMethod.addEventListener('change', toggleFileMethod);
   if (filePathMethod) filePathMethod.addEventListener('change', toggleFileMethod);
   
-  // File selection preview
+  // File selection preview and enhanced upload area
   if (fileInput) {
     fileInput.addEventListener('change', showFilesPreview);
+    setupEnhancedFileUpload(fileInput);
   }
   
   // Bulk URL validation and preview
@@ -736,6 +737,150 @@ function getFileIconFromExtension(extension) {
     return 'bi bi-file-text';
   } else {
     return 'bi bi-file-earmark';
+  }
+}
+
+// Setup enhanced file upload functionality
+function setupEnhancedFileUpload(fileInput) {
+  if (!fileInput) return;
+  
+  const fileUploadArea = document.getElementById('fileUploadArea');
+  const selectFilesBtn = document.getElementById('selectFilesBtn');
+  
+  if (!fileUploadArea || !selectFilesBtn) return;
+  
+  // Click handlers to trigger file browser
+  fileUploadArea.addEventListener('click', function(e) {
+    // Don't trigger if clicking the button itself
+    if (e.target !== selectFilesBtn && !selectFilesBtn.contains(e.target)) {
+      fileInput.click();
+    }
+  });
+  
+  selectFilesBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    fileInput.click();
+  });
+  
+  // Drag and drop functionality
+  fileUploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    fileUploadArea.style.borderColor = '#0d6efd';
+    fileUploadArea.style.backgroundColor = '#e7f3ff';
+    fileUploadArea.classList.add('drag-over');
+  });
+  
+  fileUploadArea.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only reset if leaving the main container
+    if (!fileUploadArea.contains(e.relatedTarget)) {
+      resetUploadAreaStyle();
+    }
+  });
+  
+  fileUploadArea.addEventListener('drop', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    resetUploadAreaStyle();
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      // Set files to the input
+      fileInput.files = files;
+      // Trigger change event manually
+      const changeEvent = new Event('change', { bubbles: true });
+      fileInput.dispatchEvent(changeEvent);
+    }
+  });
+  
+  // Reset upload area styling
+  function resetUploadAreaStyle() {
+    fileUploadArea.style.borderColor = '#dee2e6';
+    fileUploadArea.style.backgroundColor = '#f8f9fa';
+    fileUploadArea.classList.remove('drag-over');
+  }
+  
+  // Hover effects
+  fileUploadArea.addEventListener('mouseenter', function() {
+    if (!fileUploadArea.classList.contains('drag-over')) {
+      fileUploadArea.style.borderColor = '#86b7fe';
+      fileUploadArea.style.backgroundColor = '#f0f8ff';
+    }
+  });
+  
+  fileUploadArea.addEventListener('mouseleave', function() {
+    if (!fileUploadArea.classList.contains('drag-over')) {
+      resetUploadAreaStyle();
+    }
+  });
+  
+  // Update upload area when files are selected
+  fileInput.addEventListener('change', function() {
+    updateUploadAreaDisplay();
+  });
+  
+  function updateUploadAreaDisplay() {
+    const uploadContent = fileUploadArea.querySelector('.file-upload-content');
+    
+    if (fileInput.files && fileInput.files.length > 0) {
+      const fileCount = fileInput.files.length;
+      const totalSize = Array.from(fileInput.files).reduce((sum, file) => sum + file.size, 0);
+      const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+      
+      uploadContent.innerHTML = `
+        <i class="bi bi-check-circle-fill text-success mb-3" style="font-size: 3rem;"></i>
+        <h5 class="mb-2 text-success">${fileCount} File${fileCount > 1 ? 's' : ''} Selected</h5>
+        <p class="text-muted mb-2">Total size: ${totalSizeMB} MB</p>
+        <button type="button" class="btn btn-outline-primary" id="changeFilesBtn">
+          <i class="bi bi-arrow-clockwise"></i> Change Files
+        </button>
+        <div class="mt-3">
+          <small class="text-muted">
+            <i class="bi bi-info-circle"></i> 
+            Files ready for upload. Click "Change Files" to select different files.
+          </small>
+        </div>
+      `;
+      
+      // Re-attach event listener for change files button
+      const changeFilesBtn = document.getElementById('changeFilesBtn');
+      if (changeFilesBtn) {
+        changeFilesBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          fileInput.click();
+        });
+      }
+    } else {
+      // Reset to original state
+      uploadContent.innerHTML = `
+        <i class="bi bi-cloud-upload-fill text-primary mb-3" style="font-size: 3rem;"></i>
+        <h5 class="mb-2">Click to Select Files</h5>
+        <p class="text-muted mb-2">or drag and drop files here</p>
+        <button type="button" class="btn btn-primary" id="selectFilesBtn">
+          <i class="bi bi-folder-open"></i> Browse Files
+        </button>
+        <div class="mt-3">
+          <small class="text-muted">
+            <i class="bi bi-info-circle"></i> 
+            Supported: Images, Audio, Video, PDF, Word documents, Text files. Max 1GB per file.
+          </small>
+        </div>
+      `;
+      
+      // Re-attach event listener for select files button
+      const newSelectFilesBtn = document.getElementById('selectFilesBtn');
+      if (newSelectFilesBtn) {
+        newSelectFilesBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          fileInput.click();
+        });
+      }
+    }
   }
 }
 
