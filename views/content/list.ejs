@@ -427,19 +427,86 @@
       <% } %>
     </div>
 
-    <!-- Pagination (if needed) -->
+    <!-- Enhanced Pagination -->
     <% if (pagination && pagination.totalPages > 1) { %>
       <div class="row mt-4">
-        <div class="col-12 d-flex justify-content-center">
-          <nav>
-            <ul class="pagination">
-              <% for (let i = 1; i <= pagination.totalPages; i++) { %>
-                <li class="page-item <%= i === pagination.currentPage ? 'active' : '' %>">
-                  <a class="page-link" href="?page=<%= i %>"><%= i %></a>
+        <div class="col-12">
+          <div class="d-flex justify-content-between align-items-center">
+            <!-- Items per page info -->
+            <div class="text-muted">
+              Showing <%= Math.min(pagination.limit * (pagination.currentPage - 1) + 1, pagination.totalItems) %>-<%= Math.min(pagination.limit * pagination.currentPage, pagination.totalItems) %> of <%= pagination.totalItems %> items
+            </div>
+            
+            <!-- Pagination controls -->
+            <nav aria-label="Content pagination">
+              <ul class="pagination mb-0">
+                <!-- Previous button -->
+                <li class="page-item <%= !pagination.hasPrev ? 'disabled' : '' %>">
+                  <a class="page-link" href="<%= pagination.hasPrev ? `?page=${pagination.prevPage}${tag ? '&tag=' + encodeURIComponent(tag) : ''}${from ? '&from=' + from : ''}${to ? '&to=' + to : ''}` : '#' %>" 
+                     aria-label="Previous" <%= !pagination.hasPrev ? 'tabindex="-1"' : '' %>>
+                    <span aria-hidden="true">&laquo;</span>
+                  </a>
                 </li>
-              <% } %>
-            </ul>
-          </nav>
+                
+                <!-- Page numbers -->
+                <% 
+                let startPage = Math.max(1, pagination.currentPage - 2);
+                let endPage = Math.min(pagination.totalPages, pagination.currentPage + 2);
+                
+                // Adjust if we're near the beginning
+                if (pagination.currentPage <= 3) {
+                  endPage = Math.min(5, pagination.totalPages);
+                }
+                
+                // Adjust if we're near the end
+                if (pagination.currentPage >= pagination.totalPages - 2) {
+                  startPage = Math.max(1, pagination.totalPages - 4);
+                }
+                %>
+                
+                <% if (startPage > 1) { %>
+                  <li class="page-item">
+                    <a class="page-link" href="?page=1<%= tag ? '&tag=' + encodeURIComponent(tag) : '' %><%= from ? '&from=' + from : '' %><%= to ? '&to=' + to : '' %>">1</a>
+                  </li>
+                  <% if (startPage > 2) { %>
+                    <li class="page-item disabled">
+                      <span class="page-link">...</span>
+                    </li>
+                  <% } %>
+                <% } %>
+                
+                <% for (let i = startPage; i <= endPage; i++) { %>
+                  <li class="page-item <%= i === pagination.currentPage ? 'active' : '' %>">
+                    <a class="page-link" href="?page=<%= i %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %><%= from ? '&from=' + from : '' %><%= to ? '&to=' + to : '' %>">
+                      <%= i %>
+                      <% if (i === pagination.currentPage) { %>
+                        <span class="visually-hidden">(current)</span>
+                      <% } %>
+                    </a>
+                  </li>
+                <% } %>
+                
+                <% if (endPage < pagination.totalPages) { %>
+                  <% if (endPage < pagination.totalPages - 1) { %>
+                    <li class="page-item disabled">
+                      <span class="page-link">...</span>
+                    </li>
+                  <% } %>
+                  <li class="page-item">
+                    <a class="page-link" href="?page=<%= pagination.totalPages %><%= tag ? '&tag=' + encodeURIComponent(tag) : '' %><%= from ? '&from=' + from : '' %><%= to ? '&to=' + to : '' %>"><%= pagination.totalPages %></a>
+                  </li>
+                <% } %>
+                
+                <!-- Next button -->
+                <li class="page-item <%= !pagination.hasNext ? 'disabled' : '' %>">
+                  <a class="page-link" href="<%= pagination.hasNext ? `?page=${pagination.nextPage}${tag ? '&tag=' + encodeURIComponent(tag) : ''}${from ? '&from=' + from : ''}${to ? '&to=' + to : ''}` : '#' %>" 
+                     aria-label="Next" <%= !pagination.hasNext ? 'tabindex="-1"' : '' %>>
+                    <span aria-hidden="true">&raquo;</span>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          </div>
         </div>
       </div>
     <% } %>

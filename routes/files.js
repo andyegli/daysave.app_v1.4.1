@@ -1478,6 +1478,17 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     // Get multimedia analysis results from new models
     const { VideoAnalysis, AudioAnalysis, ImageAnalysis, ProcessingJob, Thumbnail, OCRCaption, Speaker } = require('../models');
     
+    // Debug: Check if models are available
+    console.log('📊 Available models:', {
+      VideoAnalysis: !!VideoAnalysis,
+      AudioAnalysis: !!AudioAnalysis, 
+      ImageAnalysis: !!ImageAnalysis,
+      ProcessingJob: !!ProcessingJob,
+      Thumbnail: !!Thumbnail,
+      OCRCaption: !!OCRCaption,
+      Speaker: !!Speaker
+    });
+    
     // Function to get proper title
     function getFileTitle(fileRecord) {
       // Try metadata title first

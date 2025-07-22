@@ -681,4 +681,18 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteFile(fileId, filename);
     }
   });
-}); 
+});
+
+/**
+ * Show AI Analysis Modal for a file
+ * @param {string} fileId - File ID to show analysis for
+ */
+function showAIAnalysis(fileId) {
+  console.log('🤖 Opening AI Analysis for file:', fileId);
+  if (window.aiAnalysisModal) {
+    window.aiAnalysisModal.show(fileId);
+  } else {
+    console.error('AI Analysis Modal not initialized');
+    alert('AI Analysis Modal is not available. Please refresh the page and try again.');
+  }
+} 

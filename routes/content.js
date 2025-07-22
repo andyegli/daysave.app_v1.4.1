@@ -227,14 +227,21 @@ router.get('/', isAuthenticated, async (req, res) => {
     console.log('DEBUG: Available models:', Object.keys(models));
     console.log('DEBUG: SocialAccount model exists:', !!models.SocialAccount);
     console.log('DEBUG: Content model exists:', !!models.Content);
+    
+    // ✨ PAGINATION: Get pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10; // Show 10 items per page
+    const offset = (page - 1) * limit;
+    
     let { tag, from, to } = req.query;
     const where = { user_id: req.user.id };
     
     if (from) where.createdAt = { ...(where.createdAt || {}), [Op.gte]: new Date(from) };
     if (to) where.createdAt = { ...(where.createdAt || {}), [Op.lte]: new Date(to) };
-    // Fetch both content items and files for unified display
-    const [contentItems, fileItems] = await Promise.all([
-      Content.findAll({
+    
+    // ✨ PAGINATION: Fetch both content items and files with count and pagination
+    const [contentResult, fileResult] = await Promise.all([
+      Content.findAndCountAll({
         where,
         include: [{
           model: require('../models').SocialAccount,
@@ -242,9 +249,11 @@ router.get('/', isAuthenticated, async (req, res) => {
           attributes: ['platform', 'handle'],
           required: false // Make it a LEFT JOIN so it doesn't fail if no social account
         }],
-        order: [['createdAt', 'DESC']]
+        order: [['createdAt', 'DESC']],
+        limit,
+        offset
       }),
-      require('../models').File.findAll({
+      require('../models').File.findAndCountAll({
         where: { user_id: req.user.id },
         include: [{
           model: require('../models').Thumbnail,
@@ -254,9 +263,17 @@ router.get('/', isAuthenticated, async (req, res) => {
             status: 'ready'
           }
         }],
-        order: [['createdAt', 'DESC']]
+        order: [['createdAt', 'DESC']],
+        limit,
+        offset
       })
     ]);
+    
+    const contentItems = contentResult.rows;
+    const fileItems = fileResult.rows;
+    const totalContentItems = contentResult.count;
+    const totalFileItems = fileResult.count;
+    const totalItems = totalContentItems + totalFileItems;
 
     // Function to determine content source and get brand logo
     function getContentSourceInfo(url, socialAccount) {
@@ -580,10 +597,17 @@ router.get('/', isAuthenticated, async (req, res) => {
       where: { user_id: req.user.id },
       order: [['name', 'ASC']]
     });
+    // ✨ PAGINATION: Calculate pagination data
+    const totalPages = Math.ceil(totalItems / limit);
     const pagination = {
-      currentPage: 1,
-      totalPages: 1,
-      totalItems: allItems.length
+      currentPage: page,
+      totalPages: totalPages,
+      totalItems: totalItems,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+      limit: limit,
+      nextPage: page < totalPages ? page + 1 : null,
+      prevPage: page > 1 ? page - 1 : null
     };
     
     // Split items by type for debugging
