@@ -649,11 +649,177 @@ router.get('/', isAuthenticated, async (req, res) => {
   }
 });
 
+/**
+ * Handle bulk URL submission
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+async function handleBulkUrlSubmission(req, res) {
+  console.log('🔄 Processing bulk URL submission');
+  
+  try {
+    const { bulk_urls, user_comments, user_tags, group_ids, generate_ai_title, auto_tag } = req.body;
+    
+    if (!bulk_urls || typeof bulk_urls !== 'string') {
+      return res.status(400).json({ 
+        success: false,
+        error: 'bulk_urls is required and must be a string' 
+      });
+    }
+    
+    // Parse URLs from text (split by newlines, filter empty lines)
+    const urls = bulk_urls
+      .split('\n')
+      .map(url => url.trim())
+      .filter(url => url.length > 0 && url.startsWith('http'));
+    
+    console.log(`📋 Processing ${urls.length} URLs from bulk submission`);
+    
+    if (urls.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'No valid URLs found in bulk submission' 
+      });
+    }
+    
+    // Limit bulk submissions to prevent abuse
+    if (urls.length > 50) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Maximum 50 URLs allowed per bulk submission' 
+      });
+    }
+    
+    // Check usage limits for bulk submission
+    const { checkUsageLimit, updateUsage } = require('../middleware');
+    try {
+      await new Promise((resolve, reject) => {
+        // Check if user can add this many content items
+        const customLimitChecker = (req, res, next) => {
+          req.bulkItemCount = urls.length; // Custom property for bulk checking
+          checkUsageLimit('content_items', () => urls.length)(req, res, next);
+        };
+        customLimitChecker(req, res, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    } catch (limitError) {
+      return res.status(429).json({ 
+        success: false,
+        error: `Usage limit exceeded: Cannot add ${urls.length} items`,
+        message: limitError.message 
+      });
+    }
+    
+    const results = {
+      success: true,
+      imported: [],
+      errors: [],
+      total: urls.length
+    };
+    
+    const detector = new ContentTypeDetector();
+    
+    // Process each URL
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i];
+      
+      try {
+        console.log(`📤 [${i+1}/${urls.length}] Processing URL: ${url.substring(0, 60)}...`);
+        
+        // Detect content type
+        const detected_content_type = detector.detectFromUrl(url) || 'unknown';
+        
+        // Create content record
+        const content = await Content.create({
+          user_id: req.user.id,
+          url,
+          user_comments: user_comments || '',
+          user_tags: Array.isArray(user_tags) ? user_tags : [],
+          content_type: detected_content_type
+        });
+        
+        // Add to group if specified
+        if (Array.isArray(group_ids) && group_ids.length > 0) {
+          const groupMemberships = group_ids.map(group_id => ({
+            content_id: content.id,
+            group_id
+          }));
+          await ContentGroupMember.bulkCreate(groupMemberships);
+        }
+        
+        // Log successful import
+        logger.user.contentAdd(req.user.id, content.id, url, 'bulk_import');
+        
+        results.imported.push({
+          id: content.id,
+          url: url,
+          content_type: detected_content_type,
+          success: true
+        });
+        
+        // Trigger multimedia analysis if detected
+        if (isMultimediaURL(url)) {
+          console.log(`🎬 [${i+1}/${urls.length}] Multimedia detected, triggering analysis: ${content.id}`);
+          
+          // Trigger analysis in background
+          setImmediate(async () => {
+            try {
+              await triggerMultimediaAnalysis(content, req.user);
+              console.log(`✅ Background analysis started for ${content.id}`);
+            } catch (analysisError) {
+              console.error(`❌ Analysis failed for ${content.id}:`, analysisError.message);
+            }
+          });
+        }
+        
+      } catch (urlError) {
+        console.error(`❌ [${i+1}/${urls.length}] Failed to process URL: ${url}`, urlError.message);
+        
+        results.errors.push({
+          url: url,
+          error: urlError.message
+        });
+      }
+    }
+    
+    console.log(`📊 Bulk import completed: ${results.imported.length} success, ${results.errors.length} errors`);
+    
+    // Update usage count for successful imports
+    if (results.imported.length > 0) {
+      try {
+        await new Promise((resolve, reject) => {
+          const customUsageUpdater = (req, res, next) => {
+            req.actualUsage = results.imported.length; // Update based on actual successful imports
+            updateUsage('content_items', () => results.imported.length)(req, res, next);
+          };
+          customUsageUpdater(req, res, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      } catch (usageError) {
+        console.warn('⚠️ Failed to update usage count:', usageError.message);
+      }
+    }
+    
+    // Return results
+    return res.json(results);
+    
+  } catch (error) {
+    console.error('❌ Bulk URL submission failed:', error);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Bulk URL submission failed',
+      message: error.message 
+    });
+  }
+}
+
 // Create new content
 router.post('/', [
-  isAuthenticated,
-  checkUsageLimit('content_items'),
-  updateUsage('content_items')
+  isAuthenticated
 ], async (req, res) => {
   console.log('DEBUG: POST /content route hit by user:', req.user ? req.user.id : 'NO USER');
   console.log('DEBUG: Request method:', req.method);
@@ -662,6 +828,21 @@ router.post('/', [
   console.log('DEBUG: Request body:', req.body);
   
   try {
+    // Check if this is a bulk URL submission
+    if (req.body.content_type === 'bulk_urls') {
+      console.log('DEBUG: Bulk URL submission detected');
+      return await handleBulkUrlSubmission(req, res);
+    }
+    
+    // Handle single URL submission - check usage limits
+    const { checkUsageLimit, updateUsage } = require('../middleware');
+    await new Promise((resolve, reject) => {
+      checkUsageLimit('content_items')(req, res, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+    
     const { url, user_comments, user_tags, group_ids } = req.body;
     console.log('DEBUG: Creating content with URL:', url);
     console.log('DEBUG: Request body:', JSON.stringify(req.body, null, 2));
@@ -685,6 +866,14 @@ router.post('/', [
 
     // Log content creation
     logger.user.contentAdd(req.user.id, content.id, url, isMultimediaURL(url) ? 'multimedia' : 'standard');
+    
+    // Update usage count for single URL
+    await new Promise((resolve, reject) => {
+      updateUsage('content_items')(req, res, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
 
     console.log('DEBUG: Content created successfully:', content.id);
     console.log('DEBUG: Created content data:', JSON.stringify(content.toJSON(), null, 2));
