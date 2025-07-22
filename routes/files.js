@@ -679,13 +679,13 @@ async function triggerFileAnalysis(fileRecord, user) {
       console.log(`😊 Added sentiment analysis`);
     }
     
-    // ✨ ENHANCED: Use AI-powered tags and title if available
+    // ✨ ENHANCED: Use AI-powered tags and title if available (prioritize AI titles)
     if (enhancedResults) {
-      // AI-generated title - store in BOTH fields for consistency with content items
+      // AI-generated title - prioritize this over other title generation
       if (enhancedResults.generatedTitle) {
-        updateData.generated_title = enhancedResults.generatedTitle; // Primary field (like content items)
-        updateData.metadata.title = enhancedResults.generatedTitle;  // Backup field for metadata
-        console.log(`🎯 Added AI-generated title to both fields: "${enhancedResults.generatedTitle}"`);
+        updateData.generated_title = enhancedResults.generatedTitle;
+        updateData.metadata.title = enhancedResults.generatedTitle;
+        console.log(`🎯 Added enhanced AI-generated title: "${enhancedResults.generatedTitle}"`);
       }
       
       // AI-powered tags (prioritize these over basic object detection)
@@ -701,58 +701,40 @@ async function triggerFileAnalysis(fileRecord, user) {
       }
     }
     
-    // 🚀 ENHANCED: Use core pipeline's sophisticated AI title or generate one
-    if ((!enhancedResults || !enhancedResults.generatedTitle) && !updateData.metadata.title) {
-            // Check if core pipeline generated a title
+        // 🚀 ENHANCED: Generate proper AI titles like videos do
+    if ((!enhancedResults || !enhancedResults.generatedTitle) && !updateData.generated_title) {
+      // Check if core pipeline generated a title
       if (formattedResults.data && formattedResults.data.generatedTitle) {
-        updateData.generated_title = formattedResults.data.generatedTitle; // Primary field
-        updateData.metadata.title = formattedResults.data.generatedTitle;  // Backup field
+        updateData.generated_title = formattedResults.data.generatedTitle;
+        updateData.metadata.title = formattedResults.data.generatedTitle;
         console.log(`🎯 Using core pipeline AI title: "${formattedResults.data.generatedTitle}"`);
       } else if (updateData.summary) {
-        // Fallback: Generate title using the same function as core pipeline
+        // Generate sophisticated AI title using the same function as core pipeline
         try {
-          console.log(`🎯 Generating sophisticated AI title as fallback...`);
+          console.log(`🎯 Generating sophisticated AI title for image...`);
           const aiTitle = await generateSophisticatedImageTitle(updateData.summary, formattedResults.data);
           if (aiTitle) {
-            updateData.generated_title = aiTitle; // Primary field
-            updateData.metadata.title = aiTitle;  // Backup field
+            updateData.generated_title = aiTitle;
+            updateData.metadata.title = aiTitle;
             console.log(`🎯 Generated sophisticated AI title: "${aiTitle}"`);
           } else {
-            // Final fallback - create professional structured title
-            const firstSentence = updateData.summary.split('.')[0];
-            let professionalTitle;
-            if (firstSentence.length > 0 && firstSentence.length <= 120) {
-              professionalTitle = formatAsProfessionalTitle(firstSentence.trim());
-              console.log(`🎯 Professional fallback title from summary: "${professionalTitle}"`);
-            } else if (updateData.summary.length <= 120) {
-              professionalTitle = formatAsProfessionalTitle(updateData.summary.trim());
-              console.log(`🎯 Using full summary as professional title: "${professionalTitle}"`);
-            } else {
-              const truncated = updateData.summary.substring(0, 117).trim();
-              professionalTitle = formatAsProfessionalTitle(truncated) + '...';
-              console.log(`🎯 Using truncated summary as professional title: "${professionalTitle}"`);
-            }
-            updateData.generated_title = professionalTitle; // Primary field
-            updateData.metadata.title = professionalTitle;  // Backup field
+            // Fallback: Extract key elements for a concise title
+            const words = updateData.summary.split(' ');
+            const firstPart = words.slice(0, 8).join(' '); // First 8 words
+            const cleanTitle = firstPart.charAt(0).toUpperCase() + firstPart.slice(1);
+            updateData.generated_title = cleanTitle + (words.length > 8 ? '...' : '');
+            updateData.metadata.title = updateData.generated_title;
+            console.log(`🎯 Generated concise title: "${updateData.generated_title}"`);
           }
         } catch (titleError) {
           console.error(`⚠️ AI title generation failed: ${titleError.message}`);
-          // Fallback to professional structured title
-          const firstSentence = updateData.summary.split('.')[0];
-          let professionalTitle;
-          if (firstSentence.length > 0 && firstSentence.length <= 120) {
-            professionalTitle = formatAsProfessionalTitle(firstSentence.trim());
-            console.log(`🎯 Professional error fallback title: "${professionalTitle}"`);
-          } else if (updateData.summary.length <= 120) {
-            professionalTitle = formatAsProfessionalTitle(updateData.summary.trim());
-            console.log(`🎯 Using full summary as professional title: "${professionalTitle}"`);
-          } else {
-            const truncated = updateData.summary.substring(0, 117).trim();
-            professionalTitle = formatAsProfessionalTitle(truncated) + '...';
-            console.log(`🎯 Using truncated summary as professional title: "${professionalTitle}"`);
-          }
-          updateData.generated_title = professionalTitle; // Primary field
-          updateData.metadata.title = professionalTitle;  // Backup field
+          // Simple fallback: extract meaningful first part
+          const words = updateData.summary.split(' ');
+          const firstPart = words.slice(0, 8).join(' ');
+          const cleanTitle = firstPart.charAt(0).toUpperCase() + firstPart.slice(1);
+          updateData.generated_title = cleanTitle + (words.length > 8 ? '...' : '');
+          updateData.metadata.title = updateData.generated_title;
+          console.log(`🎯 Generated fallback title: "${updateData.generated_title}"`);
         }
       }
     }
@@ -1528,6 +1510,36 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     }
     
     console.log(`✅ File found: ${file.filename} (${file.metadata?.mimetype})`);
+    
+    // Check if file has a poor title that needs regeneration
+    if (file.summary && file.generated_title && 
+        file.generated_title.length > 100 && 
+        file.summary.substring(0, 100) === file.generated_title.substring(0, 100)) {
+      console.log(`🔧 Regenerating poor quality title for ${file.filename}`);
+      try {
+        const aiTitle = await generateSophisticatedImageTitle(file.summary, {});
+        if (aiTitle && aiTitle !== file.generated_title) {
+          await file.update({ 
+            generated_title: aiTitle,
+            metadata: { ...file.metadata, title: aiTitle }
+          });
+          console.log(`✅ Updated title to: "${aiTitle}"`);
+        }
+      } catch (titleError) {
+        // Generate a better title using first 8 words
+        const words = file.summary.split(' ');
+        const betterTitle = words.slice(0, 8).join(' ') + (words.length > 8 ? '...' : '');
+        if (betterTitle !== file.generated_title) {
+          await file.update({
+            generated_title: betterTitle,
+            metadata: { ...file.metadata, title: betterTitle }
+          });
+          console.log(`✅ Updated title to concise version: "${betterTitle}"`);
+        }
+      }
+      // Reload file with updated title
+      await file.reload();
+    }
     
     // Get multimedia analysis results from new models
     let models;
