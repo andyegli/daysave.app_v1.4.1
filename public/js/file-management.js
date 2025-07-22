@@ -351,6 +351,48 @@ class FileManager {
         setTimeout(() => {
           window.location.href = '/auth/login';
         }, 2000);
+      } else if (response.status === 429) {
+        // Usage limit exceeded
+        try {
+          result = await response.json();
+          result.isSubscriptionError = true;
+        } catch (e) {
+          result = {
+            success: false,
+            error: 'Upload Limit Reached',
+            message: 'You have reached your subscription upload limit.',
+            upgradeMessage: 'Upgrade your subscription to upload more files.',
+            isSubscriptionError: true
+          };
+        }
+      } else if (response.status === 413) {
+        // File size limit exceeded
+        try {
+          result = await response.json();
+          result.isSubscriptionError = true;
+        } catch (e) {
+          result = {
+            success: false,
+            error: 'File Too Large',
+            message: 'Your file exceeds the size limit for your subscription plan.',
+            upgradeMessage: 'Upgrade to upload larger files.',
+            isSubscriptionError: true
+          };
+        }
+      } else if (response.status === 403) {
+        // Feature not available
+        try {
+          result = await response.json();
+          result.isSubscriptionError = true;
+        } catch (e) {
+          result = {
+            success: false,
+            error: 'Premium Feature Required',
+            message: 'This feature requires a premium subscription.',
+            upgradeMessage: 'Upgrade to unlock all features.',
+            isSubscriptionError: true
+          };
+        }
       } else {
         // Success response
         try {
@@ -476,10 +518,33 @@ class FileManager {
     }
 
     if (!result.success && result.error) {
-      html += `<div class="alert alert-danger">
-        <i class="fas fa-exclamation-triangle"></i> 
-        ${result.error}: ${result.message || 'Unknown error occurred'}
-      </div>`;
+      if (result.isSubscriptionError) {
+        // Special handling for subscription-related errors
+        html += `<div class="alert alert-warning">
+          <div class="d-flex align-items-start">
+            <i class="fas fa-crown me-3 mt-1" style="color: #ffd700; font-size: 1.2em;"></i>
+            <div class="flex-grow-1">
+              <h6 class="alert-heading mb-2">${result.error}</h6>
+              <p class="mb-2">${result.message}</p>
+              ${result.upgradeMessage ? `<p class="mb-3 text-muted small">${result.upgradeMessage}</p>` : ''}
+              <div class="d-flex gap-2">
+                <a href="${result.upgradeUrl || '/subscription/plans'}" class="btn btn-primary btn-sm">
+                  <i class="fas fa-arrow-up me-1"></i> Upgrade Now
+                </a>
+                ${result.supportUrl ? `<a href="${result.supportUrl}" class="btn btn-outline-secondary btn-sm">
+                  <i class="fas fa-cog me-1"></i> Manage Subscription
+                </a>` : ''}
+              </div>
+            </div>
+          </div>
+        </div>`;
+      } else {
+        // Regular error handling
+        html += `<div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle"></i> 
+          ${result.error}: ${result.message || 'Unknown error occurred'}
+        </div>`;
+      }
     }
 
     resultsDiv.innerHTML = html;

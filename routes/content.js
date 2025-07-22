@@ -246,6 +246,14 @@ router.get('/', isAuthenticated, async (req, res) => {
       }),
       require('../models').File.findAll({
         where: { user_id: req.user.id },
+        include: [{
+          model: require('../models').Thumbnail,
+          as: 'thumbnails',
+          required: false,
+          where: {
+            status: 'ready'
+          }
+        }],
         order: [['createdAt', 'DESC']]
       })
     ]);
@@ -386,13 +394,70 @@ router.get('/', isAuthenticated, async (req, res) => {
 
       // Get title from metadata or generate from filename
       const getFileTitle = (file) => {
-        // Try metadata.title first (populated by AI or our script)
-        if (file.metadata && file.metadata.title) {
-          return file.metadata.title;
+        // Parse metadata if it's a string
+        let metadata = file.metadata;
+        if (typeof metadata === 'string') {
+          try {
+            metadata = JSON.parse(metadata);
+          } catch (e) {
+            metadata = {};
+          }
         }
+        
+        // Try metadata.title first (populated by AI or our script)
+        if (metadata && metadata.title) {
+          return metadata.title;
+        }
+        
+        // Get correct file type from parsed metadata
+        const parsedFileType = metadata?.mimetype || '';
+        
+        // For images, try to generate a title from AI summary or auto_tags
+        if (parsedFileType.startsWith('image/')) {
+          // Use first part of AI summary if available
+          if (file.summary && file.summary.length > 0) {
+            // Extract first sentence or first 50 chars, whichever is shorter
+            const firstSentence = file.summary.split('.')[0];
+            if (firstSentence.length > 0 && firstSentence.length <= 60) {
+              return firstSentence.trim();
+            } else if (file.summary.length <= 60) {
+              return file.summary.trim();
+            } else {
+              return file.summary.substring(0, 57).trim() + '...';
+            }
+          }
+          
+          // Use top auto_tags to create a descriptive title
+          if (file.auto_tags && Array.isArray(file.auto_tags) && file.auto_tags.length > 0) {
+            const topTags = file.auto_tags.slice(0, 3).join(', ');
+            return topTags.length <= 60 ? topTags : topTags.substring(0, 57) + '...';
+          }
+        }
+        
         // Fallback: clean up filename
         return file.filename.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
       };
+
+      // Get thumbnail URL for images
+      let thumbnailUrl = null;
+      if (fileType.startsWith('image/')) {
+        // Check if thumbnails are loaded and available
+        if (file.thumbnails && file.thumbnails.length > 0) {
+          // Find main thumbnail or use first available
+          const mainThumbnail = file.thumbnails.find(t => t.thumbnail_type === 'main' && t.status === 'ready');
+          const usableThumbnail = mainThumbnail || file.thumbnails.find(t => t.status === 'ready');
+          
+          if (usableThumbnail) {
+            // For thumbnails, use the file path directly (they should be accessible)
+            thumbnailUrl = `/${usableThumbnail.file_path}`;
+          }
+        }
+        
+        // Fallback: Use the original image file as thumbnail
+        if (!thumbnailUrl) {
+          thumbnailUrl = `/files/serve/${file.user_id}/${encodeURIComponent(file.filename)}`;
+        }
+      }
 
       return {
         id: file.id,
@@ -409,10 +474,11 @@ router.get('/', isAuthenticated, async (req, res) => {
         createdAt: file.createdAt,
         metadata: {
           ...file.metadata,
-          thumbnail: file.metadata?.thumbnail || null,
+          thumbnail: thumbnailUrl, // Use the computed thumbnail URL
           fileId: file.id,
           filename: file.filename,
-          isFile: true
+          isFile: true,
+          hasGeneratedThumbnail: !!(file.thumbnails && file.thumbnails.length > 0)
         },
         sourceInfo
       };

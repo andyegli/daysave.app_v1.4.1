@@ -13,6 +13,8 @@ const VoicePrintDatabase = require('./VoicePrintDatabase');
 const MultimediaAnalyzer = require('./MultimediaAnalyzer');
 const ThumbnailGenerator = require('./ThumbnailGenerator');
 const VideoProcessor = require('./VideoProcessor');
+const AudioProcessor = require('./AudioProcessor');
+const ImageProcessor = require('./ImageProcessor');
 const AutomationOrchestrator = require('./AutomationOrchestrator');
 
 module.exports = {
@@ -20,5 +22,7 @@ module.exports = {
   MultimediaAnalyzer,
   ThumbnailGenerator,
   VideoProcessor,
+  AudioProcessor,
+  ImageProcessor,
   AutomationOrchestrator
 }; 

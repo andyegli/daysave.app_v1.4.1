@@ -1167,5 +1167,24 @@ openssl rand -base64 32
   - [x] **Status**: Complete image upload, AI analysis, thumbnail generation, and deletion pipeline now fully functional for both local and GCS storage with proper content type handling
   - [x] **Image Summary Display Fix**: Fixed image summary truncation to show 4 lines like videos - removed fixed `height: 100px` and `overflow-y: auto` from `.transcription-preview` CSS that was creating scrollable container instead of allowing `-webkit-line-clamp: 4` to work
   - [x] **Image Content Layout Consistency**: Fixed image content items to display same information as video content items - proper titles, 4-line summaries, tags, sentiment analysis, and consistent UI layout. Fixed route normalization, migrated AI data, and resolved thumbnail quality database schema mismatch
-- [⚠️] **4-Line Summary Display Issue**: Applied comprehensive CSS fixes but user still seeing 1-line truncation. Created debugging tool (`debug-summary-display.js`) to identify root cause - may be CSS specificity conflicts or browser caching
+- [x] **4-Line Summary Display Issue**: RESOLVED - Root cause was JavaScript truncation in `ai-analysis.js` that ran after page load and truncated image summaries to 120 characters. Removed `displayTranscriptionSummary()` truncation logic to let CSS `-webkit-line-clamp: 4` handle proper 4-line display. Image summaries now show 4 full lines before truncation
 - [x] **Status**: Complete image upload, AI analysis, thumbnail generation, deletion, and display pipeline now fully functional for both local and GCS storage with proper content type handling and UI consistency
+
+- [x] **AI Pipeline Processing Issues for Images**: RESOLVED - Fixed root causes preventing proper AI-generated titles for uploaded images
+  - [x] **Missing ImageProcessor Export**: Fixed missing `ImageProcessor` and `AudioProcessor` exports from `services/multimedia/index.js` causing silent import failures
+  - [x] **GCS File Processing Issues**: Fixed file download and processing issues in `triggerFileAnalysis()` with proper initialization and cleanup for Google Cloud Storage files
+  - [x] **Enhanced AI Title Generation**: Implemented smart title generation using AI descriptions instead of basic object detection tags
+    - [x] Titles now stored in `metadata.title` field where content rendering expects them
+    - [x] Multiple fallback strategies: AI description → AI tags → filename cleaning
+    - [x] First sentence extraction from AI descriptions for concise, meaningful titles
+  - [x] **Improved AI Analysis Flow**: Enhanced image analysis pipeline with better error handling and tag generation
+    - [x] Rich, descriptive tags extracted from AI analysis instead of single object names
+    - [x] Fallback tag generation when BackwardCompatibilityService fails
+    - [x] Direct meaningful word extraction from AI descriptions for better tag quality
+  - [x] **Robust Metadata Handling**: Fixed metadata parsing and merging with proper string/object handling
+  - [x] **Fixed Specific File**: Manually updated IMG_3083.PNG with proper AI analysis results
+    - [x] Before: Title showed only "Shoe" (basic object detection)
+    - [x] After: Title shows "Close-up white sneaker with hands tying shoelaces" (AI-generated)
+    - [x] Added 10 rich AI tags: ['shoe tying', 'sneaker', 'footwear', 'instruction', 'demonstration', 'close-up', 'hands', 'tying shoelaces', 'tutorial', 'bright lighting']
+  - [x] **Pipeline Testing**: Verified improvements with test script showing 400-character AI descriptions and 10 meaningful tags vs. single basic tags
+  - [x] **Status**: AI pipeline now generates proper titles for all future image uploads automatically - no more timestamp or single-word titles

@@ -1,6 +1,36 @@
 // Content Management JavaScript
 // This file handles all content management functionality
 
+// Show subscription error with upgrade options
+function showSubscriptionError(errorData) {
+  const alert = document.getElementById('addContentAlert');
+  alert.className = 'alert alert-warning mt-2';
+  
+  const upgradeUrl = errorData.upgradeUrl || '/subscription/plans';
+  const supportUrl = errorData.supportUrl || '/subscription/manage';
+  
+  alert.innerHTML = `
+    <div class="d-flex align-items-start">
+      <i class="fas fa-crown me-3 mt-1" style="color: #ffd700; font-size: 1.2em;"></i>
+      <div class="flex-grow-1">
+        <h6 class="alert-heading mb-2">${errorData.error || 'Subscription Limit Reached'}</h6>
+        <p class="mb-2">${errorData.message}</p>
+        ${errorData.upgradeMessage ? `<p class="mb-3 text-muted small">${errorData.upgradeMessage}</p>` : ''}
+        <div class="d-flex gap-2">
+          <a href="${upgradeUrl}" class="btn btn-primary btn-sm">
+            <i class="fas fa-arrow-up me-1"></i> Upgrade Now
+          </a>
+          ${supportUrl ? `<a href="${supportUrl}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-cog me-1"></i> Manage Subscription
+          </a>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+  
+  alert.classList.remove('d-none');
+}
+
 // Handle Add Content Form Submission
 document.addEventListener('DOMContentLoaded', function() {
   const form = document.getElementById('addContentForm');
@@ -21,6 +51,14 @@ document.addEventListener('DOMContentLoaded', function() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
+        
+        // Handle subscription-related errors
+        if (res.status === 429 || res.status === 403 || res.status === 413) {
+          const errorResult = await res.json();
+          showSubscriptionError(errorResult);
+          return;
+        }
+        
         const result = await res.json();
         const alert = document.getElementById('addContentAlert');
         if (result.success) {
@@ -66,7 +104,18 @@ document.addEventListener('DOMContentLoaded', function() {
       const itemId = this.getAttribute('data-id');
       const itemType = this.getAttribute('data-item-type') || 'content';
       
-      console.log('🗑️ Delete button clicked for item:', { itemId, itemType });
+      // DEBUG: Log all attributes to see what's being read
+      console.log('🗑️ Delete button clicked for item:', { 
+        itemId, 
+        itemType,
+        allAttributes: {
+          'data-id': this.getAttribute('data-id'),
+          'data-item-type': this.getAttribute('data-item-type'),
+          'data-item-type-debug': this.hasAttribute('data-item-type'),
+          'className': this.className,
+          'outerHTML': this.outerHTML
+        }
+      });
       
       if (!itemId) {
         alert('No item ID found.');
@@ -85,12 +134,23 @@ document.addEventListener('DOMContentLoaded', function() {
       
       try {
         // Use appropriate endpoint based on item type
-        const endpoint = itemType === 'file' ? `/files/${itemId}` : `/content/${itemId}`;
+        let endpoint = itemType === 'file' ? `/files/${itemId}` : `/content/${itemId}`;
+        
+        // FALLBACK: If delete fails with 404 on /content/:id, try /files/:id
         console.log('📡 Making delete request to:', endpoint);
         
-        const res = await fetch(endpoint, {
+        let res = await fetch(endpoint, {
           method: 'DELETE'
         });
+        
+        // If content endpoint fails with 404, try files endpoint
+        if (!res.ok && res.status === 404 && endpoint.startsWith('/content/')) {
+          console.log('🔄 Content endpoint failed, trying files endpoint...');
+          endpoint = `/files/${itemId}`;
+          res = await fetch(endpoint, {
+            method: 'DELETE'
+          });
+        }
         
         if (res.ok) {
           console.log('✅ Item deleted successfully');
@@ -260,4 +320,77 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   });
+}); 
+
+// DEBUG: Log all delete buttons when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🔍 DEBUG: Checking all delete buttons on page load');
+  const deleteButtons = document.querySelectorAll('.delete-content-btn');
+  console.log(`Found ${deleteButtons.length} delete buttons`);
+  
+  deleteButtons.forEach((btn, index) => {
+    console.log(`Button ${index + 1}:`, {
+      'data-id': btn.getAttribute('data-id'),
+      'data-item-type': btn.getAttribute('data-item-type'),
+      'hasDataItemType': btn.hasAttribute('data-item-type'),
+      'className': btn.className,
+      'outerHTML': btn.outerHTML.substring(0, 200) + '...' // Truncate for readability
+    });
+  });
+  
+  // Also check the content cards
+  const contentCards = document.querySelectorAll('.content-card');
+  console.log(`Found ${contentCards.length} content cards`);
+  
+  contentCards.forEach((card, index) => {
+    console.log(`Card ${index + 1}:`, {
+      'data-id': card.getAttribute('data-id'),
+      'data-item-type': card.getAttribute('data-item-type'),
+      'className': card.className
+    });
+  });
+});
+
+// Copy content summary function (CSP-compliant)
+function copyContentSummary(contentId) {
+  const summaryElement = document.querySelector(`#transcription-summary-${contentId} .transcription-text`);
+  if (summaryElement) {
+    const summaryText = summaryElement.textContent.trim();
+    
+    if (summaryText && summaryText !== 'Loading transcription...') {
+      navigator.clipboard.writeText(summaryText).then(() => {
+        // Show brief success feedback
+        const button = document.querySelector(`[data-content-id="${contentId}"]`);
+        if (button) {
+          const originalHtml = button.innerHTML;
+          button.innerHTML = '<i class="bi bi-check" style="font-size: 0.7rem;"></i>';
+          button.classList.add('btn-success');
+          button.classList.remove('btn-outline-primary');
+          
+          setTimeout(() => {
+            button.innerHTML = originalHtml;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-primary');
+          }, 1500);
+        }
+      }).catch(err => {
+        console.error('Failed to copy summary:', err);
+        alert('Failed to copy summary to clipboard');
+      });
+    } else {
+      alert('No summary available to copy');
+    }
+  }
+}
+
+// Handle copy summary buttons (CSP-compliant event delegation)
+document.addEventListener('click', function(e) {
+  if (e.target.closest('.copy-summary-btn')) {
+    const button = e.target.closest('.copy-summary-btn');
+    const contentId = button.getAttribute('data-content-id');
+    
+    if (contentId) {
+      copyContentSummary(contentId);
+    }
+  }
 }); 

@@ -88,11 +88,30 @@ const requireFeature = (feature) => {
           route: req.originalUrl
         });
         
+        // Create feature-specific error messages
+        let featureMessage = 'This feature requires a premium subscription.';
+        let upgradeMessage = 'Upgrade to unlock all premium features.';
+        
+        if (feature === 'ai_analysis_enabled') {
+          featureMessage = 'AI analysis and transcription require a premium subscription.';
+          upgradeMessage = 'Upgrade to unlock AI-powered content analysis, transcription, and smart tagging.';
+        } else if (feature === 'premium_support') {
+          featureMessage = 'Premium support is only available for paid subscribers.';
+          upgradeMessage = 'Upgrade to get priority support and dedicated assistance.';
+        } else if (feature === 'api_access') {
+          featureMessage = 'API access requires a premium subscription.';
+          upgradeMessage = 'Upgrade to get API keys and integrate DaySave with your applications.';
+        }
+
         return res.status(403).json({
           success: false,
-          error: `This feature requires a premium subscription`,
+          error: 'Premium Feature Required',
+          message: featureMessage,
+          upgradeMessage: upgradeMessage,
           feature,
-          upgradeUrl: '/subscription/plans'
+          currentPlan: plan.name,
+          upgradeUrl: '/subscription/plans',
+          supportUrl: '/subscription/manage'
         });
       }
 
@@ -150,12 +169,37 @@ const checkUsageLimit = (feature, amount = 1) => {
           route: req.originalUrl
         });
         
+        // Create user-friendly error message based on feature
+        let userMessage = 'You have reached your subscription limit.';
+        let upgradeMessage = 'Upgrade your subscription to continue.';
+        
+        if (feature === 'file_uploads') {
+          userMessage = `You've reached your monthly upload limit of ${usageCheck.limit} files.`;
+          upgradeMessage = 'Upgrade to a higher plan for more uploads and storage space.';
+        } else if (feature === 'content_items') {
+          userMessage = `You've reached your limit of ${usageCheck.limit} saved content items.`;
+          upgradeMessage = 'Upgrade to save more content and access premium features.';
+        } else if (feature === 'storage_mb') {
+          userMessage = `You've reached your storage limit of ${Math.round(usageCheck.limit / 1024)} GB.`;
+          upgradeMessage = 'Upgrade to get more storage space for your files.';
+        } else if (feature === 'api_requests') {
+          userMessage = `You've exceeded your API request limit of ${usageCheck.limit} requests per hour.`;
+          upgradeMessage = 'Upgrade to get higher API rate limits and priority support.';
+        }
+
         return res.status(429).json({
           success: false,
-          error: 'Usage limit exceeded',
+          error: 'Subscription Limit Reached',
+          message: userMessage,
+          upgradeMessage: upgradeMessage,
           feature,
-          usage: usageCheck,
-          upgradeUrl: '/subscription/plans'
+          usage: {
+            current: usageCheck.currentUsage,
+            limit: usageCheck.limit,
+            percentage: Math.round((usageCheck.currentUsage / usageCheck.limit) * 100)
+          },
+          upgradeUrl: '/subscription/plans',
+          supportUrl: '/subscription/manage'
         });
       }
 
@@ -289,10 +333,13 @@ const checkFileSizeLimit = (sizeField = 'size') => {
         
         return res.status(413).json({
           success: false,
-          error: 'File size exceeds plan limit',
+          error: 'File Too Large',
+          message: `Your file (${fileSizeMB.toFixed(2)} MB) exceeds your plan's ${maxSizeMB} MB limit per file.`,
+          upgradeMessage: 'Upgrade to a higher plan to upload larger files and get more storage space.',
           fileSizeMB: fileSizeMB.toFixed(2),
           maxSizeMB,
-          upgradeUrl: '/subscription/plans'
+          upgradeUrl: '/subscription/plans',
+          supportUrl: '/subscription/manage'
         });
       }
 

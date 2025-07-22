@@ -74,7 +74,9 @@ async function triggerFileAnalysis(fileRecord, user) {
           userId: user.id,
           mimeType: fileRecord.metadata?.mimetype,
           fileSize: fileRecord.metadata?.size,
-          source: 'upload'
+          source: 'upload',
+          cleanupTempFile: false, // Initialize cleanup flag
+          tempFilePath: null      // Initialize temp path
         };
         console.log(`🔧 DEBUG: fileMetadata after initialization:`, fileMetadata);
         
@@ -84,6 +86,8 @@ async function triggerFileAnalysis(fileRecord, user) {
         const objectName = pathParts.join('/');
         
         // Use FileUploadService to download the file
+        console.log(`📥 Downloading from bucket: ${bucketName}, object: ${objectName}`);
+        const FileUploadService = require('../services/fileUpload');
         const downloadResult = await FileUploadService.downloadFromGCS(bucketName, objectName, filePath);
         console.log(`✅ Downloaded GCS file to: ${filePath}`);
         
@@ -96,6 +100,9 @@ async function triggerFileAnalysis(fileRecord, user) {
       } catch (downloadError) {
         console.error(`❌ Failed to download GCS file: ${downloadError.message}`);
         console.error(`🔧 DEBUG: fileMetadata when error occurred:`, typeof fileMetadata, fileMetadata);
+        // Log more details about the error
+        console.error(`🔧 DEBUG: GCS path: ${fileRecord.file_path}`);
+        console.error(`🔧 DEBUG: Error stack:`, downloadError.stack);
         throw new Error(`Failed to download file from Google Cloud Storage: ${downloadError.message}`);
       }
     } else {
@@ -222,7 +229,36 @@ async function triggerFileAnalysis(fileRecord, user) {
       } catch (aiError) {
         console.error(`⚠️ Enhanced AI analysis failed for file ${fileRecord.id}:`, aiError.message);
         console.error(`⚠️ AI Error stack:`, aiError.stack);
-        // Continue with basic analysis if AI enhancement fails
+        
+        // 🚀 FALLBACK: Create enhanced results directly from AI content
+        console.log(`🔧 Creating enhanced results directly from AI content...`);
+        enhancedResults = {
+          generatedTitle: null, // Will be generated later from content
+          auto_tags: [],
+          category: formattedResults.mediaType || 'unknown'
+        };
+        
+        // Extract meaningful tags from AI description
+        if (contentForAI.length > 20) {
+          const words = contentForAI.toLowerCase()
+            .replace(/[^\w\s]/g, ' ')
+            .split(/\s+/)
+            .filter(word => word.length > 3 && !['this', 'that', 'with', 'from', 'they', 'were', 'been', 'have', 'will', 'would', 'could', 'should'].includes(word));
+          
+          // Get most frequent meaningful words as tags
+          const wordCounts = {};
+          words.forEach(word => {
+            wordCounts[word] = (wordCounts[word] || 0) + 1;
+          });
+          
+          const topWords = Object.entries(wordCounts)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 8)
+            .map(([word]) => word);
+          
+          enhancedResults.auto_tags = topWords;
+          console.log(`🏷️ Generated fallback tags from content: ${topWords.join(', ')}`);
+        }
       }
     } else {
       console.log(`⚠️ Insufficient content for AI enhancement (${contentForAI.length} chars)`);
@@ -233,16 +269,29 @@ async function triggerFileAnalysis(fileRecord, user) {
     
     console.log(`💾 Building update data...`);
     
-    // Store basic metadata
-    if (formattedResults.data.metadata) {
-      updateData.metadata = {
-        ...(fileRecord.metadata || {}),
-        ...formattedResults.data.metadata,
-        processingJobId: processingResult.jobId,
-        lastAnalyzed: new Date().toISOString()
-      };
-      console.log(`📊 Added metadata to update`);
+    // Store basic metadata - ensure proper parsing and merging
+    let existingMetadata = {};
+    if (fileRecord.metadata) {
+      if (typeof fileRecord.metadata === 'string') {
+        try {
+          existingMetadata = JSON.parse(fileRecord.metadata);
+        } catch (e) {
+          console.log(`⚠️ Failed to parse existing metadata, using empty object`);
+          existingMetadata = {};
+        }
+      } else {
+        existingMetadata = fileRecord.metadata;
+      }
     }
+    
+    // Build metadata object
+    updateData.metadata = {
+      ...existingMetadata,
+      ...(formattedResults.data.metadata || {}),
+      processingJobId: processingResult.jobId,
+      lastAnalyzed: new Date().toISOString()
+    };
+    console.log(`📊 Added metadata to update`);
     
     // Handle transcription results based on media type
     if (formattedResults.data.transcription) {
@@ -278,10 +327,10 @@ async function triggerFileAnalysis(fileRecord, user) {
     
     // ✨ ENHANCED: Use AI-powered tags and title if available
     if (enhancedResults) {
-      // AI-generated title
+      // AI-generated title - store in metadata.title for proper display
       if (enhancedResults.generatedTitle) {
-        updateData.generated_title = enhancedResults.generatedTitle;
-        console.log(`🎯 Added AI-generated title: "${enhancedResults.generatedTitle}"`);
+        updateData.metadata.title = enhancedResults.generatedTitle;
+        console.log(`🎯 Added AI-generated title to metadata: "${enhancedResults.generatedTitle}"`);
       }
       
       // AI-powered tags (prioritize these over basic object detection)
@@ -297,9 +346,31 @@ async function triggerFileAnalysis(fileRecord, user) {
       }
     }
     
+    // 🚀 FALLBACK: Generate title from AI description if no enhanced title available
+    if ((!enhancedResults || !enhancedResults.generatedTitle) && updateData.summary && !updateData.metadata.title) {
+      // Generate title from first sentence of summary
+      const firstSentence = updateData.summary.split('.')[0];
+      if (firstSentence.length > 0 && firstSentence.length <= 60) {
+        updateData.metadata.title = firstSentence.trim();
+        console.log(`🎯 Generated title from summary: "${updateData.metadata.title}"`);
+      } else if (updateData.summary.length <= 60) {
+        updateData.metadata.title = updateData.summary.trim();
+        console.log(`🎯 Using full summary as title: "${updateData.metadata.title}"`);
+      } else {
+        updateData.metadata.title = updateData.summary.substring(0, 57).trim() + '...';
+        console.log(`🎯 Using truncated summary as title: "${updateData.metadata.title}"`);
+      }
+    }
+    
     // Fallback to basic tags if AI enhancement didn't produce any
     if (!updateData.auto_tags || updateData.auto_tags.length === 0) {
       const autoTags = [];
+      
+      // Tags from AI description/processor results (priority)
+      if (formattedResults.data.tags && Array.isArray(formattedResults.data.tags)) {
+        autoTags.push(...formattedResults.data.tags);
+        console.log(`🎨 Added AI processor tags: ${formattedResults.data.tags.join(', ')}`);
+      }
       
       // Tags from objects detected (fallback)
       if (formattedResults.data.objects) {
@@ -311,10 +382,10 @@ async function triggerFileAnalysis(fileRecord, user) {
         console.log(`🔍 Added object detection tags: ${autoTags.join(', ')}`);
       }
       
-      // Tags from AI description (fallback)
+      // Tags from AI description metadata (additional fallback)
       if (formattedResults.data.aiDescription && formattedResults.data.aiDescription.tags) {
         autoTags.push(...formattedResults.data.aiDescription.tags);
-        console.log(`🎨 Added AI description tags`);
+        console.log(`🎨 Added AI description metadata tags`);
       }
       
       // Store fallback tags if we have any
@@ -955,7 +1026,47 @@ router.get('/serve/:userId/:filename', isAuthenticated, async (req, res) => {
       return res.status(403).json({ error: 'Access denied - you can only access your own files' });
     }
     
-    // Construct file path
+    // First, try to find the file in the database to get the correct path
+    const fileRecord = await File.findOne({
+      where: {
+        user_id: userId,
+        filename: filename
+      }
+    });
+    
+    if (fileRecord) {
+      // File found in database - use proper URL generation
+      try {
+        const fileUrl = await FileUploadService.getFileUrl(fileRecord.file_path);
+        
+        // If it's a GCS signed URL, redirect to it
+        if (fileUrl.includes('storage.googleapis.com')) {
+          return res.redirect(fileUrl);
+        }
+        
+        // For local files, continue with local serving
+        const path = require('path');
+        const fs = require('fs');
+        const filePath = path.join(__dirname, '..', fileRecord.file_path);
+        
+        if (fs.existsSync(filePath)) {
+          const stat = fs.statSync(filePath);
+          const mimeType = await FileUploadService.getMimeType(filePath);
+          
+          res.setHeader('Content-Type', mimeType || 'application/octet-stream');
+          res.setHeader('Content-Length', stat.size);
+          res.setHeader('Cache-Control', 'private, max-age=3600');
+          
+          const readStream = fs.createReadStream(filePath);
+          readStream.pipe(res);
+          return;
+        }
+      } catch (urlError) {
+        console.error('Error generating file URL:', urlError);
+      }
+    }
+    
+    // Fallback: Try original local file serving for backwards compatibility
     const path = require('path');
     const fs = require('fs');
     const filePath = path.join(__dirname, '..', 'uploads', userId, filename);
