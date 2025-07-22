@@ -599,52 +599,94 @@
   <script>
     // Force 4-line text display with JavaScript fallback
     document.addEventListener('DOMContentLoaded', function() {
-      const transcriptionTexts = document.querySelectorAll('.force-4-lines .text-content');
+      console.log('🔧 4-line fix script started');
       
-      transcriptionTexts.forEach(function(element) {
+      const transcriptionTexts = document.querySelectorAll('.force-4-lines .text-content');
+      console.log('🔍 Found transcription texts:', transcriptionTexts.length);
+      
+      transcriptionTexts.forEach(function(element, index) {
+        console.log(`🎯 Processing element ${index + 1}:`, element);
+        
         const originalText = element.textContent.trim();
         const container = element.parentElement;
+        
+        console.log(`📝 Original text length: ${originalText.length}`);
+        console.log(`📝 Text preview: "${originalText.substring(0, 100)}..."`);
+        
+        // Force remove any existing line-clamp CSS
+        element.style.display = 'block';
+        element.style.webkitLineClamp = 'unset';
+        element.style.webkitBoxOrient = 'unset';
+        container.style.display = 'block';
+        container.style.webkitLineClamp = 'unset';
+        container.style.webkitBoxOrient = 'unset';
         
         // Set up the container with proper styling
         const lineHeight = 22; // 1.6 * 13.6px (0.85rem)
         const maxHeight = lineHeight * 4; // 88px for 4 lines
         
         container.style.height = maxHeight + 'px';
+        container.style.minHeight = maxHeight + 'px';
+        container.style.maxHeight = maxHeight + 'px';
         container.style.overflow = 'hidden';
         container.style.lineHeight = '1.6';
+        container.style.fontSize = '0.85rem';
         
-        // Test if text fits in 4 lines
+        element.style.lineHeight = '1.6';
+        element.style.fontSize = '0.85rem';
         element.style.height = 'auto';
+        element.style.display = 'block';
+        
+        console.log(`📏 Container height set to: ${maxHeight}px`);
+        console.log(`📏 Element scrollHeight: ${element.scrollHeight}px`);
         
         if (element.scrollHeight > maxHeight) {
+          console.log(`✂️ Text needs truncation. ScrollHeight: ${element.scrollHeight}px > MaxHeight: ${maxHeight}px`);
+          
           // Text is longer than 4 lines, we need to truncate
           let testText = originalText;
           let lastGoodText = originalText;
+          let iterations = 0;
+          const maxIterations = 50;
           
           // Binary search to find the maximum text that fits in 4 lines
-          while (testText.length > 0) {
+          while (testText.length > 0 && iterations < maxIterations) {
+            iterations++;
             element.textContent = testText + '...';
+            
+            console.log(`🔄 Iteration ${iterations}: Testing text length ${testText.length}, scrollHeight: ${element.scrollHeight}px`);
             
             if (element.scrollHeight <= maxHeight) {
               lastGoodText = testText + '...';
+              console.log(`✅ Found good text at length: ${testText.length}`);
               break;
             }
             
             // Remove words from the end
             const words = testText.split(' ');
+            if (words.length <= 1) break;
             words.pop();
             testText = words.join(' ');
           }
           
           element.textContent = lastGoodText;
+          console.log(`🎯 Final text set: "${lastGoodText.substring(0, 100)}..."`);
+        } else {
+          console.log(`✅ Text fits in ${maxHeight}px without truncation`);
         }
+        
+        console.log(`📊 Final element scrollHeight: ${element.scrollHeight}px`);
       });
+      
+      console.log('✅ 4-line fix script completed');
     });
   </script>
   
   <style>
-    /* Additional aggressive 4-line forcing CSS - loaded last for highest priority */
-    .force-4-lines {
+    /* ULTRA-AGGRESSIVE 4-line forcing CSS with maximum specificity */
+    body .container .content-card .transcription-summary .transcription-preview .force-4-lines,
+    .content-card .transcription-preview .transcription-text.force-4-lines,
+    .force-4-lines[style] {
       height: 88px !important;
       min-height: 88px !important;
       max-height: 88px !important;
@@ -653,12 +695,29 @@
       overflow: hidden !important;
       white-space: normal !important;
       word-wrap: break-word !important;
+      display: block !important;
+      /* Force remove any line-clamp */
+      -webkit-line-clamp: unset !important;
+      -webkit-box-orient: unset !important;
     }
     
-    .force-4-lines .text-content {
+    body .container .content-card .transcription-summary .transcription-preview .force-4-lines .text-content,
+    .content-card .transcription-preview .transcription-text.force-4-lines .text-content,
+    .force-4-lines .text-content[style] {
       display: block !important;
       line-height: 1.6 !important;
       font-size: 0.85rem !important;
+      height: auto !important;
+      overflow: visible !important;
+      /* Force remove any line-clamp */
+      -webkit-line-clamp: unset !important;
+      -webkit-box-orient: unset !important;
+    }
+    
+    /* Debug border to visualize the container */
+    .force-4-lines {
+      border: 2px solid red !important;
+      background-color: yellow !important;
     }
   </style>
 </body>
