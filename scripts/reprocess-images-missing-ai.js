@@ -28,42 +28,26 @@ async function reprocessImagesWithoutAI() {
     }
     
     try {
-        // Find all image files that have no AI summary/description
+        // Find all image files (simpler approach - just look for image extensions)
         const imagesToReprocess = await File.findAll({
             where: {
-                [Op.and]: [
-                    // Only image files
-                    {
-                        [Op.or]: [
-                            { metadata: { [Op.like]: '%"mimetype":"image/%' } },
-                            { filename: { [Op.like]: '%.jpg' } },
-                            { filename: { [Op.like]: '%.jpeg' } },
-                            { filename: { [Op.like]: '%.png' } },
-                            { filename: { [Op.like]: '%.gif' } },
-                            { filename: { [Op.like]: '%.webp' } },
-                            { filename: { [Op.like]: '%.bmp' } }
-                        ]
-                    },
-                    // Missing AI analysis data (check existing fields only)
-                    {
-                        [Op.or]: [
-                            { summary: { [Op.is]: null } },
-                            { summary: '' },
-                            { transcription: { [Op.is]: null } },
-                            { transcription: '' },
-                            { auto_tags: { [Op.is]: null } },
-                            { auto_tags: '' }
-                        ]
-                    }
+                [Op.or]: [
+                    { filename: { [Op.like]: '%.jpg' } },
+                    { filename: { [Op.like]: '%.jpeg' } },
+                    { filename: { [Op.like]: '%.png' } },
+                    { filename: { [Op.like]: '%.gif' } },
+                    { filename: { [Op.like]: '%.webp' } },
+                    { filename: { [Op.like]: '%.bmp' } }
                 ]
             },
-            order: [['created_at', 'DESC']]
+            order: [['createdAt', 'DESC']],
+            limit: 10 // Process only 10 images at a time to avoid overwhelming the system
         });
 
-        console.log(`📊 Found ${imagesToReprocess.length} images that need AI analysis:\n`);
+        console.log(`📊 Found ${imagesToReprocess.length} images to reprocess (limited to 10 for safety):\n`);
 
         if (imagesToReprocess.length === 0) {
-            console.log('✅ All images already have AI analysis data!');
+            console.log('✅ No images found to reprocess!');
             return;
         }
 
@@ -133,6 +117,7 @@ async function reprocessImagesWithoutAI() {
         if (successCount > 0) {
             console.log('🎉 Reprocessing initiated! Check the server logs for analysis progress.');
             console.log('💡 AI analysis runs in the background - results will appear in content cards as processing completes.');
+            console.log('🔄 Note: Processing limited to 10 images for safety. Run script again to process more.');
         }
 
     } catch (error) {
