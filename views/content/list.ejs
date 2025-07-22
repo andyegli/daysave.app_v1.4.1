@@ -99,12 +99,20 @@
     
     /* Transcription text flow improvements */
     .transcription-text {
-      width: 100%;
-      white-space: normal;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      hyphens: auto;
+      width: 100% !important;
+      white-space: normal !important;
+      word-wrap: break-word !important;
+      overflow-wrap: break-word !important;
+      hyphens: auto !important;
       /* Note: display is handled inline for line-clamp functionality */
+    }
+
+    /* Force 4-line display for transcription text */
+    .transcription-text[style*="-webkit-line-clamp"] {
+      display: -webkit-box !important;
+      -webkit-box-orient: vertical !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
     }
     
     /* Brain icon styling */
@@ -258,8 +266,8 @@
                       <% if (item.summary) { %>
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>">
                         <div class="position-relative">
-                          <div class="transcription-preview bg-light p-2 rounded small">
-                            <div class="transcription-text text-dark" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; max-height: 5.6em;">
+                          <div class="transcription-preview bg-light p-2 rounded" style="font-size: 0.85rem;">
+                            <div class="transcription-text text-dark" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.4 !important; max-height: none !important; white-space: normal !important;">
                               <%= item.summary %>
                             </div>
                           </div>
