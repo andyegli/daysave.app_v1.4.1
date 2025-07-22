@@ -36,7 +36,7 @@ function isMultimediaFile(mimetype) {
  * @param {Object} user - User object
  */
 async function triggerFileAnalysis(fileRecord, user) {
-  let fileMetadata; // Declare in function scope for cleanup
+  let fileMetadata = {}; // FIXED: Initialize as empty object instead of undefined
   
   try {
     console.log(`🎬 Starting enhanced file analysis for ${fileRecord.id}`, {
@@ -45,6 +45,8 @@ async function triggerFileAnalysis(fileRecord, user) {
       filename: fileRecord.filename,
       mimetype: fileRecord.metadata?.mimetype
     });
+
+    console.log(`🔧 DEBUG: fileMetadata initialized as:`, typeof fileMetadata, fileMetadata);
 
     // Get the actual filesystem path for the uploaded file
     const path = require('path');
@@ -64,6 +66,18 @@ async function triggerFileAnalysis(fileRecord, user) {
       filePath = path.join(tempDir, tempFileName);
       
       try {
+        // FIXED: Initialize fileMetadata for GCS downloads BEFORE setting properties
+        console.log(`🔧 DEBUG: Initializing fileMetadata for GCS download...`);
+        fileMetadata = {
+          filename: fileRecord.filename,
+          fileId: fileRecord.id,
+          userId: user.id,
+          mimeType: fileRecord.metadata?.mimetype,
+          fileSize: fileRecord.metadata?.size,
+          source: 'upload'
+        };
+        console.log(`🔧 DEBUG: fileMetadata after initialization:`, fileMetadata);
+        
         // Download file from GCS using FileUploadService
         const gcsPath = fileRecord.file_path.replace('gs://', '');
         const [bucketName, ...pathParts] = gcsPath.split('/');
@@ -73,16 +87,20 @@ async function triggerFileAnalysis(fileRecord, user) {
         const downloadResult = await FileUploadService.downloadFromGCS(bucketName, objectName, filePath);
         console.log(`✅ Downloaded GCS file to: ${filePath}`);
         
-        // Set flag to clean up temp file after analysis
+        // FIXED: Now it's safe to set cleanup flags
+        console.log(`🔧 DEBUG: Setting cleanup flags...`);
         fileMetadata.cleanupTempFile = true;
         fileMetadata.tempFilePath = filePath;
+        console.log(`🔧 DEBUG: fileMetadata after cleanup flags:`, fileMetadata);
         
       } catch (downloadError) {
         console.error(`❌ Failed to download GCS file: ${downloadError.message}`);
+        console.error(`🔧 DEBUG: fileMetadata when error occurred:`, typeof fileMetadata, fileMetadata);
         throw new Error(`Failed to download file from Google Cloud Storage: ${downloadError.message}`);
       }
     } else {
       // For local files, convert the stored path to absolute path
+      console.log(`📁 Processing local file: ${fileRecord.file_path}`);
       if (fileRecord.file_path.startsWith('/uploads/')) {
         // Path is already relative to project root
         filePath = path.join(__dirname, '..', fileRecord.file_path);
@@ -92,16 +110,23 @@ async function triggerFileAnalysis(fileRecord, user) {
       }
     }
 
+    console.log(`🔧 DEBUG: Final filePath: ${filePath}`);
+
     // Verify file exists
     if (!fs.existsSync(filePath)) {
       throw new Error(`File not found at path: ${filePath}`);
     }
 
+    console.log(`📖 Reading file into buffer...`);
     // Read file into buffer for processing
-    const fileBuffer = await fs.readFile(filePath);
+    const fileBuffer = await fs.promises.readFile(filePath);
+    console.log(`📖 File buffer size: ${fileBuffer.length} bytes`);
     
-    // Create metadata for orchestrator
+    // FIXED: Update metadata for orchestrator (preserve cleanup flags)
+    console.log(`🔧 DEBUG: Updating fileMetadata for orchestrator...`);
+    console.log(`🔧 DEBUG: fileMetadata before update:`, fileMetadata);
     fileMetadata = {
+      ...fileMetadata, // Preserve any existing properties like cleanup flags
       filename: fileRecord.filename,
       fileId: fileRecord.id,
       userId: user.id,
@@ -110,7 +135,9 @@ async function triggerFileAnalysis(fileRecord, user) {
       source: 'upload',
       filePath: filePath
     };
+    console.log(`🔧 DEBUG: fileMetadata after update:`, fileMetadata);
 
+    console.log(`🎯 Starting orchestrator processing...`);
     // Process file with new orchestrator for detailed analysis
     const processingResult = await orchestrator.processContent(
       fileBuffer,
@@ -158,6 +185,7 @@ async function triggerFileAnalysis(fileRecord, user) {
     // For images, use AI description
     if (formattedResults.data.aiDescription && formattedResults.data.aiDescription.description) {
       contentForAI = formattedResults.data.aiDescription.description;
+      console.log(`🎨 Found AI description: ${contentForAI.length} characters`);
     }
     
     // For OCR text, append it
@@ -165,12 +193,16 @@ async function triggerFileAnalysis(fileRecord, user) {
       contentForAI = contentForAI ? 
         `${contentForAI}\n\nExtracted Text: ${formattedResults.data.ocrText.fullText}` : 
         `Extracted Text: ${formattedResults.data.ocrText.fullText}`;
+      console.log(`📝 Added OCR text, total content length: ${contentForAI.length} characters`);
     }
+    
+    console.log(`🤖 Content for AI enhancement: ${contentForAI.length} characters`);
     
     // Enhanced AI analysis using our improved system
     let enhancedResults = null;
     if (contentForAI.trim().length > 10) { // Only if we have sufficient content
       try {
+        console.log(`🎯 Running AI enhancement...`);
         // Create a fake analysis result with our content for AI enhancement
         const fakeAnalysisForAI = {
           transcription: contentForAI,
@@ -189,12 +221,17 @@ async function triggerFileAnalysis(fileRecord, user) {
         });
       } catch (aiError) {
         console.error(`⚠️ Enhanced AI analysis failed for file ${fileRecord.id}:`, aiError.message);
+        console.error(`⚠️ AI Error stack:`, aiError.stack);
         // Continue with basic analysis if AI enhancement fails
       }
+    } else {
+      console.log(`⚠️ Insufficient content for AI enhancement (${contentForAI.length} chars)`);
     }
     
     // Update file record with enhanced structured results
     const updateData = {};
+    
+    console.log(`💾 Building update data...`);
     
     // Store basic metadata
     if (formattedResults.data.metadata) {
@@ -204,6 +241,7 @@ async function triggerFileAnalysis(fileRecord, user) {
         processingJobId: processingResult.jobId,
         lastAnalyzed: new Date().toISOString()
       };
+      console.log(`📊 Added metadata to update`);
     }
     
     // Handle transcription results based on media type
@@ -213,11 +251,13 @@ async function triggerFileAnalysis(fileRecord, user) {
       } else if (typeof formattedResults.data.transcription === 'string') {
         updateData.transcription = formattedResults.data.transcription;
       }
+      console.log(`📝 Added transcription to update: ${updateData.transcription?.length} characters`);
     }
     
     // Handle AI descriptions for images
     if (formattedResults.data.aiDescription) {
       updateData.summary = formattedResults.data.aiDescription.description || '';
+      console.log(`🎨 Added AI description to summary: ${updateData.summary.length} characters`);
     }
     
     // Handle OCR text for images/videos
@@ -227,11 +267,13 @@ async function triggerFileAnalysis(fileRecord, user) {
       updateData.summary = updateData.summary ? 
         `${updateData.summary}\n\nExtracted Text: ${ocrText}` : 
         `Extracted Text: ${ocrText}`;
+      console.log(`📝 Added OCR text to summary: ${updateData.summary.length} characters`);
     }
     
     // Store sentiment analysis
     if (formattedResults.data.sentiment) {
       updateData.sentiment = formattedResults.data.sentiment;
+      console.log(`😊 Added sentiment analysis`);
     }
     
     // ✨ ENHANCED: Use AI-powered tags and title if available
@@ -239,16 +281,19 @@ async function triggerFileAnalysis(fileRecord, user) {
       // AI-generated title
       if (enhancedResults.generatedTitle) {
         updateData.generated_title = enhancedResults.generatedTitle;
+        console.log(`🎯 Added AI-generated title: "${enhancedResults.generatedTitle}"`);
       }
       
       // AI-powered tags (prioritize these over basic object detection)
       if (enhancedResults.auto_tags && enhancedResults.auto_tags.length > 0) {
         updateData.auto_tags = [...new Set(enhancedResults.auto_tags)]; // Remove duplicates
+        console.log(`🏷️ Added AI-generated tags: ${updateData.auto_tags.join(', ')}`);
       }
       
       // AI-powered category
       if (enhancedResults.category) {
         updateData.category = enhancedResults.category;
+        console.log(`📁 Added AI category: ${enhancedResults.category}`);
       }
     }
     
@@ -263,26 +308,42 @@ async function triggerFileAnalysis(fileRecord, user) {
             autoTags.push(obj.name);
           }
         });
+        console.log(`🔍 Added object detection tags: ${autoTags.join(', ')}`);
       }
       
       // Tags from AI description (fallback)
       if (formattedResults.data.aiDescription && formattedResults.data.aiDescription.tags) {
         autoTags.push(...formattedResults.data.aiDescription.tags);
+        console.log(`🎨 Added AI description tags`);
       }
       
       // Store fallback tags if we have any
       if (autoTags.length > 0) {
         updateData.auto_tags = [...new Set(autoTags)]; // Remove duplicates
+        console.log(`🏷️ Using fallback tags: ${updateData.auto_tags.join(', ')}`);
       }
     }
     
     // Determine category based on media type and content (fallback)
     if (!updateData.category && formattedResults.mediaType) {
       updateData.category = formattedResults.mediaType;
+      console.log(`📁 Using fallback category: ${updateData.category}`);
     }
+
+    console.log(`💾 Final update data:`, {
+      hasMetadata: !!updateData.metadata,
+      hasTranscription: !!updateData.transcription,
+      hasSummary: !!updateData.summary,
+      hasSentiment: !!updateData.sentiment,
+      hasGeneratedTitle: !!updateData.generated_title,
+      hasAutoTags: !!updateData.auto_tags,
+      hasCategory: !!updateData.category,
+      autoTagsCount: updateData.auto_tags?.length || 0
+    });
 
     // Update file record with analysis results
     if (Object.keys(updateData).length > 0) {
+      console.log(`💾 Updating file record with ${Object.keys(updateData).length} fields...`);
       await File.update(updateData, {
         where: { id: fileRecord.id, user_id: user.id }
       });
@@ -297,6 +358,8 @@ async function triggerFileAnalysis(fileRecord, user) {
         ai_tags: updateData.auto_tags,
         ai_category: updateData.category
       });
+    } else {
+      console.log(`⚠️ No update data generated - this is unusual!`);
     }
 
     console.log(`🎉 Enhanced file analysis completed for ${fileRecord.id}`, {
@@ -328,6 +391,8 @@ async function triggerFileAnalysis(fileRecord, user) {
     });
   } finally {
     // Clean up temporary file if it was downloaded from GCS
+    console.log(`🧹 Cleanup phase...`);
+    console.log(`🔧 DEBUG: fileMetadata in cleanup:`, typeof fileMetadata, fileMetadata);
     if (fileMetadata && fileMetadata.cleanupTempFile && fileMetadata.tempFilePath) {
       try {
         const fs = require('fs');

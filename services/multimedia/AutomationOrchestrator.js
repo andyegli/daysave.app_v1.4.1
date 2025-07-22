@@ -719,13 +719,64 @@ class AutomationOrchestrator {
         
         const processorConfig = this.configManager.getProcessorConfig(mediaType);
         
+        // Map configuration options to processor-specific option names
+        const mappedOptions = this.mapOptionsForProcessor(mediaType, processorConfig, features);
+        
         return {
             ...baseOptions,
-            ...processorConfig,
+            ...mappedOptions,
             metadata,
             features,
             pluginRegistry: this.pluginRegistry
         };
+    }
+
+    /**
+     * Map configuration options to processor-specific option names
+     */
+    mapOptionsForProcessor(mediaType, config, features) {
+        const mappedOptions = { ...config };
+        
+        switch (mediaType) {
+            case 'image':
+                // Map image processor configuration to expected option names
+                if (config.enableAIDescription !== undefined) {
+                    mappedOptions.enableDescriptionGeneration = config.enableAIDescription && features.plugins.aiDescription;
+                }
+                if (config.enableOCR !== undefined) {
+                    mappedOptions.enableOCRExtraction = config.enableOCR && features.plugins.ocrExtraction;
+                }
+                if (config.enableObjectDetection !== undefined) {
+                    mappedOptions.enableObjectDetection = config.enableObjectDetection && features.plugins.objectDetection;
+                }
+                if (config.enableQualityAnalysis !== undefined) {
+                    mappedOptions.enableQualityAnalysis = config.enableQualityAnalysis && features.plugins.qualityAnalysis;
+                }
+                // Enable thumbnail and tag generation by default for images
+                mappedOptions.enableThumbnailGeneration = config.enableThumbnailGeneration !== false;
+                mappedOptions.enableTagGeneration = config.enableTagGeneration !== false && features.plugins.aiDescription;
+                break;
+                
+            case 'video':
+                // Map video processor configuration
+                if (config.enableOCR !== undefined) {
+                    mappedOptions.enableOCRExtraction = config.enableOCR && features.plugins.ocrExtraction;
+                }
+                mappedOptions.enableThumbnailGeneration = config.enableThumbnailGeneration !== false;
+                break;
+                
+            case 'audio':
+                // Map audio processor configuration
+                if (config.enableTranscription !== undefined) {
+                    mappedOptions.enableTranscription = config.enableTranscription && features.plugins.transcription;
+                }
+                if (config.enableSpeakerDiarization !== undefined) {
+                    mappedOptions.enableSpeakerDiarization = config.enableSpeakerDiarization && features.plugins.speakerDiarization;
+                }
+                break;
+        }
+        
+        return mappedOptions;
     }
 
     /**
