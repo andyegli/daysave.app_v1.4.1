@@ -467,6 +467,7 @@ router.get('/', isAuthenticated, async (req, res) => {
       // Get title from metadata or generate from filename
       const getFileTitle = (file) => {
         // First priority: AI-generated title (same as content items)
+        // Note: generated_title field will be available after migration
         if (file.generated_title && file.generated_title.trim()) {
           return file.generated_title;
         }
