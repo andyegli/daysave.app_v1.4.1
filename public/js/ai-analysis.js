@@ -2247,10 +2247,8 @@ function displayTranscriptionSummary(contentId, text, wordCount, mediaType = 'au
   summaryContainer.style.display = 'block';
   
   // Create summary text (adjust length based on content type)
-  const maxLength = mediaType === 'image' ? 120 : 100;
-  const summaryText = text.length > maxLength ? 
-    text.substring(0, maxLength) + '...' : 
-    text;
+  // Removed truncation - let CSS handle 4-line display with line-clamp
+  const summaryText = text;
   
   // Update the summary content
   const transcriptionTextElement = summaryContainer.querySelector('.transcription-text');
