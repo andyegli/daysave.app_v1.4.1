@@ -1161,3 +1161,5 @@ openssl rand -base64 32
   - [x] **Enhanced Logging**: Added comprehensive debug logging throughout image analysis pipeline for troubleshooting
   - [x] **Thumbnail Generation Overhaul**: Fixed ImageProcessor to use ThumbnailGenerator with FFmpeg instead of just copying original files - now creates properly resized thumbnails (12KB vs 241KB copies, 95% size reduction)
   - [x] **Status**: Image upload and AI analysis pipeline now fully functional for both local and GCS storage with proper thumbnail generation
+  - [x] **File Deletion Fix**: Fixed FileUploadService.deleteFile() to extract bucket name from file path and added comprehensive thumbnail cleanup - resolves "image could not be found" error when deleting content
+  - [x] **Status**: Image upload and AI analysis pipeline now fully functional for both local and GCS storage with proper thumbnail generation and deletion

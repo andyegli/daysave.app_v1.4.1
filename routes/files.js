@@ -805,19 +805,32 @@ router.put('/:id', isAuthenticated, async (req, res) => {
 
 // Delete File
 router.delete('/:id', isAuthenticated, async (req, res) => {
+  const fileId = req.params.id;
+  const userId = req.user.id;
+  
+  console.log('🗑️ DELETE /files/:id called', { fileId, userId });
+  
   try {
     const file = await File.findOne({
       where: {
-        id: req.params.id,
-        user_id: req.user.id
+        id: fileId,
+        user_id: userId
       }
     });
 
     if (!file) {
+      console.log('🚨 File not found for deletion', { fileId, userId });
       return res.status(404).json({
-        error: 'File not found'
+        error: 'File not found or already deleted'
       });
     }
+    
+    console.log('📁 Found file for deletion:', {
+      id: file.id,
+      filename: file.filename,
+      filePath: file.file_path,
+      userId: file.user_id
+    });
 
     // Delete file from storage
     await FileUploadService.deleteFile(file.file_path);

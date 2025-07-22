@@ -60,36 +60,61 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Handle delete content buttons
+  // Handle delete content buttons (updated to handle both content and file items)
   document.querySelectorAll('.delete-content-btn').forEach(btn => {
     btn.addEventListener('click', async function() {
-      const contentId = this.getAttribute('data-id');
-      console.log('DEBUG: Delete button clicked for contentId:', contentId);
-      if (!contentId) {
-        alert('No content ID found.');
+      const itemId = this.getAttribute('data-id');
+      const itemType = this.getAttribute('data-item-type') || 'content';
+      
+      console.log('🗑️ Delete button clicked for item:', { itemId, itemType });
+      
+      if (!itemId) {
+        alert('No item ID found.');
         return;
       }
-      if (!confirm('Are you sure you want to delete this content?')) {
-        console.log('DEBUG: Delete cancelled by user');
+      
+      // Determine item name for confirmation
+      const itemName = itemType === 'file' ? 'file' : 'content';
+      
+      if (!confirm(`Are you sure you want to delete this ${itemName}?`)) {
+        console.log('🚫 Delete cancelled by user');
         return;
       }
+      
       btn.disabled = true;
+      
       try {
-        const res = await fetch(`/content/${contentId}`, {
+        // Use appropriate endpoint based on item type
+        const endpoint = itemType === 'file' ? `/files/${itemId}` : `/content/${itemId}`;
+        console.log('📡 Making delete request to:', endpoint);
+        
+        const res = await fetch(endpoint, {
           method: 'DELETE'
         });
+        
         if (res.ok) {
-          console.log('DEBUG: Content deleted successfully');
-          // Optionally show a toast or alert
-          window.location.reload();
+          console.log('✅ Item deleted successfully');
+          // Show success message briefly before reload
+          const alert = document.createElement('div');
+          alert.className = 'alert alert-success alert-dismissible fade show';
+          alert.innerHTML = `
+            <i class="fas fa-check-circle"></i> ${itemName.charAt(0).toUpperCase() + itemName.slice(1)} deleted successfully
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          `;
+          document.querySelector('.container-fluid').insertAdjacentElement('afterbegin', alert);
+          
+          // Reload page after short delay
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
         } else {
           const result = await res.json().catch(() => ({}));
-          console.error('DEBUG: Failed to delete content:', result.error);
-          alert(result.error || 'Failed to delete content.');
+          console.error('❌ Failed to delete item:', result.error);
+          alert(result.error || `Failed to delete ${itemName}.`);
         }
       } catch (err) {
-        console.error('DEBUG: Error deleting content:', err);
-        alert('Error deleting content: ' + err.message);
+        console.error('❌ Error deleting item:', err);
+        alert(`Error deleting ${itemName}: ` + err.message);
       } finally {
         btn.disabled = false;
       }
