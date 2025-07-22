@@ -1156,6 +1156,7 @@ openssl rand -base64 32
   - [x] **Option Mapping Fix**: Fixed AutomationOrchestrator configuration mapping - now properly maps `enableAIDescription` → `enableDescriptionGeneration` and `enableOCR` → `enableOCRExtraction` for ImageProcessor
   - [x] **Thumbnail Generation Fix**: Fixed missing `file_name` field in thumbnail database creation causing validation errors
   - [x] **JSON Parsing Fix**: Fixed OpenAI response parsing to handle markdown-formatted JSON responses (```json blocks)
-  - [x] **Debug Logging**: Added comprehensive debug logging to track option mapping and ImageProcessor execution
+  - [x] **Debug Logging**: Added comprehensive debug logging to track option mapping and ImageProcessor execution  
+  - [x] **Critical Format Results Fix**: Fixed key mapping in AutomationOrchestrator formatResults() - now properly maps `results.description` → `formatted.data.aiDescription` and handles nested result structures
   - [x] **Enhanced Logging**: Added comprehensive debug logging throughout image analysis pipeline for troubleshooting
   - [x] **Status**: Image upload and AI analysis pipeline now fully functional for both local and GCS storage
