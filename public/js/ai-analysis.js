@@ -63,20 +63,42 @@ async function loadAIIndicators(contentId, itemType = 'content') {
   try {
     const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
     
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      credentials: 'same-origin'
+    // Use XMLHttpRequest instead of fetch for better compatibility
+    const result = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            resolve(data);
+          } catch (parseError) {
+            console.error('Failed to parse AI indicators response:', parseError);
+            resolve(null); // Silently fail for indicators
+          }
+        } else {
+          resolve(null); // Silently fail for indicators
+        }
+      };
+      
+      xhr.onerror = function() {
+        resolve(null); // Silently fail for indicators
+      };
+      
+      xhr.ontimeout = function() {
+        resolve(null); // Silently fail for indicators
+      };
+      
+      xhr.timeout = 10000; // 10 second timeout
+      xhr.open('GET', endpoint);
+      xhr.setRequestHeader('Accept', 'application/json');
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.send();
     });
     
-    if (!response.ok) {
+    if (!result) {
       return; // Silently fail for indicators
     }
-    
-    const result = await response.json();
     
     if (result.success && result.status === 'completed' && result.analysis) {
       const analysis = result.analysis;
@@ -166,21 +188,37 @@ async function showComprehensiveAnalysisModal(contentId, itemType = 'content') {
     // Determine endpoint based on item type
     const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
     
-    // Fetch analysis data
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      credentials: 'same-origin'
+    // Fetch analysis data using XMLHttpRequest for better compatibility
+    const result = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            resolve(data);
+          } catch (parseError) {
+            reject(new Error(`Failed to parse response: ${parseError.message}`));
+          }
+        } else {
+          reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText || 'Request failed'}`));
+        }
+      };
+      
+      xhr.onerror = function() {
+        reject(new Error('Network error occurred while fetching analysis data'));
+      };
+      
+      xhr.ontimeout = function() {
+        reject(new Error('Request timeout - analysis data took too long to load'));
+      };
+      
+      xhr.timeout = 30000; // 30 second timeout for modal data
+      xhr.open('GET', endpoint);
+      xhr.setRequestHeader('Accept', 'application/json');
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.send();
     });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    const result = await response.json();
     
     if (result.success) {
       // Store analysis data globally for copy functionality
