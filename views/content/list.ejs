@@ -262,7 +262,7 @@
                 <!-- Card Body -->
                 <div class="flex-grow-1 d-flex flex-row p-3 align-items-stretch">
                   <!-- Main Content (title, comment) -->
-                  <div class="flex-grow-1 d-flex flex-column justify-content-between">
+                  <div class="flex-grow-1 d-flex flex-column justify-content-between" style="min-width: 0; flex: 1 1 auto; max-width: calc(100% - 220px);">
                     <div>
                       <h5 class="card-title mb-1" title="<%= item.displayTitle %>"
                         data-bs-toggle="modal" data-bs-target="#viewContentModal" data-id="<%= item.id %>">
@@ -280,8 +280,8 @@
                       <% if (item.summary) { %>
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>">
                         <div class="position-relative">
-                          <div class="transcription-preview bg-light p-2 rounded" style="font-size: 0.85rem;">
-                            <div class="transcription-text text-dark" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.4 !important; white-space: normal !important; word-wrap: break-word !important;">
+                          <div class="transcription-preview bg-light p-2 rounded" style="font-size: 0.85rem; width: 100%; min-width: 250px;">
+                            <div class="transcription-text text-dark" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.4 !important; white-space: normal !important; word-wrap: break-word !important; width: 100%; min-width: 250px;">
                               <%= item.summary %>
                             </div>
                           </div>
