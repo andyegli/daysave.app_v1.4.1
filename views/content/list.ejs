@@ -286,8 +286,10 @@
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>">
                         <div class="position-relative">
                           <div class="transcription-preview bg-light p-2 rounded" style="font-size: 0.85rem; width: 100%; min-width: 250px;">
-                            <div class="transcription-text text-dark force-4-lines" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.6 !important; white-space: normal !important; word-wrap: break-word !important; width: 100%; height: 88px !important; min-height: 88px !important; max-height: 88px !important; font-size: 0.85rem !important;">
-                              <%= item.summary %>
+                            <div class="transcription-text text-dark force-4-lines" style="height: 88px !important; min-height: 88px !important; max-height: 88px !important; line-height: 1.6 !important; font-size: 0.85rem !important; overflow: hidden !important; white-space: normal !important; word-wrap: break-word !important; position: relative;">
+                              <span class="text-content" style="display: block; overflow: hidden;">
+                                <%= item.summary %>
+                              </span>
                             </div>
                           </div>
                           <button class="btn btn-sm btn-outline-primary position-absolute top-0 end-0 mt-1 me-1 py-0 px-2 copy-summary-btn" data-content-id="<%= item.id %>" title="Copy Summary" style="z-index: 10;">
@@ -299,7 +301,9 @@
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>" style="display: none;">
                         <div class="position-relative">
                           <div class="transcription-preview bg-light p-2 rounded small">
-                            <div class="transcription-text text-muted force-4-lines" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.6 !important; white-space: normal !important; word-wrap: break-word !important; width: 100%; height: 88px !important; min-height: 88px !important; max-height: 88px !important; font-size: 0.85rem !important;">Loading transcription...</div>
+                            <div class="transcription-text text-muted force-4-lines" style="height: 88px !important; min-height: 88px !important; max-height: 88px !important; line-height: 1.6 !important; font-size: 0.85rem !important; overflow: hidden !important; white-space: normal !important; word-wrap: break-word !important; position: relative;">
+                              <span class="text-content" style="display: block; overflow: hidden;">Loading transcription...</span>
+                            </div>
                           </div>
                           <button class="btn btn-sm btn-outline-primary position-absolute top-0 end-0 mt-1 me-1 py-0 px-2 copy-summary-btn" data-content-id="<%= item.id %>" title="Copy Summary" style="z-index: 10;">
                             <i class="bi bi-clipboard" style="font-size: 0.7rem;"></i>
@@ -592,21 +596,69 @@
   <script src="/js/ai-analysis.js?v=<%= Date.now() %>"></script>
   <script src="/js/content-tags-modal.js?v=<%= Date.now() %>"></script>
   
+  <script>
+    // Force 4-line text display with JavaScript fallback
+    document.addEventListener('DOMContentLoaded', function() {
+      const transcriptionTexts = document.querySelectorAll('.force-4-lines .text-content');
+      
+      transcriptionTexts.forEach(function(element) {
+        const originalText = element.textContent.trim();
+        const container = element.parentElement;
+        
+        // Set up the container with proper styling
+        const lineHeight = 22; // 1.6 * 13.6px (0.85rem)
+        const maxHeight = lineHeight * 4; // 88px for 4 lines
+        
+        container.style.height = maxHeight + 'px';
+        container.style.overflow = 'hidden';
+        container.style.lineHeight = '1.6';
+        
+        // Test if text fits in 4 lines
+        element.style.height = 'auto';
+        
+        if (element.scrollHeight > maxHeight) {
+          // Text is longer than 4 lines, we need to truncate
+          let testText = originalText;
+          let lastGoodText = originalText;
+          
+          // Binary search to find the maximum text that fits in 4 lines
+          while (testText.length > 0) {
+            element.textContent = testText + '...';
+            
+            if (element.scrollHeight <= maxHeight) {
+              lastGoodText = testText + '...';
+              break;
+            }
+            
+            // Remove words from the end
+            const words = testText.split(' ');
+            words.pop();
+            testText = words.join(' ');
+          }
+          
+          element.textContent = lastGoodText;
+        }
+      });
+    });
+  </script>
+  
   <style>
     /* Additional aggressive 4-line forcing CSS - loaded last for highest priority */
     .force-4-lines {
-      display: -webkit-box !important;
-      -webkit-line-clamp: 4 !important;
-      -webkit-box-orient: vertical !important;
-      overflow: hidden !important;
-      line-height: 1.6 !important;
       height: 88px !important;
       min-height: 88px !important;
       max-height: 88px !important;
+      line-height: 1.6 !important;
       font-size: 0.85rem !important;
+      overflow: hidden !important;
       white-space: normal !important;
       word-wrap: break-word !important;
-      text-overflow: ellipsis !important;
+    }
+    
+    .force-4-lines .text-content {
+      display: block !important;
+      line-height: 1.6 !important;
+      font-size: 0.85rem !important;
     }
   </style>
 </body>
