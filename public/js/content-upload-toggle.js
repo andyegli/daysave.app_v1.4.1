@@ -125,12 +125,16 @@ function initializeContentUploadToggle() {
   // Bulk URL validation and preview
   if (bulkUrlInput) {
     bulkUrlInput.addEventListener('input', validateAndPreviewUrls);
+    // Add line counter and auto-resize functionality
+    setupTextareaEnhancements(bulkUrlInput, 'URLs');
   }
   
   // File path validation and preview
   const bulkFilePathInput = document.getElementById('bulkFilePaths');
   if (bulkFilePathInput) {
     bulkFilePathInput.addEventListener('input', validateAndPreviewPaths);
+    // Add line counter and auto-resize functionality
+    setupTextareaEnhancements(bulkFilePathInput, 'file paths');
   }
   
   // Preview button handlers
@@ -733,4 +737,127 @@ function getFileIconFromExtension(extension) {
   } else {
     return 'bi bi-file-earmark';
   }
+}
+
+// Setup enhanced textarea functionality
+function setupTextareaEnhancements(textarea, contentType) {
+  if (!textarea) return;
+  
+  // Create line counter element
+  const counterId = textarea.id + '_counter';
+  let counterElement = document.getElementById(counterId);
+  
+  if (!counterElement) {
+    counterElement = document.createElement('div');
+    counterElement.id = counterId;
+    counterElement.className = 'form-text text-muted mt-1';
+    counterElement.style.fontSize = '0.875rem';
+    textarea.parentNode.appendChild(counterElement);
+  }
+  
+  // Update line counter
+  function updateLineCounter() {
+    const text = textarea.value.trim();
+    const lines = text ? text.split('\n') : [];
+    const nonEmptyLines = lines.filter(line => line.trim().length > 0);
+    
+    let counterText = '';
+    if (text.length === 0) {
+      counterText = `<i class="bi bi-info-circle"></i> Start pasting your ${contentType} here...`;
+    } else {
+      counterText = `<i class="bi bi-list-ol"></i> ${lines.length} total lines, ${nonEmptyLines.length} non-empty`;
+      
+      // Add character count for very long content
+      if (text.length > 1000) {
+        const charCount = (text.length / 1000).toFixed(1);
+        counterText += ` (${charCount}k characters)`;
+      }
+    }
+    
+    counterElement.innerHTML = counterText;
+  }
+  
+  // Add paste enhancement
+  textarea.addEventListener('paste', function(e) {
+    // Small delay to let paste complete
+    setTimeout(() => {
+      updateLineCounter();
+      
+      // Auto-format pasted content
+      const lines = textarea.value.split('\n');
+      const cleanedLines = lines.map(line => line.trim()).filter(line => line.length > 0);
+      
+      // Remove duplicates while preserving order
+      const uniqueLines = [...new Set(cleanedLines)];
+      
+      if (uniqueLines.length !== cleanedLines.length) {
+        // Update textarea with cleaned content
+        textarea.value = uniqueLines.join('\n');
+        
+        // Show feedback about cleaning
+        const duplicatesRemoved = cleanedLines.length - uniqueLines.length;
+        if (duplicatesRemoved > 0) {
+          counterElement.innerHTML += ` <span class="text-success"><i class="bi bi-check-circle"></i> Removed ${duplicatesRemoved} duplicate(s)</span>`;
+        }
+      }
+      
+      // Trigger validation
+      if (contentType === 'URLs') {
+        validateAndPreviewUrls();
+      } else if (contentType === 'file paths') {
+        validateAndPreviewPaths();
+      }
+    }, 100);
+  });
+  
+  // Add input listener for real-time updates
+  textarea.addEventListener('input', updateLineCounter);
+  
+  // Add keyboard shortcuts
+  textarea.addEventListener('keydown', function(e) {
+    // Ctrl/Cmd + A to select all
+    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+      // Default behavior is fine
+      return;
+    }
+    
+    // Ctrl/Cmd + D to duplicate current line
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+      e.preventDefault();
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = textarea.value;
+      
+      // Find current line
+      const beforeCursor = text.substring(0, start);
+      const afterCursor = text.substring(end);
+      const lastNewline = beforeCursor.lastIndexOf('\n');
+      const nextNewline = afterCursor.indexOf('\n');
+      
+      const lineStart = lastNewline === -1 ? 0 : lastNewline + 1;
+      const lineEnd = nextNewline === -1 ? text.length : end + nextNewline;
+      
+      const currentLine = text.substring(lineStart, lineEnd);
+      const newText = text.substring(0, lineEnd) + '\n' + currentLine + text.substring(lineEnd);
+      
+      textarea.value = newText;
+      textarea.selectionStart = textarea.selectionEnd = lineEnd + 1 + currentLine.length;
+      
+      updateLineCounter();
+    }
+  });
+  
+  // Initial counter update
+  updateLineCounter();
+  
+  // Add focus/blur styling
+  textarea.addEventListener('focus', function() {
+    textarea.style.borderColor = '#86b7fe';
+    textarea.style.boxShadow = '0 0 0 0.25rem rgba(13, 110, 253, 0.25)';
+  });
+  
+  textarea.addEventListener('blur', function() {
+    textarea.style.borderColor = '';
+    textarea.style.boxShadow = '';
+  });
 } 

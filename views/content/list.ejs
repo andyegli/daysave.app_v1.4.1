@@ -561,16 +561,26 @@
               <label for="bulkContentUrls" class="form-label">
                 <i class="bi bi-list-ul"></i> Multiple URLs (one per line)
               </label>
-              <textarea class="form-control" id="bulkContentUrls" name="bulk_urls" rows="8" 
+              <textarea class="form-control" id="bulkContentUrls" name="bulk_urls" rows="15" 
+                        style="min-height: 300px; max-height: 400px; resize: vertical; overflow-y: auto; font-family: 'Courier New', monospace; line-height: 1.4;"
                         placeholder="https://example.com/post1
 https://example.com/post2
 https://example.com/post3
+https://youtube.com/watch?v=example
+https://instagram.com/p/example/
+https://twitter.com/user/status/123
+https://linkedin.com/posts/activity-456
+https://facebook.com/posts/789
+https://tiktok.com/@user/video/123
+https://pinterest.com/pin/456
 
 Paste multiple URLs here, one per line.
-Blank lines will be ignored."></textarea>
+Blank lines will be ignored.
+You can add as many URLs as needed - the field will scroll automatically."></textarea>
               <div class="form-text">
                 <i class="bi bi-info-circle"></i> 
-                Paste multiple URLs, one per line. Empty lines and duplicates will be automatically filtered out.
+                <strong>Tip:</strong> Paste multiple URLs, one per line. Empty lines and duplicates will be automatically filtered out. 
+                The field will scroll when you have many URLs.
               </div>
             </div>
             <!-- URL Preview Counter -->
@@ -624,16 +634,26 @@ Blank lines will be ignored."></textarea>
                 <label for="bulkFilePaths" class="form-label">
                   <i class="bi bi-terminal"></i> File Paths (one per line)
                 </label>
-                <textarea class="form-control" id="bulkFilePaths" name="bulk_file_paths" rows="8" 
+                <textarea class="form-control" id="bulkFilePaths" name="bulk_file_paths" rows="15" 
+                          style="min-height: 300px; max-height: 400px; resize: vertical; overflow-y: auto; font-family: 'Courier New', monospace; line-height: 1.4;"
                           placeholder="/Users/username/Documents/image1.jpg
 /Users/username/Downloads/video.mp4
-/path/to/audio/file.mp3
+/Users/username/Pictures/photo.png
+/Users/username/Movies/video.mov
+/home/user/media/audio.mp3
+/home/user/documents/file.pdf
+\\server\share\media\video.avi
+\\server\photos\vacation\img001.jpg
+/mnt/storage/archive/document.docx
+/var/media/uploads/presentation.pptx
 
 Paste full file paths here, one per line.
-Files must be accessible to the server."></textarea>
+Files must be accessible to the server.
+You can add as many file paths as needed - the field will scroll automatically."></textarea>
                 <div class="form-text">
                   <i class="bi bi-exclamation-triangle text-warning"></i> 
                   <strong>Note:</strong> File paths must be accessible to the server. This works best for server-local files or network-mounted drives.
+                  The field will scroll when you have many file paths.
                 </div>
               </div>
               <!-- Path Preview Counter -->
