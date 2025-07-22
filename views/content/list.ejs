@@ -88,10 +88,9 @@
     .transcription-preview {
       background-color: #f8f9fa !important;
       border: 1px solid #e9ecef;
-      line-height: 1.6;
-      height: 100px;
-      overflow-y: auto;
       font-size: 0.85rem;
+      /* Removed fixed height and overflow-y to allow line-clamp to work */
+      /* line-height is now handled inline for line-clamp functionality */
     }
     
     .transcription-preview:hover {
