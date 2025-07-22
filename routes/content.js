@@ -229,33 +229,186 @@ router.get('/', isAuthenticated, async (req, res) => {
     console.log('DEBUG: SocialAccount model exists:', !!models.SocialAccount);
     console.log('DEBUG: Content model exists:', !!models.Content);
     
-    // ✨ PAGINATION: Get pagination parameters
+    // ✨ ENHANCED PAGINATION: Get pagination parameters
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10; // Show 10 items per page
     const offset = (page - 1) * limit;
     
-    let { tag, from, to } = req.query;
-    const where = { user_id: req.user.id };
+    // ✨ ENHANCED FILTERING: Get filter parameters
+    let { tag, from, to, search, content_type, status } = req.query;
+    console.log('🔍 Filter parameters:', { tag, from, to, search, content_type, status, page, limit });
     
-    if (from) where.createdAt = { ...(where.createdAt || {}), [Op.gte]: new Date(from) };
-    if (to) where.createdAt = { ...(where.createdAt || {}), [Op.lte]: new Date(to) };
+    // Build where clauses for both content and files
+    const contentWhere = { user_id: req.user.id };
+    const fileWhere = { user_id: req.user.id };
     
-    // ✨ PAGINATION: Fetch both content items and files with count and pagination
-    const [contentResult, fileResult] = await Promise.all([
-      Content.findAndCountAll({
-        where,
+    // ✨ DATE FILTERING
+    if (from) {
+      const fromDate = new Date(from);
+      contentWhere.createdAt = { ...(contentWhere.createdAt || {}), [Op.gte]: fromDate };
+      fileWhere.createdAt = { ...(fileWhere.createdAt || {}), [Op.gte]: fromDate };
+    }
+    if (to) {
+      const toDate = new Date(to + 'T23:59:59.999Z'); // Include the entire day
+      contentWhere.createdAt = { ...(contentWhere.createdAt || {}), [Op.lte]: toDate };
+      fileWhere.createdAt = { ...(fileWhere.createdAt || {}), [Op.lte]: toDate };
+    }
+    
+    // ✨ TAG FILTERING  
+    if (tag && tag.trim()) {
+      const tagFilter = tag.trim();
+      console.log('🏷️ Applying tag filter:', tagFilter);
+      
+      // For content: search in both user_tags and auto_tags
+      contentWhere[Op.or] = [
+        {
+          user_tags: {
+            [Op.like]: `%${tagFilter}%`
+          }
+        },
+        {
+          auto_tags: {
+            [Op.like]: `%${tagFilter}%`
+          }
+        }
+      ];
+      
+      // For files: search in both user_tags and auto_tags
+      fileWhere[Op.or] = [
+        {
+          user_tags: {
+            [Op.like]: `%${tagFilter}%`
+          }
+        },
+        {
+          auto_tags: {
+            [Op.like]: `%${tagFilter}%`
+          }
+        }
+      ];
+    }
+    
+    // ✨ SEARCH FILTERING (in title, summary, comments, URL)
+    if (search && search.trim()) {
+      const searchTerm = search.trim();
+      console.log('🔎 Applying search filter:', searchTerm);
+      
+      // For content: search in url, user_comments, summary, generated_title
+      const contentSearchOr = [
+        { url: { [Op.like]: `%${searchTerm}%` } },
+        { user_comments: { [Op.like]: `%${searchTerm}%` } },
+        { summary: { [Op.like]: `%${searchTerm}%` } },
+        { generated_title: { [Op.like]: `%${searchTerm}%` } }
+      ];
+      
+      contentWhere[Op.and] = [
+        ...(contentWhere[Op.and] || []),
+        { [Op.or]: contentSearchOr }
+      ];
+      
+      // For files: search in filename, user_comments, summary, generated_title
+      const fileSearchOr = [
+        { filename: { [Op.like]: `%${searchTerm}%` } },
+        { user_comments: { [Op.like]: `%${searchTerm}%` } },
+        { summary: { [Op.like]: `%${searchTerm}%` } },
+        { generated_title: { [Op.like]: `%${searchTerm}%` } }
+      ];
+      
+      fileWhere[Op.and] = [
+        ...(fileWhere[Op.and] || []),
+        { [Op.or]: fileSearchOr }
+      ];
+    }
+    
+    // ✨ CONTENT TYPE FILTERING
+    if (content_type && content_type !== 'all') {
+      console.log('📁 Applying content type filter:', content_type);
+      
+      if (content_type === 'multimedia') {
+        // Show only multimedia content (video, audio, image)
+        contentWhere.content_type = { [Op.in]: ['video', 'audio', 'image'] };
+        fileWhere[Op.or] = [
+          { 
+            metadata: {
+              [Op.like]: '%"mimetype":"video/%'
+            }
+          },
+          { 
+            metadata: {
+              [Op.like]: '%"mimetype":"audio/%'
+            }
+          },
+          { 
+            metadata: {
+              [Op.like]: '%"mimetype":"image/%'
+            }
+          }
+        ];
+      } else if (content_type === 'social') {
+        // Show only social media content
+        contentWhere.content_type = { [Op.in]: ['instagram', 'facebook', 'twitter', 'youtube', 'linkedin'] };
+        // Files don't have social content, so exclude all files
+        fileWhere.id = null;
+      } else if (content_type === 'files') {
+        // Show only uploaded files
+        contentWhere.id = null; // Exclude all content
+        // Keep files as-is
+      } else {
+        // Specific content type
+        contentWhere.content_type = content_type;
+      }
+    }
+    
+    // ✨ STATUS FILTERING 
+    if (status && status !== 'all') {
+      console.log('📊 Applying status filter:', status);
+      
+      if (status === 'analyzed') {
+        // Show only items with AI analysis
+        contentWhere.summary = { [Op.not]: null };
+        fileWhere.summary = { [Op.not]: null };
+      } else if (status === 'pending') {
+        // Show only items without AI analysis
+        contentWhere[Op.or] = [
+          { summary: null },
+          { summary: '' }
+        ];
+        fileWhere[Op.or] = [
+          { summary: null },
+          { summary: '' }
+        ];
+      }
+    }
+    
+    console.log('🔍 Content WHERE clause:', JSON.stringify(contentWhere, null, 2));
+    console.log('🔍 File WHERE clause:', JSON.stringify(fileWhere, null, 2));
+    
+    // ✨ CORRECTED PAGINATION: Fetch items with proper server-side pagination
+    // First, get total counts for both content and files (without pagination)
+    const [totalContentCount, totalFileCount] = await Promise.all([
+      Content.count({ where: contentWhere }),
+      require('../models').File.count({ where: fileWhere })
+    ]);
+    
+    const totalItems = totalContentCount + totalFileCount;
+    console.log('📊 Total counts:', { content: totalContentCount, files: totalFileCount, total: totalItems });
+    
+    // ✨ UNIFIED QUERY: Get items from both tables and combine them properly
+    const [contentItems, fileItems] = await Promise.all([
+      Content.findAll({
+        where: contentWhere,
         include: [{
           model: require('../models').SocialAccount,
           as: 'SocialAccount',
           attributes: ['platform', 'handle'],
-          required: false // Make it a LEFT JOIN so it doesn't fail if no social account
+          required: false
         }],
         order: [['createdAt', 'DESC']],
-        limit,
-        offset
+        limit: Math.max(0, limit * 2), // Get more items to ensure we have enough after merging
+        offset: 0 // We'll handle pagination after merging
       }),
-      require('../models').File.findAndCountAll({
-        where: { user_id: req.user.id },
+      require('../models').File.findAll({
+        where: fileWhere,
         include: [{
           model: require('../models').Thumbnail,
           as: 'thumbnails',
@@ -265,16 +418,10 @@ router.get('/', isAuthenticated, async (req, res) => {
           }
         }],
         order: [['createdAt', 'DESC']],
-        limit,
-        offset
+        limit: Math.max(0, limit * 2), // Get more items to ensure we have enough after merging
+        offset: 0 // We'll handle pagination after merging
       })
     ]);
-    
-    const contentItems = contentResult.rows;
-    const fileItems = fileResult.rows;
-    const totalContentItems = contentResult.count;
-    const totalFileItems = fileResult.count;
-    const totalItems = totalContentItems + totalFileItems;
 
     // Function to determine content source and get brand logo
     function getContentSourceInfo(url, socialAccount) {
@@ -579,26 +726,18 @@ router.get('/', isAuthenticated, async (req, res) => {
     // Sort all items by creation date (newest first)
     allItems.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
-
+    // ✨ PROPER SERVER-SIDE PAGINATION: Apply pagination to the merged and sorted items
+    const paginatedItems = allItems.slice(offset, offset + limit);
     
-
+    console.log(`📄 Pagination: Showing items ${offset + 1}-${Math.min(offset + limit, allItems.length)} of ${totalItems} total`);
     
-    // Apply tag filtering to all items
-    if (tag) {
-      const tagList = tag.split(/[,	\s]+/).map(t => t.trim().toLowerCase()).filter(Boolean);
-      allItems = allItems.filter(item => {
-        const itemTags = [
-          ...(item.user_tags || []),
-          ...(item.auto_tags || [])
-        ].map(t => t.trim().toLowerCase());
-        return tagList.some(filterTag => itemTags.some(t => t.includes(filterTag)));
-      });
-    }
+    // Get content groups for the UI
     const contentGroups = await ContentGroup.findAll({
       where: { user_id: req.user.id },
       order: [['name', 'ASC']]
     });
-    // ✨ PAGINATION: Calculate pagination data
+    
+    // ✨ ENHANCED PAGINATION: Calculate pagination data with proper totals
     const totalPages = Math.ceil(totalItems / limit);
     const pagination = {
       currentPage: page,
@@ -608,37 +747,53 @@ router.get('/', isAuthenticated, async (req, res) => {
       hasPrev: page > 1,
       limit: limit,
       nextPage: page < totalPages ? page + 1 : null,
-      prevPage: page > 1 ? page - 1 : null
+      prevPage: page > 1 ? page - 1 : null,
+      // Add filter state to pagination for maintaining filters across pages
+      filters: {
+        tag: tag || '',
+        from: from || '',
+        to: to || '',
+        search: search || '',
+        content_type: content_type || 'all',
+        status: status || 'all'
+      }
     };
     
     // Split items by type for debugging
-    const contentCount = allItems.filter(item => item.itemType === 'content').length;
-    const fileCount = allItems.filter(item => item.itemType === 'file').length;
+    const contentCount = paginatedItems.filter(item => item.itemType === 'content').length;
+    const fileCount = paginatedItems.filter(item => item.itemType === 'file').length;
     
-    console.log(`DEBUG: Found ${allItems.length} total items (${contentCount} content + ${fileCount} files) and ${contentGroups.length} groups for user ${req.user.id}`);
-    if (allItems.length > 0) {
-      console.log('DEBUG: First item:', {
-        type: allItems[0].itemType,
-        title: allItems[0].displayTitle,
-        id: allItems[0].id,
-        sourceInfo: allItems[0].sourceInfo
+    console.log(`📊 Found ${paginatedItems.length} items on page ${page} (${contentCount} content + ${fileCount} files) of ${totalItems} total for user ${req.user.id}`);
+    if (paginatedItems.length > 0) {
+      console.log('DEBUG: First item on page:', {
+        type: paginatedItems[0].itemType,
+        title: paginatedItems[0].displayTitle,
+        id: paginatedItems[0].id,
+        sourceInfo: paginatedItems[0].sourceInfo
       });
     } else {
-      console.log('DEBUG: No items found');
+      console.log('DEBUG: No items found for current filters/page');
     }
 
     res.render('content/list', {
         user: req.user,
         title: 'Content Management - DaySave',
-        contentItems: allItems, // Pass unified items array
+        contentItems: paginatedItems, // Pass paginated items array
         contentGroups,
         pagination,
-        tag,
-        from,
-        to,
+        // Pass filter values to maintain state in the UI
+        tag: tag || '',
+        from: from || '',
+        to: to || '',
+        search: search || '',
+        content_type: content_type || 'all',
+        status: status || 'all',
         debugInfo: {
           userId: req.user.id,
-          contentCount: contentItems.length,
+          contentCount: totalContentCount,
+          fileCount: totalFileCount,
+          totalItems: totalItems,
+          currentPageItems: paginatedItems.length,
           groupCount: contentGroups.length
         }
       });

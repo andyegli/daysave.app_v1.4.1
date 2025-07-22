@@ -173,12 +173,21 @@
       console.log('DEBUG: Content items count:', contentItems ? contentItems.length : 0);
     %>
 
-    <!-- Filter Bar -->
+    <!-- Enhanced Filter Bar -->
     <div class="card mb-4 p-3">
       <form class="row g-2 align-items-end" method="get" action="/content" id="filterForm">
-
-
-
+        <input type="hidden" name="page" value="1">
+        
+        <!-- Search Filter -->
+        <div class="col-md-3">
+          <label for="filterSearch" class="form-label mb-0">Search</label>
+          <div class="input-group">
+            <input type="text" class="form-control" id="filterSearch" name="search" placeholder="Search title, summary, comments..." value="<%= search %>" autocomplete="off">
+            <button class="btn btn-outline-secondary clear-filter-btn" type="button" data-target="#filterSearch" title="Clear">
+              <i class="bi bi-x-circle"></i>
+            </button>
+          </div>
+        </div>
 
         <!-- Tag Filter with autocomplete -->
         <div class="col-md-2">
@@ -214,12 +223,46 @@
             </button>
           </div>
         </div>
+        <!-- Content Type Filter -->
         <div class="col-md-2">
+          <label for="filterContentType" class="form-label mb-0">Type</label>
+          <div class="input-group">
+            <select class="form-select" id="filterContentType" name="content_type">
+              <option value="all" <%= content_type === 'all' ? 'selected' : '' %>>All Types</option>
+              <option value="multimedia" <%= content_type === 'multimedia' ? 'selected' : '' %>>Multimedia</option>
+              <option value="social" <%= content_type === 'social' ? 'selected' : '' %>>Social Media</option>
+              <option value="files" <%= content_type === 'files' ? 'selected' : '' %>>Files</option>
+              <option value="video" <%= content_type === 'video' ? 'selected' : '' %>>Video</option>
+              <option value="audio" <%= content_type === 'audio' ? 'selected' : '' %>>Audio</option>
+              <option value="image" <%= content_type === 'image' ? 'selected' : '' %>>Images</option>
+            </select>
+            <button class="btn btn-outline-secondary clear-filter-btn" type="button" data-target="#filterContentType" title="Clear">
+              <i class="bi bi-x-circle"></i>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Status Filter -->
+        <div class="col-md-2">
+          <label for="filterStatus" class="form-label mb-0">Status</label>
+          <div class="input-group">
+            <select class="form-select" id="filterStatus" name="status">
+              <option value="all" <%= status === 'all' ? 'selected' : '' %>>All Status</option>
+              <option value="analyzed" <%= status === 'analyzed' ? 'selected' : '' %>>✅ Analyzed</option>
+              <option value="pending" <%= status === 'pending' ? 'selected' : '' %>>⏳ Pending</option>
+            </select>
+            <button class="btn btn-outline-secondary clear-filter-btn" type="button" data-target="#filterStatus" title="Clear">
+              <i class="bi bi-x-circle"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="col-md-1">
           <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Filter</button>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-1">
           <button type="button" class="btn btn-outline-secondary w-100" id="clearAllFilters">
-            <i class="bi bi-x-circle"></i> Clear All
+            <i class="bi bi-x-circle"></i> Clear
           </button>
         </div>
       </form>
@@ -442,7 +485,7 @@
               <ul class="pagination mb-0">
                 <!-- Previous button -->
                 <li class="page-item <%= !pagination.hasPrev ? 'disabled' : '' %>">
-                  <a class="page-link" href="<%= pagination.hasPrev ? `?page=${pagination.prevPage}${tag ? '&tag=' + encodeURIComponent(tag) : ''}${from ? '&from=' + from : ''}${to ? '&to=' + to : ''}` : '#' %>" 
+                  <a class="page-link" href="<%= pagination.hasPrev ? `?page=${pagination.prevPage}${tag ? '&tag=' + encodeURIComponent(tag) : ''}${from ? '&from=' + from : ''}${to ? '&to=' + to : ''}${search ? '&search=' + encodeURIComponent(search) : ''}${content_type && content_type !== 'all' ? '&content_type=' + encodeURIComponent(content_type) : ''}${status && status !== 'all' ? '&status=' + encodeURIComponent(status) : ''}` : '#' %>" 
                      aria-label="Previous" <%= !pagination.hasPrev ? 'tabindex="-1"' : '' %>>
                     <span aria-hidden="true">&laquo;</span>
                   </a>
