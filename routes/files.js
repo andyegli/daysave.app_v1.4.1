@@ -652,24 +652,51 @@ async function triggerFileAnalysis(fileRecord, user) {
     if (formattedResults.data.thumbnails && formattedResults.data.thumbnails.length > 0) {
       const { Thumbnail } = require('../models');
       for (const thumb of formattedResults.data.thumbnails) {
-        await Thumbnail.create({
-          user_id: user.id,
-          file_id: fileRecord.id,
-          video_analysis_id: formattedResults.mediaType === 'video' ? analysisRecord?.id : null,
-          image_analysis_id: formattedResults.mediaType === 'image' ? analysisRecord?.id : null,
-          file_path: thumb.url || thumb.path,
-          timestamp_seconds: thumb.timestamp || 0,
-          size: thumb.size || 'medium',
-          width: thumb.width,
-          height: thumb.height,
-          metadata: {
-            originalUrl: thumb.url,
-            generatedAt: new Date().toISOString(),
-            quality: thumb.quality || 'standard'
+        // Validate required fields for thumbnail creation
+        const thumbnailPath = thumb.url || thumb.path || thumb.file_path;
+        const thumbnailName = thumb.filename || thumb.name || (thumbnailPath ? require('path').basename(thumbnailPath) : null);
+        
+        // Only create thumbnail if we have required data
+        if (thumbnailPath && thumbnailName) {
+          try {
+            await Thumbnail.create({
+              user_id: user.id,
+              file_id: fileRecord.id,
+              video_analysis_id: formattedResults.mediaType === 'video' ? analysisRecord?.id : null,
+              image_analysis_id: formattedResults.mediaType === 'image' ? analysisRecord?.id : null,
+              file_path: thumbnailPath,
+              file_name: thumbnailName,
+              timestamp_seconds: thumb.timestamp || 0,
+              width: thumb.width || null,
+              height: thumb.height || null,
+              mime_type: thumb.mimeType || thumb.mime_type || 'image/jpeg',
+              file_size: thumb.size || null,
+              metadata: {
+                originalUrl: thumb.url,
+                generatedAt: new Date().toISOString(),
+                quality: thumb.quality || 'standard',
+                source: 'orchestrator'
+              }
+            });
+          } catch (thumbnailError) {
+            console.error(`⚠️ Failed to create thumbnail record:`, thumbnailError.message);
+            console.error(`   Thumbnail data:`, {
+              path: thumbnailPath,
+              name: thumbnailName,
+              width: thumb.width,
+              height: thumb.height
+            });
+            // Continue processing other thumbnails
           }
-        });
+        } else {
+          console.log(`⚠️ Skipping thumbnail creation - missing required data:`, {
+            hasPath: !!thumbnailPath,
+            hasName: !!thumbnailName,
+            thumb: thumb
+          });
+        }
       }
-      console.log(`🖼️ Created ${formattedResults.data.thumbnails.length} thumbnail records`);
+      console.log(`🖼️ Processed ${formattedResults.data.thumbnails.length} thumbnail records`);
     }
     
     if (formattedResults.data.ocrCaptions && formattedResults.data.ocrCaptions.length > 0) {
