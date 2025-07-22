@@ -551,7 +551,6 @@ function showAlert(message, type = 'info') {
       }
     });
   });
-}); 
 
 // DEBUG: Log all delete buttons when page loads
 document.addEventListener('DOMContentLoaded', function() {
