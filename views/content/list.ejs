@@ -116,17 +116,18 @@
     }
 
     /* Ultra-specific 4-line class - highest priority */
-    .content-card .transcription-preview .transcription-text.force-four-lines {
+    .content-card .transcription-preview .transcription-text {
       display: -webkit-box !important;
       -webkit-line-clamp: 4 !important;
       -webkit-box-orient: vertical !important;
       overflow: hidden !important;
-      line-height: 1.4 !important;
-      max-height: none !important;
+      line-height: 1.5 !important;
+      min-height: 84px !important;
+      max-height: 84px !important;
       white-space: normal !important;
       text-overflow: ellipsis !important;
       word-wrap: break-word !important;
-      height: auto !important;
+      font-size: 0.85rem !important;
     }
     
     /* Brain icon styling */
@@ -282,7 +283,7 @@
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>">
                         <div class="position-relative">
                           <div class="transcription-preview bg-light p-2 rounded" style="font-size: 0.85rem; width: 100%; min-width: 250px;">
-                            <div class="transcription-text text-dark" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.4 !important; white-space: normal !important; word-wrap: break-word !important; width: 100%; min-width: 250px;">
+                            <div class="transcription-text text-dark" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.5 !important; white-space: normal !important; word-wrap: break-word !important; width: 100%; min-height: 84px; max-height: 84px;">
                               <%= item.summary %>
                             </div>
                           </div>
@@ -295,7 +296,7 @@
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>" style="display: none;">
                         <div class="position-relative">
                           <div class="transcription-preview bg-light p-2 rounded small">
-                            <div class="transcription-text text-muted">Loading transcription...</div>
+                            <div class="transcription-text text-muted" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.5 !important; white-space: normal !important; word-wrap: break-word !important; width: 100%; min-height: 84px; max-height: 84px;">Loading transcription...</div>
                           </div>
                           <button class="btn btn-sm btn-outline-primary position-absolute top-0 end-0 mt-1 me-1 py-0 px-2 copy-summary-btn" data-content-id="<%= item.id %>" title="Copy Summary" style="z-index: 10;">
                             <i class="bi bi-clipboard" style="font-size: 0.7rem;"></i>
