@@ -289,6 +289,16 @@ async function triggerFileAnalysis(fileRecord, user) {
       resultsKeys: processingResult.results ? Object.keys(processingResult.results) : null,
       dataKeys: processingResult.results?.data ? Object.keys(processingResult.results.data) : null
     });
+    
+    // 🔍 DEBUG: Log the actual structure of critical data
+    if (processingResult.results?.data) {
+      console.log('🔍 DEBUG: AI Description structure:', processingResult.results.data.aiDescription ? typeof processingResult.results.data.aiDescription : 'undefined');
+      if (processingResult.results.data.aiDescription) {
+        console.log('🔍 DEBUG: AI Description preview:', JSON.stringify(processingResult.results.data.aiDescription).substring(0, 200));
+      }
+      console.log('🔍 DEBUG: Objects structure:', processingResult.results.data.objects ? `Array[${processingResult.results.data.objects.length}]` : 'undefined');
+      console.log('🔍 DEBUG: Tags structure:', processingResult.results.data.tags ? `Array[${processingResult.results.data.tags.length}]` : 'undefined');
+    }
 
     // Extract results from orchestrator response
     const formattedResults = processingResult.results;
@@ -620,10 +630,32 @@ async function triggerFileAnalysis(fileRecord, user) {
       console.log(`📝 Added transcription to update: ${updateData.transcription?.length} characters`);
     }
     
-    // Handle AI descriptions for images
+    // Handle AI descriptions for images (enhanced with better structure detection)
+    console.log(`🔍 DEBUG: Checking for AI description...`);
+    console.log(`🔍 DEBUG: formattedResults.data.aiDescription:`, formattedResults.data.aiDescription);
+    
     if (formattedResults.data.aiDescription) {
-      updateData.summary = formattedResults.data.aiDescription.description || '';
-      console.log(`🎨 Added AI description to summary: ${updateData.summary.length} characters`);
+      // Handle different possible structures
+      let aiDescription = '';
+      if (typeof formattedResults.data.aiDescription === 'string') {
+        aiDescription = formattedResults.data.aiDescription;
+        console.log(`🎨 Found AI description as string: ${aiDescription.length} characters`);
+      } else if (formattedResults.data.aiDescription.description) {
+        aiDescription = formattedResults.data.aiDescription.description;
+        console.log(`🎨 Found AI description as object.description: ${aiDescription.length} characters`);
+      } else if (formattedResults.data.aiDescription.text) {
+        aiDescription = formattedResults.data.aiDescription.text;
+        console.log(`🎨 Found AI description as object.text: ${aiDescription.length} characters`);
+      } else {
+        console.log(`🔍 DEBUG: AI description structure:`, JSON.stringify(formattedResults.data.aiDescription, null, 2));
+      }
+      
+      if (aiDescription && aiDescription.length > 0) {
+        updateData.summary = aiDescription;
+        console.log(`🎨 Added AI description to summary: ${updateData.summary.length} characters`);
+      }
+    } else {
+      console.log(`⚠️ No AI description found in formattedResults.data`);
     }
     
     // Handle OCR text for images/videos
@@ -757,6 +789,18 @@ async function triggerFileAnalysis(fileRecord, user) {
     if (!updateData.category && formattedResults.mediaType) {
       updateData.category = formattedResults.mediaType;
       console.log(`📁 Using fallback category: ${updateData.category}`);
+    }
+
+    // 🔧 FALLBACK: If we have analysis data but no summary, copy from analysis record
+    if (!updateData.summary && analysisRecord && analysisRecord.ai_description) {
+      console.log(`🔧 FALLBACK: Copying AI description from analysis record...`);
+      if (typeof analysisRecord.ai_description === 'string') {
+        updateData.summary = analysisRecord.ai_description;
+        console.log(`🎨 Copied AI description from analysis record: ${updateData.summary.length} characters`);
+      } else if (analysisRecord.ai_description.description) {
+        updateData.summary = analysisRecord.ai_description.description;
+        console.log(`🎨 Copied AI description.description from analysis record: ${updateData.summary.length} characters`);
+      }
     }
 
     console.log(`💾 Final update data:`, {
