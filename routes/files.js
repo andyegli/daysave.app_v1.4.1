@@ -31,6 +31,97 @@ function isMultimediaFile(mimetype) {
 }
 
 /**
+ * Generate sophisticated AI title for images using OpenAI (same approach as videos)
+ * @param {string} imageDescription - AI description of the image
+ * @param {Object} analysisData - Additional analysis data (objects, tags, etc.)
+ * @returns {Promise<string|null>} Generated title or null if failed
+ */
+async function generateSophisticatedImageTitle(imageDescription, analysisData = {}) {
+  try {
+    console.log('📝 Starting sophisticated AI-powered title generation for image');
+    
+    // Initialize OpenAI if not already done
+    const { OpenAI } = require('openai');
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+    
+    if (!openai || !process.env.OPENAI_API_KEY) {
+      console.log('⚠️ OpenAI not available for title generation');
+      return null;
+    }
+
+    // Prepare content for analysis
+    let contentToAnalyze = imageDescription.trim();
+    
+    // Enhance with additional context from analysis data
+    if (analysisData.objects && analysisData.objects.length > 0) {
+      const objectNames = analysisData.objects.map(obj => obj.name).join(', ');
+      contentToAnalyze += `\n\nDetected objects: ${objectNames}`;
+    }
+    
+    if (analysisData.tags && analysisData.tags.length > 0) {
+      const tagList = analysisData.tags.slice(0, 5).join(', '); // Top 5 tags
+      contentToAnalyze += `\n\nKey themes: ${tagList}`;
+    }
+
+    if (!contentToAnalyze || contentToAnalyze.length < 10) {
+      console.log('⚠️ Insufficient content for AI title generation');
+      return null;
+    }
+
+    console.log(`🤖 Sending image content to OpenAI for title generation (${contentToAnalyze.length} chars)`);
+
+    const prompt = `Based on the following image description and analysis, create an engaging and descriptive title.
+
+The title should be:
+- Concise (5-10 words maximum)
+- Descriptive of the main subject or scene
+- Engaging and clickable
+- Professional and appropriate
+- Capture the essence of the visual content
+- Focus on the most interesting or unique aspect
+
+Image Analysis: ${contentToAnalyze}
+
+Respond with only the title, no quotes or additional text.`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert content creator who specializes in writing engaging titles for visual content. Create compelling titles that capture the essence of images and make viewers want to see them. Focus on the most interesting visual elements and create titles that are descriptive yet concise.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 50
+    });
+
+    let generatedTitle = response.choices[0].message.content.trim();
+    
+    // Clean up title (remove quotes if present)
+    generatedTitle = generatedTitle.replace(/^["']|["']$/g, '');
+    
+    // Ensure title isn't too long
+    if (generatedTitle.length > 60) {
+      generatedTitle = generatedTitle.substring(0, 57) + '...';
+    }
+    
+    console.log(`✅ Generated sophisticated AI title: "${generatedTitle}"`);
+    return generatedTitle;
+    
+  } catch (error) {
+    console.error('❌ Sophisticated AI title generation failed:', error.message);
+    return null;
+  }
+}
+
+/**
  * Trigger multimedia analysis for uploaded file using enhanced AI system
  * @param {Object} fileRecord - File database record
  * @param {Object} user - User object
@@ -346,19 +437,42 @@ async function triggerFileAnalysis(fileRecord, user) {
       }
     }
     
-    // 🚀 FALLBACK: Generate title from AI description if no enhanced title available
+    // 🚀 ENHANCED: Generate sophisticated AI title if no enhanced title available
     if ((!enhancedResults || !enhancedResults.generatedTitle) && updateData.summary && !updateData.metadata.title) {
-      // Generate title from first sentence of summary
-      const firstSentence = updateData.summary.split('.')[0];
-      if (firstSentence.length > 0 && firstSentence.length <= 60) {
-        updateData.metadata.title = firstSentence.trim();
-        console.log(`🎯 Generated title from summary: "${updateData.metadata.title}"`);
-      } else if (updateData.summary.length <= 60) {
-        updateData.metadata.title = updateData.summary.trim();
-        console.log(`🎯 Using full summary as title: "${updateData.metadata.title}"`);
-      } else {
-        updateData.metadata.title = updateData.summary.substring(0, 57).trim() + '...';
-        console.log(`🎯 Using truncated summary as title: "${updateData.metadata.title}"`);
+      try {
+        console.log(`🎯 Generating sophisticated AI title for image...`);
+        const aiTitle = await generateSophisticatedImageTitle(updateData.summary, formattedResults.data);
+        if (aiTitle) {
+          updateData.metadata.title = aiTitle;
+          console.log(`🎯 Generated sophisticated AI title: "${aiTitle}"`);
+        } else {
+          // Fallback to simple extraction
+          const firstSentence = updateData.summary.split('.')[0];
+          if (firstSentence.length > 0 && firstSentence.length <= 60) {
+            updateData.metadata.title = firstSentence.trim();
+            console.log(`🎯 Fallback title from summary: "${updateData.metadata.title}"`);
+          } else if (updateData.summary.length <= 60) {
+            updateData.metadata.title = updateData.summary.trim();
+            console.log(`🎯 Using full summary as title: "${updateData.metadata.title}"`);
+          } else {
+            updateData.metadata.title = updateData.summary.substring(0, 57).trim() + '...';
+            console.log(`🎯 Using truncated summary as title: "${updateData.metadata.title}"`);
+          }
+        }
+      } catch (titleError) {
+        console.error(`⚠️ AI title generation failed: ${titleError.message}`);
+        // Fallback to simple extraction
+        const firstSentence = updateData.summary.split('.')[0];
+        if (firstSentence.length > 0 && firstSentence.length <= 60) {
+          updateData.metadata.title = firstSentence.trim();
+          console.log(`🎯 Fallback title from summary: "${updateData.metadata.title}"`);
+        } else if (updateData.summary.length <= 60) {
+          updateData.metadata.title = updateData.summary.trim();
+          console.log(`🎯 Using full summary as title: "${updateData.metadata.title}"`);
+        } else {
+          updateData.metadata.title = updateData.summary.substring(0, 57).trim() + '...';
+          console.log(`🎯 Using truncated summary as title: "${updateData.metadata.title}"`);
+        }
       }
     }
     

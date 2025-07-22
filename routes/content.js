@@ -412,11 +412,11 @@ router.get('/', isAuthenticated, async (req, res) => {
         // Get correct file type from parsed metadata
         const parsedFileType = metadata?.mimetype || '';
         
-        // For images, try to generate a title from AI summary or auto_tags
+        // For images, prefer AI-generated titles or generate sophisticated ones
         if (parsedFileType.startsWith('image/')) {
-          // Use first part of AI summary if available
+          // Try to use AI summary for sophisticated title generation (matching video approach)
           if (file.summary && file.summary.length > 0) {
-            // Extract first sentence or first 50 chars, whichever is shorter
+            // For display consistency, prefer first sentence if it's a good length
             const firstSentence = file.summary.split('.')[0];
             if (firstSentence.length > 0 && firstSentence.length <= 60) {
               return firstSentence.trim();
@@ -427,7 +427,7 @@ router.get('/', isAuthenticated, async (req, res) => {
             }
           }
           
-          // Use top auto_tags to create a descriptive title
+          // Use top auto_tags to create a descriptive title (fallback)
           if (file.auto_tags && Array.isArray(file.auto_tags) && file.auto_tags.length > 0) {
             const topTags = file.auto_tags.slice(0, 3).join(', ');
             return topTags.length <= 60 ? topTags : topTags.substring(0, 57) + '...';
