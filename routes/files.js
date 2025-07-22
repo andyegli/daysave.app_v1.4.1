@@ -320,10 +320,15 @@ async function triggerFileAnalysis(fileRecord, user) {
       }
     }
     
-    // For images, use AI description
-    if (formattedResults.data.aiDescription && formattedResults.data.aiDescription.description) {
-      contentForAI = formattedResults.data.aiDescription.description;
-      console.log(`🎨 Found AI description: ${contentForAI.length} characters`);
+    // For images, use AI description (FIXED: Handle both string and object formats)
+    if (formattedResults.data.aiDescription) {
+      if (typeof formattedResults.data.aiDescription === 'string') {
+        contentForAI = formattedResults.data.aiDescription;
+        console.log(`🎨 Found AI description (string): ${contentForAI.length} characters`);
+      } else if (formattedResults.data.aiDescription.description) {
+        contentForAI = formattedResults.data.aiDescription.description;
+        console.log(`🎨 Found AI description (object): ${contentForAI.length} characters`);
+      }
     }
     
     // For OCR text, append it
