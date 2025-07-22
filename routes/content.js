@@ -33,6 +33,7 @@ function isMultimediaURL(url) {
     /facebook\.com\/watch/i,
     /facebook\.com\/share\/v\//i,
     /facebook\.com\/share\/p\//i,
+    /facebook\.com\/share\/r\//i,  // Facebook share/r/ URLs (reels/mixed content)
     /facebook\.com\/video\//i,
     /facebook\.com\/.*\/videos\//i,
     /facebook\.com\/.*\/posts\//i,
