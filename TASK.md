@@ -1163,3 +1163,5 @@ openssl rand -base64 32
   - [x] **Status**: Image upload and AI analysis pipeline now fully functional for both local and GCS storage with proper thumbnail generation
   - [x] **File Deletion Fix**: Fixed FileUploadService.deleteFile() to extract bucket name from file path and added comprehensive thumbnail cleanup - resolves "image could not be found" error when deleting content
   - [x] **Status**: Image upload and AI analysis pipeline now fully functional for both local and GCS storage with proper thumbnail generation and deletion
+  - [x] **Deletion Routing Fix**: Fixed content/file deletion routing issue - content items now route to `/content/:id`, file items to `/files/:id` with proper data-item-type attributes and endpoint detection
+  - [x] **Status**: Complete image upload, AI analysis, thumbnail generation, and deletion pipeline now fully functional for both local and GCS storage with proper content type handling
