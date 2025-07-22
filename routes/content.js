@@ -384,12 +384,22 @@ router.get('/', isAuthenticated, async (req, res) => {
         sourceInfo = { source: 'Audio', logo: 'bi-music-note', color: '#20c997' };
       }
 
+      // Get title from metadata or generate from filename
+      const getFileTitle = (file) => {
+        // Try metadata.title first (populated by AI or our script)
+        if (file.metadata && file.metadata.title) {
+          return file.metadata.title;
+        }
+        // Fallback: clean up filename
+        return file.filename.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      };
+
       return {
         id: file.id,
         itemType: 'file',
         url: `/files/${file.id}`, // Link to file detail page
-        title: file.generated_title || file.filename,
-        displayTitle: file.generated_title || file.filename.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
+        title: getFileTitle(file),
+        displayTitle: getFileTitle(file),
         user_comments: file.user_comments || '',
         summary: file.summary || '',
         transcription: file.transcription || '',

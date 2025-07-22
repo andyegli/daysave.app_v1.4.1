@@ -82,6 +82,31 @@ class ThumbnailGenerator {
   }
 
   /**
+   * Normalize quality value to database ENUM
+   * Converts numeric quality to 'low', 'medium', 'high' for database storage
+   * 
+   * @param {string|number} quality - Quality value to normalize
+   * @returns {string} Normalized quality ('low', 'medium', or 'high')
+   */
+  normalizeQuality(quality) {
+    // If already a string, validate and return
+    if (typeof quality === 'string') {
+      const validValues = ['low', 'medium', 'high'];
+      return validValues.includes(quality) ? quality : 'medium';
+    }
+
+    // Convert numeric quality to ENUM
+    if (typeof quality === 'number') {
+      if (quality <= 70) return 'low';
+      if (quality <= 85) return 'medium';
+      return 'high';
+    }
+
+    // Default fallback
+    return 'medium';
+  }
+
+  /**
    * Generate thumbnails for video content
    * 
    * @param {string} userId - User ID
@@ -450,7 +475,7 @@ class ThumbnailGenerator {
         mime_type: 'image/jpeg',
         width: dimensions.width,
         height: dimensions.height,
-        quality: options.quality,
+        quality: this.normalizeQuality(options.quality),
         generation_method: 'ffmpeg',
         metadata: {
           originalImage: path.basename(imagePath),
