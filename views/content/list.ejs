@@ -115,19 +115,22 @@
       text-overflow: ellipsis !important;
     }
 
-    /* Ultra-specific 4-line class - highest priority */
-    .content-card .transcription-preview .transcription-text {
+    /* Ultra-specific 4-line class - highest priority with ID specificity */
+    .content-card .transcription-preview .transcription-text,
+    .content-card .transcription-text.force-4-lines,
+    div[id*="transcription-summary"] .transcription-text {
       display: -webkit-box !important;
       -webkit-line-clamp: 4 !important;
       -webkit-box-orient: vertical !important;
       overflow: hidden !important;
-      line-height: 1.5 !important;
-      min-height: 84px !important;
-      max-height: 84px !important;
+      line-height: 1.6 !important;
+      min-height: 88px !important;
+      max-height: 88px !important;
       white-space: normal !important;
       text-overflow: ellipsis !important;
       word-wrap: break-word !important;
       font-size: 0.85rem !important;
+      height: 88px !important;
     }
     
     /* Brain icon styling */
@@ -283,7 +286,7 @@
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>">
                         <div class="position-relative">
                           <div class="transcription-preview bg-light p-2 rounded" style="font-size: 0.85rem; width: 100%; min-width: 250px;">
-                            <div class="transcription-text text-dark" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.5 !important; white-space: normal !important; word-wrap: break-word !important; width: 100%; min-height: 84px; max-height: 84px;">
+                            <div class="transcription-text text-dark force-4-lines" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.6 !important; white-space: normal !important; word-wrap: break-word !important; width: 100%; height: 88px !important; min-height: 88px !important; max-height: 88px !important; font-size: 0.85rem !important;">
                               <%= item.summary %>
                             </div>
                           </div>
@@ -296,7 +299,7 @@
                       <div class="transcription-summary mb-2" id="transcription-summary-<%= item.id %>" style="display: none;">
                         <div class="position-relative">
                           <div class="transcription-preview bg-light p-2 rounded small">
-                            <div class="transcription-text text-muted" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.5 !important; white-space: normal !important; word-wrap: break-word !important; width: 100%; min-height: 84px; max-height: 84px;">Loading transcription...</div>
+                            <div class="transcription-text text-muted force-4-lines" style="display: -webkit-box !important; -webkit-line-clamp: 4 !important; -webkit-box-orient: vertical !important; overflow: hidden !important; line-height: 1.6 !important; white-space: normal !important; word-wrap: break-word !important; width: 100%; height: 88px !important; min-height: 88px !important; max-height: 88px !important; font-size: 0.85rem !important;">Loading transcription...</div>
                           </div>
                           <button class="btn btn-sm btn-outline-primary position-absolute top-0 end-0 mt-1 me-1 py-0 px-2 copy-summary-btn" data-content-id="<%= item.id %>" title="Copy Summary" style="z-index: 10;">
                             <i class="bi bi-clipboard" style="font-size: 0.7rem;"></i>
@@ -585,8 +588,26 @@
 
   <!-- Custom JS for Content Management -->
   <script src="/js/content-management.js?v=<%= Date.now() %>"></script>
-  <script src="/js/content-filters.js"></script>
+  <script src="/js/content-filters.js?v=<%= Date.now() %>"></script>
   <script src="/js/ai-analysis.js?v=<%= Date.now() %>"></script>
-  <script src="/js/content-tags-modal.js"></script>
+  <script src="/js/content-tags-modal.js?v=<%= Date.now() %>"></script>
+  
+  <style>
+    /* Additional aggressive 4-line forcing CSS - loaded last for highest priority */
+    .force-4-lines {
+      display: -webkit-box !important;
+      -webkit-line-clamp: 4 !important;
+      -webkit-box-orient: vertical !important;
+      overflow: hidden !important;
+      line-height: 1.6 !important;
+      height: 88px !important;
+      min-height: 88px !important;
+      max-height: 88px !important;
+      font-size: 0.85rem !important;
+      white-space: normal !important;
+      word-wrap: break-word !important;
+      text-overflow: ellipsis !important;
+    }
+  </style>
 </body>
 </html> 
