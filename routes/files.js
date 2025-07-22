@@ -280,8 +280,6 @@ async function triggerFileAnalysis(fileRecord, user) {
       mimetype: fileRecord.metadata?.mimetype
     });
 
-    console.log(`🔧 DEBUG: fileMetadata initialized as:`, typeof fileMetadata, fileMetadata);
-
     // Get the actual filesystem path for the uploaded file
     const path = require('path');
     const fs = require('fs');
@@ -300,8 +298,7 @@ async function triggerFileAnalysis(fileRecord, user) {
       filePath = path.join(tempDir, tempFileName);
       
       try {
-        // FIXED: Initialize fileMetadata for GCS downloads BEFORE setting properties
-        console.log(`🔧 DEBUG: Initializing fileMetadata for GCS download...`);
+        // Initialize fileMetadata for GCS downloads
         fileMetadata = {
           filename: fileRecord.filename,
           fileId: fileRecord.id,
@@ -312,7 +309,6 @@ async function triggerFileAnalysis(fileRecord, user) {
           cleanupTempFile: false, // Initialize cleanup flag
           tempFilePath: null      // Initialize temp path
         };
-        console.log(`🔧 DEBUG: fileMetadata after initialization:`, fileMetadata);
         
         // Download file from GCS using FileUploadService
         const gcsPath = fileRecord.file_path.replace('gs://', '');
@@ -325,11 +321,9 @@ async function triggerFileAnalysis(fileRecord, user) {
         const downloadResult = await FileUploadService.downloadFromGCS(bucketName, objectName, filePath);
         console.log(`✅ Downloaded GCS file to: ${filePath}`);
         
-        // FIXED: Now it's safe to set cleanup flags
-        console.log(`🔧 DEBUG: Setting cleanup flags...`);
+        // Set cleanup flags for temporary file
         fileMetadata.cleanupTempFile = true;
         fileMetadata.tempFilePath = filePath;
-        console.log(`🔧 DEBUG: fileMetadata after cleanup flags:`, fileMetadata);
         
       } catch (downloadError) {
         console.error(`❌ Failed to download GCS file: ${downloadError.message}`);
@@ -351,8 +345,6 @@ async function triggerFileAnalysis(fileRecord, user) {
       }
     }
 
-    console.log(`🔧 DEBUG: Final filePath: ${filePath}`);
-
     // Verify file exists
     if (!fs.existsSync(filePath)) {
       throw new Error(`File not found at path: ${filePath}`);
@@ -363,9 +355,7 @@ async function triggerFileAnalysis(fileRecord, user) {
     const fileBuffer = await fs.promises.readFile(filePath);
     console.log(`📖 File buffer size: ${fileBuffer.length} bytes`);
     
-    // FIXED: Update metadata for orchestrator (preserve cleanup flags)
-    console.log(`🔧 DEBUG: Updating fileMetadata for orchestrator...`);
-    console.log(`🔧 DEBUG: fileMetadata before update:`, fileMetadata);
+    // Update metadata for orchestrator (preserve cleanup flags)
     fileMetadata = {
       ...fileMetadata, // Preserve any existing properties like cleanup flags
       filename: fileRecord.filename,
@@ -376,7 +366,6 @@ async function triggerFileAnalysis(fileRecord, user) {
       source: 'upload',
       filePath: filePath
     };
-    console.log(`🔧 DEBUG: fileMetadata after update:`, fileMetadata);
 
     console.log(`🎯 Starting orchestrator processing...`);
     // Process file with new orchestrator for detailed analysis
@@ -403,14 +392,12 @@ async function triggerFileAnalysis(fileRecord, user) {
       dataKeys: processingResult.results?.data ? Object.keys(processingResult.results.data) : null
     });
     
-    // 🔍 DEBUG: Log the actual structure of critical data
+    // Log critical data structure (summary only)
     if (processingResult.results?.data) {
-      console.log('🔍 DEBUG: AI Description structure:', processingResult.results.data.aiDescription ? typeof processingResult.results.data.aiDescription : 'undefined');
-      if (processingResult.results.data.aiDescription) {
-        console.log('🔍 DEBUG: AI Description preview:', JSON.stringify(processingResult.results.data.aiDescription).substring(0, 200));
-      }
-      console.log('🔍 DEBUG: Objects structure:', processingResult.results.data.objects ? `Array[${processingResult.results.data.objects.length}]` : 'undefined');
-      console.log('🔍 DEBUG: Tags structure:', processingResult.results.data.tags ? `Array[${processingResult.results.data.tags.length}]` : 'undefined');
+      const hasAiDescription = !!processingResult.results.data.aiDescription;
+      const objectCount = processingResult.results.data.objects?.length || 0;
+      const tagCount = processingResult.results.data.tags?.length || 0;
+      console.log(`📊 Analysis data: AI description: ${hasAiDescription}, Objects: ${objectCount}, Tags: ${tagCount}`);
     }
 
     // Extract results from orchestrator response
@@ -776,9 +763,6 @@ async function triggerFileAnalysis(fileRecord, user) {
     }
     
     // Handle AI descriptions for images (enhanced with better structure detection)
-    console.log(`🔍 DEBUG: Checking for AI description...`);
-    console.log(`🔍 DEBUG: formattedResults.data.aiDescription:`, formattedResults.data.aiDescription);
-    
     if (formattedResults.data.aiDescription) {
       // Handle different possible structures
       let aiDescription = '';
@@ -791,8 +775,6 @@ async function triggerFileAnalysis(fileRecord, user) {
       } else if (formattedResults.data.aiDescription.text) {
         aiDescription = formattedResults.data.aiDescription.text;
         console.log(`🎨 Found AI description as object.text: ${aiDescription.length} characters`);
-      } else {
-        console.log(`🔍 DEBUG: AI description structure:`, JSON.stringify(formattedResults.data.aiDescription, null, 2));
       }
       
       if (aiDescription && aiDescription.length > 0) {
@@ -992,7 +974,6 @@ async function triggerFileAnalysis(fileRecord, user) {
   } finally {
     // Clean up temporary file if it was downloaded from GCS
     console.log(`🧹 Cleanup phase...`);
-    console.log(`🔧 DEBUG: fileMetadata in cleanup:`, typeof fileMetadata, fileMetadata);
     if (fileMetadata && fileMetadata.cleanupTempFile && fileMetadata.tempFilePath) {
       try {
         const fs = require('fs');

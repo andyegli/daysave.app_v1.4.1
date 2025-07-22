@@ -14,9 +14,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /**
  * Force 4-line text display with JavaScript fallback
+ * DISABLED: CSS webkit-line-clamp is working properly, no need for JS override
  */
 function initializeFourLineTextDisplay() {
-  console.log('🔧 4-line fix script started');
+  console.log('🔧 4-line fix: CSS webkit-line-clamp is handling this properly, skipping JS override');
+  return; // Skip JavaScript override since CSS is working
   
   const transcriptionTexts = document.querySelectorAll('.force-4-lines .text-content');
   console.log('🔍 Found transcription texts:', transcriptionTexts.length);
