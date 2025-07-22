@@ -194,13 +194,24 @@ async function showComprehensiveAnalysisModal(contentId, itemType = 'content') {
       const modalBody = modal.querySelector('.modal-body');
       modalBody.innerHTML = modalHtml;
       
-      // Show modal
-      currentModalInstance = new bootstrap.Modal(modal, {
-        backdrop: true,
-        keyboard: true,
-        focus: true
-      });
-      currentModalInstance.show();
+      // Show modal with proper initialization
+      setTimeout(() => {
+        try {
+          // Dispose previous instance if it exists
+          if (currentModalInstance) {
+            currentModalInstance.dispose();
+          }
+          
+          currentModalInstance = new bootstrap.Modal(modal, {
+            backdrop: 'static',
+            keyboard: true,
+            focus: true
+          });
+          currentModalInstance.show();
+        } catch (error) {
+          console.error('Error showing modal:', error);
+        }
+      }, 50);
       
       // Initialize interactive features
       initializeModalInteractivity();
@@ -666,8 +677,19 @@ function showLoadingModal() {
     </div>
   `;
   
-  currentModalInstance = new bootstrap.Modal(modal, { backdrop: true, keyboard: false });
-  currentModalInstance.show();
+  // Add a small delay to ensure DOM is ready
+  setTimeout(() => {
+    try {
+      currentModalInstance = new bootstrap.Modal(modal, { 
+        backdrop: 'static', 
+        keyboard: false,
+        focus: true 
+      });
+      currentModalInstance.show();
+    } catch (error) {
+      console.error('Error showing loading modal:', error);
+    }
+  }, 50);
 }
 
 function showErrorModal(title, message) {
@@ -681,11 +703,21 @@ function showErrorModal(title, message) {
     </div>
   `;
   
-  if (currentModalInstance) {
-    currentModalInstance.dispose();
-  }
-  currentModalInstance = new bootstrap.Modal(modal, { backdrop: true, keyboard: true });
-  currentModalInstance.show();
+  setTimeout(() => {
+    try {
+      if (currentModalInstance) {
+        currentModalInstance.dispose();
+      }
+      currentModalInstance = new bootstrap.Modal(modal, { 
+        backdrop: 'static', 
+        keyboard: true,
+        focus: true 
+      });
+      currentModalInstance.show();
+    } catch (error) {
+      console.error('Error showing error modal:', error);
+    }
+  }, 50);
 }
 
 function escapeHtml(text) {
@@ -1367,16 +1399,7 @@ function formatFileSize(bytes) {
   return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
-// Update the placeholder function implementations
-function renderFacesAccordion(result, analysis) { return renderFacesAccordion(result, analysis); }
-function renderSpeakersAccordion(result, analysis) { return renderSpeakersAccordion(result, analysis); }
-function renderOCRAccordion(result, analysis) { return renderOCRAccordion(result, analysis); }
-function renderColorsAccordion(result, analysis) { return renderColorsAccordion(result, analysis); }
-function renderScenesAccordion(result, analysis) { return renderScenesAccordion(result, analysis); }
-function renderFileMetadataAccordion(result, analysis) { return renderFileMetadataAccordion(result, analysis); }
-function renderQualityAccordion(result, analysis) { return renderQualityAccordion(result, analysis); }
-function renderPerformanceAccordion(result, analysis) { return renderPerformanceAccordion(result, analysis); }
-function renderThumbnailsAccordion(result, analysis) { return renderThumbnailsAccordion(result, analysis); }
+// All accordion render functions are implemented above
 
 // Legacy support functions
 function setupContentAnalysisMonitoring() {
