@@ -2186,44 +2186,88 @@ Respond with only the title, no quotes or additional text.`;
    * @returns {string} Fallback image title
    */
   getFallbackImageTitle(results) {
-    // Try to use first sentence of description
+    // Try to use first sentence of description with descriptive prefix
     if (results.description && results.description.trim()) {
       const firstSentence = results.description.split('.')[0];
-      if (firstSentence.length > 0 && firstSentence.length <= 60) {
-        return firstSentence.trim();
-      } else if (results.description.length <= 60) {
-        return results.description.trim();
+      if (firstSentence.length > 0 && firstSentence.length <= 120) {
+        // Add descriptive prefix if not already present
+        if (!firstSentence.toLowerCase().startsWith('in the image') && 
+            !firstSentence.toLowerCase().startsWith('the image shows') &&
+            !firstSentence.toLowerCase().startsWith('this image captures')) {
+          return `In the image, ${firstSentence.trim().toLowerCase()}`;
+        } else {
+          return firstSentence.trim();
+        }
+      } else if (results.description.length <= 120) {
+        // Add descriptive prefix if not already present
+        if (!results.description.toLowerCase().startsWith('in the image') && 
+            !results.description.toLowerCase().startsWith('the image shows') &&
+            !results.description.toLowerCase().startsWith('this image captures')) {
+          return `In the image, ${results.description.trim().toLowerCase()}`;
+        } else {
+          return results.description.trim();
+        }
       } else {
-        return results.description.substring(0, 57).trim() + '...';
+        const truncated = results.description.substring(0, 117).trim();
+        if (!truncated.toLowerCase().startsWith('in the image') && 
+            !truncated.toLowerCase().startsWith('the image shows') &&
+            !truncated.toLowerCase().startsWith('this image captures')) {
+          return `In the image, ${truncated.toLowerCase()}...`;
+        } else {
+          return truncated + '...';
+        }
       }
     }
     
-    // Use transcription if available
+    // Use transcription if available with descriptive prefix
     if (results.transcription && results.transcription.trim()) {
       const firstSentence = results.transcription.split('.')[0];
-      if (firstSentence.length > 0 && firstSentence.length <= 60) {
-        return firstSentence.trim();
-      } else if (results.transcription.length <= 60) {
-        return results.transcription.trim();
+      if (firstSentence.length > 0 && firstSentence.length <= 120) {
+        // Add descriptive prefix if not already present
+        if (!firstSentence.toLowerCase().startsWith('in the image') && 
+            !firstSentence.toLowerCase().startsWith('the image shows') &&
+            !firstSentence.toLowerCase().startsWith('this image captures')) {
+          return `In the image, ${firstSentence.trim().toLowerCase()}`;
+        } else {
+          return firstSentence.trim();
+        }
+      } else if (results.transcription.length <= 120) {
+        // Add descriptive prefix if not already present
+        if (!results.transcription.toLowerCase().startsWith('in the image') && 
+            !results.transcription.toLowerCase().startsWith('the image shows') &&
+            !results.transcription.toLowerCase().startsWith('this image captures')) {
+          return `In the image, ${results.transcription.trim().toLowerCase()}`;
+        } else {
+          return results.transcription.trim();
+        }
       } else {
-        return results.transcription.substring(0, 57).trim() + '...';
+        const truncated = results.transcription.substring(0, 117).trim();
+        if (!truncated.toLowerCase().startsWith('in the image') && 
+            !truncated.toLowerCase().startsWith('the image shows') &&
+            !truncated.toLowerCase().startsWith('this image captures')) {
+          return `In the image, ${truncated.toLowerCase()}...`;
+        } else {
+          return truncated + '...';
+        }
       }
     }
     
     // Use top tags to create a descriptive title
     if (results.tags && Array.isArray(results.tags) && results.tags.length > 0) {
       const topTags = results.tags.slice(0, 3).join(', ');
-      return topTags.length <= 60 ? topTags : topTags.substring(0, 57) + '...';
+      const tagTitle = topTags.length <= 120 ? topTags : topTags.substring(0, 117) + '...';
+      return `In the image, ${tagTitle.toLowerCase()}`;
     }
     
     // Use object names as fallback
     if (results.objects && results.objects.length > 0) {
       const objectNames = results.objects.slice(0, 3).map(obj => obj.name || obj).join(', ');
-      return objectNames.length <= 60 ? objectNames : objectNames.substring(0, 57) + '...';
+      const objectTitle = objectNames.length <= 120 ? objectNames : objectNames.substring(0, 117) + '...';
+      return `The image shows ${objectTitle.toLowerCase()}`;
     }
     
     // Final fallback
-    return 'Image Content';
+    return 'In the image, various visual elements are captured';
   }
 
   // Placeholder methods for features to be implemented

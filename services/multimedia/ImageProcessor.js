@@ -1016,17 +1016,23 @@ Return only the extracted text, preserving original formatting and line breaks w
         console.log(`🤖 Sending image content to OpenAI for title generation (${contentToAnalyze.length} chars)`);
       }
 
-      const prompt = `Based on the following image description and analysis, create an engaging and descriptive title.
+      const prompt = `Based on the following image description and analysis, create an engaging and descriptive title that tells a story about what's happening in the image.
 
 The title should be:
-- Concise (5-10 words maximum)
-- Descriptive of the main subject or scene
-- Engaging and clickable
-- Professional and appropriate
-- Capture the essence of the visual content
-- Focus on the most interesting or unique aspect
+- Start with "In the image," or "The image shows" or "This image captures"
+- Be descriptive and storytelling (15-25 words)
+- Paint a vivid picture of the scene
+- Include key details about people, objects, actions, and setting
+- Be engaging and make the viewer want to see the image
+- Focus on the most interesting visual elements and what's happening
+- Use descriptive adjectives and action words
 
 Image Analysis: ${contentToAnalyze}
+
+Examples of good titles:
+- "In the image, a young girl stands confidently on a colorful playground, her bright smile radiating joy as she poses for the camera"
+- "The image shows a bustling city street at sunset, with warm golden light illuminating the faces of people walking past vibrant storefronts"
+- "This image captures a peaceful mountain lake reflecting the snow-capped peaks, with a lone kayaker gliding across the crystal-clear water"
 
 Respond with only the title, no quotes or additional text.`;
 
@@ -1035,7 +1041,7 @@ Respond with only the title, no quotes or additional text.`;
         messages: [
           {
             role: 'system',
-            content: 'You are an expert content creator who specializes in writing engaging titles for visual content. Create compelling titles that capture the essence of images and make viewers want to see them. Focus on the most interesting visual elements and create titles that are descriptive yet concise.'
+            content: 'You are an expert content creator who specializes in writing engaging, descriptive titles for images. Create compelling titles that tell a story about what\'s happening in the image. Your titles should paint a vivid picture and make viewers feel like they can almost see the image just from reading the title. Focus on people, actions, emotions, settings, and interesting visual details. Always start with "In the image," "The image shows," or "This image captures" and be descriptive and storytelling.'
           },
           {
             role: 'user',
@@ -1043,7 +1049,7 @@ Respond with only the title, no quotes or additional text.`;
           }
         ],
         temperature: 0.7,
-        max_tokens: 50
+        max_tokens: 80
       });
 
       let generatedTitle = response.choices[0].message.content.trim();
@@ -1051,9 +1057,9 @@ Respond with only the title, no quotes or additional text.`;
       // Clean up title (remove quotes if present)
       generatedTitle = generatedTitle.replace(/^["']|["']$/g, '');
       
-      // Ensure title isn't too long
-      if (generatedTitle.length > 60) {
-        generatedTitle = generatedTitle.substring(0, 57) + '...';
+      // Ensure title isn't too long (allow for more descriptive titles)
+      if (generatedTitle.length > 150) {
+        generatedTitle = generatedTitle.substring(0, 147) + '...';
       }
       
       if (this.enableLogging) {
@@ -1077,32 +1083,55 @@ Respond with only the title, no quotes or additional text.`;
    * @returns {string} Fallback title
    */
   getFallbackTitle(context = {}) {
-    // Try to use first sentence of description
+    // Try to use first sentence of description with descriptive prefix
     if (context.description && context.description.trim()) {
       const firstSentence = context.description.split('.')[0];
-      if (firstSentence.length > 0 && firstSentence.length <= 60) {
-        return firstSentence.trim();
-      } else if (context.description.length <= 60) {
-        return context.description.trim();
+      if (firstSentence.length > 0 && firstSentence.length <= 120) {
+        // Add descriptive prefix if not already present
+        if (!firstSentence.toLowerCase().startsWith('in the image') && 
+            !firstSentence.toLowerCase().startsWith('the image shows') &&
+            !firstSentence.toLowerCase().startsWith('this image captures')) {
+          return `In the image, ${firstSentence.trim().toLowerCase()}`;
+        } else {
+          return firstSentence.trim();
+        }
+      } else if (context.description.length <= 120) {
+        // Add descriptive prefix if not already present
+        if (!context.description.toLowerCase().startsWith('in the image') && 
+            !context.description.toLowerCase().startsWith('the image shows') &&
+            !context.description.toLowerCase().startsWith('this image captures')) {
+          return `In the image, ${context.description.trim().toLowerCase()}`;
+        } else {
+          return context.description.trim();
+        }
       } else {
-        return context.description.substring(0, 57).trim() + '...';
+        const truncated = context.description.substring(0, 117).trim();
+        if (!truncated.toLowerCase().startsWith('in the image') && 
+            !truncated.toLowerCase().startsWith('the image shows') &&
+            !truncated.toLowerCase().startsWith('this image captures')) {
+          return `In the image, ${truncated.toLowerCase()}...`;
+        } else {
+          return truncated + '...';
+        }
       }
     }
     
     // Use top tags to create a descriptive title
     if (context.tags && Array.isArray(context.tags) && context.tags.length > 0) {
       const topTags = context.tags.slice(0, 3).join(', ');
-      return topTags.length <= 60 ? topTags : topTags.substring(0, 57) + '...';
+      const tagTitle = topTags.length <= 120 ? topTags : topTags.substring(0, 117) + '...';
+      return `In the image, ${tagTitle.toLowerCase()}`;
     }
     
     // Use object names as fallback
     if (context.objects && context.objects.length > 0) {
       const objectNames = context.objects.slice(0, 3).map(obj => obj.name || obj).join(', ');
-      return objectNames.length <= 60 ? objectNames : objectNames.substring(0, 57) + '...';
+      const objectTitle = objectNames.length <= 120 ? objectNames : objectNames.substring(0, 117) + '...';
+      return `The image shows ${objectTitle.toLowerCase()}`;
     }
     
     // Final fallback
-    return 'Image Content';
+    return 'In the image, various visual elements are captured';
   }
 
   /**
