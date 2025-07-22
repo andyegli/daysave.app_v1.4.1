@@ -242,6 +242,20 @@ async function handleFileUploadSubmission() {
     return;
   }
   
+  // Debug: Log current URL and protocol
+  console.log('🔧 DEBUG: Current URL:', window.location.href);
+  console.log('🔧 DEBUG: Protocol:', window.location.protocol);
+  console.log('🔧 DEBUG: Host:', window.location.host);
+  
+  // Additional debugging for SSL issues
+  try {
+    // Test connection to the upload endpoint
+    console.log('🔧 DEBUG: Testing connection to upload endpoint...');
+    testUploadEndpoint();
+  } catch (testError) {
+    console.warn('🔧 DEBUG: Connection test failed:', testError);
+  }
+  
   // Prepare form data
   const formData = new FormData();
   
@@ -272,16 +286,58 @@ async function handleFileUploadSubmission() {
     submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Uploading...';
     if (progressSection) progressSection.style.display = 'block';
     
-    // Upload files
-    const response = await fetch('/files/upload', {
-      method: 'POST',
-      body: formData
+    // Use XMLHttpRequest for better file upload support and progress tracking
+    const response = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      
+      // Track upload progress
+      if (progressBar) {
+        xhr.upload.addEventListener('progress', function(e) {
+          if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            progressBar.style.width = percentComplete + '%';
+            progressBar.textContent = Math.round(percentComplete) + '%';
+          }
+        });
+      }
+      
+      // Handle response
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            resolve(result);
+          } catch (parseError) {
+            reject(new Error('Invalid response format'));
+          }
+        } else {
+          try {
+            const errorResult = JSON.parse(xhr.responseText);
+            reject(new Error(errorResult.message || `HTTP ${xhr.status}: ${xhr.statusText}`));
+          } catch (parseError) {
+            reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+          }
+        }
+      };
+      
+      // Handle network errors
+      xhr.onerror = function() {
+        reject(new Error('Network error occurred. Please check your connection and try again.'));
+      };
+      
+      // Handle timeout
+      xhr.ontimeout = function() {
+        reject(new Error('Upload timeout. Please try again with smaller files.'));
+      };
+      
+      // Configure request
+      xhr.timeout = 300000; // 5 minute timeout
+      xhr.open('POST', '/files/upload');
+      xhr.send(formData);
     });
     
-    const result = await response.json();
-    
-    if (result.success) {
-      showUploadAlert(`Successfully uploaded ${result.uploaded.length} file(s)! Redirecting...`, 'success');
+    if (response.success) {
+      showUploadAlert(`Successfully uploaded ${response.uploaded.length} file(s)! Redirecting...`, 'success');
       
       // Close modal and refresh page
       const modal = bootstrap.Modal.getInstance(document.getElementById('addContentModal'));
@@ -291,12 +347,23 @@ async function handleFileUploadSubmission() {
         window.location.reload();
       }, 1500);
     } else {
-      throw new Error(result.message || 'Upload failed');
+      throw new Error(response.message || 'Upload failed');
     }
     
   } catch (error) {
     console.error('File upload error:', error);
-    showUploadAlert(`Upload failed: ${error.message}`, 'danger');
+    let errorMessage = error.message;
+    
+    // Provide more helpful error messages
+    if (errorMessage.includes('ERR_SSL_PROTOCOL_ERROR')) {
+      errorMessage = 'Connection error. Please try refreshing the page and uploading again.';
+    } else if (errorMessage.includes('Failed to fetch')) {
+      errorMessage = 'Network connection failed. Please check your internet connection and try again.';
+    } else if (errorMessage.includes('timeout')) {
+      errorMessage = 'Upload timed out. Please try uploading smaller files or check your connection.';
+    }
+    
+    showUploadAlert(`Upload failed: ${errorMessage}`, 'danger');
   } finally {
     // Reset UI
     submitBtn.disabled = false;
@@ -547,16 +614,36 @@ async function handleBulkUrlSubmission() {
     const batchSize = 5;
     for (let i = 0; i < uniqueUrls.length; i += batchSize) {
       const batch = uniqueUrls.slice(i, i + batchSize);
-      const batchPromises = batch.map(async (url) => {
-        try {
-          const response = await fetch('/content', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              url: url,
-              ...commonData
-            })
-          });
+             const batchPromises = batch.map(async (url) => {
+         try {
+           // Use XMLHttpRequest for consistent behavior
+           const response = await new Promise((resolve, reject) => {
+             const xhr = new XMLHttpRequest();
+             
+             xhr.onload = function() {
+               if (xhr.status >= 200 && xhr.status < 300) {
+                 try {
+                   const result = JSON.parse(xhr.responseText);
+                   resolve({ ok: true, json: () => Promise.resolve(result) });
+                 } catch (parseError) {
+                   reject(new Error('Invalid response format'));
+                 }
+               } else {
+                 resolve({ ok: false, status: xhr.status, json: () => Promise.resolve(JSON.parse(xhr.responseText || '{}')) });
+               }
+             };
+             
+             xhr.onerror = function() {
+               reject(new Error('Network error'));
+             };
+             
+             xhr.open('POST', '/content');
+             xhr.setRequestHeader('Content-Type', 'application/json');
+             xhr.send(JSON.stringify({
+               url: url,
+               ...commonData
+             }));
+           });
           
           if (response.ok) {
             successCount++;
@@ -662,10 +749,39 @@ async function handleFilePathSubmission() {
       });
     }
     
-    // Send to a new endpoint that handles file paths
-    const response = await fetch('/files/import-paths', {
-      method: 'POST',
-      body: formData
+    // Send to a new endpoint that handles file paths using XMLHttpRequest
+    const response = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            resolve(result);
+          } catch (parseError) {
+            reject(new Error('Invalid response format'));
+          }
+        } else {
+          try {
+            const errorResult = JSON.parse(xhr.responseText);
+            reject(new Error(errorResult.message || `HTTP ${xhr.status}: ${xhr.statusText}`));
+          } catch (parseError) {
+            reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+          }
+        }
+      };
+      
+      xhr.onerror = function() {
+        reject(new Error('Network error occurred. Please check your connection and try again.'));
+      };
+      
+      xhr.ontimeout = function() {
+        reject(new Error('Request timeout. Please try again.'));
+      };
+      
+      xhr.timeout = 120000; // 2 minute timeout
+      xhr.open('POST', '/files/import-paths');
+      xhr.send(formData);
     });
     
     const result = await response.json();
@@ -1005,4 +1121,26 @@ function setupTextareaEnhancements(textarea, contentType) {
     textarea.style.borderColor = '';
     textarea.style.boxShadow = '';
   });
+}
+
+// Test upload endpoint connectivity
+function testUploadEndpoint() {
+  const xhr = new XMLHttpRequest();
+  
+  xhr.onload = function() {
+    console.log('🔧 DEBUG: Upload endpoint test - Status:', xhr.status);
+    console.log('🔧 DEBUG: Upload endpoint test - Response headers:', xhr.getAllResponseHeaders());
+  };
+  
+  xhr.onerror = function() {
+    console.error('🔧 DEBUG: Upload endpoint test - Network error occurred');
+  };
+  
+  xhr.ontimeout = function() {
+    console.error('🔧 DEBUG: Upload endpoint test - Request timed out');
+  };
+  
+  xhr.timeout = 5000; // 5 second timeout for test
+  xhr.open('GET', '/files/api/settings'); // Test a simpler endpoint first
+  xhr.send();
 } 
