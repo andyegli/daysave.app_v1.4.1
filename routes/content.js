@@ -336,6 +336,78 @@ router.get('/', isAuthenticated, async (req, res) => {
       return colorMap[platform] || '#6c757d';
     }
 
+    /**
+     * Format image summary as a professional title (matching video quality)
+     * @param {string} summary - AI-generated image description
+     * @param {Array} tags - Auto-generated tags for additional context
+     * @returns {string} Professional formatted title
+     */
+    function formatAsProfessionalImageTitle(summary, tags = []) {
+      if (!summary || summary.trim().length === 0) {
+        return createProfessionalTitleFromTags(tags);
+      }
+      
+      // Use first sentence and format professionally
+      const firstSentence = summary.split('.')[0].trim();
+      
+      if (firstSentence.length > 0 && firstSentence.length <= 120) {
+        return formatAsProfessionalTitle(firstSentence);
+      } else if (summary.length <= 120) {
+        return formatAsProfessionalTitle(summary.trim());
+      } else {
+        const truncated = summary.substring(0, 117).trim();
+        return formatAsProfessionalTitle(truncated) + '...';
+      }
+    }
+
+    /**
+     * Create professional title from tags (avoid comma lists)
+     * @param {Array} tags - Auto-generated tags
+     * @returns {string} Professional structured title
+     */
+    function createProfessionalTitleFromTags(tags) {
+      if (!tags || !Array.isArray(tags) || tags.length === 0) {
+        return 'Professional Visual Content: Detailed Product Display';
+      }
+      
+      const mainTag = tags[0];
+      const additionalTags = tags.slice(1, 3);
+      
+      if (additionalTags.length > 0) {
+        return `${capitalizeFirst(mainTag)} Showcase: Featuring ${additionalTags.join(' and ')}`;
+      } else {
+        return `Professional ${capitalizeFirst(mainTag)} Display`;
+      }
+    }
+
+    /**
+     * Format text as a professional title with proper structure
+     * @param {string} text - Text to format
+     * @returns {string} Professionally formatted title
+     */
+    function formatAsProfessionalTitle(text) {
+      // Capitalize first letter and ensure proper sentence structure
+      const formatted = text.charAt(0).toUpperCase() + text.slice(1);
+      
+      // If it already has good structure, return as is
+      if (formatted.includes(':') || formatted.includes(' - ') || formatted.length > 40) {
+        return formatted;
+      }
+      
+      // Add professional structure for shorter phrases
+      return `Professional ${formatted}: Detailed Visual Overview`;
+    }
+
+    /**
+     * Capitalize the first letter of a string
+     * @param {string} str - String to capitalize
+     * @returns {string} Capitalized string
+     */
+    function capitalizeFirst(str) {
+      if (!str || typeof str !== 'string') return 'Content';
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
     // Function to extract title from URL or metadata
     function getContentTitle(item) {
       // First priority: AI-generated title
@@ -394,6 +466,11 @@ router.get('/', isAuthenticated, async (req, res) => {
 
       // Get title from metadata or generate from filename
       const getFileTitle = (file) => {
+        // First priority: AI-generated title (same as content items)
+        if (file.generated_title && file.generated_title.trim()) {
+          return file.generated_title;
+        }
+        
         // Parse metadata if it's a string
         let metadata = file.metadata;
         if (typeof metadata === 'string') {
@@ -404,7 +481,7 @@ router.get('/', isAuthenticated, async (req, res) => {
           }
         }
         
-        // Try metadata.title first (populated by AI or our script)
+        // Second priority: metadata.title (backup field)
         if (metadata && metadata.title) {
           return metadata.title;
         }
@@ -412,25 +489,17 @@ router.get('/', isAuthenticated, async (req, res) => {
         // Get correct file type from parsed metadata
         const parsedFileType = metadata?.mimetype || '';
         
-        // For images, prefer AI-generated titles or generate sophisticated ones
+        // For images, prefer AI-generated titles with professional structure
         if (parsedFileType.startsWith('image/')) {
           // Try to use AI summary for sophisticated title generation (matching video approach)
           if (file.summary && file.summary.length > 0) {
-            // For display consistency, prefer first sentence if it's a good length
-            const firstSentence = file.summary.split('.')[0];
-            if (firstSentence.length > 0 && firstSentence.length <= 60) {
-              return firstSentence.trim();
-            } else if (file.summary.length <= 60) {
-              return file.summary.trim();
-            } else {
-              return file.summary.substring(0, 57).trim() + '...';
-            }
+            // Use professional title formatting instead of simple extraction
+            return formatAsProfessionalImageTitle(file.summary, file.auto_tags);
           }
           
-          // Use top auto_tags to create a descriptive title (fallback)
+          // Create structured title from tags - avoid comma lists (matching video quality)
           if (file.auto_tags && Array.isArray(file.auto_tags) && file.auto_tags.length > 0) {
-            const topTags = file.auto_tags.slice(0, 3).join(', ');
-            return topTags.length <= 60 ? topTags : topTags.substring(0, 57) + '...';
+            return createProfessionalTitleFromTags(file.auto_tags);
           }
         }
         
