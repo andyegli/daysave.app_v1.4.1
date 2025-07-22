@@ -25,6 +25,9 @@ const { v4: uuidv4 } = require('uuid');
 // DaySave models
 const { Thumbnail } = require('../../models');
 
+// Import the proper ThumbnailGenerator service
+const ThumbnailGenerator = require('./ThumbnailGenerator');
+
 // Base processor
 const BaseMediaProcessor = require('./BaseMediaProcessor');
 
@@ -42,6 +45,12 @@ class ImageProcessor extends BaseMediaProcessor {
   constructor(options = {}) {
     // Call parent constructor
     super(options);
+    
+    // Initialize ThumbnailGenerator service
+    this.thumbnailGenerator = new ThumbnailGenerator({
+      thumbnailDir: 'uploads/thumbnails',
+      enableLogging: this.enableLogging
+    });
     
     // Image-specific configuration
     this.config = {
@@ -780,7 +789,7 @@ Return only the extracted text, preserving original formatting and line breaks w
   }
 
   /**
-   * Generate image thumbnails in multiple sizes
+   * Generate image thumbnails in multiple sizes using ThumbnailGenerator
    * @param {string} userId - User ID
    * @param {string} imagePath - Path to image file
    * @param {Object} options - Thumbnail options
@@ -788,39 +797,39 @@ Return only the extracted text, preserving original formatting and line breaks w
    */
   async generateImageThumbnails(userId, imagePath, options = {}) {
     try {
-      const thumbnails = [];
-      const sizes = options.sizes || this.config.thumbnailOptions.sizes;
-      
-      for (const size of sizes) {
-        const thumbnailPath = path.join(
-          this.config.thumbnailDir,
-          `thumb_${size}_${uuidv4()}.jpg`
-        );
-        
-        // Simple thumbnail generation (would use Sharp or similar in production)
-        // For now, just copy the original file
-        fs.copyFileSync(imagePath, thumbnailPath);
-        
-        // Save thumbnail to database
-        const thumbnail = await Thumbnail.create({
-          id: uuidv4(),
-          user_id: userId,
-          file_path: thumbnailPath,
-          file_name: path.basename(thumbnailPath), // FIX: Add required file_name field
-          thumbnail_type: 'main',
-          thumbnail_size: size,
-          created_at: new Date(),
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-        });
-        
-        thumbnails.push(thumbnail);
-      }
-      
       if (this.enableLogging) {
-        this.log(`Generated ${thumbnails.length} thumbnails`);
+        console.log('🖼️ Generating image thumbnails using ThumbnailGenerator:', {
+          userId,
+          imagePath: path.basename(imagePath),
+          options
+        });
       }
-      
-      return thumbnails;
+
+      // Use the ThumbnailGenerator service for proper thumbnail generation
+      const thumbnailOptions = {
+        sizes: options.sizes || this.config.thumbnailOptions.sizes,
+        quality: options.quality || 'medium',
+        maintainAspectRatio: true,
+        ...options
+      };
+
+      const results = await this.thumbnailGenerator.generateImageThumbnails(
+        userId,
+        imagePath,
+        null, // contentId - not used for file-level thumbnails
+        options.metadata?.fileId || null, // fileId from metadata
+        thumbnailOptions
+      );
+
+      if (this.enableLogging) {
+        console.log('✅ Image thumbnails generated successfully:', {
+          thumbnailCount: results.thumbnails.length,
+          sizes: thumbnailOptions.sizes,
+          processingTime: `${results.metadata.processingTime}ms`
+        });
+      }
+
+      return results.thumbnails;
     } catch (error) {
       if (this.enableLogging) {
         console.error('❌ Failed to generate image thumbnails:', error);
