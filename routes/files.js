@@ -1666,6 +1666,206 @@ router.get('/serve/:userId/:filename', isAuthenticated, async (req, res) => {
   }
 });
 
+// Import files from local paths (for bulk import)
+router.post('/import-paths', isAuthenticated, async (req, res) => {
+  try {
+    const { file_paths } = req.body;
+    const userId = req.user.id;
+    
+    if (!file_paths) {
+      return res.status(400).json({
+        error: 'No file paths provided',
+        message: 'Please provide file_paths parameter'
+      });
+    }
+    
+    let paths = [];
+    try {
+      paths = JSON.parse(file_paths);
+    } catch (e) {
+      return res.status(400).json({
+        error: 'Invalid file paths format',
+        message: 'File paths must be a valid JSON array'
+      });
+    }
+    
+    if (!Array.isArray(paths) || paths.length === 0) {
+      return res.status(400).json({
+        error: 'No valid file paths',
+        message: 'Please provide an array of file paths'
+      });
+    }
+    
+    const importResults = [];
+    const importErrors = [];
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Process each file path
+    for (const filePath of paths) {
+      try {
+        // Validate file exists and is accessible
+        if (!fs.existsSync(filePath)) {
+          importErrors.push({
+            path: filePath,
+            error: 'File not found or not accessible'
+          });
+          continue;
+        }
+        
+        // Get file stats
+        const stats = fs.statSync(filePath);
+        if (!stats.isFile()) {
+          importErrors.push({
+            path: filePath,
+            error: 'Path is not a file'
+          });
+          continue;
+        }
+        
+        // Get file info
+        const fileName = path.basename(filePath);
+        const fileExt = path.extname(fileName).toLowerCase();
+        const fileSize = stats.size;
+        
+        // Basic file type validation
+        const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg',
+                                  '.mp4', '.avi', '.mov', '.mkv', '.webm', '.wmv',
+                                  '.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a',
+                                  '.pdf', '.doc', '.docx', '.txt', '.md'];
+        
+        if (!allowedExtensions.includes(fileExt)) {
+          importErrors.push({
+            path: filePath,
+            error: `File type ${fileExt} not supported`
+          });
+          continue;
+        }
+        
+        // Check file size (1GB limit)
+        if (fileSize > 1024 * 1024 * 1024) {
+          importErrors.push({
+            path: filePath,
+            error: 'File size exceeds 1GB limit'
+          });
+          continue;
+        }
+        
+        // Determine MIME type
+        const mimeTypes = {
+          '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif',
+          '.bmp': 'image/bmp', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+          '.mp4': 'video/mp4', '.avi': 'video/x-msvideo', '.mov': 'video/quicktime',
+          '.mkv': 'video/x-matroska', '.webm': 'video/webm', '.wmv': 'video/x-ms-wmv',
+          '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.aac': 'audio/aac',
+          '.flac': 'audio/flac', '.ogg': 'audio/ogg', '.m4a': 'audio/mp4',
+          '.pdf': 'application/pdf', '.doc': 'application/msword',
+          '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          '.txt': 'text/plain', '.md': 'text/markdown'
+        };
+        
+        const mimetype = mimeTypes[fileExt] || 'application/octet-stream';
+        
+        // Detect content type
+        const detector = new ContentTypeDetector();
+        const detected_content_type = detector.detectFromMimeType(mimetype) || 
+                                      detector.detectFromFilename(fileName) || 
+                                      'unknown';
+        
+        // Create file record
+        const fileRecord = await File.create({
+          user_id: userId,
+          filename: fileName,
+          file_path: filePath, // Store the original path
+          metadata: {
+            size: fileSize,
+            mimetype: mimetype,
+            storage: 'local_path',
+            importedAt: new Date().toISOString(),
+            originalPath: filePath
+          },
+          user_comments: req.body.comments || '',
+          user_tags: req.body.tags ? req.body.tags.split(',').map(tag => tag.trim()) : [],
+          content_type: detected_content_type
+        });
+        
+        // Assign to groups if specified
+        if (req.body.group_ids) {
+          const groupIds = Array.isArray(req.body.group_ids) ? req.body.group_ids : [req.body.group_ids];
+          const groupMemberships = groupIds.map(group_id => ({
+            content_id: fileRecord.id,
+            group_id
+          }));
+          await ContentGroupMember.bulkCreate(groupMemberships);
+        }
+        
+        importResults.push({
+          id: fileRecord.id,
+          filename: fileName,
+          originalPath: filePath,
+          size: fileSize,
+          mimetype: mimetype,
+          success: true
+        });
+        
+        // Log successful import
+        logger.logAuthEvent('FILE_PATH_IMPORT_SUCCESS', {
+          userId: userId,
+          fileId: fileRecord.id,
+          filename: fileName,
+          originalPath: filePath,
+          size: fileSize,
+          mimetype: mimetype,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Trigger multimedia analysis if applicable
+        if (isMultimediaFile(mimetype)) {
+          console.log(`🎬 Detected multimedia file from path, triggering analysis: ${fileName}`);
+          
+          // Run analysis in background
+          setImmediate(async () => {
+            try {
+              await triggerFileAnalysis(fileRecord, req.user);
+              console.log(`✅ Background analysis completed for imported file ${fileRecord.id}`);
+            } catch (analysisError) {
+              console.error(`❌ Background analysis failed for imported file ${fileRecord.id}:`, analysisError);
+            }
+          });
+        }
+        
+      } catch (pathError) {
+        console.error(`Error importing path ${filePath}:`, pathError);
+        importErrors.push({
+          path: filePath,
+          error: pathError.message
+        });
+      }
+    }
+    
+    // Return results
+    const response = {
+      success: importResults.length > 0,
+      imported: importResults,
+      errors: importErrors,
+      summary: {
+        total: paths.length,
+        successful: importResults.length,
+        failed: importErrors.length
+      }
+    };
+    
+    res.json(response);
+    
+  } catch (error) {
+    console.error('File path import error:', error);
+    res.status(500).json({
+      error: 'Import failed',
+      message: error.message || 'An unexpected error occurred during import'
+    });
+  }
+});
+
 // Get file analysis results (updated for new architecture)
 router.get('/:id/analysis', isAuthenticated, async (req, res) => {
   try {

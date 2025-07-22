@@ -524,20 +524,25 @@
           <!-- Content Type Toggle -->
           <div class="mb-4">
             <div class="btn-group w-100" role="group" aria-label="Content type selection">
-              <input type="radio" class="btn-check" name="contentTypeToggle" id="urlContentType" checked>
-              <label class="btn btn-outline-primary" for="urlContentType">
-                <i class="bi bi-link-45deg"></i> Add URL
+              <input type="radio" class="btn-check" name="contentTypeToggle" id="singleUrlContentType" checked>
+              <label class="btn btn-outline-primary" for="singleUrlContentType">
+                <i class="bi bi-link-45deg"></i> Single URL
+              </label>
+              
+              <input type="radio" class="btn-check" name="contentTypeToggle" id="bulkUrlContentType">
+              <label class="btn btn-outline-primary" for="bulkUrlContentType">
+                <i class="bi bi-list-ul"></i> Bulk URLs
               </label>
               
               <input type="radio" class="btn-check" name="contentTypeToggle" id="fileContentType">
               <label class="btn btn-outline-primary" for="fileContentType">
-                <i class="bi bi-cloud-upload"></i> Upload File
+                <i class="bi bi-cloud-upload"></i> Upload Files
               </label>
             </div>
           </div>
 
-          <!-- URL Content Section -->
-          <div id="urlContentSection">
+          <!-- Single URL Content Section -->
+          <div id="singleUrlContentSection">
             <!-- Title Input -->
             <div class="mb-3">
               <label for="contentTitle" class="form-label">Title (Optional)</label>
@@ -550,25 +555,109 @@
             </div>
           </div>
 
-          <!-- File Upload Section -->
-          <div id="fileContentSection" style="display: none;">
-            <!-- File Upload -->
+          <!-- Bulk URL Content Section -->
+          <div id="bulkUrlContentSection" style="display: none;">
             <div class="mb-3">
-              <label for="contentFiles" class="form-label">Select Files</label>
-              <input type="file" class="form-control" id="contentFiles" name="files" multiple 
-                     accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt">
+              <label for="bulkContentUrls" class="form-label">
+                <i class="bi bi-list-ul"></i> Multiple URLs (one per line)
+              </label>
+              <textarea class="form-control" id="bulkContentUrls" name="bulk_urls" rows="8" 
+                        placeholder="https://example.com/post1
+https://example.com/post2
+https://example.com/post3
+
+Paste multiple URLs here, one per line.
+Blank lines will be ignored."></textarea>
               <div class="form-text">
                 <i class="bi bi-info-circle"></i> 
-                Supported: Images, Audio, Video, PDF, Word documents, Text files. Max 1GB per file.
+                Paste multiple URLs, one per line. Empty lines and duplicates will be automatically filtered out.
               </div>
             </div>
-            <!-- Selected Files Preview -->
-            <div id="selectedFilesPreview" class="mb-3" style="display: none;">
-              <label class="form-label">Selected Files:</label>
-              <div id="filesList" class="border rounded p-2 bg-light">
-                <!-- File list will be populated by JavaScript -->
+            <!-- URL Preview Counter -->
+            <div id="urlPreviewSection" class="mb-3" style="display: none;">
+              <div class="alert alert-info">
+                <i class="bi bi-check-circle"></i> 
+                <span id="urlCount">0</span> valid URLs detected
+                <button type="button" class="btn btn-sm btn-outline-primary ms-2" id="previewUrlsBtn">
+                  <i class="bi bi-eye"></i> Preview
+                </button>
+              </div>
+              <div id="urlPreviewList" class="d-none">
+                <!-- URL preview list will be populated by JavaScript -->
               </div>
             </div>
+          </div>
+
+          <!-- File Upload Section -->
+          <div id="fileContentSection" style="display: none;">
+            <!-- Upload Method Toggle -->
+            <div class="mb-3">
+              <div class="btn-group" role="group" aria-label="File upload method">
+                <input type="radio" class="btn-check" name="fileUploadMethod" id="fileSelectMethod" checked>
+                <label class="btn btn-outline-secondary btn-sm" for="fileSelectMethod">
+                  <i class="bi bi-folder-open"></i> Select Files
+                </label>
+                
+                <input type="radio" class="btn-check" name="fileUploadMethod" id="filePathMethod">
+                <label class="btn btn-outline-secondary btn-sm" for="filePathMethod">
+                  <i class="bi bi-terminal"></i> File Paths
+                </label>
+              </div>
+            </div>
+
+            <!-- File Selection Method -->
+            <div id="fileSelectSection">
+              <div class="mb-3">
+                <label for="contentFiles" class="form-label">Select Files</label>
+                <input type="file" class="form-control" id="contentFiles" name="files" multiple 
+                       accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt">
+                <div class="form-text">
+                  <i class="bi bi-info-circle"></i> 
+                  Supported: Images, Audio, Video, PDF, Word documents, Text files. Max 1GB per file.
+                </div>
+              </div>
+            </div>
+
+            <!-- File Path Method -->
+            <div id="filePathSection" style="display: none;">
+              <div class="mb-3">
+                <label for="bulkFilePaths" class="form-label">
+                  <i class="bi bi-terminal"></i> File Paths (one per line)
+                </label>
+                <textarea class="form-control" id="bulkFilePaths" name="bulk_file_paths" rows="8" 
+                          placeholder="/Users/username/Documents/image1.jpg
+/Users/username/Downloads/video.mp4
+/path/to/audio/file.mp3
+
+Paste full file paths here, one per line.
+Files must be accessible to the server."></textarea>
+                <div class="form-text">
+                  <i class="bi bi-exclamation-triangle text-warning"></i> 
+                  <strong>Note:</strong> File paths must be accessible to the server. This works best for server-local files or network-mounted drives.
+                </div>
+              </div>
+              <!-- Path Preview Counter -->
+              <div id="pathPreviewSection" class="mb-3" style="display: none;">
+                <div class="alert alert-info">
+                  <i class="bi bi-check-circle"></i> 
+                  <span id="pathCount">0</span> file paths detected
+                  <button type="button" class="btn btn-sm btn-outline-primary ms-2" id="previewPathsBtn">
+                    <i class="bi bi-eye"></i> Preview
+                  </button>
+                </div>
+                <div id="pathPreviewList" class="d-none">
+                  <!-- Path preview list will be populated by JavaScript -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Selected Files Preview (for file selection method) -->
+                      <div id="selectedFilesPreview" class="mb-3" style="display: none;">
+            <label class="form-label">Selected Files:</label>
+            <div id="filesList" class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto;">
+              <!-- File list will be populated by JavaScript -->
+            </div>
+          </div>
           </div>
 
           <!-- Common Fields (for both URL and File content) -->
@@ -612,8 +701,10 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary" id="addContentBtn">
-            <span id="urlBtnText"><i class="bi bi-plus-circle"></i> Add Content</span>
+            <span id="singleUrlBtnText"><i class="bi bi-plus-circle"></i> Add Content</span>
+            <span id="bulkUrlBtnText" style="display: none;"><i class="bi bi-list-check"></i> Import URLs</span>
             <span id="fileBtnText" style="display: none;"><i class="bi bi-cloud-upload"></i> Upload Files</span>
+            <span id="pathBtnText" style="display: none;"><i class="bi bi-terminal"></i> Import Paths</span>
           </button>
         </div>
       </form>
