@@ -1469,17 +1469,31 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     const fileId = req.params.id;
     const userId = req.user.id;
     
+    console.log(`🔍 Analysis request for file: ${fileId} by user: ${userId}`);
+    
     // Verify user owns the file
     const file = await File.findOne({ where: { id: fileId, user_id: userId } });
     if (!file) {
+      console.log(`❌ File not found: ${fileId} for user: ${userId}`);
       return res.status(404).json({ error: 'File not found.' });
     }
     
+    console.log(`✅ File found: ${file.filename} (${file.metadata?.mimetype})`);
+    
     // Get multimedia analysis results from new models
-    const { VideoAnalysis, AudioAnalysis, ImageAnalysis, ProcessingJob, Thumbnail, OCRCaption, Speaker } = require('../models');
+    let models;
+    try {
+      models = require('../models');
+      console.log('📊 All available models:', Object.keys(models));
+    } catch (modelError) {
+      console.error('❌ Error loading models:', modelError);
+      return res.status(500).json({ error: 'Model loading failed', details: modelError.message });
+    }
+    
+    const { VideoAnalysis, AudioAnalysis, ImageAnalysis, ProcessingJob, Thumbnail, OCRCaption, Speaker } = models;
     
     // Debug: Check if models are available
-    console.log('📊 Available models:', {
+    console.log('📊 Target models availability:', {
       VideoAnalysis: !!VideoAnalysis,
       AudioAnalysis: !!AudioAnalysis, 
       ImageAnalysis: !!ImageAnalysis,
@@ -1502,18 +1516,39 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     }
     
     // Look for processing jobs for this file
-    const processingJobs = await ProcessingJob.findAll({
-      where: { file_id: fileId, user_id: userId },
-      order: [['createdAt', 'DESC']],
-      limit: 5
-    });
+    let processingJobs = [];
+    try {
+      console.log('🔍 Querying processing jobs...');
+      processingJobs = await ProcessingJob.findAll({
+        where: { file_id: fileId, user_id: userId },
+        order: [['createdAt', 'DESC']],
+        limit: 5
+      });
+      console.log(`📊 Found ${processingJobs.length} processing jobs`);
+    } catch (jobError) {
+      console.error('❌ Error querying processing jobs:', jobError);
+      // Continue without processing jobs data
+    }
     
     // Look for analysis records
-    const [videoAnalysis, audioAnalysis, imageAnalysis] = await Promise.all([
-      VideoAnalysis.findOne({ where: { file_id: fileId, user_id: userId } }),
-      AudioAnalysis.findOne({ where: { file_id: fileId, user_id: userId } }),
-      ImageAnalysis.findOne({ where: { file_id: fileId, user_id: userId } })
-    ]);
+    let videoAnalysis, audioAnalysis, imageAnalysis;
+    try {
+      console.log('🔍 Querying analysis records...');
+      [videoAnalysis, audioAnalysis, imageAnalysis] = await Promise.all([
+        VideoAnalysis ? VideoAnalysis.findOne({ where: { file_id: fileId, user_id: userId } }) : Promise.resolve(null),
+        AudioAnalysis ? AudioAnalysis.findOne({ where: { file_id: fileId, user_id: userId } }) : Promise.resolve(null),
+        ImageAnalysis ? ImageAnalysis.findOne({ where: { file_id: fileId, user_id: userId } }) : Promise.resolve(null)
+      ]);
+      console.log(`📊 Analysis records found:`, {
+        video: !!videoAnalysis,
+        audio: !!audioAnalysis,
+        image: !!imageAnalysis
+      });
+    } catch (analysisError) {
+      console.error('❌ Error querying analysis records:', analysisError);
+      // Continue without analysis records
+      videoAnalysis = audioAnalysis = imageAnalysis = null;
+    }
     
     // Get any analysis record that exists
     const analysis = videoAnalysis || audioAnalysis || imageAnalysis;
@@ -1606,38 +1641,49 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     let speakers = [];
     let ocrCaptions = [];
     
-    if (videoAnalysis) {
-      // Get video-specific related data
-      [thumbnails, ocrCaptions] = await Promise.all([
-        Thumbnail.findAll({
+    try {
+      if (videoAnalysis && Thumbnail && OCRCaption) {
+        console.log('🔍 Querying video-related data...');
+        // Get video-specific related data
+        [thumbnails, ocrCaptions] = await Promise.all([
+          Thumbnail.findAll({
+            where: { file_id: fileId, user_id: userId },
+            order: [['timestamp_seconds', 'ASC']],
+            limit: 10
+          }),
+          OCRCaption.findAll({
+            where: { file_id: fileId, user_id: userId },
+            order: [['timestamp_seconds', 'ASC']],
+            limit: 20
+          })
+        ]);
+        console.log(`📊 Video data: ${thumbnails.length} thumbnails, ${ocrCaptions.length} OCR captions`);
+      }
+      
+      if (audioAnalysis && Speaker) {
+        console.log('🔍 Querying audio-related data...');
+        // Get audio-specific related data
+        speakers = await Speaker.findAll({
+          where: { user_id: userId, audio_analysis_id: audioAnalysis.id },
+          order: [['confidence_score', 'DESC']],
+          limit: 5
+        });
+        console.log(`📊 Audio data: ${speakers.length} speakers`);
+      }
+      
+      if (imageAnalysis && Thumbnail) {
+        console.log('🔍 Querying image-related data...');
+        // Get image-specific related data
+        thumbnails = await Thumbnail.findAll({
           where: { file_id: fileId, user_id: userId },
-          order: [['timestamp_seconds', 'ASC']],
-          limit: 10
-        }),
-        OCRCaption.findAll({
-          where: { file_id: fileId, user_id: userId },
-          order: [['timestamp_seconds', 'ASC']],
-          limit: 20
-        })
-      ]);
-    }
-    
-    if (audioAnalysis) {
-      // Get audio-specific related data
-      speakers = await Speaker.findAll({
-        where: { user_id: userId, audio_analysis_id: audioAnalysis.id },
-        order: [['confidence_score', 'DESC']],
-        limit: 5
-      });
-    }
-    
-    if (imageAnalysis) {
-      // Get image-specific related data
-      thumbnails = await Thumbnail.findAll({
-        where: { file_id: fileId, user_id: userId },
-        order: [['createdAt', 'ASC']],
-        limit: 5
-      });
+          order: [['createdAt', 'ASC']],
+          limit: 5
+        });
+        console.log(`📊 Image data: ${thumbnails.length} thumbnails`);
+      }
+    } catch (relatedDataError) {
+      console.error('❌ Error querying related data:', relatedDataError);
+      // Continue with empty arrays
     }
     
     // Format response based on analysis type
@@ -1716,8 +1762,16 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     res.json(responseData);
     
   } catch (error) {
-    console.error('ERROR getting file analysis:', error);
-    res.status(500).json({ error: 'Failed to get file analysis.' });
+    console.error('❌ CRITICAL ERROR in file analysis endpoint:', {
+      error: error.message,
+      stack: error.stack,
+      fileId: req.params.id,
+      userId: req.user?.id
+    });
+    res.status(500).json({ 
+      error: 'Failed to get file analysis',
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
