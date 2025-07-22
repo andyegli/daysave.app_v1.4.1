@@ -1159,4 +1159,5 @@ openssl rand -base64 32
   - [x] **Debug Logging**: Added comprehensive debug logging to track option mapping and ImageProcessor execution  
   - [x] **Critical Format Results Fix**: Fixed key mapping in AutomationOrchestrator formatResults() - now properly maps `results.description` → `formatted.data.aiDescription` and handles nested result structures
   - [x] **Enhanced Logging**: Added comprehensive debug logging throughout image analysis pipeline for troubleshooting
-  - [x] **Status**: Image upload and AI analysis pipeline now fully functional for both local and GCS storage
+  - [x] **Thumbnail Generation Overhaul**: Fixed ImageProcessor to use ThumbnailGenerator with FFmpeg instead of just copying original files - now creates properly resized thumbnails (12KB vs 241KB copies, 95% size reduction)
+  - [x] **Status**: Image upload and AI analysis pipeline now fully functional for both local and GCS storage with proper thumbnail generation

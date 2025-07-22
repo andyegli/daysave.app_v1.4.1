@@ -310,21 +310,36 @@ class FileUploadService {
     try {
       if (filePath.startsWith('gs://')) {
         // Delete from Google Cloud Storage
-        const fileName = filePath.replace(`gs://${this.defaultSettings.bucketName}/`, '');
-        const settings = await this.getUploadSettings();
-        const bucket = this.storage.bucket(settings.bucketName);
-        await bucket.file(fileName).delete();
-        console.log(`Deleted file from GCS: ${fileName}`);
+        // Extract bucket name and object path from the full GCS URL
+        const gcsPath = filePath.replace('gs://', '');
+        const [bucketName, ...pathParts] = gcsPath.split('/');
+        const objectName = pathParts.join('/');
+        
+        console.log(`🗑️ Deleting GCS file: bucket="${bucketName}", object="${objectName}"`);
+        
+        if (!bucketName || !objectName) {
+          throw new Error(`Invalid GCS path format: ${filePath}`);
+        }
+        
+        if (!this.storage) {
+          throw new Error('Google Cloud Storage not initialized');
+        }
+        
+        const bucket = this.storage.bucket(bucketName);
+        await bucket.file(objectName).delete();
+        console.log(`✅ Deleted file from GCS: gs://${bucketName}/${objectName}`);
       } else {
         // Delete from local storage
         const localPath = path.join(__dirname, '..', filePath);
         if (fs.existsSync(localPath)) {
           fs.unlinkSync(localPath);
-          console.log(`Deleted local file: ${localPath}`);
+          console.log(`✅ Deleted local file: ${localPath}`);
+        } else {
+          console.log(`⚠️ Local file not found, skipping: ${localPath}`);
         }
       }
     } catch (error) {
-      console.error('Error deleting file:', error);
+      console.error('❌ Error deleting file:', error);
       throw error;
     }
   }

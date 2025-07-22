@@ -822,6 +822,46 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
     // Delete file from storage
     await FileUploadService.deleteFile(file.file_path);
 
+    // Delete related thumbnails from storage and database
+    const { Thumbnail } = require('../models');
+    const thumbnails = await Thumbnail.findAll({
+      where: { 
+        file_id: file.id,
+        user_id: req.user.id 
+      }
+    });
+
+    console.log(`🗑️ Found ${thumbnails.length} thumbnails to delete for file ${file.id}`);
+    
+    for (const thumbnail of thumbnails) {
+      try {
+        // Delete thumbnail file from storage
+        if (thumbnail.file_path) {
+          if (thumbnail.file_path.startsWith('gs://')) {
+            // For GCS thumbnails, use FileUploadService 
+            await FileUploadService.deleteFile(thumbnail.file_path);
+          } else {
+            // For local thumbnails, delete directly
+            const fs = require('fs');
+            const path = require('path');
+            const fullPath = path.join(__dirname, '..', thumbnail.file_path);
+            if (fs.existsSync(fullPath)) {
+              fs.unlinkSync(fullPath);
+              console.log(`✅ Deleted thumbnail file: ${fullPath}`);
+            }
+          }
+        }
+        
+        // Delete thumbnail database record
+        await thumbnail.destroy();
+        console.log(`✅ Deleted thumbnail record: ${thumbnail.id}`);
+        
+      } catch (thumbnailError) {
+        console.error(`⚠️ Failed to delete thumbnail ${thumbnail.id}:`, thumbnailError);
+        // Continue with other thumbnails even if one fails
+      }
+    }
+
     // Delete group memberships
     await ContentGroupMember.destroy({
       where: { content_id: file.id }
@@ -835,12 +875,14 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
       userId: req.user.id,
       fileId: file.id,
       filename: file.filename,
+      thumbnailsDeleted: thumbnails.length,
       timestamp: new Date().toISOString()
     });
 
     res.json({
       success: true,
-      message: 'File deleted successfully'
+      message: 'File deleted successfully',
+      thumbnailsDeleted: thumbnails.length
     });
 
   } catch (error) {
