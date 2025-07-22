@@ -243,7 +243,12 @@ async function handleFileUpload(form) {
       modal.hide();
       
       setTimeout(() => {
-        window.location.reload();
+        // Fix for localhost HTTPS/HTTP protocol issues
+        if (window.location.hostname === 'localhost') {
+          window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+        } else {
+          window.location.reload();
+        }
       }, 1500);
     } else {
       throw new Error(response.message || 'Upload failed');
@@ -303,10 +308,24 @@ async function handleUrlContent(form) {
         }
         
         // Reload page after a shorter delay to show the new content
-        setTimeout(() => { window.location.reload(); }, 1000);
+        setTimeout(() => { 
+          // Fix for localhost HTTPS/HTTP protocol issues
+          if (window.location.hostname === 'localhost') {
+            window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+          } else {
+            window.location.reload();
+          }
+        }, 1000);
       } else {
         // For non-multimedia content, reload immediately
-        setTimeout(() => { window.location.reload(); }, 1000);
+        setTimeout(() => { 
+          // Fix for localhost HTTPS/HTTP protocol issues
+          if (window.location.hostname === 'localhost') {
+            window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+          } else {
+            window.location.reload();
+          }
+        }, 1000);
       }
       
       alert.textContent = message;
@@ -401,7 +420,12 @@ function showAlert(message, type = 'info') {
           
           // Reload page after short delay
           setTimeout(() => {
-            window.location.reload();
+            // Fix for localhost HTTPS/HTTP protocol issues
+            if (window.location.hostname === 'localhost') {
+              window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+            } else {
+              window.location.reload();
+            }
           }, 1500);
         } else {
           const result = await res.json().catch(() => ({}));
@@ -435,7 +459,12 @@ function showAlert(message, type = 'info') {
           body: JSON.stringify({ action: 'delete', ids: selectedIds })
         });
         if (res.ok) {
-          window.location.reload();
+          // Fix for localhost HTTPS/HTTP protocol issues
+          if (window.location.hostname === 'localhost') {
+            window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+          } else {
+            window.location.reload();
+          }
         } else {
           alert('Failed to delete content');
         }
@@ -519,7 +548,14 @@ function showAlert(message, type = 'info') {
         alert.className = 'alert alert-success mt-2';
         alert.textContent = 'Content updated successfully!';
         alert.classList.remove('d-none');
-        setTimeout(() => { window.location.reload(); }, 1000);
+        setTimeout(() => { 
+          // Fix for localhost HTTPS/HTTP protocol issues
+          if (window.location.hostname === 'localhost') {
+            window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+          } else {
+            window.location.reload();
+          }
+        }, 1000);
       } else {
         alert.className = 'alert alert-danger mt-2';
         alert.textContent = result.error || 'Failed to update content.';

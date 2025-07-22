@@ -361,7 +361,12 @@ async function handleFileUploadSubmission() {
       if (modal) modal.hide();
       
       setTimeout(() => {
-        window.location.reload();
+        // Fix for localhost HTTPS/HTTP protocol issues
+        if (window.location.hostname === 'localhost') {
+          window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+        } else {
+          window.location.reload();
+        }
       }, 1500);
     } else {
       throw new Error(response.message || 'Upload failed');
@@ -696,7 +701,12 @@ async function handleBulkUrlSubmission() {
       if (modal) modal.hide();
       
       setTimeout(() => {
-        window.location.reload();
+        // Fix for localhost HTTPS/HTTP protocol issues
+        if (window.location.hostname === 'localhost') {
+          window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+        } else {
+          window.location.reload();
+        }
       }, 2000);
     }
     
@@ -820,7 +830,12 @@ async function handleFilePathSubmission() {
         if (modal) modal.hide();
         
         setTimeout(() => {
-          window.location.reload();
+          // Fix for localhost HTTPS/HTTP protocol issues
+          if (window.location.hostname === 'localhost') {
+            window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+          } else {
+            window.location.reload();
+          }
         }, 2000);
       }
     } else {
