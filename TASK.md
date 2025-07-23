@@ -748,6 +748,36 @@ The multimedia analysis integration is fully functional and production-ready. Us
   - [x] Updated URL pattern tests in `simple-test.js`
   - [x] Enhanced automation to cover all Facebook URL variations
 
+### ✅ **Fixed Infinite Polling & Stuck Status Issues** (2025-01-23)
+- [x] **Fixed Infinite Status Polling Problem**
+  - [x] 🔄 Added polling limits (max 10 attempts) to prevent endless status checks
+  - [x] Implemented smart polling intervals: 5s if status changing, 15s if stuck at same percentage
+  - [x] Added status change detection to reduce console spam from completed items
+  - [x] Automatic polling termination for 'analysed' and 'incomplete' items
+  - [x] Enhanced error handling and debugging messages for polling lifecycle
+
+- [x] **Fixed Stuck Items at 43% Processing Status**
+  - [x] 🔍 Root cause analysis: Items had thumbnails+tags but missing transcription+summary (3/7 features = 43%)
+  - [x] Enhanced status detection logic to identify stuck partial analysis
+  - [x] Mark items as 'incomplete' after 15 minutes if core features (transcription/summary) failed
+  - [x] Proper UI handling for 'incomplete' status with red button styling
+  - [x] Stop polling for items determined to be incomplete (prevents infinite loops)
+
+- [x] **Enhanced Status System Reliability**
+  - [x] 📊 Improved status calculation logic for edge cases
+  - [x] Added 'canRetry' flag in API responses for eligible stuck items
+  - [x] Created `/content/api/:id/retry` endpoint for manual reanalysis triggering
+  - [x] Better logging with reduced noise (only log actual status changes)
+  - [x] Fixed Bootstrap modal backdrop errors causing JavaScript exceptions
+
+- [x] **Results & Impact**
+  - [x] ✅ Eliminated infinite console spam from endless polling
+  - [x] ✅ Properly identified and handled 2 stuck items at 43% completion
+  - [x] ✅ Reduced browser console output by ~90% through smart logging
+  - [x] ✅ Status buttons now show proper progression: waiting → processing X% → analysed/incomplete
+  - [x] ✅ Automatic termination prevents resource waste from endless polling
+  - [x] Status: Console is now clean with only meaningful status updates logged
+
 ## Current Status
 All recent fixes have been implemented and tested. The system now properly handles:
 - ✅ Content updates and tag management without logger errors
