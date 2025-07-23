@@ -26,6 +26,34 @@ class DocumentProcessor extends BaseMediaProcessor {
     }
 
     /**
+     * Initialize the DocumentProcessor
+     */
+    async initialize(options = {}) {
+        try {
+            // Initialize any required components
+            if (!this.genAI && process.env.GOOGLE_AI_API_KEY) {
+                this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
+                this.model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+            }
+            
+            // Set processing capabilities
+            this.capabilities = {
+                textExtraction: true,
+                contentAnalysis: !!this.genAI,
+                summarization: !!this.genAI,
+                titleGeneration: !!this.genAI,
+                tagGeneration: !!this.genAI
+            };
+            
+            this.initialized = true;
+            console.log(`📄 ${this.name} initialized successfully`);
+        } catch (error) {
+            console.error(`❌ Failed to initialize ${this.name}:`, error);
+            throw error;
+        }
+    }
+
+    /**
      * Processes document file for AI analysis
      */
     async process(filePath, metadata = {}) {

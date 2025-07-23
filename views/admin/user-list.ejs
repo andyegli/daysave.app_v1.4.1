@@ -402,7 +402,7 @@
             </a>
           </div>
           <div class="col-md-2">
-            <button type="button" class="btn btn-outline-primary w-100" onclick="exportUsers()">
+            <button type="button" class="btn btn-outline-primary w-100" id="export-users-btn">
               <i class="fas fa-download me-1"></i>Export
             </button>
           </div>
@@ -561,7 +561,8 @@
                         <button type="submit" 
                                 class="btn btn-sm <%= u.email_verified ? 'btn-outline-warning' : 'btn-outline-success' %> me-1" 
                                 title="<%= u.email_verified ? 'Disable user account' : 'Enable user account' %>"
-                                onclick="return confirm('Are you sure you want to <%= u.email_verified ? 'disable' : 'enable' %> this user?')">
+                                data-action="toggle-user"
+                                data-username="<%= u.username %>">
                           <i class="fas <%= u.email_verified ? 'fa-user-slash' : 'fa-user-check' %>"></i>
                         </button>
                       </form>
@@ -571,7 +572,8 @@
                         <button type="submit" 
                                 class="btn btn-sm btn-outline-secondary me-1" 
                                 title="Reset user password"
-                                onclick="return confirm('Are you sure you want to reset the password for <%= u.username %>?')">
+                                data-action="reset-password"
+                                data-username="<%= u.username %>">
                           <i class="fas fa-key"></i>
                         </button>
                       </form>
@@ -582,7 +584,8 @@
                           <button type="submit" 
                                   class="btn btn-sm btn-outline-success me-1" 
                                   title="Manually verify user email"
-                                  onclick="return confirm('Are you sure you want to verify the email for <%= u.username %>?')">
+                                  data-action="verify-email"
+                                  data-username="<%= u.username %>">
                             <i class="fas fa-check"></i>
                           </button>
                         </form>
@@ -591,10 +594,9 @@
                       <!-- Delete Button -->
                       <form action="/admin/users/<%= u.id %>/delete" method="POST" style="display:inline;">
                         <button type="submit" 
-                                class="btn btn-sm btn-outline-danger" 
+                                class="btn btn-sm btn-outline-danger delete-user-btn" 
                                 title="Delete user account permanently"
-                                data-username="<%= u.username %>"
-                                onclick="return confirm('Are you sure you want to DELETE user <%= u.username %>?\\n\\nThis action cannot be undone and will remove all user data.')">
+                                data-username="<%= u.username %>">
                           <i class="fas fa-trash"></i>
                         </button>
                       </form>
@@ -664,86 +666,5 @@
 
 <%- include('../partials/footer') %>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Auto-submit search form on Enter
-  const searchInput = document.getElementById('search');
-  searchInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      document.getElementById('searchForm').submit();
-    }
-  });
-  
-  // Auto-submit on limit change
-  const limitSelect = document.getElementById('limit');
-  limitSelect.addEventListener('change', function() {
-    document.getElementById('searchForm').submit();
-  });
-  
-  // Real-time search (debounced)
-  let searchTimeout;
-  searchInput.addEventListener('input', function() {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      if (this.value.length >= 3 || this.value.length === 0) {
-        document.getElementById('searchForm').submit();
-      }
-    }, 500);
-  });
-  
-  // Handle delete confirmations
-  const deleteButtons = document.querySelectorAll('.delete-user-btn');
-  deleteButtons.forEach(button => {
-    button.addEventListener('click', function(e) {
-      e.preventDefault();
-      
-      const username = this.getAttribute('data-username');
-      
-      // Modern confirmation dialog
-      if (confirm(`Are you sure you want to delete user "${username}"?\n\nThis action cannot be undone.`)) {
-        showLoading();
-        this.closest('form').submit();
-      }
-    });
-  });
-  
-  // Select all functionality
-  window.toggleSelectAll = function() {
-    const selectAll = document.getElementById('selectAll');
-    const checkboxes = document.querySelectorAll('.user-checkbox');
-    
-    checkboxes.forEach(checkbox => {
-      checkbox.checked = selectAll.checked;
-    });
-  };
-  
-  // Export functionality
-  window.exportUsers = function() {
-    const searchParams = new URLSearchParams(window.location.search);
-    const exportUrl = `/admin/users/export?${searchParams.toString()}`;
-    
-    showLoading();
-    window.location.href = exportUrl;
-    
-    setTimeout(() => {
-      hideLoading();
-    }, 2000);
-  };
-  
-  // Loading overlay functions
-  function showLoading() {
-    document.getElementById('loadingOverlay').classList.add('active');
-  }
-  
-  function hideLoading() {
-    document.getElementById('loadingOverlay').classList.remove('active');
-  }
-  
-  // Show loading on form submit
-  document.getElementById('searchForm').addEventListener('submit', showLoading);
-  
-  // Hide loading on page load
-  window.addEventListener('load', hideLoading);
-});
-</script> 
+<!-- Admin User List JavaScript (CSP Compliant) -->
+<script src="/js/admin-user-list.js"></script> 

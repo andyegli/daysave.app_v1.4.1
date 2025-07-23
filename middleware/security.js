@@ -77,23 +77,36 @@ const logAllHeaders = (req, res, next) => {
 const corsMiddleware = cors(corsOptions);
 
 // Security headers middleware
-const securityHeaders = () => helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com", "https://unpkg.com"],
-      scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://maps.googleapis.com", "https://code.jquery.com"],
-      imgSrc: ["'self'", "data:", "https:", "https://maps.googleapis.com", "https://maps.gstatic.com"],
-      connectSrc: ["'self'", "https://maps.googleapis.com", "https://maps.gstatic.com"],
-      fontSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"]
-    }
-  },
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-});
+const securityHeaders = () => {
+  const cspDirectives = {
+    defaultSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com", "https://unpkg.com"],
+    scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://maps.googleapis.com", "https://code.jquery.com"],
+    imgSrc: ["'self'", "data:", "https:", "https://maps.googleapis.com", "https://maps.gstatic.com"],
+    connectSrc: ["'self'", "https://maps.googleapis.com", "https://maps.gstatic.com"],
+    fontSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com"],
+    objectSrc: ["'none'"],
+    mediaSrc: ["'self'"],
+    frameSrc: ["'none'"],
+    baseUri: ["'self'"],
+    formAction: ["'self'"],
+    frameAncestors: ["'self'"],
+    scriptSrcAttr: ["'none'"]
+  };
+
+  // Only add upgrade-insecure-requests in production to avoid localhost SSL issues
+  if (process.env.NODE_ENV === 'production') {
+    cspDirectives.upgradeInsecureRequests = [];
+  }
+
+  return helmet({
+    contentSecurityPolicy: {
+      directives: cspDirectives
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  });
+};
 
 // Request logging middleware
 const requestLogger = (req, res, next) => {
