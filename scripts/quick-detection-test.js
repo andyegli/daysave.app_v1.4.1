@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const { ContentTypeDetector } = require('./scripts/populate-content-types');
-const { MultimediaAnalyzer } = require('./services/multimedia');
+const { ContentTypeDetector } = require('./populate-content-types');
+const { MultimediaAnalyzer } = require('../services/multimedia');
 
 const detector = new ContentTypeDetector();
 const analyzer = new MultimediaAnalyzer({ enableLogging: false });

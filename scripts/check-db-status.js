@@ -4,7 +4,7 @@
  */
 
 require('dotenv').config();
-const db = require('./models');
+const db = require('../models');
 
 async function checkDatabaseStatus() {
   console.log('🔍 Checking DaySave database status...');

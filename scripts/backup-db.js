@@ -26,7 +26,7 @@ if (!dbConfig.username || !dbConfig.password || !dbConfig.database) {
 }
 
 // Create backup directory
-const backupDir = path.join(__dirname, 'db_backup');
+const backupDir = path.join(__dirname, '../db_backup');
 if (!fs.existsSync(backupDir)) {
   fs.mkdirSync(backupDir, { recursive: true });
   console.log('📁 Created db_backup directory');

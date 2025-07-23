@@ -7,11 +7,11 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const db = require('./models');
+const db = require('../models');
 
 class RawDatabaseBackup {
   constructor() {
-    this.backupDir = path.join(__dirname, 'db_backup');
+    this.backupDir = path.join(__dirname, '../db_backup');
     this.timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     this.backupFileName = `daysave_raw_backup_${this.timestamp}.json`;
     this.backupFilePath = path.join(this.backupDir, this.backupFileName);

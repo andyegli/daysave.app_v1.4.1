@@ -13,8 +13,8 @@ const {
   VoicePrintDatabase, 
   ThumbnailGenerator, 
   VideoProcessor 
-} = require('./services/multimedia');
-const { Content, VideoAnalysis, Speaker, Thumbnail, OCRCaption, User } = require('./models');
+} = require('../services/multimedia');
+const { Content, VideoAnalysis, Speaker, Thumbnail, OCRCaption, User } = require('../models');
 
 /**
  * Test multimedia URL detection
