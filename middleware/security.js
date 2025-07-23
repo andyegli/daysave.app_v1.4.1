@@ -104,7 +104,12 @@ const securityHeaders = () => {
       directives: cspDirectives
     },
     crossOriginEmbedderPolicy: false,
-    crossOriginResourcePolicy: { policy: "cross-origin" }
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    hsts: process.env.NODE_ENV === 'production' ? {
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+      preload: true
+    } : false // Disable HSTS for development to prevent localhost SSL errors
   });
 };
 
