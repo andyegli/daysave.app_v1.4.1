@@ -669,6 +669,7 @@ router.get('/', isAuthenticated, async (req, res) => {
         const usableThumbnail = mainThumbnail || thumbnails[0];
         
         if (usableThumbnail) {
+          // For thumbnails, use direct file path (they're already accessible)
           thumbnailUrl = usableThumbnail.file_path.startsWith('http') ? 
             usableThumbnail.file_path : 
             '/' + usableThumbnail.file_path;
