@@ -264,11 +264,37 @@ Create a production-ready web application called **DaySave.app** version 1.4.1 u
 - **JavaScript**: External JS files for CSP compliance, autocomplete functionality, dynamic form handling, AI analysis modals.
 
 ### 11. Deployment
-- **Platform**: Google Cloud App Engine (F1 instance).
-- **CI/CD**: GitHub Actions.
-- **SSL**: Let's Encrypt.
-- **Scaling**: Auto-scaling, Redis caching.
-- **Backup**: Daily MySQL backups via Cloud SQL.
+
+#### 11.1 Container Infrastructure (Production-Ready)
+- **Docker Support**: Complete containerization with multi-stage builds and optimized layers
+  - **Enhanced Dockerfile**: Includes MySQL client, document processing libraries (poppler-utils, antiword, unrtf, tesseract-ocr), Google Cloud SDK, ImageMagick, and all system dependencies
+  - **Docker Compose**: Advanced configuration with custom networking, persistent volumes, health checks, and service orchestration
+  - **Container Optimization**: Comprehensive .dockerignore, security hardening with non-root user, and minimal attack surface
+  - **Volume Management**: Persistent data volumes for logs, uploads, backups, multimedia temp files, and Google Cloud credentials
+
+#### 11.2 Environment & Configuration
+- **Multi-Environment Support**: Separate configurations for development, staging, and production
+- **Environment Templates**: docker-env.example with all required variables for container deployment
+- **Secrets Management**: Google Cloud credentials mounting, secure environment variable handling
+- **Network Isolation**: Custom Docker networks for service communication and security
+
+#### 11.3 Production Deployment Options
+- **Google Cloud Platform**:
+  - **App Engine**: F1 instance with automatic scaling
+  - **Cloud Run**: Containerized deployment with pay-per-use pricing
+  - **GKE**: Kubernetes deployment for enterprise scaling
+- **Alternative Platforms**: AWS ECS, Azure Container Instances, DigitalOcean Droplets
+- **Self-Hosted**: Docker Compose on VPS with reverse proxy (nginx/Traefik)
+
+#### 11.4 Infrastructure Components
+- **Database**: MySQL 8.0 in container with optimized configuration, persistent volumes, and automated backups
+- **Caching**: Redis container ready for implementation with volume persistence
+- **Load Balancing**: nginx or Traefik reverse proxy with SSL/TLS termination
+- **Monitoring**: Health check endpoints, container monitoring, and logging aggregation
+- **CI/CD**: GitHub Actions with Docker registry integration and automated deployments
+- **SSL**: Let's Encrypt with automatic renewal
+- **Scaling**: Horizontal pod autoscaling, Redis caching, CDN integration
+- **Backup**: Automated database backups with multiple restore options (mysqldump, raw SQL, Sequelize-based)
 
 ### 12. Non-Functional Requirements
 - **Performance**: Page load < 2s, API response < 500ms.
@@ -287,7 +313,13 @@ Create a production-ready web application called **DaySave.app** version 1.4.1 u
 2. **Documentation**:
    - Setup guide, API specs, user guide (`docs/*.md`).
    - Inline comments, modular code (≤ 500 lines/file).
-3. **Deployment Scripts**: Docker Compose, `app.yaml`.
+3. **Deployment Scripts**: 
+   - Docker Compose (`docker-compose.yml`) with advanced networking and volume management
+   - Enhanced Dockerfile with comprehensive system dependencies
+   - Docker environment template (`docker-env.example`)
+   - Container optimization (`.dockerignore`)
+   - Google Cloud App Engine (`app.yaml`)
+   - Production deployment configurations
 4. **Tests**: Jest (unit), Cypress (E2E).
 
 ### 14. Success Criteria
