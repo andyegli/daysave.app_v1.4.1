@@ -1833,4 +1833,189 @@ router.post('/api/:id/retry', isAuthenticated, async (req, res) => {
   }
 });
 
+// Get content analysis results page (NEW: Dedicated analysis page)
+router.get('/:id/analysis/view', isAuthenticated, async (req, res) => {
+  try {
+    const contentId = req.params.id;
+    const userId = req.user.id;
+    
+    console.log(`🔍 Analysis page request for content: ${contentId} by user: ${userId}`);
+    
+    // Verify user owns the content
+    const content = await Content.findOne({ where: { id: contentId, user_id: userId } });
+    if (!content) {
+      console.log(`❌ Content not found: ${contentId} for user: ${userId}`);
+      return res.status(404).render('error', { 
+        user: req.user, 
+        title: 'Content Not Found', 
+        message: 'The requested content was not found.' 
+      });
+    }
+    
+    console.log(`✅ Content found: ${content.url}`);
+    
+    // Get comprehensive analysis data (reuse existing logic)
+    const { VideoAnalysis, AudioAnalysis, ImageAnalysis, ProcessingJob, Thumbnail, OCRCaption, Speaker } = require('../models');
+    
+    // Get analysis records and related data
+    let videoAnalysis, audioAnalysis, imageAnalysis, processingJobs = [], thumbnails = [], speakers = [], ocrCaptions = [];
+    
+    try {
+      [videoAnalysis, audioAnalysis, imageAnalysis, processingJobs] = await Promise.all([
+        VideoAnalysis.findOne({ where: { content_id: contentId, user_id: userId } }),
+        AudioAnalysis.findOne({ where: { content_id: contentId, user_id: userId } }),
+        ImageAnalysis.findOne({ where: { content_id: contentId, user_id: userId } }),
+        ProcessingJob.findAll({
+          where: { content_id: contentId, user_id: userId },
+          order: [['createdAt', 'DESC']],
+          limit: 5
+        })
+      ]);
+    } catch (analysisError) {
+      console.error('❌ Error querying analysis records:', analysisError);
+      videoAnalysis = audioAnalysis = imageAnalysis = null;
+      processingJobs = [];
+    }
+    
+    // Get related data based on analysis type
+    try {
+      if (videoAnalysis && Thumbnail && OCRCaption) {
+        [thumbnails, ocrCaptions] = await Promise.all([
+          Thumbnail.findAll({
+            where: { content_id: contentId, user_id: userId },
+            order: [['timestamp_seconds', 'ASC']],
+            limit: 10
+          }),
+          OCRCaption.findAll({
+            where: { content_id: contentId, user_id: userId },
+            order: [['timestamp_seconds', 'ASC']],
+            limit: 20
+          })
+        ]);
+      }
+      
+      if (audioAnalysis && Speaker) {
+        speakers = await Speaker.findAll({
+          where: { user_id: userId, audio_analysis_id: audioAnalysis.id },
+          order: [['confidence_score', 'DESC']],
+          limit: 5
+        });
+      }
+      
+      if (imageAnalysis && Thumbnail) {
+        thumbnails = await Thumbnail.findAll({
+          where: { content_id: contentId, user_id: userId },
+          order: [['createdAt', 'ASC']],
+          limit: 5
+        });
+      }
+    } catch (relatedDataError) {
+      console.error('❌ Error querying related data:', relatedDataError);
+    }
+    
+    // Determine analysis type and primary analysis object
+    const analysis = videoAnalysis || audioAnalysis || imageAnalysis;
+    let mediaType = content.content_type === 'unknown' ? 'content' : content.content_type;
+    if (videoAnalysis) mediaType = 'video';
+    else if (audioAnalysis) mediaType = 'audio';
+    else if (imageAnalysis) mediaType = 'image';
+    
+    // Helper function to get proper title
+    function getContentTitle(content) {
+      if (content.generated_title && content.generated_title.trim()) {
+        return content.generated_title;
+      }
+      if (content.metadata && content.metadata.title) {
+        return content.metadata.title;
+      }
+      if (content.url) {
+        try {
+          const url = new URL(content.url);
+          const hostname = url.hostname.replace('www.', '');
+          const pathname = url.pathname.replace(/\/$/, '').split('/').pop();
+          if (pathname && pathname.length > 3) {
+            return `${hostname} - ${pathname.replace(/[-_]/g, ' ')}`;
+          }
+          return hostname;
+        } catch (e) {
+          return content.url;
+        }
+      }
+      return 'Untitled Content';
+    }
+    
+    // Prepare comprehensive analysis data for the view
+    const analysisData = {
+      content: content,
+      title: getContentTitle(content),
+      mediaType: mediaType,
+      hasAnalysis: !!analysis,
+      
+      // Core analysis data
+      analysis: analysis,
+      videoAnalysis: videoAnalysis,
+      audioAnalysis: audioAnalysis,
+      imageAnalysis: imageAnalysis,
+      
+      // Summary and content
+      summary: content.summary || '',
+      transcription: content.transcription || '',
+      
+      // AI-generated content
+      generatedTitle: content.generated_title || '',
+      autoTags: content.auto_tags || [],
+      userTags: content.user_tags || [],
+      category: content.category || '',
+      userComments: content.user_comments || '',
+      sentiment: content.sentiment || null,
+      
+      // Technical metadata
+      metadata: content.metadata || {},
+      
+      // Related data
+      thumbnails: thumbnails || [],
+      speakers: speakers || [],
+      ocrCaptions: ocrCaptions || [],
+      processingJobs: processingJobs || [],
+      
+      // Processing information
+      latestJob: processingJobs.length > 0 ? processingJobs[0] : null,
+      
+      // Content details
+      url: content.url,
+      createdAt: content.createdAt,
+      updatedAt: content.updatedAt
+    };
+    
+    console.log(`📊 Rendering analysis page for content ${contentId}:`, {
+      hasAnalysis: !!analysis,
+      mediaType: mediaType,
+      hasSummary: !!content.summary,
+      hasTranscription: !!content.transcription,
+      thumbnailCount: thumbnails.length,
+      speakerCount: speakers.length
+    });
+    
+    // Render the dedicated analysis page
+    res.render('content/analysis', {
+      user: req.user,
+      title: `AI Analysis - ${getContentTitle(content)}`,
+      analysisData: analysisData
+    });
+    
+  } catch (error) {
+    console.error('❌ CRITICAL ERROR in content analysis page:', {
+      error: error.message,
+      stack: error.stack,
+      contentId: req.params.id,
+      userId: req.user?.id
+    });
+    res.status(500).render('error', { 
+      user: req.user, 
+      title: 'Analysis Error', 
+      message: 'Failed to load content analysis. Please try again later.' 
+    });
+  }
+});
+
 module.exports = router; 

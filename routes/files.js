@@ -2314,4 +2314,188 @@ router.get('/serve/thumbnails/:filename', (req, res) => {
   }
 });
 
+// Get file analysis results page (NEW: Dedicated analysis page)
+router.get('/:id/analysis/view', isAuthenticated, async (req, res) => {
+  try {
+    const fileId = req.params.id;
+    const userId = req.user.id;
+    
+    console.log(`🔍 Analysis page request for file: ${fileId} by user: ${userId}`);
+    
+    // Verify user owns the file
+    const file = await File.findOne({ where: { id: fileId, user_id: userId } });
+    if (!file) {
+      console.log(`❌ File not found: ${fileId} for user: ${userId}`);
+      return res.status(404).render('error', { 
+        user: req.user, 
+        title: 'File Not Found', 
+        message: 'The requested file was not found.' 
+      });
+    }
+    
+    console.log(`✅ File found: ${file.filename} (${file.metadata?.mimetype})`);
+    
+    // Get comprehensive analysis data (reuse existing logic)
+    let models;
+    try {
+      models = require('../models');
+    } catch (modelError) {
+      console.error('❌ Error loading models:', modelError);
+      models = {};
+    }
+    
+    const { VideoAnalysis, AudioAnalysis, ImageAnalysis, ProcessingJob, Thumbnail, OCRCaption, Speaker } = models;
+    
+    // Get analysis records and related data
+    let videoAnalysis, audioAnalysis, imageAnalysis, processingJobs = [], thumbnails = [], speakers = [], ocrCaptions = [];
+    
+    try {
+      [videoAnalysis, audioAnalysis, imageAnalysis, processingJobs] = await Promise.all([
+        VideoAnalysis ? VideoAnalysis.findOne({ where: { file_id: fileId, user_id: userId } }) : Promise.resolve(null),
+        AudioAnalysis ? AudioAnalysis.findOne({ where: { file_id: fileId, user_id: userId } }) : Promise.resolve(null),
+        ImageAnalysis ? ImageAnalysis.findOne({ where: { file_id: fileId, user_id: userId } }) : Promise.resolve(null),
+        ProcessingJob ? ProcessingJob.findAll({
+          where: { file_id: fileId, user_id: userId },
+          order: [['createdAt', 'DESC']],
+          limit: 5
+        }) : Promise.resolve([])
+      ]);
+    } catch (analysisError) {
+      console.error('❌ Error querying analysis records:', analysisError);
+      videoAnalysis = audioAnalysis = imageAnalysis = null;
+      processingJobs = [];
+    }
+    
+    // Get related data based on analysis type
+    try {
+      if (videoAnalysis && Thumbnail && OCRCaption) {
+        [thumbnails, ocrCaptions] = await Promise.all([
+          Thumbnail.findAll({
+            where: { file_id: fileId, user_id: userId },
+            order: [['timestamp_seconds', 'ASC']],
+            limit: 10
+          }),
+          OCRCaption.findAll({
+            where: { file_id: fileId, user_id: userId },
+            order: [['timestamp_seconds', 'ASC']],
+            limit: 20
+          })
+        ]);
+      }
+      
+      if (audioAnalysis && Speaker) {
+        speakers = await Speaker.findAll({
+          where: { user_id: userId, audio_analysis_id: audioAnalysis.id },
+          order: [['confidence_score', 'DESC']],
+          limit: 5
+        });
+      }
+      
+      if (imageAnalysis && Thumbnail) {
+        thumbnails = await Thumbnail.findAll({
+          where: { file_id: fileId, user_id: userId },
+          order: [['createdAt', 'ASC']],
+          limit: 5
+        });
+      }
+    } catch (relatedDataError) {
+      console.error('❌ Error querying related data:', relatedDataError);
+    }
+    
+    // Determine analysis type and primary analysis object
+    const analysis = videoAnalysis || audioAnalysis || imageAnalysis;
+    let mediaType = file.content_type === 'unknown' ? 'file' : file.content_type;
+    if (videoAnalysis) mediaType = 'video';
+    else if (audioAnalysis) mediaType = 'audio';
+    else if (imageAnalysis) mediaType = 'image';
+    
+    // Helper function to get proper title
+    function getFileTitle(file) {
+      if (file.generated_title && file.generated_title.trim()) {
+        return file.generated_title;
+      }
+      if (file.metadata && file.metadata.title) {
+        return file.metadata.title;
+      }
+      if (file.filename) {
+        return file.filename.replace(/\.[^/.]+$/, ""); // Remove extension
+      }
+      return 'Untitled File';
+    }
+    
+    // Prepare comprehensive analysis data for the view
+    const analysisData = {
+      file: file,
+      title: getFileTitle(file),
+      mediaType: mediaType,
+      hasAnalysis: !!analysis,
+      
+      // Core analysis data
+      analysis: analysis,
+      videoAnalysis: videoAnalysis,
+      audioAnalysis: audioAnalysis,
+      imageAnalysis: imageAnalysis,
+      
+      // Summary and content
+      summary: file.summary || '',
+      transcription: file.transcription || '',
+      
+      // AI-generated content
+      generatedTitle: file.generated_title || '',
+      autoTags: file.auto_tags || [],
+      userTags: file.user_tags || [],
+      category: file.category || '',
+      userComments: file.user_comments || '',
+      sentiment: file.sentiment || null,
+      
+      // Technical metadata
+      metadata: file.metadata || {},
+      
+      // Related data
+      thumbnails: thumbnails || [],
+      speakers: speakers || [],
+      ocrCaptions: ocrCaptions || [],
+      processingJobs: processingJobs || [],
+      
+      // Processing information
+      latestJob: processingJobs.length > 0 ? processingJobs[0] : null,
+      
+      // File details
+      filename: file.filename,
+      createdAt: file.createdAt,
+      updatedAt: file.updatedAt,
+      filePath: file.file_path
+    };
+    
+    console.log(`📊 Rendering analysis page for file ${fileId}:`, {
+      hasAnalysis: !!analysis,
+      mediaType: mediaType,
+      hasSummary: !!file.summary,
+      hasTranscription: !!file.transcription,
+      thumbnailCount: thumbnails.length,
+      speakerCount: speakers.length
+    });
+    
+    // Render the dedicated analysis page
+    res.render('files/analysis', {
+      user: req.user,
+      title: `AI Analysis - ${getFileTitle(file)}`,
+      analysisData: analysisData
+    });
+    
+  } catch (error) {
+    console.error('❌ CRITICAL ERROR in file analysis page:', {
+      error: error.message,
+      stack: error.stack,
+      fileId: req.params.id,
+      userId: req.user?.id
+    });
+    res.status(500).render('error', { 
+      user: req.user, 
+      title: 'Analysis Error', 
+      message: 'Failed to load file analysis. Please try again later.' 
+    });
+  }
+});
+
 module.exports = router; 

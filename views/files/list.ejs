@@ -473,9 +473,9 @@
                   <i class="bi bi-eye" style="font-size: 0.8rem;"></i>
                 </a>
                 <% if (isMultimedia) { %>
-                <button class="btn btn-outline-info btn-sm ai-analysis-btn" data-id="<%= file.id %>" data-bs-toggle="modal" data-bs-target="#aiAnalysisModal" title="AI Analysis">
+                <a href="/files/<%= file.id %>/analysis/view" class="btn btn-outline-info btn-sm" title="View AI Analysis">
                   <i class="bi bi-brain" style="font-size: 0.8rem;"></i>
-                </button>
+                </a>
                 <% } %>
               </div>
               <div class="d-flex gap-1">
