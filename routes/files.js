@@ -2314,6 +2314,88 @@ router.get('/serve/thumbnails/:filename', (req, res) => {
   }
 });
 
+// Reprocess File Analysis Endpoint
+router.post('/:id/reprocess', isAuthenticated, async (req, res) => {
+  try {
+    const fileId = req.params.id;
+    const userId = req.user.id;
+    
+    console.log(`🔄 Reprocess analysis request for file: ${fileId} by user: ${userId}`);
+    
+    // Find the file
+    const file = await File.findOne({
+      where: { id: fileId, user_id: userId }
+    });
+    
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // Check if it's a multimedia file that can be reprocessed
+    const isMultimedia = isMultimediaFile(file.metadata?.mimetype);
+    
+    if (!isMultimedia) {
+      return res.status(400).json({ error: 'Only multimedia files can be reprocessed' });
+    }
+    
+    // Trigger reprocessing
+    try {
+      console.log(`🚀 Triggering reprocessing for file: ${file.filename}`);
+      
+      // Reset analysis fields to clear previous results
+      await file.update({
+        ai_analysis: null,
+        generated_title: null,
+        metadata: {
+          ...file.metadata,
+          reprocessedAt: new Date().toISOString(),
+          reprocessReason: 'Manual reprocess - user requested'
+        }
+      });
+      
+      // Trigger analysis in background using the multimedia orchestrator
+      setImmediate(async () => {
+        try {
+          // Get file buffer or path for reprocessing
+          const filePath = file.file_path || `uploads/${file.filename}`;
+          
+          // Use the automation orchestrator for reprocessing
+          const fileUploadService = new FileUploadService();
+          await fileUploadService.triggerFileAnalysis(file, userId, {
+            source: 'reprocess',
+            forceReprocess: true
+          });
+          
+          console.log(`✅ Reprocessing triggered for file ${fileId}`);
+        } catch (reprocessError) {
+          console.error(`❌ Reprocessing failed for file ${fileId}:`, reprocessError);
+        }
+      });
+      
+      res.json({
+        success: true,
+        message: 'File reprocessing started successfully',
+        fileId: fileId,
+        status: 'processing'
+      });
+      
+    } catch (triggerError) {
+      console.error(`❌ Failed to trigger reprocessing for file ${fileId}:`, triggerError);
+      res.status(500).json({
+        error: 'Failed to trigger reprocessing',
+        details: triggerError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Error in file reprocess endpoint:', error);
+    res.status(500).json({ 
+      error: 'Failed to reprocess file',
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
 // Get file analysis results page (NEW: Dedicated analysis page)
 router.get('/:id/analysis/view', isAuthenticated, async (req, res) => {
   try {

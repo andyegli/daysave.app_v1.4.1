@@ -22,13 +22,12 @@ async function main() {
     // Step 1: Update analysis statuses that have data but are still "processing"
     console.log('\n📊 Updating analysis record statuses...');
     
-    // Update video analysis records that have transcription but are still processing
+    // Update video analysis records that are still processing
     const videoUpdates = await VideoAnalysis.update(
       { status: 'ready' },
       { 
         where: {
-          status: 'processing',
-          transcription_results: { [Op.ne]: null }
+          status: 'processing'
         }
       }
     );
@@ -39,8 +38,7 @@ async function main() {
       { status: 'ready' },
       { 
         where: {
-          status: 'processing', 
-          transcription_results: { [Op.ne]: null }
+          status: 'processing'
         }
       }
     );
@@ -51,8 +49,7 @@ async function main() {
       { status: 'ready' },
       { 
         where: {
-          status: 'processing',
-          ai_description: { [Op.ne]: null }
+          status: 'processing'
         }
       }
     );

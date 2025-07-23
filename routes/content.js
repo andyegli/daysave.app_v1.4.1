@@ -1833,6 +1833,87 @@ router.post('/api/:id/retry', isAuthenticated, async (req, res) => {
   }
 });
 
+// Reprocess Content Analysis Endpoint
+router.post('/:id/reprocess', isAuthenticated, async (req, res) => {
+  try {
+    const contentId = req.params.id;
+    const userId = req.user.id;
+    
+    console.log(`🔄 Reprocess analysis request for content: ${contentId} by user: ${userId}`);
+    
+    // Find the content item
+    const content = await Content.findOne({
+      where: { id: contentId, user_id: userId }
+    });
+    
+    if (!content) {
+      return res.status(404).json({ error: 'Content not found' });
+    }
+    
+    // Check if it's a multimedia URL that can be reprocessed
+    const isMultimedia = isMultimediaURL(content.url);
+    
+    if (!isMultimedia) {
+      return res.status(400).json({ error: 'Only multimedia content can be reprocessed' });
+    }
+    
+    // Trigger reprocessing
+    try {
+      console.log(`🚀 Triggering reprocessing for ${content.url}`);
+      
+      // Reset analysis fields to clear previous results
+      await content.update({
+        transcription: null,
+        summary: null,
+        sentiment: null,
+        auto_tags: null,
+        generated_title: null,
+        metadata: {
+          ...content.metadata,
+          reprocessedAt: new Date().toISOString(),
+          reprocessReason: 'Manual reprocess - user requested'
+        }
+      });
+      
+      // Trigger analysis in background using the multimedia orchestrator
+      setImmediate(async () => {
+        try {
+          // Use the automation orchestrator for reprocessing
+          await triggerMultimediaAnalysis(content.url, req.user.id, {
+            source: 'reprocess',
+            contentId: content.id,
+            forceReprocess: true
+          });
+          console.log(`✅ Reprocessing triggered for ${contentId}`);
+        } catch (reprocessError) {
+          console.error(`❌ Reprocessing failed for ${contentId}:`, reprocessError);
+        }
+      });
+      
+      res.json({
+        success: true,
+        message: 'Content reprocessing started successfully',
+        contentId: contentId,
+        status: 'processing'
+      });
+      
+    } catch (triggerError) {
+      console.error(`❌ Failed to trigger reprocessing for ${contentId}:`, triggerError);
+      res.status(500).json({
+        error: 'Failed to trigger reprocessing',
+        details: triggerError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Error in reprocess endpoint:', error);
+    res.status(500).json({ 
+      error: 'Failed to reprocess content',
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
 // Get content analysis results page (NEW: Dedicated analysis page)
 router.get('/:id/analysis/view', isAuthenticated, async (req, res) => {
   try {
