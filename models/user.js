@@ -82,6 +82,9 @@ module.exports = (sequelize, DataTypes) => {
     User.hasMany(models.ContactSubmission, { foreignKey: 'user_id', allowNull: true });
     User.hasMany(models.AdminSetting, { foreignKey: 'user_id' });
     
+    // Subscription associations
+    User.hasMany(models.UserSubscription, { foreignKey: 'user_id', as: 'UserSubscriptions' });
+    
     // Multimedia analysis associations
     User.hasMany(models.Speaker, { foreignKey: 'user_id', as: 'speakers' });
     User.hasMany(models.Thumbnail, { foreignKey: 'user_id', as: 'thumbnails' });
