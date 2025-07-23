@@ -38,7 +38,21 @@ function fixThumbnailUrls() {
 }
 
 function initializeImageErrorHandling() {
-  console.log('🖼️ Initializing image error handling');
+  console.log('🖼️ Initializing enhanced image error handling and aspect ratio fixes');
+  
+  // Fix thumbnail aspect ratios on load
+  $(document).on('load', '.thumbnail-container img', function() {
+    const $img = $(this);
+    fixThumbnailAspectRatio($img);
+  });
+  
+  // Fix aspect ratios for already loaded images
+  $('.thumbnail-container img').each(function() {
+    const $img = $(this);
+    if (this.complete && this.naturalHeight !== 0) {
+      fixThumbnailAspectRatio($img);
+    }
+  });
   
   // Handle thumbnail image load errors with fallback
   $(document).on('error', 'img[data-fallback="true"]', function() {
@@ -48,13 +62,19 @@ function initializeImageErrorHandling() {
     
     console.log(`🚫 Image failed to load: ${$img.attr('src')}`);
     
-    // Replace failed image with icon
-    const $icon = $(`<i class="${fallbackIcon} fs-1" style="color: ${fallbackColor}"></i>`);
-    
-    // Maintain the same styling as the image container
-    const $container = $img.parent();
-    $container.empty().append($icon);
-    $container.addClass('d-flex align-items-center justify-content-center');
+    // Check if we're in a thumbnail container
+    const $container = $img.closest('.thumbnail-container');
+    if ($container.length > 0) {
+      // Use fallback icon class for thumbnail containers
+      const $icon = $(`<i class="${fallbackIcon} fallback-icon" style="color: ${fallbackColor}"></i>`);
+      $img.replaceWith($icon);
+    } else {
+      // Legacy fallback for other images
+      const $icon = $(`<i class="${fallbackIcon} fs-1" style="color: ${fallbackColor}"></i>`);
+      const $parent = $img.parent();
+      $parent.empty().append($icon);
+      $parent.addClass('d-flex align-items-center justify-content-center');
+    }
   });
   
   // Handle onerror events for images with nextElementSibling fallback
@@ -70,7 +90,33 @@ function initializeImageErrorHandling() {
     }
   });
   
-  console.log('✅ Image error handling initialized');
+  console.log('✅ Enhanced image error handling initialized');
+}
+
+function fixThumbnailAspectRatio($img) {
+  const img = $img[0];
+  if (!img.naturalWidth || !img.naturalHeight) return;
+  
+  const aspectRatio = img.naturalWidth / img.naturalHeight;
+  
+  // For very tall images (aspect ratio < 0.7), use contain to prevent stretching
+  // For normal images, use cover for better visual appeal
+  if (aspectRatio < 0.7) {
+    $img.css({
+      'object-fit': 'contain',
+      'background': '#fff'
+    });
+    console.log(`🖼️ Applied contain fit for tall image (ratio: ${aspectRatio.toFixed(2)})`);
+  } else {
+    $img.css({
+      'object-fit': 'cover',
+      'background': 'transparent'
+    });
+    console.log(`🖼️ Applied cover fit for normal image (ratio: ${aspectRatio.toFixed(2)})`);
+  }
+  
+  // Add loaded class for potential styling
+  $img.closest('.thumbnail-container').addClass('image-loaded');
 }
 
 /**

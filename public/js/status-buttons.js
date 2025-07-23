@@ -66,8 +66,8 @@ function updateStatusButton(contentId, itemType) {
         
         setStatusButtonState(contentId, status, progress);
         
-        // Only log if status changed or if it's not analysed
-        if (prevStatus !== status || prevProgress !== progress || status !== 'analysed') {
+        // Only log significant status changes
+        if (prevStatus !== status || (status === 'processing' && Math.abs((prevProgress || 0) - progress) >= 10)) {
           console.log(`✅ Status updated for ${contentId.substring(0,8)}: ${status} (${progress}%)`);
         }
         

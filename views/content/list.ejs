@@ -65,17 +65,59 @@
         padding: 0.1rem 0.3rem;
       }
     }
-    .content-card .flex-shrink-0 {
-      min-width: 60px;
+    /* Enhanced Thumbnail Container */
+    .content-card .thumbnail-container {
+      width: 90px;
+      height: 90px;
+      min-width: 90px;
       max-width: 90px;
       display: flex;
       align-items: center;
       justify-content: center;
+      background: #f8f9fa;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
     }
-    .content-card .img-fluid {
-      border-radius: 0.5rem;
-      max-height: 80px;
+    
+    .content-card .thumbnail-container img {
+      width: 100%;
+      height: 100%;
       object-fit: cover;
+      object-position: center;
+      border-radius: 6px;
+      transition: transform 0.2s ease;
+    }
+    
+    .content-card .thumbnail-container:hover img {
+      transform: scale(1.05);
+    }
+    
+    .content-card .thumbnail-container .fallback-icon {
+      font-size: 2rem;
+      opacity: 0.7;
+    }
+    
+    /* Maintain aspect ratio for different image sizes */
+    .content-card .thumbnail-container.video-thumb img {
+      object-fit: cover;
+    }
+    
+    .content-card .thumbnail-container.image-thumb img {
+      object-fit: contain;
+      background: #fff;
+    }
+    
+    @media (max-width: 768px) {
+      .content-card .thumbnail-container {
+        width: 70px;
+        height: 70px;
+        min-width: 70px;
+        max-width: 70px;
+      }
+      .content-card .thumbnail-container .fallback-icon {
+        font-size: 1.5rem;
+      }
     }
     
     /* Transcription Summary Styles */
@@ -368,47 +410,35 @@
           <div class="col">
             <div class="card h-100 shadow-sm content-card flex-row flex-wrap" data-id="<%= item.id %>" data-item-type="<%= item.itemType %>" style="min-height:unset;">
               <div class="d-flex flex-row w-100">
-                <!-- Thumbnail -->
-                <div class="flex-shrink-0 d-flex align-items-center justify-content-center bg-light" style="width: 90px; height: 90px; overflow: hidden;">
+                <!-- Enhanced Thumbnail Container -->
+                <div class="thumbnail-container <%= item.sourceInfo.source === 'YouTube' || item.sourceInfo.source === 'Facebook' ? 'video-thumb' : 'image-thumb' %>">
                   <% if (item.itemType === 'file') { %>
                     <!-- File item thumbnail -->
-                    <a href="/files/<%= item.metadata.fileId %>" target="_blank" rel="noopener noreferrer" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                    <a href="/files/<%= item.metadata.fileId %>" target="_blank" rel="noopener noreferrer">
                       <% if (item.metadata && item.metadata.thumbnail) { %>
-                        <img src="<%= item.metadata.thumbnail %>" class="img-fluid" alt="<%= item.displayTitle %>" 
-                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;"
+                        <img src="<%= item.metadata.thumbnail %>" alt="<%= item.displayTitle %>" 
                              data-fallback="true" data-fallback-icon="<%= item.sourceInfo.logo %>" data-fallback-color="<%= item.sourceInfo.color %>">
                       <% } else { %>
-                        <i class="<%= item.sourceInfo.logo %> fs-1" style="color: <%= item.sourceInfo.color %>"></i>
+                        <i class="<%= item.sourceInfo.logo %> fallback-icon" style="color: <%= item.sourceInfo.color %>"></i>
                       <% } %>
                     </a>
                   <% } else { %>
                     <!-- Content item thumbnail -->
-                    <% if (item.metadata && item.metadata.thumbnail) { %>
-                      <a href="<%= item.url %>" target="_blank" rel="noopener noreferrer" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                        <img src="<%= item.metadata.thumbnail %>" class="img-fluid" alt="Thumbnail" 
-                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;"
-                             data-fallback="true" data-fallback-icon="<%= item.sourceInfo.logo %>" data-fallback-color="<%= item.sourceInfo.color %>">
-                      </a>
-                    <% } else if (item.url && item.url.match(/\.(jpg|jpeg|png|gif)$/i)) { %>
-                      <a href="<%= item.url %>" target="_blank" rel="noopener noreferrer" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                        <img src="<%= item.url %>" class="img-fluid" alt="Thumbnail"
-                             style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;"
-                             data-fallback="true" data-fallback-icon="<%= item.sourceInfo.logo %>" data-fallback-color="<%= item.sourceInfo.color %>">
-                      </a>
-                    <% } else { %>
-                      <a href="<%= item.url %>" target="_blank" rel="noopener noreferrer" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                        <!-- Check if we have generated thumbnails or fallback to icon -->
-                        <% if (item.metadata && item.metadata.thumbnail) { %>
-                          <img src="<%= item.metadata.thumbnail %>" class="img-fluid" alt="Generated Thumbnail" 
-                               style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;"
-                               data-fallback="true" data-fallback-icon="<%= item.sourceInfo.logo %>" data-fallback-color="<%= item.sourceInfo.color %>"
-                               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                          <i class="<%= item.sourceInfo.logo %> fs-1" style="color: <%= item.sourceInfo.color %>; display: none;"></i>
-                        <% } else { %>
-                          <i class="<%= item.sourceInfo.logo %> fs-1" style="color: <%= item.sourceInfo.color %>"></i>
-                        <% } %>
-                      </a>
-                    <% } %>
+                    <a href="<%= item.url %>" target="_blank" rel="noopener noreferrer">
+                      <% if (item.metadata && item.metadata.thumbnail) { %>
+                        <img src="<%= item.metadata.thumbnail %>" alt="Thumbnail" 
+                             data-fallback="true" data-fallback-icon="<%= item.sourceInfo.logo %>" data-fallback-color="<%= item.sourceInfo.color %>"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <i class="<%= item.sourceInfo.logo %> fallback-icon" style="color: <%= item.sourceInfo.color %>; display: none;"></i>
+                      <% } else if (item.url && item.url.match(/\.(jpg|jpeg|png|gif)$/i)) { %>
+                        <img src="<%= item.url %>" alt="Thumbnail"
+                             data-fallback="true" data-fallback-icon="<%= item.sourceInfo.logo %>" data-fallback-color="<%= item.sourceInfo.color %>"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <i class="<%= item.sourceInfo.logo %> fallback-icon" style="color: <%= item.sourceInfo.color %>; display: none;"></i>
+                      <% } else { %>
+                        <i class="<%= item.sourceInfo.logo %> fallback-icon" style="color: <%= item.sourceInfo.color %>"></i>
+                      <% } %>
+                    </a>
                   <% } %>
                 </div>
                 <!-- Card Body -->
