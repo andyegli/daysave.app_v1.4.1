@@ -77,7 +77,7 @@
                 <strong>Debug Info:</strong> 
                 Role: <%= user.Role ? user.Role.name : 'No role loaded' %>
                 <% if (!user.Role) { %>
-                    - <button class="btn btn-sm btn-primary" onclick="refreshAdminSession()">Refresh Session</button>
+                    - <button class="btn btn-sm btn-primary" id="refresh-session-btn">Refresh Session</button>
                 <% } %>
             </div>
         <% } %>
@@ -190,42 +190,7 @@
     <!-- Admin Session Fix Script -->
     <script src="/js/admin-session-fix.js"></script>
     
-    <script>
-        // Check for admin session issues on page load
-        if (typeof window.checkAdminSession === 'function') {
-            window.checkAdminSession().then(result => {
-                if (result && result.data && result.data.sessionUser && result.data.sessionUser.templateCondition) {
-                    // User should be admin but link might not be showing
-                    if (!document.querySelector('a[href="/admin/users"]')) {
-                        console.log('Admin user detected but link not showing - refreshing session...');
-                        window.refreshAdminSession();
-                    }
-                }
-            }).catch(e => console.log('Admin check failed:', e));
-        }
-        
-        // Global refresh function for the debug button
-        window.refreshAdminSession = async function() {
-            try {
-                const response = await fetch('/auth/refresh-session', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Accept': 'application/json' }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success) {
-                        alert('Session refreshed! Page will reload to show updated navigation.');
-                        window.location.reload();
-                    }
-                } else {
-                    alert('Session refresh failed. Try logging out and back in.');
-                }
-            } catch (error) {
-                alert('Error refreshing session. Try logging out and back in.');
-            }
-        };
-    </script>
+    <!-- Dashboard specific scripts -->
+    <script src="/js/dashboard.js"></script>
 </body>
 </html> 

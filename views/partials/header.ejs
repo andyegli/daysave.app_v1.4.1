@@ -98,7 +98,7 @@
                 <% if (user.Role && user.Role.name === 'admin') { %>
                   ✅
                 <% } else if (user.role_id) { %>
-                  🔄<button class="btn btn-sm btn-link p-0 text-muted" onclick="window.location.reload()">↻</button>
+                  🔄<button class="btn btn-sm btn-link p-0 text-muted" id="navbar-refresh-btn">↻</button>
                 <% } %>
               </span>
             </li>
