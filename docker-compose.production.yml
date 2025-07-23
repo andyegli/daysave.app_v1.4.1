@@ -1,0 +1,200 @@
+version: '3.8'
+
+networks:
+  daysave-internal:
+    driver: bridge
+    internal: true
+  daysave-external:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  app_uploads:
+    driver: local
+  app_logs:
+    driver: local
+  app_backup:
+    driver: local
+  nginx_ssl:
+    driver: local
+  nginx_conf:
+    driver: local
+  redis_data:
+    driver: local
+
+services:
+  # ===== NGINX REVERSE PROXY WITH SSL =====
+  nginx:
+    image: nginx:alpine
+    container_name: daysave-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - nginx_conf:/etc/nginx/conf.d
+      - nginx_ssl:/etc/nginx/ssl
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/sites-available/daysave.conf:/etc/nginx/conf.d/default.conf:ro
+      # Let's Encrypt certificates
+      - /etc/letsencrypt/live/your-domain.com/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+      - /etc/letsencrypt/live/your-domain.com/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+      - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
+      - /etc/letsencrypt/live:/etc/letsencrypt/live:ro
+    depends_on:
+      - app
+    networks:
+      - daysave-external
+      - daysave-internal
+    restart: unless-stopped
+    command: >
+      sh -c "nginx -t && nginx -g 'daemon off;'"
+
+  # ===== APPLICATION CONTAINER =====
+  app:
+    image: gcr.io/daysave-v1412/daysave:latest
+    container_name: daysave-app
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    environment:
+      # Production environment
+      - NODE_ENV=production
+      - APP_PORT=3000
+      
+      # Database connection (internal network)
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=${DB_NAME:-daysave_v141}
+      - DB_USER=${DB_USER:-daysave}
+      - DB_USER_PASSWORD=${DB_USER_PASSWORD}
+      
+      # Google Cloud - NO credentials file needed in production!
+      # Service account attached to VM provides authentication
+      - GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID}
+      - GOOGLE_CLOUD_STORAGE_BUCKET=${GOOGLE_CLOUD_STORAGE_BUCKET}
+      - GOOGLE_CLOUD_SPEECH_LANGUAGE=en-US
+      - GOOGLE_CLOUD_VISION_LANGUAGE=en
+      
+      # API Keys
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      
+      # OAuth Configuration
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - MICROSOFT_CLIENT_ID=${MICROSOFT_CLIENT_ID}
+      - MICROSOFT_CLIENT_SECRET=${MICROSOFT_CLIENT_SECRET}
+      
+      # Email Configuration
+      - GMAIL_USER=${GMAIL_USER}
+      - GMAIL_PASS=${GMAIL_PASS}
+      - GMAIL_FROM=${GMAIL_FROM}
+      - BASE_URL=https://your-domain.com
+      
+      # Security
+      - SESSION_SECRET=${SESSION_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      
+      # File Upload
+      - MAX_FILE_SIZE=52428800  # 50MB for production
+      - ALLOWED_FILE_TYPES=image/jpeg,image/png,image/gif,application/pdf,text/plain,video/mp4,audio/mpeg,audio/wav
+      
+      # Multimedia Processing
+      - MULTIMEDIA_TEMP_DIR=/usr/src/app/multimedia-temp
+      - THUMBNAIL_COUNT=5
+      - SPEAKER_CONFIDENCE_THRESHOLD=0.7
+      
+    volumes:
+      # Persistent data volumes
+      - app_uploads:/usr/src/app/uploads
+      - app_logs:/usr/src/app/logs
+      - app_backup:/usr/src/app/db_backup
+      - /tmp/multimedia-temp:/usr/src/app/multimedia-temp
+    
+    depends_on:
+      db:
+        condition: service_healthy
+    
+    networks:
+      - daysave-internal
+    
+    restart: unless-stopped
+    
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ===== MYSQL DATABASE =====
+  db:
+    image: mysql:8.0
+    container_name: daysave-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME:-daysave_v141}
+      - MYSQL_USER=${DB_USER:-daysave}
+      - MYSQL_PASSWORD=${DB_USER_PASSWORD}
+      - MYSQL_ROOT_HOST=%
+    
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/mysql-init:/docker-entrypoint-initdb.d:ro
+    
+    networks:
+      - daysave-internal
+    
+    restart: unless-stopped
+    
+    # MySQL Configuration
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --innodb-buffer-pool-size=1G
+      --innodb-log-file-size=128M
+      --max-connections=200
+      --query-cache-type=1
+      --query-cache-size=64M
+      --slow-query-log=1
+      --slow-query-log-file=/var/lib/mysql/slow.log
+      --long-query-time=2
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ===== REDIS CACHE (Optional but recommended for production) =====
+  redis:
+    image: redis:7-alpine
+    container_name: daysave-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - daysave-internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# Additional volumes need to be added to the existing volumes section above
+# redis_data: (add this to the volumes section at the top) 

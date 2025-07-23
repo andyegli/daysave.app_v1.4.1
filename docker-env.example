@@ -22,8 +22,11 @@ GOOGLE_CLOUD_PROJECT_ID=your-project-id
 # Path to Google Cloud Service Account JSON file (mounted in container)
 GOOGLE_APPLICATION_CREDENTIALS=/usr/src/app/gcp-credentials/service-account.json
 
-# Alternative: Google API Key (if not using service account)
+# Alternative: Google API Key (if not using service account)  
 GOOGLE_API_KEY=your-google-api-key
+
+# Google Cloud Storage Bucket
+GOOGLE_CLOUD_STORAGE_BUCKET=daysave-uploads
 
 # Google Cloud Storage
 GOOGLE_CLOUD_STORAGE_BUCKET=your-bucket-name
