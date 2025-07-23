@@ -271,6 +271,13 @@ function initializeContentUploadToggle() {
   
   // Override form submission for different modes
   addContentForm.addEventListener('submit', function(e) {
+    console.log('🔍 FORM SUBMIT DEBUG:', {
+      singleUrl: singleUrlToggle?.checked,
+      bulkUrl: bulkUrlToggle?.checked, 
+      file: fileToggle?.checked,
+      filePathMethod: filePathMethod?.checked
+    });
+    
     if (singleUrlToggle.checked) {
       // Let normal form submission proceed for single URL mode
       console.log('🔗 Single URL mode - allowing normal form submission');
@@ -285,6 +292,10 @@ function initializeContentUploadToggle() {
       } else {
         handleFileUploadSubmission();
       }
+    } else {
+      // CRITICAL FIX: Always prevent form submission if no mode is clearly selected
+      console.warn('⚠️ No upload mode selected - preventing form submission');
+      e.preventDefault();
     }
   });
 }
