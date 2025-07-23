@@ -34,13 +34,24 @@ if (window.location.hostname === 'localhost') {
   const _originalXHROpen = XMLHttpRequest.prototype.open;
   const _originalFetch = window.fetch;
   
-  // Safe XHR override with recursion protection
+  // AGGRESSIVE XHR override with detailed logging
   XMLHttpRequest.prototype.open = function(method, url, async = true, user, password) {
-    // Convert HTTPS to HTTP for localhost
+    // Log ALL requests for debugging
+    console.log('🔍 XHR REQUEST:', method, url, 'from:', new Error().stack.split('\n')[2]);
+    
+    // Convert HTTPS to HTTP for localhost  
     if (typeof url === 'string' && url.includes('https://localhost')) {
       const newUrl = url.replace('https://localhost', 'http://localhost');
       console.log('🔧 XHR Protocol Fix:', url, '→', newUrl);
       url = newUrl;
+    }
+    
+    // Force HTTP for ANY localhost request
+    if (typeof url === 'string' && url.includes('localhost') && !url.startsWith('http://')) {
+      if (url.startsWith('/')) {
+        url = `http://localhost:${window.location.port || 3000}${url}`;
+        console.log('🔧 XHR Relative URL Fixed:', url);
+      }
     }
     
     // Handle timeout conflict for sync requests
@@ -51,13 +62,25 @@ if (window.location.hostname === 'localhost') {
     return _originalXHROpen.call(this, method, url, async, user, password);
   };
   
-  // Safe fetch override
+  // AGGRESSIVE fetch override with detailed logging
   window.fetch = function(url, options = {}) {
+    // Log ALL fetch requests for debugging
+    console.log('🔍 FETCH REQUEST:', url, 'from:', new Error().stack.split('\n')[2]);
+    
     if (typeof url === 'string' && url.includes('https://localhost')) {
       const newUrl = url.replace('https://localhost', 'http://localhost');
       console.log('🔧 Fetch Protocol Fix:', url, '→', newUrl);
       url = newUrl;
     }
+    
+    // Force HTTP for ANY localhost request
+    if (typeof url === 'string' && url.includes('localhost') && !url.startsWith('http://')) {
+      if (url.startsWith('/')) {
+        url = `http://localhost:${window.location.port || 3000}${url}`;
+        console.log('🔧 Fetch Relative URL Fixed:', url);
+      }
+    }
+    
     return _originalFetch.call(this, url, options);
   };
 }
@@ -340,8 +363,12 @@ async function handleFileUpload(form) {
         reject(new Error('Network error occurred'));
       };
       
-      // Ensure correct protocol for localhost (fix SSL errors)
-      const uploadUrl = getCorrectUrl('/files/upload');
+      // FORCE HTTP URL - bypass all browser caching/HSTS
+      const uploadUrl = window.location.hostname === 'localhost' ? 
+        `http://localhost:${window.location.port || 3000}/files/upload` : 
+        '/files/upload';
+      
+      console.log('🚀 FINAL UPLOAD URL:', uploadUrl);
       
       xhr.open('POST', uploadUrl);
       xhr.send(formData);
