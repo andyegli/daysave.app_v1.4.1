@@ -314,13 +314,19 @@ class AutomationOrchestrator {
     setupPerformanceIntegration() {
         this.performanceMonitor.on('alert', (alert) => {
             if (alert.type === 'memory_high' || alert.type === 'cpu_high') {
-                console.log(`⚠️ Performance Alert: ${alert.type} - ${alert.severity}`);
-                console.log(`   📊 Current: ${alert.current}, Threshold: ${alert.threshold}`);
+                const { logging } = require('../../config/config');
+                if (logging.enablePerformanceAlertLogging) {
+                    console.log(`⚠️ Performance Alert: ${alert.type} - ${alert.severity}`);
+                    console.log(`   📊 Current: ${alert.current}, Threshold: ${alert.threshold}`);
+                }
             }
         });
         
         this.performanceOptimizer.on('memoryPressure', (memUsage) => {
-            console.log(`🧹 Memory cleanup triggered - Usage: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
+            const { logging } = require('../../config/config');
+            if (logging.enablePerformanceAlertLogging) {
+                console.log(`🧹 Memory cleanup triggered - Usage: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
+            }
         });
     }
 

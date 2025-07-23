@@ -473,7 +473,10 @@ class PerformanceMonitor extends EventEmitter {
         this.baselines.processingTime = this.calculateAverage(recentHistory, 'application.averageProcessingTime');
         this.baselines.throughput = this.calculateAverage(recentHistory, 'application.throughput');
         
-        console.log('📊 Performance baselines established:', this.baselines);
+        const { logging } = require('../../config/config');
+        if (logging.enablePerformanceAlertLogging) {
+            console.log('📊 Performance baselines established:', this.baselines);
+        }
       }
     }, 60000); // After 1 minute
   }

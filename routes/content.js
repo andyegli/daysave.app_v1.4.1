@@ -1629,7 +1629,10 @@ router.get('/api/:id/status', isAuthenticated, async (req, res) => {
     const contentId = req.params.id;
     const userId = req.user.id;
     
-    console.log(`🔍 Status check request for content: ${contentId} by user: ${userId}`);
+    const { logging } = require('../config/config');
+    if (logging.enableStatusPollingLogging) {
+      console.log(`🔍 Status check request for content: ${contentId} by user: ${userId}`);
+    }
     
     // Find the content item
     const content = await Content.findOne({
@@ -1736,7 +1739,9 @@ router.get('/api/:id/status', isAuthenticated, async (req, res) => {
       }
     };
     
-    console.log(`📊 Status response for ${contentId}: ${status} (${progressPercentage}%)`);
+    if (logging.enableStatusPollingLogging) {
+      console.log(`📊 Status response for ${contentId}: ${status} (${progressPercentage}%)`);
+    }
     res.json(response);
     
   } catch (error) {
@@ -1754,7 +1759,9 @@ router.post('/api/:id/retry', isAuthenticated, async (req, res) => {
     const contentId = req.params.id;
     const userId = req.user.id;
     
-    console.log(`🔄 Retry analysis request for content: ${contentId} by user: ${userId}`);
+    if (logging.enableAnalysisRequestLogging) {
+      console.log(`🔄 Retry analysis request for content: ${contentId} by user: ${userId}`);
+    }
     
     // Find the content item
     const content = await Content.findOne({
@@ -1839,7 +1846,9 @@ router.post('/:id/reprocess', isAuthenticated, async (req, res) => {
     const contentId = req.params.id;
     const userId = req.user.id;
     
-    console.log(`🔄 Reprocess analysis request for content: ${contentId} by user: ${userId}`);
+    if (logging.enableAnalysisRequestLogging) {
+      console.log(`🔄 Reprocess analysis request for content: ${contentId} by user: ${userId}`);
+    }
     
     // Find the content item
     const content = await Content.findOne({
