@@ -11,6 +11,7 @@ const BaseMediaProcessor = require('./BaseMediaProcessor');
 const VideoProcessor = require('./VideoProcessor');
 const AudioProcessor = require('./AudioProcessor');
 const ImageProcessor = require('./ImageProcessor');
+const DocumentProcessor = require('./DocumentProcessor');
 const PluginRegistry = require('./PluginRegistry');
 const ConfigurationManager = require('./ConfigurationManager');
 const PerformanceOptimizer = require('./PerformanceOptimizer');
@@ -351,6 +352,7 @@ class AutomationOrchestrator {
             this.processors.set('video', new VideoProcessor());
             this.processors.set('audio', new AudioProcessor());
             this.processors.set('image', new ImageProcessor());
+            this.processors.set('document', new DocumentProcessor());
             
             // Initialize all processors with configuration
             for (const [type, processor] of this.processors) {
@@ -705,6 +707,14 @@ class AutomationOrchestrator {
                                                this.pluginRegistry.isFeatureAvailable('image_analysis');
                 features.plugins.qualityAnalysis = this.configManager.isFeatureEnabled('image.enableQualityAnalysis');
                 break;
+                
+            case 'document':
+                features.plugins.textExtraction = this.configManager.isFeatureEnabled('document.enableTextExtraction');
+                features.plugins.aiAnalysis = this.configManager.isFeatureEnabled('document.enableAIAnalysis');
+                features.plugins.summaryGeneration = this.configManager.isFeatureEnabled('document.enableSummaryGeneration');
+                features.plugins.tagGeneration = this.configManager.isFeatureEnabled('document.enableTagGeneration');
+                features.plugins.titleGeneration = this.configManager.isFeatureEnabled('document.enableTitleGeneration');
+                break;
         }
         
         return features;
@@ -777,6 +787,15 @@ class AutomationOrchestrator {
                 if (config.enableSpeakerDiarization !== undefined) {
                     mappedOptions.enableSpeakerDiarization = config.enableSpeakerDiarization && features.plugins.speakerDiarization;
                 }
+                break;
+                
+            case 'document':
+                // Map document processor configuration
+                mappedOptions.enableTextExtraction = config.enableTextExtraction !== false && features.plugins.textExtraction;
+                mappedOptions.enableAIAnalysis = config.enableAIAnalysis !== false && features.plugins.aiAnalysis;
+                mappedOptions.enableSummaryGeneration = config.enableSummaryGeneration !== false && features.plugins.summaryGeneration;
+                mappedOptions.enableTagGeneration = config.enableTagGeneration !== false && features.plugins.tagGeneration;
+                mappedOptions.enableTitleGeneration = config.enableTitleGeneration !== false && features.plugins.titleGeneration;
                 break;
         }
         

@@ -205,7 +205,7 @@ Create a production-ready web application called **DaySave.app** version 1.4.1 u
 - **audit_logs**: id, user_id, action, target_type, target_id, details, created_at.
 - **social_accounts**: id, user_id, platform, handle, access_token, refresh_token, created_at.
 - **content**: id, user_id, social_account_id, url, metadata, transcription, summary, sentiment, auto_tags, user_tags, user_comments, category, location, created_at.
-- **files**: id, user_id, filename, file_path, metadata, transcription, summary, sentiment, auto_tags, user_tags, user_comments, category, location, created_at.
+- **files**: id, user_id, filename, file_path, metadata, transcription, summary, sentiment, auto_tags, user_tags, user_comments, category, location, created_at. (Supports images, videos, audio, and documents with AI analysis)
 - **contacts**: id, user_id, all Apple fields with JSON for multiples, created_at.
 - **contact_groups**: id, user_id, name, created_at.
 - **contact_group_members**: id, contact_id, group_id, created_at.
@@ -252,6 +252,12 @@ Create a production-ready web application called **DaySave.app** version 1.4.1 u
   - **FFmpeg**: Video processing, thumbnail generation, audio extraction
   - **Node-fetch**: URL content fetching and metadata extraction
   - **Cheerio**: HTML parsing for social media content
+  - **Document Processing**: PDF, Word, and text file analysis with AI-powered summaries
+    - **PDF Analysis**: Text extraction using pdf-parse library with AI title/summary generation
+    - **Word Document Processing**: .doc/.docx text extraction using mammoth library
+    - **Text File Processing**: Plain text and RTF file analysis with intelligent content summarization
+    - **AI-Powered Analysis**: Google Gemini AI generates meaningful titles, summaries, and relevant tags
+    - **Unified Content Display**: Documents display with same 4-line format as videos (title → comment → summary → tags)
 - **Caching**: Redis.
 - **Security**: `bcrypt`, `jsonwebtoken`, `crypto`, `helmet`, `csurf`, `fingerprintjs2`, `maxmind`, `speakeasy`.
 - **Logging**: Winston (sessions, API calls, shares, alerts, multimedia analysis).

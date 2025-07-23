@@ -119,6 +119,33 @@ class ConfigurationManager {
             }
         });
 
+        // Document processor defaults
+        this.defaults.set('document', {
+            maxFileSize: 100 * 1024 * 1024, // 100MB
+            enableTextExtraction: true,
+            enableAIAnalysis: true,
+            enableSummaryGeneration: true,
+            enableTagGeneration: true,
+            enableTitleGeneration: true,
+            supportedFormats: ['pdf', 'doc', 'docx', 'txt', 'rtf'],
+            textExtraction: {
+                maxTextLength: 50000, // Characters
+                encoding: 'utf8',
+                preserveFormatting: false
+            },
+            aiAnalysis: {
+                maxTokens: 1000,
+                summaryLength: 300, // Characters
+                maxTags: 5,
+                titleMaxLength: 100
+            },
+            qualityThresholds: {
+                minTextLength: 10, // Characters
+                maxFileSize: 100 * 1024 * 1024, // 100MB
+                acceptableFormats: ['pdf', 'docx', 'txt']
+            }
+        });
+
         // Plugin system defaults
         this.defaults.set('plugins', {
             google_cloud: {

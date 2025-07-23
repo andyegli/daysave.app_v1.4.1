@@ -1753,6 +1753,19 @@ Return only the extracted text, preserving line breaks and formatting where poss
     if (mimeType.startsWith('video/')) return 'video';
     if (mimeType.startsWith('audio/')) return 'audio';
     if (mimeType.startsWith('image/')) return 'image';
+    
+    // Document types
+    const documentTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'text/rtf',
+      'application/rtf'
+    ];
+    
+    if (documentTypes.includes(mimeType)) return 'document';
+    
     return 'unknown';
   }
 
