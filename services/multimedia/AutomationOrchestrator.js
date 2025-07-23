@@ -603,10 +603,12 @@ class AutomationOrchestrator {
         const videoExts = this.configManager.getConfig('video.supportedFormats', []);
         const audioExts = this.configManager.getConfig('audio.supportedFormats', []);
         const imageExts = this.configManager.getConfig('image.supportedFormats', []);
+        const documentExts = ['pdf', 'doc', 'docx', 'txt', 'rtf'];
         
         if (videoExts.includes(ext)) return 'video';
         if (audioExts.includes(ext)) return 'audio';
         if (imageExts.includes(ext)) return 'image';
+        if (documentExts.includes(ext)) return 'document';
         
         return null;
     }
@@ -618,6 +620,20 @@ class AutomationOrchestrator {
         if (mimeType.startsWith('video/')) return 'video';
         if (mimeType.startsWith('audio/')) return 'audio';
         if (mimeType.startsWith('image/')) return 'image';
+        
+        // Document MIME types
+        const documentMimeTypes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+            'text/rtf',
+            'application/rtf'
+        ];
+        
+        if (documentMimeTypes.includes(mimeType)) return 'document';
+        if (mimeType.startsWith('text/')) return 'document';
+        
         return null;
     }
 
@@ -667,7 +683,7 @@ class AutomationOrchestrator {
      */
     normalizeMediaType(type) {
         const normalized = type.toLowerCase();
-        if (['video', 'audio', 'image'].includes(normalized)) {
+        if (['video', 'audio', 'image', 'document'].includes(normalized)) {
             return normalized;
         }
         throw new Error(`Unsupported media type: ${type}`);
@@ -850,6 +866,15 @@ class AutomationOrchestrator {
                 if (actualResults.description) formatted.data.aiDescription = actualResults.description; // FIX: Map description to aiDescription
                 if (actualResults.transcription) formatted.data.transcription = actualResults.transcription; // Also include transcription
                 if (actualResults.tags) formatted.data.tags = actualResults.tags;
+                break;
+                
+            case 'document':
+                if (actualResults.text) formatted.data.transcription = actualResults.text;
+                if (actualResults.transcription) formatted.data.transcription = actualResults.transcription;
+                if (actualResults.summary) formatted.data.summary = actualResults.summary;
+                if (actualResults.aiDescription) formatted.data.aiDescription = actualResults.aiDescription;
+                if (actualResults.tags) formatted.data.tags = actualResults.tags;
+                if (actualResults.title) formatted.data.title = actualResults.title;
                 break;
         }
         

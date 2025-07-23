@@ -56,14 +56,14 @@ class DocumentProcessor extends BaseMediaProcessor {
     /**
      * Processes document file for AI analysis
      */
-    async process(filePath, metadata = {}) {
+    async process(userId, filePath, options = {}) {
         try {
             const startTime = Date.now();
             this.updateProgress(0, 'Starting document processing...');
 
             // Extract text from document
             this.updateProgress(20, 'Extracting text content...');
-            const extractedText = await this.extractText(filePath, metadata.mimeType);
+            const extractedText = await this.extractText(filePath, options.mimeType || options.metadata?.mimeType);
 
             if (!extractedText || extractedText.trim().length === 0) {
                 throw new Error('No text content could be extracted from document');
@@ -71,7 +71,7 @@ class DocumentProcessor extends BaseMediaProcessor {
 
             // Generate AI analysis
             this.updateProgress(50, 'Analyzing content with AI...');
-            const analysis = await this.performAIAnalysis(extractedText, metadata);
+            const analysis = await this.performAIAnalysis(extractedText, options);
 
             this.updateProgress(100, 'Document processing complete');
 
