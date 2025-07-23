@@ -39,32 +39,68 @@ class FileUploadService {
    */
   initializeStorage() {
     try {
-      // Check if we have Google Cloud project configuration
-      if (process.env.GOOGLE_CLOUD_PROJECT_ID && process.env.GOOGLE_CLOUD_STORAGE_BUCKET) {
-        const storageOptions = {};
-        
-        // Use credentials file if specified
-        if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-          storageOptions.keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-        }
-        
-        // Use project ID
-        storageOptions.projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+      // Check if we have minimum Google Cloud configuration
+      const hasProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID && process.env.GOOGLE_CLOUD_PROJECT_ID.trim();
+      const hasBucket = process.env.GOOGLE_CLOUD_STORAGE_BUCKET && process.env.GOOGLE_CLOUD_STORAGE_BUCKET.trim();
+      const hasCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS && process.env.GOOGLE_APPLICATION_CREDENTIALS.trim();
+      
+      if (!hasProjectId || !hasBucket) {
+        console.log('📁 Using local storage (Google Cloud not configured)');
+        console.log('💡 To enable Google Cloud Storage, set GOOGLE_CLOUD_PROJECT_ID and GOOGLE_CLOUD_STORAGE_BUCKET in .env');
+        this.storage = null;
+        return;
+      }
 
-        try {
-          this.storage = new Storage(storageOptions);
-          console.log('✅ Google Cloud Storage initialized with project:', process.env.GOOGLE_CLOUD_PROJECT_ID);
-        } catch (storageError) {
-          console.log('⚠️ Google Cloud Storage initialization failed, using local storage:', storageError.message);
-          this.storage = null;
-        }
-      } else {
-        console.log('📁 Using local storage (Google Cloud project not fully configured)');
+      if (!hasCredentials) {
+        console.log('📁 Using local storage (Google Cloud credentials not configured)');
+        console.log('💡 To enable Google Cloud Storage, set GOOGLE_APPLICATION_CREDENTIALS in .env');
+        this.storage = null;
+        return;
+      }
+
+      const storageOptions = {
+        projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+        keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS
+      };
+
+      try {
+        this.storage = new Storage(storageOptions);
+        console.log('✅ Google Cloud Storage initialized with project:', process.env.GOOGLE_CLOUD_PROJECT_ID);
+        
+        // Test connection (but don't fail if it doesn't work)
+        this.testGCSConnection();
+      } catch (storageError) {
+        console.log('⚠️ Google Cloud Storage initialization failed, using local storage:', storageError.message);
+        console.log('💡 Check your GOOGLE_APPLICATION_CREDENTIALS file path and permissions');
         this.storage = null;
       }
     } catch (error) {
-      console.error('❌ Error initializing Google Cloud Storage, falling back to local storage:', error);
+      console.error('❌ Error initializing Google Cloud Storage, falling back to local storage:', error.message);
       this.storage = null;
+    }
+  }
+
+  /**
+   * Test Google Cloud Storage connection without throwing errors
+   */
+  async testGCSConnection() {
+    try {
+      if (!this.storage) return;
+      
+      const bucketName = process.env.GOOGLE_CLOUD_STORAGE_BUCKET;
+      const bucket = this.storage.bucket(bucketName);
+      
+      // Test if bucket exists and is accessible
+      const [exists] = await bucket.exists();
+      if (exists) {
+        console.log('✅ Google Cloud Storage bucket accessible:', bucketName);
+      } else {
+        console.log('⚠️ Google Cloud Storage bucket not found:', bucketName);
+        console.log('💡 Create the bucket in Google Cloud Console or check permissions');
+      }
+    } catch (error) {
+      console.log('⚠️ Google Cloud Storage connection test failed:', error.message);
+      console.log('💡 App will continue using local storage for file uploads');
     }
   }
 

@@ -98,25 +98,33 @@ function fixThumbnailAspectRatio($img) {
   if (!img.naturalWidth || !img.naturalHeight) return;
   
   const aspectRatio = img.naturalWidth / img.naturalHeight;
+  const $container = $img.closest('.thumbnail-container');
   
-  // For very tall images (aspect ratio < 0.7), use contain to prevent stretching
-  // For normal images, use cover for better visual appeal
-  if (aspectRatio < 0.7) {
-    $img.css({
-      'object-fit': 'contain',
-      'background': '#fff'
-    });
-    console.log(`🖼️ Applied contain fit for tall image (ratio: ${aspectRatio.toFixed(2)})`);
-  } else {
+  // Always use contain for images to prevent stretching
+  // Video thumbnails will use cover (set by CSS class)
+  if ($container.hasClass('video-thumb')) {
+    // Videos: use cover for better visual appeal
     $img.css({
       'object-fit': 'cover',
-      'background': 'transparent'
+      'width': '100%',
+      'height': '100%'
     });
-    console.log(`🖼️ Applied cover fit for normal image (ratio: ${aspectRatio.toFixed(2)})`);
+    console.log(`🎬 Applied cover fit for video thumbnail (ratio: ${aspectRatio.toFixed(2)})`);
+  } else {
+    // Images: always use contain to prevent stretching
+    $img.css({
+      'object-fit': 'contain',
+      'max-width': '100%',
+      'max-height': '100%',
+      'width': 'auto',
+      'height': 'auto',
+      'background': '#fff'
+    });
+    console.log(`🖼️ Applied contain fit for image thumbnail (ratio: ${aspectRatio.toFixed(2)})`);
   }
   
   // Add loaded class for potential styling
-  $img.closest('.thumbnail-container').addClass('image-loaded');
+  $container.addClass('image-loaded');
 }
 
 /**

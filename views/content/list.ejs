@@ -65,12 +65,12 @@
         padding: 0.1rem 0.3rem;
       }
     }
-    /* Enhanced Thumbnail Container */
+    /* Enhanced Thumbnail Container - Fixed Aspect Ratio Without Stretching */
     .content-card .thumbnail-container {
       width: 90px;
-      height: 90px;
-      min-width: 90px;
       max-width: 90px;
+      min-width: 90px;
+      height: 90px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -81,28 +81,39 @@
     }
     
     .content-card .thumbnail-container img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
       object-position: center;
       border-radius: 6px;
       transition: transform 0.2s ease;
+      display: block;
     }
     
     .content-card .thumbnail-container:hover img {
-      transform: scale(1.05);
+      transform: scale(1.02);
     }
     
     .content-card .thumbnail-container .fallback-icon {
       font-size: 2rem;
       opacity: 0.7;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
-    /* Maintain aspect ratio for different image sizes */
+    /* Video thumbnails - use cover to fill container nicely */
     .content-card .thumbnail-container.video-thumb img {
       object-fit: cover;
+      width: 100%;
+      height: 100%;
     }
     
+    /* Image thumbnails - use contain to prevent stretching */
     .content-card .thumbnail-container.image-thumb img {
       object-fit: contain;
       background: #fff;
@@ -115,6 +126,7 @@
         min-width: 70px;
         max-width: 70px;
       }
+      
       .content-card .thumbnail-container .fallback-icon {
         font-size: 1.5rem;
       }
