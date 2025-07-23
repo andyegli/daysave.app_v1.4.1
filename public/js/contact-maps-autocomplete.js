@@ -23,11 +23,16 @@ class ModernContactMapsAutocomplete {
       this.testAPIAuthorization().then((authorized) => {
         this.apiAuthorized = authorized;
         if (authorized) {
+          console.log('ModernContactMapsAutocomplete: API authorized, using Google Maps');
           this.setupAddressAutocomplete();
         } else {
           console.warn('ModernContactMapsAutocomplete: API not authorized, using fallback');
           this.setupFallbackAutocomplete();
         }
+      }).catch((error) => {
+        console.warn('ModernContactMapsAutocomplete: API test failed, using fallback:', error);
+        this.apiAuthorized = false;
+        this.setupFallbackAutocomplete();
       });
     } else {
       console.log('ModernContactMapsAutocomplete: Google Maps API not available, setting up fallback');
@@ -37,17 +42,25 @@ class ModernContactMapsAutocomplete {
 
   async testAPIAuthorization() {
     try {
-      // Create a simple test to check if API is authorized
-      const testDiv = document.createElement('div');
-      testDiv.style.display = 'none';
-      document.body.appendChild(testDiv);
+      console.log('ModernContactMapsAutocomplete: Testing API authorization...');
       
-      const testAutocomplete = new google.maps.places.Autocomplete(testDiv, {
+      // Create a proper input element for testing
+      const testInput = document.createElement('input');
+      testInput.type = 'text';
+      testInput.style.display = 'none';
+      testInput.style.position = 'absolute';
+      testInput.style.left = '-9999px';
+      document.body.appendChild(testInput);
+      
+      // Try to create an autocomplete instance
+      const testAutocomplete = new google.maps.places.Autocomplete(testInput, {
         types: ['address']
       });
       
-      // If we get here without errors, API is likely authorized
-      document.body.removeChild(testDiv);
+      // Clean up the test input
+      document.body.removeChild(testInput);
+      
+      console.log('ModernContactMapsAutocomplete: API authorization test passed');
       return true;
     } catch (error) {
       console.warn('ModernContactMapsAutocomplete: API authorization test failed:', error);
@@ -100,6 +113,7 @@ class ModernContactMapsAutocomplete {
       if (this.apiAvailable && this.apiAuthorized) {
         this.setupModernPlacesAutocomplete(input);
       } else {
+        console.log('ModernContactMapsAutocomplete: Using fallback for input', index);
         this.setupFallbackForInput(input);
       }
     });
@@ -109,7 +123,7 @@ class ModernContactMapsAutocomplete {
     try {
       console.log('ModernContactMapsAutocomplete: Setting up modern Places autocomplete');
       
-      // Skip PlaceAutocompleteElement for now due to API issues, go directly to traditional
+      // Go directly to traditional autocomplete since PlaceAutocompleteElement has issues
       this.setupTraditionalAutocomplete(input);
     } catch (error) {
       console.warn('ModernContactMapsAutocomplete: Error setting up Google Places, using fallback:', error);
@@ -175,6 +189,13 @@ class ModernContactMapsAutocomplete {
   }
 
   setupTraditionalAutocomplete(input) {
+    // Don't even try if we know the API is not authorized
+    if (!this.apiAuthorized) {
+      console.log('ModernContactMapsAutocomplete: API not authorized, skipping traditional setup');
+      this.setupFallbackForInput(input);
+      return;
+    }
+
     try {
       console.log('ModernContactMapsAutocomplete: Setting up traditional autocomplete');
       
@@ -186,6 +207,7 @@ class ModernContactMapsAutocomplete {
 
       // Track if we get API errors
       let apiErrorDetected = false;
+      let errorTimeout;
 
       // Handle place selection
       autocomplete.addListener('place_changed', () => {
@@ -207,7 +229,7 @@ class ModernContactMapsAutocomplete {
         }
       });
 
-      // Listen for API errors globally
+      // Listen for API errors globally - but with a timeout to avoid infinite switching
       const originalConsoleError = console.error;
       const checkForAPIErrors = (message) => {
         if (typeof message === 'string' && 
@@ -218,7 +240,21 @@ class ModernContactMapsAutocomplete {
             apiErrorDetected = true;
             console.warn('ModernContactMapsAutocomplete: API authorization error detected, switching to fallback');
             this.apiAuthorized = false;
-            this.setupFallbackForInput(input);
+            
+            // Clear the existing autocomplete instance
+            if (this.autocompleteInstances.has(input)) {
+              try {
+                google.maps.event.clearInstanceListeners(this.autocompleteInstances.get(input));
+                this.autocompleteInstances.delete(input);
+              } catch (e) {
+                console.warn('Error cleaning up autocomplete:', e);
+              }
+            }
+            
+            // Setup fallback after a small delay
+            setTimeout(() => {
+              this.setupFallbackForInput(input);
+            }, 100);
           }
         }
       };
@@ -230,9 +266,9 @@ class ModernContactMapsAutocomplete {
       };
 
       // Restore original console.error after a delay
-      setTimeout(() => {
+      errorTimeout = setTimeout(() => {
         console.error = originalConsoleError;
-      }, 5000);
+      }, 10000); // Increased timeout to catch more errors
 
       // Store the instance
       this.autocompleteInstances.set(input, autocomplete);
@@ -380,7 +416,7 @@ class ModernContactMapsAutocomplete {
           // Show "no matches" message
           const noMatchItem = document.createElement('div');
           noMatchItem.className = 'suggestion-item';
-          noMatchItem.textContent = 'No address suggestions found';
+          noMatchItem.textContent = 'No address suggestions found - try typing a street name or city';
           noMatchItem.style.cssText = `
             padding: 8px 12px;
             color: #6c757d;
@@ -400,7 +436,8 @@ class ModernContactMapsAutocomplete {
     });
     
     // Add visual indicator that fallback is being used
-    input.placeholder = input.placeholder || 'Address (using basic autocomplete)';
+    const originalPlaceholder = input.placeholder;
+    input.placeholder = originalPlaceholder || 'Address (using local suggestions)';
     
     console.log('ModernContactMapsAutocomplete: Fallback autocomplete setup complete');
   }
