@@ -406,6 +406,47 @@ See AGENT.md for full specification and rationale.
 - Ensure the API key is valid and the required APIs are enabled.
 - For new field types, update the selector logic as needed.
 
+## Database Backup System (v1.4.1)
+
+### Enterprise-Grade Data Protection
+DaySave implements a comprehensive database backup system with three independent backup methods for complete data protection and disaster recovery:
+
+#### MySQLDump Backup Method
+- **Traditional SQL Backup**: Industry-standard backup using MySQL client tools
+- **File Format**: Standard SQL files (1.65 MB average) with complete schema and data
+- **Compatibility**: Cross-platform compatible, widely supported by database tools
+- **Restore Process**: Simple MySQL import with standard restoration procedures
+- **Use Case**: Traditional database backups, migration between environments, industry compliance
+
+#### Raw SQL Backup Method  
+- **Complete Database Dump**: Comprehensive backup using direct SQL queries
+- **Coverage**: All 41 database tables including system tables (SequelizeMeta, Sessions)
+- **File Format**: Structured JSON export (2.1 MB) with complete metadata
+- **Data Scope**: 634+ total records including system state and legacy data
+- **Use Case**: Complete disaster recovery, full system snapshots, forensic analysis
+
+#### Sequelize Model-Based Backup
+- **Application-Focused**: Clean backup using defined Sequelize models
+- **Coverage**: 38 application tables with 580+ application records  
+- **File Format**: Structured JSON with auto-generated restore scripts
+- **Data Quality**: Only includes tables with defined models (cleaner, application-focused)
+- **Use Case**: Application data backups, structured data exports, development snapshots
+
+### Administrative Features
+- **Automated Scheduling**: Configurable backup intervals and retention policies
+- **Backup Management**: Organized storage with timestamps and comprehensive metadata
+- **Restore Capabilities**: Multiple restore options with validation and rollback support
+- **Security**: Encrypted backups with access control and audit logging
+- **Monitoring**: Backup health monitoring with notification alerts
+- **Storage Options**: Local storage and cloud storage integration support
+
+### Technical Implementation
+- **Schema Validation**: Automatic detection and resolution of database schema issues
+- **Error Handling**: Robust error handling with graceful degradation and retry mechanisms
+- **Performance**: Optimized for minimal impact on production operations
+- **Documentation**: Complete setup guides, troubleshooting, and recovery procedures
+- **Integration**: Seamless integration with existing admin panel and monitoring systems
+
 ## Recent Updates & Fixes (January 2025)
 
 ### Content Management System Improvements

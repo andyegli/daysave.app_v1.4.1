@@ -47,6 +47,20 @@ module.exports = (sequelize, DataTypes) => {
     },
 
     /**
+     * Audio Analysis Association
+     * Links speaker to the specific audio analysis that identified this speaker
+     */
+    audio_analysis_id: {
+      type: DataTypes.CHAR(36),
+      allowNull: true,
+      references: {
+        model: 'audio_analysis',
+        key: 'id'
+      },
+      comment: 'UUID of the audio analysis record that identified this speaker'
+    },
+
+    /**
      * Speaker Tag
      * System-generated unique identifier for the speaker within analysis results
      * Format: "Speaker_[timestamp]_[name]" (e.g., "Speaker_1751830102639_Mike")
@@ -263,9 +277,13 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: 'CASCADE'
     });
 
-    // Note: Speakers are associated with content through VideoAnalysis transcription data
-    // rather than direct foreign key relationships, since speaker identification
-    // happens at the analysis level and multiple speakers can be in one content item
+    // Speaker belongs to an AudioAnalysis
+    Speaker.belongsTo(models.AudioAnalysis, { 
+      foreignKey: 'audio_analysis_id',
+      as: 'audioAnalysis',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE'
+    });
   };
 
   /**

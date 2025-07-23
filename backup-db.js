@@ -40,17 +40,17 @@ const backupFilePath = path.join(backupDir, backupFileName);
 console.log(`📊 Database: ${dbConfig.database} at ${dbConfig.host}:${dbConfig.port}`);
 console.log(`💾 Backup file: ${backupFileName}`);
 
-// Create mysqldump command
+// Create mysqldump command with basic options for better compatibility
 const dumpCommand = [
   'mysqldump',
   `--host=${dbConfig.host}`,
   `--port=${dbConfig.port}`,
   `--user=${dbConfig.username}`,
   `--password=${dbConfig.password}`,
-  '--single-transaction',
-  '--routines',
-  '--triggers',
-  '--add-drop-table',
+  '--lock-tables=false',  // Avoid locking issues
+  '--skip-comments',      // Skip version comments
+  '--skip-dump-date',     // Skip dump date
+  '--compact',            // More compact output
   dbConfig.database
 ].join(' ');
 

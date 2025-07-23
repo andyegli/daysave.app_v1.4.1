@@ -21,12 +21,16 @@ class SequelizeBackup {
    * Get all table names from Sequelize models
    */
   getTableNames() {
-    return Object.keys(db).filter(key => 
-      key !== 'sequelize' && 
-      key !== 'Sequelize' && 
-      typeof db[key] === 'object' && 
-      db[key].tableName
-    );
+    return Object.keys(db).filter(key => {
+      if (key === 'sequelize' || key === 'Sequelize') return false;
+      const model = db[key];
+      
+      // Sequelize models are constructor functions, not objects!
+      return (
+        typeof model === 'function' &&  // Models are functions
+        model.tableName                 // Has tableName property
+      );
+    });
   }
 
   /**

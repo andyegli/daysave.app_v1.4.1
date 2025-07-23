@@ -26,6 +26,15 @@ module.exports = (sequelize, DataTypes) => {
     },
     language: {
       type: DataTypes.STRING
+    },
+    user_id: {
+      type: DataTypes.CHAR(36),
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id'
+      },
+      comment: 'Optional reference to the user who made this contact submission'
     }
   }, {
     tableName: 'contact_submissions',
