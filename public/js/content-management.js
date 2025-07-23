@@ -1,6 +1,12 @@
 // Content Management JavaScript
 // This file handles all content management functionality
 
+// Force correct protocol for localhost on page load
+if (window.location.hostname === 'localhost' && window.location.protocol === 'https:') {
+  console.log('Redirecting from HTTPS to HTTP for localhost...');
+  window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+}
+
 // Show subscription error with upgrade options
 function showSubscriptionError(errorData) {
   const alert = document.getElementById('addContentAlert');
@@ -247,7 +253,7 @@ async function handleFileUpload(form) {
         if (window.location.hostname === 'localhost') {
           window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
         } else {
-          window.location.reload();
+          window.location.href = window.location.href;
         }
       }, 1500);
     } else {

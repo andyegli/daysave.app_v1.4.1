@@ -11,6 +11,12 @@ function getCorrectUrl(path) {
   return path;
 }
 
+// Force correct protocol for localhost on page load
+if (window.location.hostname === 'localhost' && window.location.protocol === 'https:') {
+  console.log('Redirecting from HTTPS to HTTP for localhost...');
+  window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   initializeContentUploadToggle();
 });
@@ -365,7 +371,8 @@ async function handleFileUploadSubmission() {
         if (window.location.hostname === 'localhost') {
           window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
         } else {
-          window.location.reload();
+          // Force reload with correct protocol
+          window.location.href = window.location.href;
         }
       }, 1500);
     } else {
@@ -705,7 +712,7 @@ async function handleBulkUrlSubmission() {
         if (window.location.hostname === 'localhost') {
           window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
         } else {
-          window.location.reload();
+          window.location.href = window.location.href;
         }
       }, 2000);
     }
@@ -834,7 +841,7 @@ async function handleFilePathSubmission() {
           if (window.location.hostname === 'localhost') {
             window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
           } else {
-            window.location.reload();
+            window.location.href = window.location.href;
           }
         }, 2000);
       }
