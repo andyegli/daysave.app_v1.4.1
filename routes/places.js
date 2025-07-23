@@ -230,6 +230,118 @@ router.post('/textsearch', isAuthenticated, async (req, res) => {
   }
 });
 
+// Geocoding endpoint for map functionality
+router.post('/geocode', isAuthenticated, async (req, res) => {
+  try {
+    const apiKey = getApiKey();
+    
+    if (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY') {
+      return res.status(400).json({
+        status: 'REQUEST_DENIED',
+        error: 'API key not configured'
+      });
+    }
+
+    const { address } = req.body;
+    
+    if (!address) {
+      return res.status(400).json({
+        status: 'INVALID_REQUEST',
+        error: 'Address parameter required'
+      });
+    }
+
+    // Use Google Geocoding API
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
+    
+    console.log('Places API geocoding request:', { address });
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('Places API geocoding error:', data);
+      return res.status(response.status).json(data);
+    }
+    
+    console.log('Places API geocoding response status:', data.status, 'results:', data.results?.length || 0);
+    
+    // Return the response as-is from Google
+    res.json(data);
+    
+  } catch (error) {
+    console.error('Places API geocoding error:', error);
+    res.status(500).json({
+      status: 'UNKNOWN_ERROR',
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Static map endpoint (serves as a proxy to hide API key)
+router.get('/static-map', isAuthenticated, async (req, res) => {
+  try {
+    const apiKey = getApiKey();
+    
+    if (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY') {
+      return res.status(400).send('API key not configured');
+    }
+
+    const { lat, lng, address } = req.query;
+    
+    if (!lat || !lng) {
+      return res.status(400).send('Latitude and longitude required');
+    }
+
+    // Build Google Static Maps URL
+    const baseUrl = 'https://maps.googleapis.com/maps/api/staticmap';
+    const params = new URLSearchParams({
+      center: `${lat},${lng}`,
+      zoom: '15',
+      size: '600x400',
+      maptype: 'roadmap',
+      markers: `color:red|${lat},${lng}`,
+      key: apiKey
+    });
+
+    const staticMapUrl = `${baseUrl}?${params.toString()}`;
+    
+    console.log('Static map request:', { lat, lng, address });
+    
+    // Fetch the map image and send it back
+    const response = await fetch(staticMapUrl);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch static map');
+    }
+    
+    // Get the image as buffer
+    const imageBuffer = await response.buffer();
+    
+    // Set appropriate headers
+    res.set({
+      'Content-Type': response.headers.get('content-type') || 'image/png',
+      'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
+    });
+    
+    // Send the image buffer
+    res.send(imageBuffer);
+    
+  } catch (error) {
+    console.error('Static map error:', error);
+    
+    // Send a placeholder image or error message
+    res.status(500).send(`
+      <svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100%" height="100%" fill="#f8f9fa"/>
+        <text x="50%" y="50%" text-anchor="middle" fill="#6c757d" font-family="Arial" font-size="16">
+          Map unavailable
+        </text>
+      </svg>
+    `);
+  }
+});
+
 // Health check endpoint for Places API
 router.get('/health', isAuthenticated, async (req, res) => {
   try {
