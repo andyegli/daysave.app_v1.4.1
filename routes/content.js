@@ -669,10 +669,24 @@ router.get('/', isAuthenticated, async (req, res) => {
         const usableThumbnail = mainThumbnail || thumbnails[0];
         
         if (usableThumbnail) {
-          // For thumbnails, use direct file path (they're already accessible)
-          thumbnailUrl = usableThumbnail.file_path.startsWith('http') ? 
-            usableThumbnail.file_path : 
-            '/' + usableThumbnail.file_path;
+          // Fix thumbnail URL generation for direct serving
+          if (usableThumbnail.file_path.startsWith('http')) {
+            thumbnailUrl = usableThumbnail.file_path;
+          } else if (usableThumbnail.file_path.startsWith('uploads/thumbnails/')) {
+            // For uploads/thumbnails/, create direct URL
+            thumbnailUrl = '/' + usableThumbnail.file_path;
+          } else if (usableThumbnail.file_path.startsWith('/files/serve/')) {
+            // Remove the problematic /files/serve/ prefix and use direct path
+            thumbnailUrl = usableThumbnail.file_path.replace('/files/serve/', '/');
+          } else if (usableThumbnail.file_path.startsWith('uploads/')) {
+            // For other uploads, add leading slash
+            thumbnailUrl = '/' + usableThumbnail.file_path;
+          } else {
+            // Default: ensure leading slash
+            thumbnailUrl = usableThumbnail.file_path.startsWith('/') ? 
+              usableThumbnail.file_path : 
+              '/' + usableThumbnail.file_path;
+          }
         }
       }
       
@@ -1606,6 +1620,126 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error('ERROR getting content analysis:', error);
     res.status(500).json({ error: 'Failed to get content analysis.' });
+  }
+});
+
+// Content Analysis Status API Endpoint
+router.get('/api/:id/status', isAuthenticated, async (req, res) => {
+  try {
+    const contentId = req.params.id;
+    const userId = req.user.id;
+    
+    console.log(`🔍 Status check request for content: ${contentId} by user: ${userId}`);
+    
+    // Find the content item
+    const content = await Content.findOne({
+      where: { id: contentId, user_id: userId },
+      include: [
+        {
+          model: require('../models').Thumbnail,
+          as: 'thumbnails',
+          required: false,
+          limit: 5
+        }
+      ]
+    });
+    
+    if (!content) {
+      return res.status(404).json({ error: 'Content not found' });
+    }
+    
+    // Check analysis completeness
+    const hasTranscription = !!(content.transcription && content.transcription.length > 10);
+    const hasSummary = !!(content.summary && content.summary.length > 10);
+    const hasTitle = !!(content.generated_title && content.generated_title.length > 0);
+    const hasTags = !!(content.auto_tags && content.auto_tags.length > 0);
+    const hasThumbnails = content.thumbnails && content.thumbnails.length > 0;
+    const hasSentiment = !!(content.sentiment);
+    
+    // Calculate completion percentage
+    const features = [];
+    let completedFeatures = 0;
+    
+    // Check if it's a multimedia URL
+    const isMultimedia = content.url && (
+      content.url.includes('facebook.com') ||
+      content.url.includes('youtube.com') ||
+      content.url.includes('instagram.com') ||
+      content.url.includes('tiktok.com')
+    );
+    
+    if (isMultimedia) {
+      features.push(
+        { name: 'Download', completed: true }, // Always completed if we have the content
+        { name: 'Processing', completed: hasSummary || hasTranscription },
+        { name: 'Transcription', completed: hasTranscription },
+        { name: 'Summary', completed: hasSummary },
+        { name: 'Thumbnails', completed: hasThumbnails },
+        { name: 'Tags', completed: hasTags },
+        { name: 'Sentiment', completed: hasSentiment }
+      );
+    } else {
+      features.push(
+        { name: 'Processing', completed: hasSummary || hasTitle },
+        { name: 'Summary', completed: hasSummary },
+        { name: 'Title', completed: hasTitle },
+        { name: 'Tags', completed: hasTags }
+      );
+    }
+    
+    completedFeatures = features.filter(f => f.completed).length;
+    const progressPercentage = Math.round((completedFeatures / features.length) * 100);
+    
+    // Determine status
+    let status = 'waiting';
+    if (progressPercentage === 0) {
+      status = 'waiting';
+    } else if (progressPercentage === 100) {
+      status = 'analysed';
+    } else if (progressPercentage > 0) {
+      status = 'processing';
+    }
+    
+    // Check for errors (if content is old but has no analysis)
+    const isOld = (Date.now() - new Date(content.createdAt).getTime()) > (10 * 60 * 1000); // 10 minutes
+    if (isOld && progressPercentage === 0 && isMultimedia) {
+      status = 'incomplete';
+    }
+    
+    const response = {
+      success: true,
+      status: status,
+      progress: progressPercentage,
+      features: features,
+      analysis: {
+        hasTranscription: hasTranscription,
+        hasSummary: hasSummary,
+        hasTitle: hasTitle,
+        hasTags: hasTags,
+        hasThumbnails: hasThumbnails,
+        hasSentiment: hasSentiment,
+        transcriptionLength: content.transcription?.length || 0,
+        summaryLength: content.summary?.length || 0,
+        tagCount: content.auto_tags?.length || 0,
+        thumbnailCount: content.thumbnails?.length || 0
+      },
+      metadata: {
+        contentId: contentId,
+        createdAt: content.createdAt,
+        isMultimedia: isMultimedia,
+        url: content.url
+      }
+    };
+    
+    console.log(`📊 Status response for ${contentId}: ${status} (${progressPercentage}%)`);
+    res.json(response);
+    
+  } catch (error) {
+    console.error('❌ Error checking content status:', error);
+    res.status(500).json({ 
+      error: 'Failed to check status',
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 

@@ -35,7 +35,7 @@ function initializeStatusButtons() {
 }
 
 function updateStatusButton(contentId, itemType) {
-  const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
+  const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/api/${contentId}/status`;
   
   // Use HTTP for localhost to avoid SSL errors
   const url = window.location.hostname === 'localhost' ? 
@@ -48,8 +48,22 @@ function updateStatusButton(contentId, itemType) {
     timeout: 10000,
     success: function(response) {
       if (response.success) {
-        setStatusButtonState(contentId, response.status, response.job?.progress || 0);
-        console.log(`✅ Status updated for ${contentId.substring(0,8)}: ${response.status}`);
+        const status = response.status;
+        const progress = response.progress || 0;
+        
+        // Store analysis data for modal display
+        const $button = $(`#status-btn-${contentId}`);
+        $button.data('analysis-response', response);
+        
+        setStatusButtonState(contentId, status, progress);
+        console.log(`✅ Status updated for ${contentId.substring(0,8)}: ${status} (${progress}%)`);
+        
+        // If still processing or waiting, check again in a few seconds
+        if (status === 'processing' || status === 'waiting') {
+          setTimeout(() => {
+            updateStatusButton(contentId, itemType);
+          }, 4000); // Check again in 4 seconds
+        }
       } else {
         setStatusButtonState(contentId, 'waiting', 0);
         console.log(`⚠️ No analysis data for ${contentId.substring(0,8)}, setting to waiting`);
@@ -57,7 +71,12 @@ function updateStatusButton(contentId, itemType) {
     },
     error: function(xhr, status, error) {
       console.log(`❌ Failed to check status for ${contentId.substring(0,8)}: ${error}`);
-      setStatusButtonState(contentId, 'waiting', 0);
+      // For 404 errors (content not found), assume it's analysed
+      if (xhr.status === 404) {
+        setStatusButtonState(contentId, 'analysed', 100);
+      } else {
+        setStatusButtonState(contentId, 'waiting', 0);
+      }
     }
   });
 }
@@ -91,6 +110,7 @@ function setStatusButtonState(contentId, status, progress = 0) {
       break;
       
     case 'completed':
+    case 'analysed':
       button.addClass('analysed');
       statusText.text('Analysed');
       progressFill.css('width', '100%');
@@ -113,13 +133,6 @@ function setStatusButtonState(contentId, status, progress = 0) {
 }
 
 function showAnalysisProgress(contentId, itemType) {
-  const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
-  
-  // Use HTTP for localhost to avoid SSL errors
-  const url = window.location.hostname === 'localhost' ? 
-    `http://localhost:${window.location.port || 3000}${endpoint}` : 
-    endpoint;
-  
   // Show loading state
   $('#progressModalContent').html(`
     <div class="text-center py-4">
@@ -130,12 +143,29 @@ function showAnalysisProgress(contentId, itemType) {
     </div>
   `);
   
+  // Try to get cached data from button first
+  const $button = $(`#status-btn-${contentId}`);
+  const cachedResponse = $button.data('analysis-response');
+  
+  if (cachedResponse) {
+    displayAnalysisSteps(cachedResponse, itemType);
+    return;
+  }
+  
+  // Otherwise fetch fresh data
+  const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/api/${contentId}/status`;
+  
+  // Use HTTP for localhost to avoid SSL errors
+  const url = window.location.hostname === 'localhost' ? 
+    `http://localhost:${window.location.port || 3000}${endpoint}` : 
+    endpoint;
+  
   $.ajax({
     url: url,
     type: 'GET',
     success: function(response) {
       if (response.success) {
-        displayAnalysisSteps(response);
+        displayAnalysisSteps(response, itemType);
       } else {
         displayError('No analysis data available');
       }
@@ -146,16 +176,29 @@ function showAnalysisProgress(contentId, itemType) {
   });
 }
 
-function displayAnalysisSteps(data) {
-  const steps = [
-    { name: 'Content Download', completed: !!data.analysis, icon: 'bi-download' },
-    { name: 'Media Processing', completed: !!data.analysis?.duration, icon: 'bi-gear' },
-    { name: 'AI Transcription', completed: !!data.analysis?.transcription, icon: 'bi-mic' },
-    { name: 'AI Summary', completed: !!data.analysis?.description || !!data.analysis?.summary, icon: 'bi-text-paragraph' },
-    { name: 'Thumbnail Generation', completed: !!data.thumbnails?.length, icon: 'bi-images' },
-    { name: 'Tag Generation', completed: !!data.auto_tags?.length, icon: 'bi-tags' },
-    { name: 'Sentiment Analysis', completed: !!data.analysis?.sentiment, icon: 'bi-emoji-smile' }
-  ];
+function displayAnalysisSteps(data, itemType) {
+  let steps = [];
+  
+  // Check if this is the new status API format or the old analysis format
+  if (data.features && Array.isArray(data.features)) {
+    // New status API format
+    steps = data.features.map(feature => ({
+      name: feature.name,
+      completed: feature.completed,
+      icon: getFeatureIcon(feature.name)
+    }));
+  } else {
+    // Old analysis format (for files)
+    steps = [
+      { name: 'Content Download', completed: !!data.analysis, icon: 'bi-download' },
+      { name: 'Media Processing', completed: !!data.analysis?.duration, icon: 'bi-gear' },
+      { name: 'AI Transcription', completed: !!data.analysis?.transcription, icon: 'bi-mic' },
+      { name: 'AI Summary', completed: !!data.analysis?.description || !!data.analysis?.summary, icon: 'bi-text-paragraph' },
+      { name: 'Thumbnail Generation', completed: !!data.thumbnails?.length, icon: 'bi-images' },
+      { name: 'Tag Generation', completed: !!data.auto_tags?.length, icon: 'bi-tags' },
+      { name: 'Sentiment Analysis', completed: !!data.analysis?.sentiment, icon: 'bi-emoji-smile' }
+    ];
+  }
 
   let html = `
     <div class="row">
@@ -182,16 +225,60 @@ function displayAnalysisSteps(data) {
         <h6 class="fw-bold mb-3">Analysis Results</h6>
         <div class="small">
           <p><strong>Status:</strong> <span class="badge bg-${getStatusBadgeClass(data.status)}">${data.status}</span></p>
-          ${data.analysis?.title ? `<p><strong>Title:</strong> ${data.analysis.title}</p>` : ''}
-          ${data.mediaType ? `<p><strong>Media Type:</strong> ${data.mediaType}</p>` : ''}
-          ${data.thumbnails?.length ? `<p><strong>Thumbnails:</strong> ${data.thumbnails.length} generated</p>` : ''}
-          ${data.analysis?.processing_time ? `<p><strong>Processing Time:</strong> ${formatProcessingTime(data.analysis.processing_time)}</p>` : ''}
+          <p><strong>Progress:</strong> ${data.progress || 0}%</p>
+  `;
+
+  // Add details based on data format
+  if (data.analysis) {
+    if (data.analysis.transcriptionLength > 0) {
+      html += `<p><strong>Transcription:</strong> ${data.analysis.transcriptionLength} characters</p>`;
+    }
+    if (data.analysis.summaryLength > 0) {
+      html += `<p><strong>Summary:</strong> ${data.analysis.summaryLength} characters</p>`;
+    }
+    if (data.analysis.tagCount > 0) {
+      html += `<p><strong>Tags:</strong> ${data.analysis.tagCount} generated</p>`;
+    }
+    if (data.analysis.thumbnailCount > 0) {
+      html += `<p><strong>Thumbnails:</strong> ${data.analysis.thumbnailCount} generated</p>`;
+    }
+  } else {
+    // Old format
+    if (data.analysis?.title) {
+      html += `<p><strong>Title:</strong> ${data.analysis.title}</p>`;
+    }
+    if (data.mediaType) {
+      html += `<p><strong>Media Type:</strong> ${data.mediaType}</p>`;
+    }
+    if (data.thumbnails?.length) {
+      html += `<p><strong>Thumbnails:</strong> ${data.thumbnails.length} generated</p>`;
+    }
+    if (data.analysis?.processing_time) {
+      html += `<p><strong>Processing Time:</strong> ${formatProcessingTime(data.analysis.processing_time)}</p>`;
+    }
+  }
+
+  html += `
         </div>
       </div>
     </div>
   `;
 
   $('#progressModalContent').html(html);
+}
+
+function getFeatureIcon(featureName) {
+  const iconMap = {
+    'Download': 'bi-download',
+    'Processing': 'bi-gear',
+    'Transcription': 'bi-mic',
+    'Summary': 'bi-text-paragraph',
+    'Thumbnails': 'bi-images',
+    'Tags': 'bi-tags',
+    'Sentiment': 'bi-emoji-smile',
+    'Title': 'bi-file-text'
+  };
+  return iconMap[featureName] || 'bi-check-circle';
 }
 
 function displayError(message) {

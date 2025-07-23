@@ -2164,4 +2164,36 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
   }
 });
 
+// Simple thumbnail serving route
+router.get('/serve/thumbnails/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const path = require('path');
+    const fs = require('fs');
+    
+    // Look for thumbnail in uploads/thumbnails directory
+    const thumbnailPath = path.join(__dirname, '..', 'uploads', 'thumbnails', filename);
+    
+    if (!fs.existsSync(thumbnailPath)) {
+      return res.status(404).json({ error: 'Thumbnail not found' });
+    }
+    
+    // Get file stats
+    const stat = fs.statSync(thumbnailPath);
+    
+    // Set appropriate headers
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Content-Length', stat.size);
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    
+    // Stream the file
+    const readStream = fs.createReadStream(thumbnailPath);
+    readStream.pipe(res);
+    
+  } catch (error) {
+    console.error('Error serving thumbnail:', error);
+    res.status(500).json({ error: 'Failed to serve thumbnail' });
+  }
+});
+
 module.exports = router; 

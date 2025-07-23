@@ -168,6 +168,12 @@ checkDatabaseConnection().then(async (connected) => {
     maxAge: '1d', // Cache static files for 1 day
     etag: true
   }));
+  
+  // Serve uploads directory for thumbnails and other user content
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+    maxAge: '1h', // Cache uploads for 1 hour
+    etag: true
+  }));
 
   // Log application startup
   logAuthEvent('APPLICATION_STARTUP', {
