@@ -7,7 +7,7 @@ class ModernContactMapsAutocomplete {
     this.autocompleteInstances = new Map();
     this.fallbackEnabled = true;
     this.apiAvailable = false;
-    this.apiAuthorized = true; // Track API authorization status
+    this.apiAuthorized = false; // Default to false until proven otherwise
     this.init();
   }
 
@@ -50,18 +50,63 @@ class ModernContactMapsAutocomplete {
       testInput.style.display = 'none';
       testInput.style.position = 'absolute';
       testInput.style.left = '-9999px';
+      testInput.style.top = '-9999px';
+      testInput.style.width = '1px';
+      testInput.style.height = '1px';
       document.body.appendChild(testInput);
       
-      // Try to create an autocomplete instance
-      const testAutocomplete = new google.maps.places.Autocomplete(testInput, {
-        types: ['address']
+      // Return a promise that resolves based on API success/failure
+      return new Promise((resolve, reject) => {
+        try {
+          // Try to create an autocomplete instance
+          const testAutocomplete = new google.maps.places.Autocomplete(testInput, {
+            types: ['address']
+          });
+          
+          // Set up error detection
+          let errorDetected = false;
+          const errorTimeout = setTimeout(() => {
+            // If no error after 2 seconds, assume it's working
+            if (!errorDetected) {
+              console.log('ModernContactMapsAutocomplete: API authorization test passed');
+              document.body.removeChild(testInput);
+              resolve(true);
+            }
+          }, 2000);
+          
+          // Listen for errors
+          const originalConsoleError = console.error;
+          console.error = function(...args) {
+            const message = args[0];
+            if (typeof message === 'string' && 
+                (message.includes('ApiTargetBlockedMapError') || 
+                 message.includes('API key is not authorized') ||
+                 message.includes('InvalidKeyMapError'))) {
+              if (!errorDetected) {
+                errorDetected = true;
+                clearTimeout(errorTimeout);
+                console.error = originalConsoleError;
+                console.warn('ModernContactMapsAutocomplete: API authorization test failed - API key not authorized');
+                document.body.removeChild(testInput);
+                resolve(false);
+              }
+            }
+            originalConsoleError.apply(console, args);
+          };
+          
+          // Trigger a test request by setting a value
+          testInput.focus();
+          testInput.value = 'test';
+          const event = new Event('input', { bubbles: true });
+          testInput.dispatchEvent(event);
+          
+        } catch (error) {
+          console.warn('ModernContactMapsAutocomplete: Exception during API test:', error);
+          document.body.removeChild(testInput);
+          reject(error);
+        }
       });
       
-      // Clean up the test input
-      document.body.removeChild(testInput);
-      
-      console.log('ModernContactMapsAutocomplete: API authorization test passed');
-      return true;
     } catch (error) {
       console.warn('ModernContactMapsAutocomplete: API authorization test failed:', error);
       return false;
@@ -113,7 +158,7 @@ class ModernContactMapsAutocomplete {
       if (this.apiAvailable && this.apiAuthorized) {
         this.setupModernPlacesAutocomplete(input);
       } else {
-        console.log('ModernContactMapsAutocomplete: Using fallback for input', index);
+        console.log('ModernContactMapsAutocomplete: Using fallback for input', index, '(API available:', this.apiAvailable, ', authorized:', this.apiAuthorized, ')');
         this.setupFallbackForInput(input);
       }
     });
@@ -128,63 +173,6 @@ class ModernContactMapsAutocomplete {
     } catch (error) {
       console.warn('ModernContactMapsAutocomplete: Error setting up Google Places, using fallback:', error);
       this.setupFallbackForInput(input);
-    }
-  }
-
-  setupPlaceAutocompleteElement(input) {
-    try {
-      console.log('ModernContactMapsAutocomplete: Setting up PlaceAutocompleteElement');
-      
-      // Simplified configuration without unsupported properties
-      const autocompleteElement = new google.maps.places.PlaceAutocompleteElement({
-        componentRestrictions: { country: [] }, // Allow all countries
-        types: ['address']
-        // Removed 'fields' property as it's not supported by PlaceAutocompleteElement
-      });
-
-      // Handle place selection
-      autocompleteElement.addEventListener('place_changed', () => {
-        try {
-          const place = autocompleteElement.place;
-          if (place && place.location) {
-            // Update the input with the formatted address
-            input.value = place.formattedAddress || place.displayName || '';
-            
-            // Store additional place data
-            input._placeId = place.id;
-            if (place.location) {
-              input._latitude = place.location.lat();
-              input._longitude = place.location.lng();
-            }
-            
-            console.log('ModernContactMapsAutocomplete: Place selected:', input.value);
-            
-            // Trigger change events
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-        } catch (error) {
-          console.warn('ModernContactMapsAutocomplete: Error processing place selection:', error);
-        }
-      });
-
-      // Replace the input with the autocomplete element
-      input.parentNode.insertBefore(autocompleteElement, input);
-      input.style.display = 'none';
-      
-      // Set initial value if exists
-      if (input.value) {
-        autocompleteElement.value = input.value;
-      }
-
-      // Store the instance
-      this.autocompleteInstances.set(input, autocompleteElement);
-      
-      console.log('ModernContactMapsAutocomplete: PlaceAutocompleteElement initialized successfully');
-      
-    } catch (error) {
-      console.warn('ModernContactMapsAutocomplete: Error with PlaceAutocompleteElement, trying traditional:', error);
-      this.setupTraditionalAutocomplete(input);
     }
   }
 
@@ -347,6 +335,7 @@ class ModernContactMapsAutocomplete {
 
     // Comprehensive address suggestions for better fallback
     const commonAddresses = [
+      '20 Brigantine Drive, Auckland, New Zealand',
       '123 Main Street, New York, NY 10001, USA',
       '456 Oak Avenue, Los Angeles, CA 90210, USA',
       '789 Pine Road, Chicago, IL 60601, USA',
