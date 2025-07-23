@@ -103,7 +103,9 @@ const securityHeaders = () => {
 
   return helmet({
     contentSecurityPolicy: {
-      directives: cspDirectives
+      directives: cspDirectives,
+      // CRITICAL: Disable upgrade-insecure-requests for localhost development
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production'
     },
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" },
