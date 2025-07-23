@@ -25,6 +25,42 @@ function setupEventListeners() {
         createApiKey();
     });
     
+    // Button event listeners
+    document.getElementById('createApiKeyBtn').addEventListener('click', function() {
+        createApiKey();
+    });
+    
+    document.getElementById('copyApiKeyBtn').addEventListener('click', function() {
+        copyApiKey();
+    });
+    
+    // Event delegation for API key action buttons
+    document.addEventListener('click', function(e) {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+        
+        const action = target.getAttribute('data-action');
+        const keyId = target.getAttribute('data-key-id');
+        
+        switch(action) {
+            case 'details':
+                showKeyDetails(keyId);
+                break;
+            case 'usage':
+                showUsageStats(keyId);
+                break;
+            case 'edit':
+                editApiKey(keyId);
+                break;
+            case 'toggle':
+                toggleApiKey(keyId);
+                break;
+            case 'delete':
+                deleteApiKey(keyId);
+                break;
+        }
+    });
+    
     // Modal events
     document.getElementById('createKeyModal').addEventListener('hidden.bs.modal', function() {
         resetCreateForm();
@@ -96,6 +132,24 @@ function renderApiKeys() {
 }
 
 /**
+ * Create a better visual representation of API key for display
+ * Shows more characters while maintaining security
+ */
+function formatApiKeyDisplay(keyPrefix, keyId) {
+    // Extract base from prefix (should be 'daysave_')
+    const base = keyPrefix || 'daysave_';
+    
+    // Generate consistent fake characters based on key ID for better UX
+    // This creates a deterministic but fake representation
+    const hash = keyId.replace(/-/g, '');
+    const startChars = hash.substring(0, 6); // First 6 chars from ID
+    const endChars = hash.substring(hash.length - 4); // Last 4 chars from ID
+    
+    // Create a realistic looking key display
+    return `${base}${startChars}••••••••••••${endChars}`;
+}
+
+/**
  * Render individual API key card
  */
 function renderApiKeyCard(key) {
@@ -107,12 +161,15 @@ function renderApiKeyCard(key) {
     const lastUsed = key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never';
     const expiresAt = key.expires_at ? new Date(key.expires_at).toLocaleDateString() : 'Never';
     
+    // Use improved key display
+    const keyDisplay = formatApiKeyDisplay(key.key_prefix, key.id);
+    
     return `
         <div class="api-key-card">
             <div class="api-key-header">
                 <div>
                     <h5 class="mb-1">${escapeHtml(key.key_name)}</h5>
-                    <div class="api-key-prefix">${escapeHtml(key.key_prefix)}••••••••</div>
+                    <div class="api-key-prefix">${escapeHtml(keyDisplay)}</div>
                 </div>
                 <div class="key-status ${status}">
                     <i class="${statusIcon}"></i>
@@ -140,20 +197,20 @@ function renderApiKeyCard(key) {
             </div>
             
             <div class="key-actions mt-3">
-                <button class="btn btn-sm btn-outline-primary" onclick="showKeyDetails('${key.id}')">
+                <button class="btn btn-sm btn-outline-primary" data-action="details" data-key-id="${key.id}">
                     <i class="fas fa-info-circle me-1"></i>Details
                 </button>
-                <button class="btn btn-sm btn-outline-success" onclick="showUsageStats('${key.id}')">
+                <button class="btn btn-sm btn-outline-success" data-action="usage" data-key-id="${key.id}">
                     <i class="fas fa-chart-bar me-1"></i>Usage Stats
                 </button>
-                <button class="btn btn-sm btn-outline-warning" onclick="editApiKey('${key.id}')">
+                <button class="btn btn-sm btn-outline-warning" data-action="edit" data-key-id="${key.id}">
                     <i class="fas fa-edit me-1"></i>Edit
                 </button>
-                <button class="btn btn-sm ${key.enabled ? 'btn-outline-secondary' : 'btn-outline-success'}" onclick="toggleApiKey('${key.id}')">
+                <button class="btn btn-sm ${key.enabled ? 'btn-outline-secondary' : 'btn-outline-success'}" data-action="toggle" data-key-id="${key.id}">
                     <i class="fas fa-${key.enabled ? 'pause' : 'play'} me-1"></i>
                     ${key.enabled ? 'Disable' : 'Enable'}
                 </button>
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteApiKey('${key.id}')">
+                <button class="btn btn-sm btn-outline-danger" data-action="delete" data-key-id="${key.id}">
                     <i class="fas fa-trash me-1"></i>Delete
                 </button>
             </div>
@@ -195,15 +252,22 @@ async function createApiKey() {
     // Build request data
     const requestData = {
         name: formData.get('name'),
-        description: formData.get('description') || null,
-        expiresAt: formData.get('expiresAt') || null,
-        rateLimitPerMinute: parseInt(formData.get('rateLimitPerMinute')),
-        rateLimitPerHour: parseInt(formData.get('rateLimitPerHour')),
-        rateLimitPerDay: parseInt(formData.get('rateLimitPerDay')),
-        allowedOrigins: formData.get('allowedOrigins') ? formData.get('allowedOrigins').split(',').map(s => s.trim()) : null,
-        allowedIps: formData.get('allowedIps') ? formData.get('allowedIps').split(',').map(s => s.trim()) : null,
+        description: formData.get('description') || undefined,
+        expiresAt: formData.get('expiresAt') || undefined,
+        rateLimitPerMinute: formData.get('rateLimitPerMinute') ? parseInt(formData.get('rateLimitPerMinute')) : undefined,
+        rateLimitPerHour: formData.get('rateLimitPerHour') ? parseInt(formData.get('rateLimitPerHour')) : undefined,
+        rateLimitPerDay: formData.get('rateLimitPerDay') ? parseInt(formData.get('rateLimitPerDay')) : undefined,
+        allowedOrigins: formData.get('allowedOrigins') ? formData.get('allowedOrigins').split(',').map(s => s.trim()).filter(s => s.length > 0) : undefined,
+        allowedIps: formData.get('allowedIps') ? formData.get('allowedIps').split(',').map(s => s.trim()).filter(s => s.length > 0) : undefined,
         permissions: permissions
     };
+    
+    // Remove undefined values to avoid sending null/undefined
+    Object.keys(requestData).forEach(key => {
+        if (requestData[key] === undefined || requestData[key] === null || requestData[key] === '') {
+            delete requestData[key];
+        }
+    });
     
     try {
         const response = await fetch('/api/keys', {
@@ -217,7 +281,13 @@ async function createApiKey() {
         const result = await response.json();
         
         if (!response.ok) {
-            throw new Error(result.message || 'Failed to create API key');
+            // Log detailed validation errors for debugging
+            if (result.details) {
+                console.error('Validation errors:', result.details);
+                const errorMessages = result.details.map(err => `${err.param}: ${err.msg}`).join(', ');
+                throw new Error(`Validation failed: ${errorMessages}`);
+            }
+            throw new Error(result.message || result.error || 'Failed to create API key');
         }
         
         // Hide create modal
