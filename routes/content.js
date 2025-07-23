@@ -1700,10 +1700,14 @@ router.get('/api/:id/status', isAuthenticated, async (req, res) => {
       status = 'processing';
     }
     
-    // Check for errors (if content is old but has no analysis)
-    const isOld = (Date.now() - new Date(content.createdAt).getTime()) > (10 * 60 * 1000); // 10 minutes
-    if (isOld && progressPercentage === 0 && isMultimedia) {
-      status = 'incomplete';
+    // Check for errors (if content is old but incomplete analysis)
+    const isOld = (Date.now() - new Date(content.createdAt).getTime()) > (15 * 60 * 1000); // 15 minutes
+    if (isOld && isMultimedia) {
+      if (progressPercentage === 0) {
+        status = 'incomplete'; // No analysis started
+      } else if (progressPercentage > 0 && progressPercentage < 100 && !hasTranscription && !hasSummary) {
+        status = 'incomplete'; // Analysis started but core features failed
+      }
     }
     
     const response = {
@@ -1727,7 +1731,8 @@ router.get('/api/:id/status', isAuthenticated, async (req, res) => {
         contentId: contentId,
         createdAt: content.createdAt,
         isMultimedia: isMultimedia,
-        url: content.url
+        url: content.url,
+        canRetry: isOld && (status === 'incomplete' || (progressPercentage > 0 && progressPercentage < 100))
       }
     };
     
@@ -1738,6 +1743,91 @@ router.get('/api/:id/status', isAuthenticated, async (req, res) => {
     console.error('❌ Error checking content status:', error);
     res.status(500).json({ 
       error: 'Failed to check status',
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
+// Retry Content Analysis API Endpoint
+router.post('/api/:id/retry', isAuthenticated, async (req, res) => {
+  try {
+    const contentId = req.params.id;
+    const userId = req.user.id;
+    
+    console.log(`🔄 Retry analysis request for content: ${contentId} by user: ${userId}`);
+    
+    // Find the content item
+    const content = await Content.findOne({
+      where: { id: contentId, user_id: userId }
+    });
+    
+    if (!content) {
+      return res.status(404).json({ error: 'Content not found' });
+    }
+    
+    // Check if it's a multimedia URL that can be reanalyzed
+    const isMultimedia = content.url && (
+      content.url.includes('facebook.com') ||
+      content.url.includes('youtube.com') ||
+      content.url.includes('instagram.com') ||
+      content.url.includes('tiktok.com')
+    );
+    
+    if (!isMultimedia) {
+      return res.status(400).json({ error: 'Only multimedia content can be reanalyzed' });
+    }
+    
+    // Trigger reanalysis
+    try {
+      console.log(`🚀 Triggering reanalysis for ${content.url}`);
+      
+      // Import the analysis function
+      const { triggerMultimediaAnalysis } = require('./content');
+      
+      // Reset analysis fields to indicate reprocessing
+      await content.update({
+        transcription: null,
+        summary: null,
+        sentiment: null,
+        metadata: {
+          ...content.metadata,
+          retryAt: new Date().toISOString(),
+          retryReason: 'Manual retry - stuck analysis'
+        }
+      });
+      
+      // Trigger analysis in background
+      setImmediate(async () => {
+        try {
+          await triggerMultimediaAnalysis(content.url, req.user.id, {
+            source: 'retry',
+            contentId: content.id
+          });
+          console.log(`✅ Reanalysis triggered for ${contentId}`);
+        } catch (retryError) {
+          console.error(`❌ Reanalysis failed for ${contentId}:`, retryError);
+        }
+      });
+      
+      res.json({
+        success: true,
+        message: 'Reanalysis triggered successfully',
+        contentId: contentId,
+        status: 'waiting'
+      });
+      
+    } catch (triggerError) {
+      console.error(`❌ Failed to trigger reanalysis for ${contentId}:`, triggerError);
+      res.status(500).json({
+        error: 'Failed to trigger reanalysis',
+        details: triggerError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Error in retry endpoint:', error);
+    res.status(500).json({ 
+      error: 'Failed to retry analysis',
       details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }

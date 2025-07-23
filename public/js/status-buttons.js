@@ -55,14 +55,36 @@ function updateStatusButton(contentId, itemType) {
         const $button = $(`#status-btn-${contentId}`);
         $button.data('analysis-response', response);
         
-        setStatusButtonState(contentId, status, progress);
-        console.log(`✅ Status updated for ${contentId.substring(0,8)}: ${status} (${progress}%)`);
+        // Store previous status to detect changes
+        const prevStatus = $button.data('prev-status');
+        const prevProgress = $button.data('prev-progress') || 0;
+        const pollCount = $button.data('poll-count') || 0;
         
-        // If still processing or waiting, check again in a few seconds
-        if (status === 'processing' || status === 'waiting') {
+        $button.data('prev-status', status);
+        $button.data('prev-progress', progress);
+        $button.data('poll-count', pollCount + 1);
+        
+        setStatusButtonState(contentId, status, progress);
+        
+        // Only log if status changed or if it's not analysed
+        if (prevStatus !== status || prevProgress !== progress || status !== 'analysed') {
+          console.log(`✅ Status updated for ${contentId.substring(0,8)}: ${status} (${progress}%)`);
+        }
+        
+        // If still processing or waiting, check again (with limits)
+        if ((status === 'processing' || status === 'waiting') && pollCount < 10) {
+          // If status hasn't changed for 3 polls, increase interval
+          const noChange = (prevStatus === status && prevProgress === progress && pollCount >= 3);
+          const interval = noChange ? 15000 : 5000; // 15s if no change, 5s if changing
+          
           setTimeout(() => {
             updateStatusButton(contentId, itemType);
-          }, 4000); // Check again in 4 seconds
+          }, interval);
+        } else if (status === 'incomplete' || status === 'analysed') {
+          // Stop polling for completed or failed items
+          console.log(`⏹️ Stopping polling for ${contentId.substring(0,8)} - status: ${status}`);
+        } else if (pollCount >= 10) {
+          console.log(`⏹️ Stopping polling for ${contentId.substring(0,8)} - reached limit`);
         }
       } else {
         setStatusButtonState(contentId, 'waiting', 0);
@@ -118,6 +140,7 @@ function setStatusButtonState(contentId, status, progress = 0) {
       
     case 'failed':
     case 'error':
+    case 'incomplete':
       button.addClass('incomplete');
       statusText.text('Incomplete');
       progressFill.css('width', '0%');
