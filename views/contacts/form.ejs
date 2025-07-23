@@ -152,6 +152,13 @@
   <script src="/js/contact-form.js"></script>
   <script src="/js/contact-autocomplete.js"></script>
   <script src="/js/contact-maps-autocomplete.js"></script>
-  <script src="<%= googleMapsScriptUrl %>&callback=initContactMaps" async defer></script>
+  <% if (googleMapsScriptUrl && googleMapsScriptUrl !== 'https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places&v=weekly') { %>
+    <script src="<%= googleMapsScriptUrl %>&callback=initContactMaps&loading=async" async defer></script>
+  <% } else { %>
+    <!-- Google Maps API key not configured - autocomplete will use fallback mode -->
+    <script>
+      console.warn('Google Maps API key not configured. Address autocomplete will use fallback suggestions.');
+    </script>
+  <% } %>
 </body>
 </html> 

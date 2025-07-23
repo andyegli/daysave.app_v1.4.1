@@ -135,8 +135,8 @@ document.addEventListener('DOMContentLoaded', function() {
       const newAddressInput = row.querySelector('input[name*="[value]"]');
       if (newAddressInput) {
         // Setup Google Maps Places autocomplete
-        if (window.contactMapsAutocomplete) {
-          window.contactMapsAutocomplete.initializeAddressFields();
+        if (window.modernContactMapsAutocomplete) {
+          window.modernContactMapsAutocomplete.initializeAddressFields();
         }
         // Also setup regular autocomplete as fallback
         if (window.contactAutocomplete) {

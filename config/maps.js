@@ -1,7 +1,7 @@
 // Google Maps API Configuration
 const getGoogleMapsConfig = () => {
   return {
-    apiKey: process.env.GOOGLE_MAPS_KEY || 'YOUR_GOOGLE_MAPS_API_KEY',
+    apiKey: process.env.GOOGLE_MAPS_KEY || process.env.GOOGLE_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY',
     libraries: ['places'],
     version: 'weekly'
   };
