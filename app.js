@@ -162,6 +162,27 @@ checkDatabaseConnection().then(async (connected) => {
   
   // Ensure role is loaded for all authenticated requests
   app.use(ensureRoleLoaded);
+  
+  // Enhanced role loading middleware for admin routes
+  app.use('/admin', async (req, res, next) => {
+    if (req.isAuthenticated() && req.user) {
+      // Force reload role if not present or if accessing admin routes
+      if (!req.user.Role || !req.user.Role.name) {
+        try {
+          const { Role } = require('./models');
+          const role = await Role.findByPk(req.user.role_id);
+          if (role) {
+            req.user.Role = role;
+            req.user.dataValues.Role = role;
+            console.log(`🔧 Admin route role loading: ${req.user.username} → ${role.name}`);
+          }
+        } catch (error) {
+          console.error('Admin route role loading failed:', error);
+        }
+      }
+    }
+    next();
+  });
 
   // Serve static files with security headers
   app.use(express.static(path.join(__dirname, 'public'), {

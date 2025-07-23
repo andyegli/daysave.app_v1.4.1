@@ -90,6 +90,19 @@
           </li>
         <% } %>
         <% if (user) { %>
+          <!-- Debug info (remove this after fixing) -->
+          <% if (process.env.NODE_ENV === 'development') { %>
+            <li class="nav-item">
+              <span class="navbar-text small text-muted">
+                Role: <%= user.Role ? user.Role.name : 'none' %>
+                <% if (user.Role && user.Role.name === 'admin') { %>
+                  ✅
+                <% } else if (user.role_id) { %>
+                  🔄<button class="btn btn-sm btn-link p-0 text-muted" onclick="window.location.reload()">↻</button>
+                <% } %>
+              </span>
+            </li>
+          <% } %>
           <li class="nav-item">
             <a class="nav-link" href="/dashboard">Dashboard</a>
           </li>

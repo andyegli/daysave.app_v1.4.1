@@ -54,12 +54,37 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
   try {
-    // logAuthEvent('USER_DESERIALIZE_START', { userId: id }); // Disabled - too verbose
-    const user = await User.findByPk(id, { include: [Role] });
+    // Force include Role relationship every time
+    const user = await User.findByPk(id, { 
+      include: [{ 
+        model: Role, 
+        required: false  // Use LEFT JOIN to avoid issues if role is missing
+      }] 
+    });
+    
     if (user) {
-      // logAuthEvent('USER_DESERIALIZE_SUCCESS', { userId: id, username: user.username }); // Disabled - too verbose
+      // Ensure role is properly attached if it exists but wasn't loaded
+      if (!user.Role && user.role_id) {
+        try {
+          const role = await Role.findByPk(user.role_id);
+          if (role) {
+            user.Role = role;
+            user.dataValues.Role = role; // Ensure it's in dataValues too
+          }
+        } catch (roleError) {
+          logAuthError('USER_ROLE_LOAD_FALLBACK', roleError, { userId: id, roleId: user.role_id });
+        }
+      }
+      
+      // Log successful deserialization with role info
+      logAuthEvent('USER_DESERIALIZE_SUCCESS', { 
+        userId: id, 
+        username: user.username,
+        hasRole: !!user.Role,
+        roleName: user.Role ? user.Role.name : 'none'
+      });
     } else {
-      logAuthEvent('USER_DESERIALIZE_NOT_FOUND', { userId: id }); // Keep this - it's important for debugging
+      logAuthEvent('USER_DESERIALIZE_NOT_FOUND', { userId: id });
     }
     done(null, user);
   } catch (error) {
