@@ -1598,9 +1598,19 @@ router.get('/serve/:userId/:filename', isAuthenticated, async (req, res) => {
         
         if (fs.existsSync(filePath)) {
           const stat = fs.statSync(filePath);
-          const mimeType = await FileUploadService.getMimeType(filePath);
           
-          res.setHeader('Content-Type', mimeType || 'application/octet-stream');
+          // Determine MIME type from file extension
+          const ext = path.extname(filePath).toLowerCase();
+          const mimeTypes = {
+            '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif',
+            '.webp': 'image/webp', '.bmp': 'image/bmp', '.svg': 'image/svg+xml',
+            '.mp4': 'video/mp4', '.avi': 'video/x-msvideo', '.mov': 'video/quicktime',
+            '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.aac': 'audio/aac',
+            '.pdf': 'application/pdf', '.txt': 'text/plain', '.json': 'application/json'
+          };
+          const mimeType = mimeTypes[ext] || 'application/octet-stream';
+          
+          res.setHeader('Content-Type', mimeType);
           res.setHeader('Content-Length', stat.size);
           res.setHeader('Cache-Control', 'private, max-age=3600');
           
@@ -1626,9 +1636,19 @@ router.get('/serve/:userId/:filename', isAuthenticated, async (req, res) => {
     // Get file stats
     const stat = fs.statSync(filePath);
     
+    // Determine MIME type from file extension
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeTypes = {
+      '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif',
+      '.webp': 'image/webp', '.bmp': 'image/bmp', '.svg': 'image/svg+xml',
+      '.mp4': 'video/mp4', '.avi': 'video/x-msvideo', '.mov': 'video/quicktime',
+      '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.aac': 'audio/aac',
+      '.pdf': 'application/pdf', '.txt': 'text/plain', '.json': 'application/json'
+    };
+    const mimeType = mimeTypes[ext] || 'application/octet-stream';
+    
     // Set appropriate headers
-    const mimeType = await FileUploadService.getMimeType(filePath);
-    res.setHeader('Content-Type', mimeType || 'application/octet-stream');
+    res.setHeader('Content-Type', mimeType);
     res.setHeader('Content-Length', stat.size);
     res.setHeader('Cache-Control', 'private, max-age=3600'); // Cache for 1 hour
     
