@@ -1,0 +1,374 @@
+name: DaySave Docker CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ===== BUILD AND TEST =====
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linting
+      run: npm run lint --if-present
+
+    - name: Run unit tests
+      run: npm test --if-present
+
+    - name: Run integration tests
+      run: npm run test:integration --if-present
+      env:
+        NODE_ENV: test
+        DB_HOST: localhost
+        DB_USER: test
+        DB_PASSWORD: test
+        DB_NAME: test_db
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.node-version }}
+        path: |
+          test-results/
+          coverage/
+
+  # ===== SECURITY SCANNING =====
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Run npm audit
+      run: npm audit --audit-level high
+
+    - name: Run Snyk security scan
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
+
+  # ===== DOCKER BUILD =====
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan]
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+
+    - name: Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          NODE_ENV=production
+          BUILD_DATE=${{ github.event.head_commit.timestamp }}
+          VCS_REF=${{ github.sha }}
+
+    - name: Run Trivy vulnerability scanner on image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ steps.meta.outputs.tags }}
+        format: 'sarif'
+        output: 'trivy-image-results.sarif'
+
+    - name: Upload Trivy image scan results
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-image-results.sarif'
+
+  # ===== STAGING DEPLOYMENT =====
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Deploy to staging
+      run: |
+        # Update image in staging deployment
+        kubectl set image deployment/daysave-staging \
+          app=${{ needs.docker-build.outputs.image-tag }} \
+          --namespace=staging
+        
+        # Wait for rollout
+        kubectl rollout status deployment/daysave-staging --namespace=staging --timeout=300s
+
+    - name: Run staging smoke tests
+      run: |
+        # Wait for deployment to be ready
+        sleep 30
+        
+        # Run basic health checks
+        curl -f https://staging.yourdomain.com/health
+        
+        # Run comprehensive staging tests
+        npm run test:staging
+      env:
+        STAGING_URL: https://staging.yourdomain.com
+
+    - name: Notify staging deployment
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: "Staging deployment completed for commit ${{ github.sha }}"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ===== PRODUCTION DEPLOYMENT =====
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.event_name == 'release'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Create database backup
+      run: |
+        # Create pre-deployment backup
+        kubectl exec deployment/daysave-db --namespace=production -- \
+          mysqldump --single-transaction --user=daysave --password=${{ secrets.DB_PASSWORD }} \
+          daysave_v141 > backup-pre-deploy-$(date +%Y%m%d-%H%M%S).sql
+        
+        # Upload backup to S3
+        aws s3 cp backup-pre-deploy-*.sql s3://${{ secrets.BACKUP_BUCKET }}/pre-deployment/
+
+    - name: Blue-Green deployment
+      run: |
+        # Determine current active deployment
+        CURRENT=$(kubectl get service daysave-prod -o jsonpath='{.spec.selector.version}' --namespace=production)
+        
+        if [ "$CURRENT" = "blue" ]; then
+          NEW_VERSION="green"
+        else
+          NEW_VERSION="blue"
+        fi
+        
+        echo "Deploying to $NEW_VERSION environment"
+        
+        # Update the inactive environment
+        kubectl set image deployment/daysave-$NEW_VERSION \
+          app=${{ needs.docker-build.outputs.image-tag }} \
+          --namespace=production
+        
+        # Wait for new deployment to be ready
+        kubectl rollout status deployment/daysave-$NEW_VERSION --namespace=production --timeout=600s
+        
+        # Run health checks on new deployment
+        kubectl exec deployment/daysave-$NEW_VERSION --namespace=production -- \
+          curl -f http://localhost:3000/health
+        
+        # Switch traffic to new deployment
+        kubectl patch service daysave-prod \
+          -p '{"spec":{"selector":{"version":"'$NEW_VERSION'"}}}' \
+          --namespace=production
+        
+        # Wait and verify traffic switch
+        sleep 30
+        curl -f https://yourdomain.com/health
+        
+        # Scale down old deployment
+        kubectl scale deployment daysave-$CURRENT --replicas=0 --namespace=production
+
+    - name: Run production smoke tests
+      run: |
+        # Comprehensive production health checks
+        npm run test:production
+        
+        # Performance tests
+        npm run test:performance
+        
+        # Security validation
+        npm run test:security
+      env:
+        PRODUCTION_URL: https://yourdomain.com
+
+    - name: Update monitoring
+      run: |
+        # Update Grafana dashboard with new version
+        curl -X POST \
+          -H "Authorization: Bearer ${{ secrets.GRAFANA_API_KEY }}" \
+          -H "Content-Type: application/json" \
+          https://grafana.yourdomain.com/api/annotations \
+          -d '{
+            "text": "Production deployment: ${{ github.event.release.tag_name }}",
+            "tags": ["deployment", "production"],
+            "time": '$(($(date +%s) * 1000))'
+          }'
+
+    - name: Notify production deployment
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: "🚀 Production deployment completed: ${{ github.event.release.tag_name }}"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ===== ROLLBACK CAPABILITY =====
+  rollback-production:
+    runs-on: ubuntu-latest
+    if: failure() && github.event_name == 'release'
+    needs: deploy-production
+    environment: production
+    
+    steps:
+    - name: Emergency rollback
+      run: |
+        echo "Production deployment failed, initiating rollback..."
+        
+        # Get previous version
+        PREVIOUS_VERSION=$(kubectl rollout history deployment/daysave-production --namespace=production | tail -2 | head -1 | awk '{print $1}')
+        
+        # Rollback to previous version
+        kubectl rollout undo deployment/daysave-production --namespace=production --to-revision=$PREVIOUS_VERSION
+        
+        # Wait for rollback to complete
+        kubectl rollout status deployment/daysave-production --namespace=production --timeout=300s
+        
+        # Verify rollback
+        curl -f https://yourdomain.com/health
+
+    - name: Restore database backup
+      if: env.RESTORE_DATABASE == 'true'
+      run: |
+        # Restore from pre-deployment backup if needed
+        aws s3 cp s3://${{ secrets.BACKUP_BUCKET }}/pre-deployment/backup-pre-deploy-*.sql ./
+        kubectl exec deployment/daysave-db --namespace=production -- \
+          mysql --user=daysave --password=${{ secrets.DB_PASSWORD }} daysave_v141 < backup-pre-deploy-*.sql
+
+    - name: Notify rollback
+      uses: 8398a7/action-slack@v3
+      with:
+        status: custom
+        custom_payload: |
+          {
+            text: "🚨 EMERGENCY ROLLBACK: Production deployment failed and has been rolled back",
+            color: "danger"
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ===== CLEANUP =====
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+    if: always()
+    
+    steps:
+    - name: Clean up old images
+      run: |
+        # Keep only last 10 images
+        IMAGES=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/${{ github.event.repository.name }}/versions" | \
+          jq -r '.[10:] | .[].id')
+        
+        for IMAGE_ID in $IMAGES; do
+          curl -X DELETE \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/${{ github.event.repository.name }}/versions/$IMAGE_ID"
+        done 
