@@ -388,7 +388,12 @@ async function deleteFileAction() {
     if (result.success) {
       // Redirect to files list with success message
       sessionStorage.setItem('deleteSuccess', 'File deleted successfully');
-      window.location.href = '/files';
+      // Fix for localhost HTTPS/HTTP protocol issues
+      if (window.location.hostname === 'localhost') {
+        window.location.href = `http://localhost:${window.location.port || 3000}/files`;
+      } else {
+        window.location.href = '/files';
+      }
     } else {
       throw new Error(result.message || 'Delete failed');
     }

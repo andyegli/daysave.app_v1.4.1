@@ -96,8 +96,8 @@ function initializeContentUploadToggle() {
         hideFilesPreview();
       }
       
-      // Update form for file upload
-      addContentForm.action = '/files/upload';
+      // Update form for file upload with correct protocol
+      addContentForm.action = getCorrectUrl('/files/upload');
       addContentForm.method = 'POST';
     }
   }

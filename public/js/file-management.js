@@ -88,7 +88,12 @@ $(document).ready(function() {
               // Close modal and refresh page
               $('#uploadModal').modal('hide');
               setTimeout(() => {
-                window.location.reload();
+                // Fix for localhost HTTPS/HTTP protocol issues
+                if (window.location.hostname === 'localhost') {
+                  window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+                } else {
+                  window.location.reload();
+                }
               }, 1000);
             } else {
               showAlert('error', 'Upload failed: ' + (response.message || 'Unknown error'));
