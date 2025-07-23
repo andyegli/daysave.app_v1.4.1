@@ -435,6 +435,11 @@ router.get('/', isAuthenticated, async (req, res) => {
           as: 'SocialAccount',
           attributes: ['platform', 'handle'],
           required: false
+        }, {
+          model: require('../models').Thumbnail,
+          as: 'thumbnails',
+          required: false,
+          attributes: ['id', 'file_path', 'file_name', 'thumbnail_type', 'width', 'height', 'timestamp_seconds']
         }],
         order: sort === 'channel' ? 
           [
@@ -450,9 +455,7 @@ router.get('/', isAuthenticated, async (req, res) => {
           model: require('../models').Thumbnail,
           as: 'thumbnails',
           required: false,
-          where: {
-            status: 'ready'
-          }
+          attributes: ['id', 'file_path', 'file_name', 'thumbnail_type', 'width', 'height', 'timestamp_seconds']
         }],
         order: sort === 'channel' ? 
           [['filename', 'ASC'], ['createdAt', 'DESC']] : orderClause,
@@ -641,13 +644,68 @@ router.get('/', isAuthenticated, async (req, res) => {
       return 'Content Title';
     }
 
+    // Function to normalize content items to include thumbnail data
+    function normalizeContentItem(item) {
+      const sourceInfo = getContentSourceInfo(item.url, item.SocialAccount);
+      
+      // Get thumbnail from database or URL
+      let thumbnailUrl = null;
+      let thumbnails = [];
+      
+      // Check if item has thumbnails from database
+      if (item.thumbnails && item.thumbnails.length > 0) {
+        thumbnails = item.thumbnails.map(thumb => ({
+          id: thumb.id,
+          file_path: thumb.file_path,
+          file_name: thumb.file_name,
+          thumbnail_type: thumb.thumbnail_type,
+          width: thumb.width,
+          height: thumb.height,
+          timestamp_seconds: thumb.timestamp_seconds
+        }));
+        
+        // Find main thumbnail or use first available
+        const mainThumbnail = thumbnails.find(t => t.thumbnail_type === 'main');
+        const usableThumbnail = mainThumbnail || thumbnails[0];
+        
+        if (usableThumbnail) {
+          thumbnailUrl = usableThumbnail.file_path.startsWith('http') ? 
+            usableThumbnail.file_path : 
+            '/' + usableThumbnail.file_path;
+        }
+      }
+      
+      // Fallback to URL if it's an image
+      if (!thumbnailUrl && item.url && item.url.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        thumbnailUrl = item.url;
+      }
+
+      return {
+        id: item.id,
+        itemType: 'content',
+        url: item.url,
+        title: getContentTitle(item),
+        displayTitle: getContentTitle(item),
+        user_comments: item.user_comments || '',
+        summary: item.summary || '',
+        transcription: item.transcription || '',
+        auto_tags: item.auto_tags || [],
+        user_tags: item.user_tags || [],
+        sentiment: item.sentiment,
+        createdAt: item.createdAt,
+        metadata: {
+          ...item.metadata,
+          thumbnail: thumbnailUrl,
+          thumbnails: thumbnails, // Include all thumbnails data
+          contentId: item.id,
+          isFile: false
+        },
+        sourceInfo
+      };
+    }
+
     // Add source info and title to each content item
-    const processedContentItems = contentItems.map(item => {
-      item.sourceInfo = getContentSourceInfo(item.url, item.SocialAccount);
-      item.displayTitle = getContentTitle(item);
-      item.itemType = 'content';
-      return item;
-    });
+    const processedContentItems = contentItems.map(item => normalizeContentItem(item));
 
     // Function to normalize file items to content format
     function normalizeFileItem(file) {
