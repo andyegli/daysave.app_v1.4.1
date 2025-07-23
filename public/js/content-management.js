@@ -9,26 +9,56 @@ function getCorrectUrl(path) {
   return path;
 }
 
-// COMPREHENSIVE REQUEST INTERCEPTION FOR LOCALHOST
+// EMERGENCY CACHE BUSTER - Force fresh JavaScript execution
+console.log('🚨 CACHE BUSTER: Content Management JS loaded at', new Date().toISOString());
 if (window.location.hostname === 'localhost') {
-  // Override XMLHttpRequest.open to prevent HTTPS requests
-  const originalXHROpen = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
-    if (typeof url === 'string' && url.includes('https://localhost')) {
-      url = url.replace('https://localhost', 'http://localhost');
-      console.log('🔧 XHR Intercepted - converted HTTPS to HTTP:', url);
+  console.log('🛡️ Localhost mode - All requests will be forced to HTTP');
+}
+
+// SAFE REQUEST INTERCEPTION FOR LOCALHOST - No Override Conflicts
+if (window.location.hostname === 'localhost') {
+  console.log('🛡️ Localhost detected - applying safe protocol enforcement');
+  
+  // Global error handler for unhandled HTTPS requests
+  window.addEventListener('error', function(event) {
+    if (event.message && event.message.includes('ERR_SSL_PROTOCOL_ERROR')) {
+      console.error('🚨 SSL Protocol Error detected - redirecting to HTTP');
+      const httpUrl = window.location.href.replace('https:', 'http:');
+      window.location.replace(httpUrl);
+      event.preventDefault();
+      return false;
     }
-    return originalXHROpen.call(this, method, url, async, user, password);
+  });
+  
+  // Store original methods safely
+  const _originalXHROpen = XMLHttpRequest.prototype.open;
+  const _originalFetch = window.fetch;
+  
+  // Safe XHR override with recursion protection
+  XMLHttpRequest.prototype.open = function(method, url, async = true, user, password) {
+    // Convert HTTPS to HTTP for localhost
+    if (typeof url === 'string' && url.includes('https://localhost')) {
+      const newUrl = url.replace('https://localhost', 'http://localhost');
+      console.log('🔧 XHR Protocol Fix:', url, '→', newUrl);
+      url = newUrl;
+    }
+    
+    // Handle timeout conflict for sync requests
+    if (async === false && this.timeout) {
+      this.timeout = 0; // Clear timeout for sync requests
+    }
+    
+    return _originalXHROpen.call(this, method, url, async, user, password);
   };
   
-  // Override fetch to prevent HTTPS requests
-  const originalFetch = window.fetch;
-  window.fetch = function(url, options) {
+  // Safe fetch override
+  window.fetch = function(url, options = {}) {
     if (typeof url === 'string' && url.includes('https://localhost')) {
-      url = url.replace('https://localhost', 'http://localhost');
-      console.log('🔧 Fetch Intercepted - converted HTTPS to HTTP:', url);
+      const newUrl = url.replace('https://localhost', 'http://localhost');
+      console.log('🔧 Fetch Protocol Fix:', url, '→', newUrl);
+      url = newUrl;
     }
-    return originalFetch.call(this, url, options);
+    return _originalFetch.call(this, url, options);
   };
 }
 
@@ -341,7 +371,25 @@ async function handleFileUpload(form) {
     
   } catch (error) {
     console.error('File upload error:', error);
-    showAlert(`Upload failed: ${error.message}`, 'danger');
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    
+    let errorMessage = error.message;
+    if (error.message.includes('Failed to load')) {
+      errorMessage = 'Server connection failed. Please ensure the server is running on http://localhost:3000';
+    } else if (error.message.includes('ERR_SSL_PROTOCOL_ERROR')) {
+      errorMessage = 'SSL Protocol error. Attempting to fix...';
+      // Force redirect to HTTP
+      setTimeout(() => {
+        const httpUrl = window.location.href.replace('https:', 'http:');
+        window.location.replace(httpUrl);
+      }, 1000);
+    }
+    
+    showAlert(`Upload failed: ${errorMessage}`, 'danger');
   } finally {
     // Reset UI
     submitBtn.disabled = false;

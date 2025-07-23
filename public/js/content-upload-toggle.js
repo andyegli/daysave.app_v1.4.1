@@ -11,26 +11,39 @@ function getCorrectUrl(path) {
   return path;
 }
 
-// COMPREHENSIVE REQUEST INTERCEPTION FOR LOCALHOST
+// SAFE REQUEST INTERCEPTION FOR LOCALHOST - No Override Conflicts
 if (window.location.hostname === 'localhost') {
-  // Override XMLHttpRequest.open to prevent HTTPS requests
-  const originalXHROpen = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+  console.log('🛡️ Localhost detected - applying safe protocol enforcement');
+  
+  // Store original methods safely
+  const _originalXHROpen = XMLHttpRequest.prototype.open;
+  const _originalFetch = window.fetch;
+  
+  // Safe XHR override with recursion protection
+  XMLHttpRequest.prototype.open = function(method, url, async = true, user, password) {
+    // Convert HTTPS to HTTP for localhost
     if (typeof url === 'string' && url.includes('https://localhost')) {
-      url = url.replace('https://localhost', 'http://localhost');
-      console.log('🔧 XHR Intercepted - converted HTTPS to HTTP:', url);
+      const newUrl = url.replace('https://localhost', 'http://localhost');
+      console.log('🔧 XHR Protocol Fix:', url, '→', newUrl);
+      url = newUrl;
     }
-    return originalXHROpen.call(this, method, url, async, user, password);
+    
+    // Handle timeout conflict for sync requests
+    if (async === false && this.timeout) {
+      this.timeout = 0; // Clear timeout for sync requests
+    }
+    
+    return _originalXHROpen.call(this, method, url, async, user, password);
   };
   
-  // Override fetch to prevent HTTPS requests
-  const originalFetch = window.fetch;
-  window.fetch = function(url, options) {
+  // Safe fetch override
+  window.fetch = function(url, options = {}) {
     if (typeof url === 'string' && url.includes('https://localhost')) {
-      url = url.replace('https://localhost', 'http://localhost');
-      console.log('🔧 Fetch Intercepted - converted HTTPS to HTTP:', url);
+      const newUrl = url.replace('https://localhost', 'http://localhost');
+      console.log('🔧 Fetch Protocol Fix:', url, '→', newUrl);
+      url = newUrl;
     }
-    return originalFetch.call(this, url, options);
+    return _originalFetch.call(this, url, options);
   };
 }
 
@@ -330,14 +343,10 @@ async function handleFileUploadSubmission() {
   console.log('🔧 DEBUG: Protocol:', window.location.protocol);
   console.log('🔧 DEBUG: Host:', window.location.host);
   
-  // Additional debugging for SSL issues
-  try {
-    // Test connection to the upload endpoint
-    console.log('🔧 DEBUG: Testing connection to upload endpoint...');
-    testUploadEndpoint();
-  } catch (testError) {
-    console.warn('🔧 DEBUG: Connection test failed:', testError);
-  }
+  // Skip debug endpoint test to avoid conflicts
+  console.log('🔧 DEBUG: Current URL:', window.location.href);
+  console.log('🔧 DEBUG: Protocol:', window.location.protocol);
+  console.log('🔧 DEBUG: Host:', window.location.host);
   
   // Prepare form data
   const formData = new FormData();
@@ -1228,7 +1237,7 @@ function setupTextareaEnhancements(textarea, contentType) {
   });
 }
 
-// Test upload endpoint connectivity
+// Test upload endpoint connectivity - ASYNC SAFE
 function testUploadEndpoint() {
   const xhr = new XMLHttpRequest();
   
@@ -1246,6 +1255,6 @@ function testUploadEndpoint() {
   };
   
   xhr.timeout = 5000; // 5 second timeout for test
-        xhr.open('GET', getCorrectUrl('/files/api/settings')); // Test a simpler endpoint first
+  xhr.open('GET', getCorrectUrl('/files/api/settings'), true); // Explicitly async (true)
   xhr.send();
 } 
