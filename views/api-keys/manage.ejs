@@ -303,7 +303,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="createApiKey()">
+                    <button type="button" class="btn btn-primary" id="createApiKeyBtn">
                         <i class="fas fa-plus me-2"></i>Create API Key
                     </button>
                 </div>
@@ -342,7 +342,7 @@
                     <div class="new-key-display">
                         <label class="form-label">Your new API key:</label>
                         <div class="key-display" id="newKeyDisplay"></div>
-                        <button class="btn btn-outline-primary btn-sm mt-2" onclick="copyApiKey()">
+                        <button class="btn btn-outline-primary btn-sm mt-2" id="copyApiKeyBtn">
                             <i class="fas fa-copy me-1"></i>Copy to Clipboard
                             <i class="fas fa-check copy-success ms-1"></i>
                         </button>

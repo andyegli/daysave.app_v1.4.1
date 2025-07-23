@@ -410,6 +410,59 @@ router.get('/:id/usage/export', isAuthenticated, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/keys/usage/summary - Get usage summary for all user's API keys
+ */
+router.get('/usage/summary', isAuthenticated, async (req, res) => {
+  try {
+    const apiKeys = await apiKeyService.getUserApiKeys(req.user.id);
+    
+    // Calculate summary statistics
+    const summary = {
+      totalKeys: apiKeys.length,
+      activeKeys: apiKeys.filter(key => key.enabled && !key.admin_disabled).length,
+      totalRequests: apiKeys.reduce((sum, key) => sum + key.usage_count, 0),
+      totalCost: 0 // This would need to be calculated from usage stats
+    };
+    
+    // If we have keys, try to get more detailed usage stats
+    if (apiKeys.length > 0) {
+      try {
+        // Get usage stats for all keys in the last 30 days
+        const usagePromises = apiKeys.map(key => 
+          apiKeyService.getUsageStats(key.id, {
+            startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+            endDate: new Date()
+          }).catch(() => ({ totalCost: 0, totalRequests: 0 }))
+        );
+        
+        const usageStats = await Promise.all(usagePromises);
+        
+        summary.totalCost = usageStats.reduce((sum, stats) => sum + (stats.totalCost || 0), 0);
+        summary.totalRequests = usageStats.reduce((sum, stats) => sum + (stats.totalRequests || 0), 0);
+      } catch (error) {
+        console.warn('Error calculating detailed usage stats:', error);
+        // Continue with basic stats
+      }
+    }
+    
+    res.json({
+      success: true,
+      data: summary
+    });
+  } catch (error) {
+    logAuthError('API_KEY_USAGE_SUMMARY_ERROR', error, {
+      userId: req.user.id,
+      endpoint: req.originalUrl
+    });
+    
+    res.status(500).json({
+      error: 'Failed to retrieve usage summary',
+      message: 'An error occurred while fetching the usage summary'
+    });
+  }
+});
+
 // Admin routes
 /**
  * GET /api/admin/keys - Get all API keys (admin only)

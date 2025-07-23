@@ -77,6 +77,11 @@ module.exports = (sequelize) => {
       allowNull: false,
       defaultValue: 0
     },
+    usage_api_keys: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0
+    },
     // Payment information (mock)
     payment_method: {
       type: DataTypes.STRING(50),
