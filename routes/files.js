@@ -1982,54 +1982,82 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
       });
     }
     
-    // If no analysis but we have legacy data
-    if (!analysis && (hasTranscription || hasSummary)) {
-      // Parse sentiment data
-      let sentiment = null;
-      if (file.sentiment) {
-        try {
-          sentiment = typeof file.sentiment === 'string' ? JSON.parse(file.sentiment) : file.sentiment;
-        } catch (e) {
+    // If no analysis but we have legacy data or basic file info
+    if (!analysis) {
+      const hasContent = hasTranscription || hasSummary || (file.auto_tags && file.auto_tags.length > 0);
+      
+      if (hasContent) {
+        // Parse sentiment data
+        let sentiment = null;
+        if (file.sentiment) {
+          try {
+            sentiment = typeof file.sentiment === 'string' ? JSON.parse(file.sentiment) : file.sentiment;
+          } catch (e) {
+            sentiment = { label: 'neutral', confidence: 0.5 };
+          }
+        } else {
           sentiment = { label: 'neutral', confidence: 0.5 };
         }
+        
+        return res.json({
+          success: true,
+          status: 'completed',
+          progress: 100,
+          mediaType: 'legacy',
+          analysis: {
+            id: file.id,
+            title: getFileTitle(file),
+            description: file.metadata?.description || '',
+            duration: file.metadata?.duration || 0,
+            transcription: file.transcription || '',
+            summary: file.summary || '',
+            sentiment: sentiment,
+            language: file.metadata?.language || 'unknown',
+            processing_time: file.metadata?.processing_time || null,
+            quality_score: file.metadata?.quality_score || null,
+            created_at: file.createdAt,
+            metadata: file.metadata || {}
+          },
+          features: [
+            { name: 'File Upload', completed: true },
+            { name: 'Processing', completed: hasTranscription || hasSummary },
+            { name: 'Summary', completed: hasSummary },
+            { name: 'Tags', completed: file.auto_tags && file.auto_tags.length > 0 }
+          ],
+          thumbnails: [],
+          speakers: [],
+          ocr_captions: [],
+          auto_tags: file.auto_tags || [],
+          user_tags: file.user_tags || []
+        });
       } else {
-        sentiment = { label: 'neutral', confidence: 0.5 };
+        // Basic file with no analysis
+        return res.json({
+          success: true,
+          status: 'not_analyzed',
+          progress: 0,
+          mediaType: file.content_type || 'file',
+          analysis: {
+            id: file.id,
+            title: getFileTitle(file),
+            description: file.metadata?.description || '',
+            created_at: file.createdAt,
+            metadata: file.metadata || {}
+          },
+          features: [
+            { name: 'File Upload', completed: true },
+            { name: 'Processing', completed: false },
+            { name: 'Analysis', completed: false }
+          ],
+          thumbnails: [],
+          speakers: [],
+          ocr_captions: [],
+          auto_tags: file.auto_tags || [],
+          user_tags: file.user_tags || []
+        });
       }
-      
-      return res.json({
-        success: true,
-        status: 'completed',
-        mediaType: 'legacy',
-        analysis: {
-          id: file.id,
-          title: getFileTitle(file),
-          description: file.metadata?.description || '',
-          duration: file.metadata?.duration || 0,
-          transcription: file.transcription || '',
-          summary: file.summary || '',
-          sentiment: sentiment,
-          language: file.metadata?.language || 'unknown',
-          processing_time: file.metadata?.processing_time || null,
-          quality_score: file.metadata?.quality_score || null,
-          created_at: file.createdAt,
-          metadata: file.metadata || {}
-        },
-        thumbnails: [],
-        speakers: [],
-        ocr_captions: [],
-        auto_tags: file.auto_tags || [],
-        user_tags: file.user_tags || []
-      });
     }
-    
-    // If no analysis data at all
-    if (!analysis) {
-      return res.json({
-        success: true,
-        status: 'not_analyzed',
-        message: 'No multimedia analysis found for this file'
-      });
-    }
+
     
     // Get related multimedia data based on analysis type
     let thumbnails = [];
@@ -2164,7 +2192,70 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
   }
 });
 
-// Simple thumbnail serving route
+// File thumbnail serving route (for file-specific thumbnails)
+router.get('/serve/:userId/:filename', isAuthenticated, (req, res) => {
+  try {
+    const { userId, filename } = req.params;
+    const requestingUserId = req.user.id;
+    
+    // Users can only access their own files (except admins)
+    const isAdmin = req.user.Role && req.user.Role.name === 'admin';
+    if (userId !== requestingUserId && !isAdmin) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    const path = require('path');
+    const fs = require('fs');
+    
+    // Try multiple possible locations for the file
+    const possiblePaths = [
+      path.join(__dirname, '..', 'uploads', 'thumbnails', filename),
+      path.join(__dirname, '..', 'uploads', userId, filename),
+      path.join(__dirname, '..', 'uploads', filename)
+    ];
+    
+    let filePath = null;
+    for (const testPath of possiblePaths) {
+      if (fs.existsSync(testPath)) {
+        filePath = testPath;
+        break;
+      }
+    }
+    
+    if (!filePath) {
+      console.log(`❌ File not found: ${filename} for user ${userId}`);
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // Get file stats
+    const stat = fs.statSync(filePath);
+    
+    // Determine content type based on file extension
+    const ext = path.extname(filename).toLowerCase();
+    let contentType = 'application/octet-stream';
+    if (['.jpg', '.jpeg'].includes(ext)) contentType = 'image/jpeg';
+    else if (ext === '.png') contentType = 'image/png';
+    else if (ext === '.gif') contentType = 'image/gif';
+    else if (ext === '.webp') contentType = 'image/webp';
+    
+    // Set appropriate headers
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Length', stat.size);
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    
+    // Stream the file
+    const readStream = fs.createReadStream(filePath);
+    readStream.pipe(res);
+    
+    console.log(`✅ Served file: ${filename} (${stat.size} bytes)`);
+    
+  } catch (error) {
+    console.error('Error serving file:', error);
+    res.status(500).json({ error: 'Failed to serve file' });
+  }
+});
+
+// Simple thumbnail serving route (for content thumbnails)
 router.get('/serve/thumbnails/:filename', (req, res) => {
   try {
     const filename = req.params.filename;

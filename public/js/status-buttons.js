@@ -71,20 +71,25 @@ function updateStatusButton(contentId, itemType) {
           console.log(`✅ Status updated for ${contentId.substring(0,8)}: ${status} (${progress}%)`);
         }
         
-        // If still processing or waiting, check again (with limits)
-        if ((status === 'processing' || status === 'waiting') && pollCount < 10) {
-          // If status hasn't changed for 3 polls, increase interval
-          const noChange = (prevStatus === status && prevProgress === progress && pollCount >= 3);
-          const interval = noChange ? 15000 : 5000; // 15s if no change, 5s if changing
+        // If still processing or waiting, check again (with enhanced limits)
+        if ((status === 'processing' || status === 'waiting') && pollCount < 8) {
+          // If status hasn't changed for 2 polls, increase interval dramatically
+          const noChange = (prevStatus === status && prevProgress === progress && pollCount >= 2);
+          const stuckTooLong = pollCount >= 5; // If polling 5+ times, probably stuck
           
-          setTimeout(() => {
-            updateStatusButton(contentId, itemType);
-          }, interval);
-        } else if (status === 'incomplete' || status === 'analysed') {
+          if (stuckTooLong) {
+            console.log(`⏹️ Stopping polling for ${contentId.substring(0,8)} - likely stuck at ${status} (${progress}%)`);
+          } else {
+            const interval = noChange ? 20000 : 6000; // 20s if no change, 6s if changing
+            setTimeout(() => {
+              updateStatusButton(contentId, itemType);
+            }, interval);
+          }
+        } else if (status === 'incomplete' || status === 'analysed' || status === 'completed') {
           // Stop polling for completed or failed items
           console.log(`⏹️ Stopping polling for ${contentId.substring(0,8)} - status: ${status}`);
-        } else if (pollCount >= 10) {
-          console.log(`⏹️ Stopping polling for ${contentId.substring(0,8)} - reached limit`);
+        } else if (pollCount >= 8) {
+          console.log(`⏹️ Stopping polling for ${contentId.substring(0,8)} - reached limit (${pollCount} attempts)`);
         }
       } else {
         setStatusButtonState(contentId, 'waiting', 0);
@@ -118,9 +123,14 @@ function setStatusButtonState(contentId, status, progress = 0) {
   
   switch (status) {
     case 'waiting':
-    case 'not_analyzed':
       button.addClass('waiting');
       statusText.text('Waiting');
+      progressFill.css('width', '0%');
+      break;
+      
+    case 'not_analyzed':
+      button.addClass('waiting');
+      statusText.text('Ready');
       progressFill.css('width', '0%');
       break;
       
@@ -134,7 +144,7 @@ function setStatusButtonState(contentId, status, progress = 0) {
     case 'completed':
     case 'analysed':
       button.addClass('analysed');
-      statusText.text('Analysed');
+      statusText.text(progress === 100 ? 'Analysed' : 'Ready');
       progressFill.css('width', '100%');
       break;
       
