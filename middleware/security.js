@@ -98,10 +98,8 @@ const securityHeaders = () => {
   // Only enable in production on HTTPS servers
   if (process.env.NODE_ENV === 'production') {
     cspDirectives.upgradeInsecureRequests = [];
-  } else {
-    // Explicitly disable for development/localhost
-    cspDirectives.upgradeInsecureRequests = false;
   }
+  // For development: don't set upgradeInsecureRequests at all (leave undefined)
 
   return helmet({
     contentSecurityPolicy: {
