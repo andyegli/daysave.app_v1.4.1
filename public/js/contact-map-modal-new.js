@@ -110,77 +110,118 @@ class ModernContactMapModal {
   async renderStaticMap(location, address) {
     const mapContainer = document.getElementById('map');
     
-    // Create a modern map display with static map and interactive elements
+    // Create a modern location display without static map dependency
     const mapHtml = `
       <div class="modern-map-container h-100 d-flex flex-column">
         <!-- Address Header -->
-        <div class="map-header p-3 bg-light border-bottom">
-          <h6 class="mb-1 fw-bold">📍 Location</h6>
-          <p class="mb-0 text-muted small">${address}</p>
+        <div class="map-header p-3 bg-primary text-white">
+          <h6 class="mb-1 fw-bold">📍 Location Found</h6>
+          <p class="mb-0 small opacity-75">${address}</p>
         </div>
         
-        <!-- Static Map -->
-        <div class="map-content flex-grow-1 position-relative">
-          <img 
-            src="${this.getStaticMapUrl(location, address)}" 
-            alt="Map showing ${address}"
-            class="w-100 h-100 object-fit-cover"
-            style="min-height: 250px;"
-          />
-          
-          <!-- Map Overlay with Actions -->
-          <div class="map-overlay position-absolute bottom-0 start-0 end-0 p-3 bg-gradient" style="background: linear-gradient(transparent, rgba(0,0,0,0.7));">
-            <div class="d-flex gap-2 justify-content-center">
-              <a href="${this.getGoogleMapsUrl(location, address)}" 
-                 target="_blank" 
-                 class="btn btn-primary btn-sm">
-                <i class="fas fa-external-link-alt me-1"></i>
-                Open in Google Maps
-              </a>
-              <a href="${this.getAppleMapsUrl(location, address)}" 
-                 target="_blank" 
-                 class="btn btn-outline-light btn-sm">
-                <i class="fas fa-map me-1"></i>
-                Apple Maps
-              </a>
-              <button onclick="navigator.clipboard?.writeText('${address}')" 
-                      class="btn btn-outline-light btn-sm">
-                <i class="fas fa-copy me-1"></i>
-                Copy Address
-              </button>
+        <!-- Location Info -->
+        <div class="map-content flex-grow-1 d-flex flex-column justify-content-center align-items-center p-4 bg-light">
+          <div class="text-center mb-4">
+            <i class="fas fa-map-marker-alt text-primary fa-4x mb-3"></i>
+            <h5 class="mb-2">Location Verified</h5>
+            <p class="text-muted mb-3">This address has been found and verified by Google Maps.</p>
+            
+            <!-- Coordinates -->
+            <div class="bg-white p-3 rounded border mb-4">
+              <small class="text-muted d-block">GPS Coordinates:</small>
+              <strong>${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}</strong>
             </div>
+          </div>
+          
+          <!-- Action Buttons -->
+          <div class="d-flex gap-2 flex-wrap justify-content-center">
+            <a href="${this.getGoogleMapsUrl(location, address)}" 
+               target="_blank" 
+               class="btn btn-primary">
+              <i class="fas fa-external-link-alt me-2"></i>
+              Open in Google Maps
+            </a>
+            <a href="${this.getAppleMapsUrl(location, address)}" 
+               target="_blank" 
+               class="btn btn-outline-secondary">
+              <i class="fas fa-map me-2"></i>
+              Apple Maps
+            </a>
+            <button class="btn btn-outline-info copy-address-btn" data-address="${address.replace(/"/g, '&quot;')}">
+              <i class="fas fa-copy me-2"></i>
+              Copy Address
+            </button>
           </div>
         </div>
         
-        <!-- Coordinates Info -->
-        <div class="map-footer p-2 bg-light border-top">
-          <small class="text-muted">
-            <i class="fas fa-map-pin me-1"></i>
-            Coordinates: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}
+        <!-- Directions Options -->
+        <div class="map-footer p-3 border-top bg-white">
+          <small class="text-muted d-block mb-2">
+            <i class="fas fa-route me-1"></i>
+            Get directions from:
           </small>
+          <div class="d-flex gap-2 flex-wrap">
+            <a href="https://www.google.com/maps/dir//${encodeURIComponent(address)}" 
+               target="_blank" 
+               class="btn btn-sm btn-outline-primary">
+              <i class="fas fa-directions me-1"></i>
+              Google Directions
+            </a>
+            <a href="https://maps.apple.com/?daddr=${encodeURIComponent(address)}" 
+               target="_blank" 
+               class="btn btn-sm btn-outline-secondary">
+              <i class="fas fa-route me-1"></i>
+              Apple Directions
+            </a>
+          </div>
         </div>
       </div>
     `;
     
     mapContainer.innerHTML = mapHtml;
+    
+    // Add copy functionality
+    const copyBtn = mapContainer.querySelector('.copy-address-btn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const address = copyBtn.getAttribute('data-address');
+        
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(address);
+            
+            // Show success feedback
+            const originalContent = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check text-success me-2"></i>Copied!';
+            copyBtn.disabled = true;
+            
+            setTimeout(() => {
+              copyBtn.innerHTML = originalContent;
+              copyBtn.disabled = false;
+            }, 2000);
+            
+            console.log('Address copied to clipboard:', address);
+          } else {
+            // Fallback for older browsers
+            this.fallbackCopyToClipboard(address);
+          }
+        } catch (error) {
+          console.error('Failed to copy address:', error);
+          
+          // Show error feedback
+          const originalContent = copyBtn.innerHTML;
+          copyBtn.innerHTML = '<i class="fas fa-times text-danger me-2"></i>Failed';
+          
+          setTimeout(() => {
+            copyBtn.innerHTML = originalContent;
+          }, 2000);
+        }
+      });
+    }
   }
 
-  getStaticMapUrl(location, address) {
-    // Use Google Static Maps API for the map image
-    const baseUrl = 'https://maps.googleapis.com/maps/api/staticmap';
-    const params = new URLSearchParams({
-      center: `${location.lat},${location.lng}`,
-      zoom: '15',
-      size: '600x400',
-      maptype: 'roadmap',
-      markers: `color:red|${location.lat},${location.lng}`,
-      key: 'YOUR_API_KEY' // This would be replaced server-side
-    });
-    
-    // For now, return a placeholder or use a different service
-    // In production, this should go through your backend to hide the API key
-    return `/api/places/static-map?lat=${location.lat}&lng=${location.lng}&address=${encodeURIComponent(address)}`;
-  }
+
 
   getGoogleMapsUrl(location, address) {
     return `https://www.google.com/maps?q=${encodeURIComponent(address)}&ll=${location.lat},${location.lng}`;
@@ -204,14 +245,50 @@ class ModernContactMapModal {
             <i class="fas fa-external-link-alt me-1"></i>
             Search on Google Maps
           </a>
-          <button onclick="navigator.clipboard?.writeText('${this.currentAddress}')" 
-                  class="btn btn-outline-secondary btn-sm">
+          <button class="btn btn-outline-secondary btn-sm copy-error-address-btn" data-address="${this.currentAddress}">
             <i class="fas fa-copy me-1"></i>
             Copy Address
           </button>
         </div>
       </div>
     `;
+    
+    // Add copy functionality to error view
+    const copyBtn = mapContainer.querySelector('.copy-error-address-btn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const address = copyBtn.getAttribute('data-address');
+        this.fallbackCopyToClipboard(address);
+      });
+    }
+  }
+
+  fallbackCopyToClipboard(text) {
+    // Fallback method for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        console.log('Address copied to clipboard (fallback method):', text);
+      } else {
+        throw new Error('Copy command failed');
+      }
+    } catch (error) {
+      console.error('Fallback copy failed:', error);
+      // As a last resort, show the text in a prompt
+      prompt('Copy this address:', text);
+    } finally {
+      document.body.removeChild(textArea);
+    }
   }
 }
 

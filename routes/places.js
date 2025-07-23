@@ -312,16 +312,18 @@ router.get('/static-map', isAuthenticated, async (req, res) => {
     const response = await fetch(staticMapUrl);
     
     if (!response.ok) {
-      throw new Error('Failed to fetch static map');
+      console.error('Google Static Maps API error:', response.status, response.statusText);
+      throw new Error(`Static Maps API returned ${response.status}: ${response.statusText}`);
     }
     
-    // Get the image as buffer
+    // Get the image as buffer (node-fetch v2 compatible)
     const imageBuffer = await response.buffer();
     
     // Set appropriate headers
     res.set({
       'Content-Type': response.headers.get('content-type') || 'image/png',
-      'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
+      'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+      'Content-Length': imageBuffer.length
     });
     
     // Send the image buffer
