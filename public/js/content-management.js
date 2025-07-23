@@ -9,11 +9,58 @@ function getCorrectUrl(path) {
   return path;
 }
 
-// Force correct protocol for localhost on page load
-if (window.location.hostname === 'localhost' && window.location.protocol === 'https:') {
-  console.log('Redirecting from HTTPS to HTTP for localhost...');
-  window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+// AGGRESSIVE PROTOCOL ENFORCEMENT FOR LOCALHOST
+if (window.location.hostname === 'localhost') {
+  if (window.location.protocol === 'https:') {
+    console.log('🔄 IMMEDIATE HTTPS→HTTP REDIRECT for localhost...');
+    const httpUrl = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+    window.stop(); // Stop any ongoing requests
+    window.location.replace(httpUrl);
+    throw new Error('Redirecting to HTTP'); // Stop all further execution
+  }
+  
+  // Intercept any navigation attempts to HTTPS
+  const originalAssign = window.location.assign;
+  const originalReplace = window.location.replace;
+  const originalHref = Object.getOwnPropertyDescriptor(window.location, 'href') || Object.getOwnPropertyDescriptor(Location.prototype, 'href');
+  
+  window.location.assign = function(url) {
+    if (typeof url === 'string' && url.includes('https://localhost')) {
+      url = url.replace('https://localhost', 'http://localhost');
+      console.log('🔧 Intercepted assign() - redirected to HTTP:', url);
+    }
+    return originalAssign.call(this, url);
+  };
+  
+  window.location.replace = function(url) {
+    if (typeof url === 'string' && url.includes('https://localhost')) {
+      url = url.replace('https://localhost', 'http://localhost');
+      console.log('🔧 Intercepted replace() - redirected to HTTP:', url);
+    }
+    return originalReplace.call(this, url);
+  };
 }
+
+// COMPREHENSIVE PAGE LOAD PROTOCOL CHECK
+document.addEventListener('DOMContentLoaded', function() {
+  // Double-check protocol after DOM load
+  if (window.location.hostname === 'localhost' && window.location.protocol === 'https:') {
+    console.log('🔄 DOM LOADED - HTTPS→HTTP REDIRECT for localhost...');
+    window.location.replace(`http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`);
+    return;
+  }
+  
+  // Fix any remaining HTTPS links or forms
+  document.querySelectorAll('a[href^="https://localhost"], form[action^="https://localhost"]').forEach(element => {
+    const attr = element.tagName === 'A' ? 'href' : 'action';
+    const url = element.getAttribute(attr);
+    if (url && url.includes('https://localhost')) {
+      const newUrl = url.replace('https://localhost', `http://localhost`);
+      element.setAttribute(attr, newUrl);
+      console.log(`🔧 Fixed ${element.tagName} ${attr}: ${url} → ${newUrl}`);
+    }
+  });
+});
 
 // Show subscription error with upgrade options
 function showSubscriptionError(errorData) {
