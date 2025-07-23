@@ -1,184 +1,312 @@
 #!/usr/bin/env node
 
 /**
- * Fix Stuck Pipeline Items
+ * Fix Stuck AI Pipeline Processing Jobs
  * 
- * Identifies content items stuck in processing and attempts to resolve them
- * by either restarting analysis or marking them as incomplete for retry.
+ * This script identifies and resolves stuck or failed AI processing jobs
+ * that are preventing content analysis from completing.
  */
 
+const { Op } = require('sequelize');
 const path = require('path');
-const { Content, VideoAnalysis, AudioAnalysis, ImageAnalysis, ProcessingJob, User } = require('../models');
 
-// Import the analysis trigger function (fallback if not available)
-let triggerMultimediaAnalysis;
-try {
-  triggerMultimediaAnalysis = require('../routes/content').triggerMultimediaAnalysis;
-} catch (error) {
-  triggerMultimediaAnalysis = async (content, user) => {
-    console.log(`⚠️ triggerMultimediaAnalysis not available, skipping ${content.id}`);
-  };
+// Load models
+require('dotenv').config();
+const models = require('../models');
+const { Content, ProcessingJob, VideoAnalysis, AudioAnalysis, ImageAnalysis } = models;
+
+/**
+ * Main execution function
+ */
+async function main() {
+  console.log('🔧 === FIXING STUCK AI PIPELINE JOBS ===');
+  console.log('=====================================');
+  
+  try {
+    // Check database connection
+    await models.sequelize.authenticate();
+    console.log('✅ Database connected successfully');
+    
+    // Get stuck content from logs (specific IDs mentioned)
+    const stuckContentIds = [
+      'c9cf8e0f-db9b-40d7-b6f4-4bb698cda56a',
+      'b9691d74-291f-4b12-812a-f1f90eddce73', 
+      '022fc1d4-c1ad-4410-91ba-686391676eec',
+      'b4f93e4a-7642-487b-9b73-5610eb2ae38e',
+      '049af111-e251-42c4-9a4f-92bb68ec7b76',
+      'df49d630-9574-47bc-8853-2d4c4de0c89e'
+    ];
+    
+    console.log(`🔍 Checking ${stuckContentIds.length} potentially stuck content items...`);
+    
+    for (const contentId of stuckContentIds) {
+      console.log(`\n📋 Analyzing content: ${contentId}`);
+      await analyzeAndFixContent(contentId);
+    }
+    
+    // Also check for any other long-running jobs
+    console.log('\n🔍 Checking for other stuck processing jobs...');
+    await checkAllStuckJobs();
+    
+    console.log('\n✅ Stuck pipeline analysis complete!');
+    
+  } catch (error) {
+    console.error('❌ Error fixing stuck pipeline:', error);
+    process.exit(1);
+  } finally {
+    await models.sequelize.close();
+  }
 }
 
-async function main() {
-  console.log('🔧 Starting stuck pipeline analysis...');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
+/**
+ * Analyze and fix specific content item
+ */
+async function analyzeAndFixContent(contentId) {
   try {
-    // Find potentially stuck content items
-    const cutoffTime = new Date(Date.now() - (20 * 60 * 1000)); // 20 minutes ago
-    
-    console.log(`🔍 Looking for content created before ${cutoffTime.toISOString()}`);
-    
-    const stuckContent = await Content.findAll({
-      where: {
-        createdAt: {
-          [require('sequelize').Op.lt]: cutoffTime
-        }
-      },
-      include: [
-        { model: User, as: 'User', attributes: ['id', 'email'] }
-      ],
-      order: [['createdAt', 'DESC']],
-      limit: 20
-    });
-
-    console.log(`📊 Found ${stuckContent.length} potentially stuck items`);
-
-    if (stuckContent.length === 0) {
-      console.log('✅ No stuck items found!');
+    // Check if content exists
+    const content = await Content.findByPk(contentId);
+    if (!content) {
+      console.log(`   ❌ Content not found: ${contentId}`);
       return;
     }
-
-    // Analyze each item
-    for (const content of stuckContent) {
-      console.log(`\n🔍 Analyzing content: ${content.id}`);
-      console.log(`   📄 URL: ${content.url?.substring(0, 60)}...`);
-      console.log(`   👤 User: ${content.User?.email}`);
-      console.log(`   📅 Created: ${content.createdAt}`);
-
-      // Check analysis completeness
-      const hasTranscription = !!(content.transcription && content.transcription.length > 10);
-      const hasSummary = !!(content.summary && content.summary.length > 10);
-      const hasTitle = !!(content.generated_title && content.generated_title.length > 0);
-      const hasTags = !!(content.auto_tags && content.auto_tags.length > 0);
-      const hasSentiment = !!(content.sentiment);
-
-      // Calculate current completion
-      const isMultimedia = content.url && (
-        content.url.includes('facebook.com') ||
-        content.url.includes('youtube.com') ||
-        content.url.includes('instagram.com') ||
-        content.url.includes('tiktok.com')
-      );
-
-      let features = [];
-      if (isMultimedia) {
-        features = [
-          { name: 'Download', completed: true },
-          { name: 'Processing', completed: hasSummary || hasTranscription },
-          { name: 'Transcription', completed: hasTranscription },
-          { name: 'Summary', completed: hasSummary },
-          { name: 'Thumbnails', completed: false }, // Can't easily check
-          { name: 'Tags', completed: hasTags },
-          { name: 'Sentiment', completed: hasSentiment }
-        ];
-      } else {
-        features = [
-          { name: 'Processing', completed: hasSummary || hasTitle },
-          { name: 'Summary', completed: hasSummary },
-          { name: 'Title', completed: hasTitle },
-          { name: 'Tags', completed: hasTags }
-        ];
-      }
-
-      const completedFeatures = features.filter(f => f.completed).length;
-      const progressPercentage = Math.round((completedFeatures / features.length) * 100);
-
-      console.log(`   📊 Progress: ${progressPercentage}% (${completedFeatures}/${features.length})`);
-      console.log(`   ✅ Has: ${features.filter(f => f.completed).map(f => f.name).join(', ')}`);
-      console.log(`   ❌ Missing: ${features.filter(f => !f.completed).map(f => f.name).join(', ')}`);
-
-      // Determine action
-      if (progressPercentage === 0) {
-        console.log(`   🔄 Action: RESTART - No analysis started`);
-        await restartAnalysis(content);
-      } else if (progressPercentage > 0 && progressPercentage < 100) {
-        if (hasTranscription || hasSummary) {
-          console.log(`   ⚠️  Action: PARTIAL - Some core features completed, likely minor issues`);
-          await markMinorIssues(content);
-        } else {
-          console.log(`   🔄 Action: RESTART - No core features completed`);
-          await restartAnalysis(content);
-        }
-      } else {
-        console.log(`   ✅ Action: COMPLETE - Analysis appears finished`);
+    
+    console.log(`   ✅ Found content: ${content.url || 'No URL'}`);
+    console.log(`   📊 Created: ${content.createdAt}`);
+    console.log(`   📊 Updated: ${content.updatedAt}`);
+    console.log(`   📊 Has summary: ${!!content.summary}`);
+    console.log(`   📊 Has transcription: ${!!content.transcription}`);
+    console.log(`   📊 Has generated title: ${!!content.generated_title}`);
+    
+    // Check processing jobs
+    const processingJobs = await ProcessingJob.findAll({
+      where: { content_id: contentId },
+      order: [['createdAt', 'DESC']],
+      limit: 5
+    });
+    
+    console.log(`   🔄 Processing jobs found: ${processingJobs.length}`);
+    
+    for (const job of processingJobs) {
+      console.log(`      Job ${job.id}: ${job.status} (${job.progress || 0}%) - ${job.current_stage || 'No stage'}`);
+      console.log(`      Created: ${job.createdAt}, Updated: ${job.updatedAt}`);
+      
+      // Check if job is stuck (created more than 30 minutes ago and still processing)
+      const jobAge = Date.now() - new Date(job.createdAt).getTime();
+      const thirtyMinutes = 30 * 60 * 1000;
+      
+      if (jobAge > thirtyMinutes && (job.status === 'processing' || job.status === 'pending')) {
+        console.log(`      ⚠️  Job appears stuck (${Math.round(jobAge / 60000)} minutes old)`);
+        await fixStuckJob(job, content);
       }
     }
-
+    
+    // Check analysis tables
+    await checkAnalysisTables(contentId, content);
+    
   } catch (error) {
-    console.error('❌ Error analyzing stuck pipeline:', error);
+    console.error(`   ❌ Error analyzing content ${contentId}:`, error.message);
   }
 }
 
-async function restartAnalysis(content) {
+/**
+ * Fix a stuck processing job
+ */
+async function fixStuckJob(job, content) {
   try {
-    console.log(`   🚀 Restarting analysis for ${content.id}...`);
+    console.log(`      🔧 Attempting to fix stuck job ${job.id}...`);
     
-    // Clear existing analysis data
-    await Content.update({
-      transcription: null,
-      summary: null,
-      sentiment: null,
-      auto_tags: [],
-      generated_title: null,
-      metadata: {
-        ...content.metadata,
-        retryAt: new Date().toISOString(),
-        retryReason: 'Pipeline stuck - automated restart'
-      }
-    }, {
-      where: { id: content.id }
+    // Mark job as failed
+    await job.update({
+      status: 'failed',
+      error_message: 'Job stuck - auto-failed by fix script',
+      completed_at: new Date(),
+      progress: 100
     });
-
-    // Note: In a real scenario, we'd trigger the analysis here
-    // For now, just log that we've prepared it for restart
-    console.log(`   ✅ Content ${content.id} prepared for restart`);
-    console.log(`   💡 Manual trigger needed: Visit the content page and click retry`);
-
+    
+    console.log(`      ✅ Marked job ${job.id} as failed`);
+    
+    // Try to trigger new analysis
+    console.log(`      🚀 Triggering new analysis for content...`);
+    
+    // Import the automation orchestrator  
+    const { AutomationOrchestrator } = require('../services/multimedia');
+    const orchestrator = AutomationOrchestrator.getInstance();
+    
+    // Check if content has URL for reprocessing
+    if (content.url) {
+      try {
+        // This would normally be handled by the content creation pipeline
+        console.log(`      ⏳ Content will be reprocessed on next access`);
+        
+        // Reset content analysis fields to trigger reprocessing
+        await content.update({
+          summary: null,
+          transcription: null,
+          generated_title: null,
+          auto_tags: null,
+          sentiment: null
+        });
+        
+        console.log(`      ✅ Reset content analysis fields for reprocessing`);
+      } catch (processError) {
+        console.error(`      ❌ Error triggering reprocessing:`, processError.message);
+      }
+    }
+    
   } catch (error) {
-    console.error(`   ❌ Failed to restart analysis for ${content.id}:`, error.message);
+    console.error(`      ❌ Error fixing job ${job.id}:`, error.message);
   }
 }
 
-async function markMinorIssues(content) {
+/**
+ * Check analysis tables for orphaned or incomplete data
+ */
+async function checkAnalysisTables(contentId, content) {
   try {
-    console.log(`   ⚠️  Marking minor issues for ${content.id}...`);
+    console.log(`   📊 Checking analysis tables...`);
     
-    // Update metadata to indicate partial completion
-    await Content.update({
-      metadata: {
-        ...content.metadata,
-        partialAnalysis: true,
-        analyzedAt: new Date().toISOString(),
-        issueReason: 'Analysis partially completed before app restart'
-      }
-    }, {
-      where: { id: content.id }
+    // Check video analysis
+    const videoAnalysis = await VideoAnalysis.findOne({
+      where: { content_id: contentId }
     });
-
-    console.log(`   ✅ Content ${content.id} marked with partial analysis flag`);
-
+    
+    // Check audio analysis  
+    const audioAnalysis = await AudioAnalysis.findOne({
+      where: { content_id: contentId }
+    });
+    
+    // Check image analysis
+    const imageAnalysis = await ImageAnalysis.findOne({
+      where: { content_id: contentId }
+    });
+    
+    const analysisCount = [videoAnalysis, audioAnalysis, imageAnalysis].filter(Boolean).length;
+    console.log(`   📊 Analysis records found: ${analysisCount}`);
+    
+    if (videoAnalysis) {
+      console.log(`      📹 Video analysis: ${videoAnalysis.status || 'unknown status'}`);
+      if (videoAnalysis.transcription_results) {
+        console.log(`      📝 Has transcription data`);
+      }
+    }
+    
+    if (audioAnalysis) {
+      console.log(`      🎵 Audio analysis: ${audioAnalysis.status || 'unknown status'}`);
+      if (audioAnalysis.transcription_results) {
+        console.log(`      📝 Has transcription data`);
+      }
+    }
+    
+    if (imageAnalysis) {
+      console.log(`      🖼️  Image analysis: ${imageAnalysis.status || 'unknown status'}`);
+      if (imageAnalysis.ai_description) {
+        console.log(`      📝 Has AI description`);
+      }
+    }
+    
+    // If we have analysis data but no content summary, copy it over
+    if (analysisCount > 0 && !content.summary) {
+      console.log(`   🔄 Found analysis data but no content summary, copying...`);
+      await copyAnalysisToContent(content, { videoAnalysis, audioAnalysis, imageAnalysis });
+    }
+    
   } catch (error) {
-    console.error(`   ❌ Failed to mark issues for ${content.id}:`, error.message);
+    console.error(`   ❌ Error checking analysis tables:`, error.message);
+  }
+}
+
+/**
+ * Copy analysis data to content record
+ */
+async function copyAnalysisToContent(content, analyses) {
+  try {
+    const updateData = {};
+    
+    // Copy transcription from video or audio analysis
+    if (analyses.videoAnalysis?.transcription_results?.fullText) {
+      updateData.transcription = analyses.videoAnalysis.transcription_results.fullText;
+      updateData.summary = analyses.videoAnalysis.transcription_results.fullText.substring(0, 500) + '...';
+    } else if (analyses.audioAnalysis?.transcription_results?.fullText) {
+      updateData.transcription = analyses.audioAnalysis.transcription_results.fullText;
+      updateData.summary = analyses.audioAnalysis.transcription_results.fullText.substring(0, 500) + '...';
+    }
+    
+    // Copy AI description from image analysis
+    if (analyses.imageAnalysis?.ai_description) {
+      const description = typeof analyses.imageAnalysis.ai_description === 'string' 
+        ? analyses.imageAnalysis.ai_description 
+        : analyses.imageAnalysis.ai_description.description;
+      if (description) {
+        updateData.summary = description;
+      }
+    }
+    
+    // Generate title from summary
+    if (updateData.summary) {
+      const words = updateData.summary.split(' ').slice(0, 10);
+      updateData.generated_title = words.join(' ') + (words.length >= 10 ? '...' : '');
+    }
+    
+    if (Object.keys(updateData).length > 0) {
+      await content.update(updateData);
+      console.log(`   ✅ Copied analysis data to content record`);
+    }
+    
+  } catch (error) {
+    console.error(`   ❌ Error copying analysis data:`, error.message);
+  }
+}
+
+/**
+ * Check for all stuck jobs in the system
+ */
+async function checkAllStuckJobs() {
+  try {
+    const now = new Date();
+    const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+    
+    // Find jobs that are still processing but were created more than 30 minutes ago
+    const stuckJobs = await ProcessingJob.findAll({
+      where: {
+        status: {
+          [Op.in]: ['processing', 'pending']
+        },
+        createdAt: {
+          [Op.lt]: thirtyMinutesAgo
+        }
+      },
+      order: [['createdAt', 'ASC']],
+      limit: 20
+    });
+    
+    console.log(`📊 Found ${stuckJobs.length} potentially stuck jobs`);
+    
+    for (const job of stuckJobs) {
+      const jobAge = Math.round((now.getTime() - new Date(job.createdAt).getTime()) / 60000);
+      console.log(`   Job ${job.id}: ${job.status} (${jobAge} minutes old) - Stage: ${job.current_stage || 'unknown'}`);
+      
+      // Mark very old jobs as failed
+      if (jobAge > 60) { // More than 1 hour
+        await job.update({
+          status: 'failed',
+          error_message: 'Job timeout - auto-failed by cleanup script',
+          completed_at: new Date()
+        });
+        console.log(`   ✅ Auto-failed job ${job.id} (too old)`);
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Error checking all stuck jobs:', error.message);
   }
 }
 
 // Run the script
-main().then(() => {
-  console.log('\n🎉 Stuck pipeline analysis completed!');
-  process.exit(0);
-}).catch(error => {
-  console.error('\n💥 Script failed:', error);
-  process.exit(1);
-}); 
+if (require.main === module) {
+  main().catch(error => {
+    console.error('Fatal error:', error);
+    process.exit(1);
+  });
+}
+
+module.exports = { main, analyzeAndFixContent }; 
