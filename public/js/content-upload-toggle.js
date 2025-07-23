@@ -11,6 +11,29 @@ function getCorrectUrl(path) {
   return path;
 }
 
+// COMPREHENSIVE REQUEST INTERCEPTION FOR LOCALHOST
+if (window.location.hostname === 'localhost') {
+  // Override XMLHttpRequest.open to prevent HTTPS requests
+  const originalXHROpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+    if (typeof url === 'string' && url.includes('https://localhost')) {
+      url = url.replace('https://localhost', 'http://localhost');
+      console.log('🔧 XHR Intercepted - converted HTTPS to HTTP:', url);
+    }
+    return originalXHROpen.call(this, method, url, async, user, password);
+  };
+  
+  // Override fetch to prevent HTTPS requests
+  const originalFetch = window.fetch;
+  window.fetch = function(url, options) {
+    if (typeof url === 'string' && url.includes('https://localhost')) {
+      url = url.replace('https://localhost', 'http://localhost');
+      console.log('🔧 Fetch Intercepted - converted HTTPS to HTTP:', url);
+    }
+    return originalFetch.call(this, url, options);
+  };
+}
+
 // AGGRESSIVE PROTOCOL ENFORCEMENT FOR LOCALHOST
 if (window.location.hostname === 'localhost') {
   if (window.location.protocol === 'https:') {
@@ -408,12 +431,14 @@ async function handleFileUploadSubmission() {
       if (modal) modal.hide();
       
       setTimeout(() => {
-        // Fix for localhost HTTPS/HTTP protocol issues
+        // SAFE NAVIGATION - No HTTPS triggers
         if (window.location.hostname === 'localhost') {
-          window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+          const safeUrl = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+          console.log('🔄 Safe navigation to:', safeUrl);
+          window.location.replace(safeUrl);
         } else {
-          // Force reload with correct protocol
-          window.location.href = window.location.href;
+          // Force safe reload for non-localhost
+          window.location.reload(true);
         }
       }, 1500);
     } else {
