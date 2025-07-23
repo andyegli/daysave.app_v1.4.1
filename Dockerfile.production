@@ -1,0 +1,110 @@
+# Production Dockerfile for DaySave
+# Multi-stage build for optimized production image
+
+# ===== BUILDER STAGE =====
+FROM node:18-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    make \
+    g++ \
+    && pip3 install --break-system-packages yt-dlp
+
+WORKDIR /usr/src/app
+
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+# ===== PRODUCTION STAGE =====
+FROM node:18-alpine AS production
+
+# Security: Create non-root user first
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S daysave -u 1001 -G nodejs
+
+# Install production system dependencies
+RUN apk add --no-cache \
+    # Core multimedia processing
+    ffmpeg \
+    # MySQL client for health checks and operations
+    mysql-client \
+    # Document processing dependencies
+    poppler-utils \
+    antiword \
+    unrtf \
+    tesseract-ocr \
+    tesseract-ocr-data-eng \
+    # Image processing
+    imagemagick \
+    # Essential utilities
+    curl \
+    bash \
+    dumb-init \
+    # Python and pip for yt-dlp
+    python3 \
+    py3-pip \
+    # Remove cache
+    && rm -rf /var/cache/apk/* \
+    # Install yt-dlp for URL processing
+    && pip3 install --break-system-packages yt-dlp
+
+# Set working directory
+WORKDIR /usr/src/app
+
+# Copy node_modules from builder stage
+COPY --from=builder --chown=daysave:nodejs /usr/src/app/node_modules ./node_modules
+
+# Copy application code
+COPY --chown=daysave:nodejs package*.json ./
+COPY --chown=daysave:nodejs app.js ./
+COPY --chown=daysave:nodejs config/ ./config/
+COPY --chown=daysave:nodejs models/ ./models/
+COPY --chown=daysave:nodejs routes/ ./routes/
+COPY --chown=daysave:nodejs middleware/ ./middleware/
+COPY --chown=daysave:nodejs services/ ./services/
+COPY --chown=daysave:nodejs utils/ ./utils/
+COPY --chown=daysave:nodejs views/ ./views/
+COPY --chown=daysave:nodejs public/ ./public/
+COPY --chown=daysave:nodejs migrations/ ./migrations/
+COPY --chown=daysave:nodejs seeders/ ./seeders/
+
+# Create comprehensive directory structure with proper permissions
+RUN mkdir -p \
+    logs \
+    uploads \
+    temp \
+    multimedia-temp \
+    db_backup \
+    testfiles \
+    && chown -R daysave:nodejs \
+    logs \
+    uploads \
+    temp \
+    multimedia-temp \
+    db_backup \
+    testfiles
+
+# Build packages already removed - make and g++ were only in builder stage
+
+# Switch to non-root user
+USER daysave
+
+# Environment variables
+ENV NODE_ENV=production
+ENV NPM_CONFIG_CACHE=/tmp/.npm
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Expose port
+EXPOSE 3000
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start application
+CMD ["node", "app.js"] 

@@ -32,8 +32,8 @@ services:
       - app_temp:/usr/src/app/temp
       - app_backup:/usr/src/app/db_backup
       - multimedia_temp:/usr/src/app/multimedia-temp
-      # Google Cloud credentials (mount your service account file here)
-      # - ./path/to/your/service-account.json:/usr/src/app/gcp-credentials/service-account.json:ro
+      # Google Cloud credentials (mount your existing service account file)
+      - ./config/credentials/daysave-v1412-storage-a1e112ca7a82.json:/usr/src/app/gcp-credentials/service-account.json:ro
       # Optional: Mount test files for development
       - ./testfiles:/usr/src/app/testfiles:ro
     networks:

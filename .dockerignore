@@ -54,6 +54,8 @@ scripts/test-*
 
 # Credentials and secrets
 gcp-credentials/
-*.json
+# Exclude specific credential JSON files, but keep package.json files
+**/credentials/*.json
+**/service-account*.json
 *.pem
 *.key 

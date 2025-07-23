@@ -223,6 +223,7 @@ checkDatabaseConnection().then(async (connected) => {
   app.use('/content', require('./routes/content'));
   app.use('/multimedia', require('./routes/multimedia'));
   app.use('/api/keys', require('./routes/apiKeys'));
+  app.use('/api/places', require('./routes/places'));
   app.use('/subscription', require('./routes/subscription'));
   app.use('/api/subscription', require('./routes/subscription'));
 
