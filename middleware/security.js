@@ -94,9 +94,13 @@ const securityHeaders = () => {
     scriptSrcAttr: ["'none'"]
   };
 
-  // Only add upgrade-insecure-requests in production to avoid localhost SSL issues
+  // DISABLE upgrade-insecure-requests for localhost development to prevent SSL errors
+  // Only enable in production on HTTPS servers
   if (process.env.NODE_ENV === 'production') {
     cspDirectives.upgradeInsecureRequests = [];
+  } else {
+    // Explicitly disable for development/localhost
+    cspDirectives.upgradeInsecureRequests = false;
   }
 
   return helmet({
