@@ -238,10 +238,10 @@ class DocumentProcessor extends BaseMediaProcessor {
 
         const preview = text.length > 3000 ? text.substring(0, 3000) + '...' : text;
         
-        const prompt = `Please analyze this document and provide a JSON response with the following structure:
+        const prompt = `Please analyze this document content and provide a JSON response with the following structure:
 {
-    "title": "Suggested title for the document (max 100 chars)",
-    "summary": "Comprehensive summary in 2-3 sentences (max 300 chars)",
+    "title": "Descriptive title based on the actual content (max 100 chars)",
+    "summary": "Meaningful summary describing what this document is about (max 300 chars)",
     "tags": ["tag1", "tag2", "tag3"],
     "category": "document type category",
     "confidence": 0.95
@@ -251,10 +251,13 @@ Document content:
 ${preview}
 
 Requirements:
-- Title should be descriptive and capture the main topic
-- Summary should be concise but informative
-- Tags should be relevant keywords (3-5 tags)
-- Category should describe the document type (report, letter, manual, etc.)
+- Focus on the ACTUAL TEXT CONTENT, not technical file structure
+- If this is placeholder text (like Lorem Ipsum), identify it as such and provide appropriate description
+- Title should describe what the document contains or its purpose
+- Summary should explain the document's content or nature
+- Tags should reflect the content type and purpose (e.g., "sample", "lorem-ipsum", "placeholder", "text-document")
+- Category should be the document's purpose (sample, template, report, letter, etc.)
+- DO NOT describe file formats, ZIP archives, or XML structure
 - Return only valid JSON, no additional text`;
 
         const response = await this.openai.chat.completions.create({
@@ -275,10 +278,10 @@ Requirements:
         const preview = text.length > 3000 ? text.substring(0, 3000) + '...' : text;
         
         return `
-Please analyze this document and provide a JSON response with the following structure:
+Please analyze this document content and provide a JSON response with the following structure:
 {
-    "title": "Suggested title for the document (max 100 chars)",
-    "summary": "Comprehensive summary in 2-3 sentences (max 300 chars)",
+    "title": "Descriptive title based on the actual content (max 100 chars)",
+    "summary": "Meaningful summary describing what this document is about (max 300 chars)",
     "tags": ["tag1", "tag2", "tag3"],
     "category": "document type category",
     "confidence": 0.95
@@ -288,10 +291,13 @@ Document content:
 ${preview}
 
 Requirements:
-- Title should be descriptive and capture the main topic
-- Summary should be concise but informative
-- Tags should be relevant keywords (3-5 tags)
-- Category should describe the document type (report, letter, manual, etc.)
+- Focus on the ACTUAL TEXT CONTENT, not technical file structure
+- If this is placeholder text (like Lorem Ipsum), identify it as such and provide appropriate description
+- Title should describe what the document contains or its purpose
+- Summary should explain the document's content or nature
+- Tags should reflect the content type and purpose (e.g., "sample", "lorem-ipsum", "placeholder", "text-document")
+- Category should be the document's purpose (sample, template, report, letter, etc.)
+- DO NOT describe file formats, ZIP archives, or XML structure
 - Return only valid JSON, no additional text
         `;
     }

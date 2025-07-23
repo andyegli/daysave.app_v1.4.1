@@ -875,6 +875,7 @@ class AutomationOrchestrator {
                 if (actualResults.aiDescription) formatted.data.aiDescription = actualResults.aiDescription;
                 if (actualResults.tags) formatted.data.tags = actualResults.tags;
                 if (actualResults.title) formatted.data.title = actualResults.title;
+                if (actualResults.generatedTitle) formatted.data.title = actualResults.generatedTitle; // Map DocumentProcessor title
                 break;
         }
         

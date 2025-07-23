@@ -210,6 +210,16 @@ async function processContentDocument(content, user) {
       }
     }
 
+    // DIRECT MAPPING: Add document AI results from AutomationOrchestrator
+    if (formattedResults.data.title) {
+      updateData.generated_title = formattedResults.data.title;
+      console.log(`📝 Setting title: ${formattedResults.data.title}`);
+    }
+    if (formattedResults.data.tags && formattedResults.data.tags.length > 0) {
+      updateData.auto_tags = formattedResults.data.tags;
+      console.log(`🏷️ Setting tags: ${formattedResults.data.tags.join(', ')}`);
+    }
+
     console.log(`💾 Updating content record with AI results...`);
     await Content.update(updateData, {
       where: { id: content.id, user_id: user.id }
