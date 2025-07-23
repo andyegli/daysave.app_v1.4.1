@@ -777,4 +777,81 @@ router.post('/login', isNotAuthenticated, async (req, res, next) => {
   }
 });
 
+// Debug route to check current session user role
+router.get('/debug-session', isAuthenticated, async (req, res) => {
+  try {
+    const sessionUser = req.user;
+    
+    // Get fresh user data from database
+    const freshUser = await User.findByPk(sessionUser.id, { 
+      include: [{ model: Role }] 
+    });
+    
+    const sessionRole = sessionUser.Role ? sessionUser.Role.name : 'NO ROLE IN SESSION';
+    const dbRole = freshUser.Role ? freshUser.Role.name : 'NO ROLE IN DB';
+    
+    const debugInfo = {
+      sessionUser: {
+        id: sessionUser.id,
+        username: sessionUser.username,
+        hasRole: !!sessionUser.Role,
+        roleName: sessionRole,
+        templateCondition: sessionUser && sessionUser.Role && sessionUser.Role.name === 'admin'
+      },
+      freshUser: {
+        id: freshUser.id,
+        username: freshUser.username,
+        hasRole: !!freshUser.Role,
+        roleName: dbRole,
+        templateCondition: freshUser && freshUser.Role && freshUser.Role.name === 'admin'
+      },
+      mismatch: sessionRole !== dbRole
+    };
+    
+    res.json({
+      status: 'debug_info',
+      data: debugInfo,
+      message: debugInfo.mismatch ? 'Role mismatch detected - session needs refresh' : 'Session and DB roles match'
+    });
+    
+  } catch (error) {
+    res.status(500).json({ error: 'Debug failed', message: error.message });
+  }
+});
+
+// Force refresh user session with fresh role data
+router.post('/refresh-session', isAuthenticated, async (req, res) => {
+  try {
+    // Get fresh user data from database
+    const freshUser = await User.findByPk(req.user.id, { 
+      include: [{ model: Role }] 
+    });
+    
+    if (!freshUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Update the session user object
+    req.login(freshUser, (err) => {
+      if (err) {
+        return res.status(500).json({ error: 'Session refresh failed', message: err.message });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Session refreshed successfully',
+        user: {
+          id: freshUser.id,
+          username: freshUser.username,
+          role: freshUser.Role ? freshUser.Role.name : null,
+          adminLinkWillShow: freshUser && freshUser.Role && freshUser.Role.name === 'admin'
+        }
+      });
+    });
+    
+  } catch (error) {
+    res.status(500).json({ error: 'Refresh failed', message: error.message });
+  }
+});
+
 module.exports = router; 

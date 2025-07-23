@@ -312,91 +312,115 @@ checkDatabaseConnection().then(async (connected) => {
     });
   });
 
-  // Profile route (protected)
-  app.get('/profile', (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.redirect('/auth/login');
+  // Profile route
+  app.get('/profile', isAuthenticated, async (req, res) => {
+    const clientDetails = {
+      ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown'
+    };
+    
+    logAuthEvent('PROFILE_ACCESSED', {
+      ...clientDetails,
+      userId: req.user.id,
+      username: req.user.username
+    });
+    
+    // Load user's subscription information for profile
+    let subscriptionInfo = null;
+    try {
+      const subscriptionService = require('./services/subscriptionService');
+      subscriptionInfo = await subscriptionService.getUserSubscription(req.user.id);
+    } catch (error) {
+      console.error('Error loading subscription info for profile:', error);
     }
-    res.render('profile', {
+    
+    res.render('profile', { 
+      title: 'Profile - DaySave',
       user: req.user,
-      title: 'Profile - DaySave'
+      subscription: subscriptionInfo
     });
   });
 
-  // Health check endpoint
-  app.get('/health', (req, res) => {
-    res.status(200).json({
-      status: 'OK',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development'
-    });
-  });
-
-  // Test endpoints for AI pipeline testing
-  app.get('/test-google-api', async (req, res) => {
-    try {
-      const MultimediaAnalyzer = require('./services/multimedia/MultimediaAnalyzer');
-      const analyzer = new MultimediaAnalyzer({ enableLogging: false });
-      
-      // Check if Google Vision API is available
-      if (analyzer.visionClient || analyzer.googleApiKey) {
-        res.json({
-          success: true,
-          message: 'Google Vision API is accessible',
-          method: analyzer.visionClient ? 'Service Account' : 'API Key'
-        });
-      } else {
-        res.json({
-          success: false,
-          message: 'Google Vision API credentials not configured'
-        });
+  // Admin dashboard route
+  app.get('/admin/dashboard', isAuthenticated, async (req, res) => {
+    // Force role loading for admin access
+    if (!req.user.Role) {
+      const { Role } = require('./models');
+      const role = await Role.findByPk(req.user.role_id);
+      if (role) {
+        req.user.Role = role;
       }
-    } catch (error) {
+    }
+    
+    // Check admin permission
+    if (!req.user.Role || req.user.Role.name !== 'admin') {
+      return res.status(403).render('error', {
+        user: req.user,
+        title: 'Access Denied',
+        message: 'You do not have administrator privileges.'
+      });
+    }
+
+    res.render('admin-dashboard', {
+      title: 'Admin Dashboard - DaySave',
+      user: req.user
+    });
+  });
+
+  // Temporary debug route for admin session issues
+  app.get('/debug-admin-session', async (req, res) => {
+    try {
+      const { User, Role } = require('./models');
+      
+      // Get all admin users
+      const adminUsers = await User.findAll({
+        include: [{ model: Role, where: { name: 'admin' }, required: true }]
+      });
+      
+      // Check current session user if authenticated
+      let sessionInfo = null;
+      if (req.isAuthenticated() && req.user) {
+        const freshUser = await User.findByPk(req.user.id, { include: [Role] });
+        sessionInfo = {
+          sessionUserId: req.user.id,
+          sessionUsername: req.user.username,
+          sessionHasRole: !!req.user.Role,
+          sessionRoleName: req.user.Role ? req.user.Role.name : null,
+          dbRoleName: freshUser.Role ? freshUser.Role.name : null,
+          isAdmin: req.user.Role && req.user.Role.name === 'admin',
+          templateCondition: req.user && req.user.Role && req.user.Role.name === 'admin'
+        };
+      }
+      
       res.json({
-        success: false,
-        message: `Google Vision API test failed: ${error.message}`
+        status: 'debug_info',
+        authenticated: req.isAuthenticated(),
+        adminUsers: adminUsers.map(u => ({
+          id: u.id,
+          username: u.username,
+          email: u.email,
+          role: u.Role.name
+        })),
+        currentSession: sessionInfo,
+        fixInstructions: {
+          ifNotAuthenticated: 'Please log in as an admin user',
+          ifNoRole: 'Session missing role - try /auth/refresh-session',
+          ifNotAdmin: 'User is not an admin - contact administrator',
+          browserFix: 'Try hard refresh (Ctrl+F5) or clear browser cache'
+        }
+      });
+      
+    } catch (error) {
+      res.status(500).json({ 
+        error: 'Debug failed', 
+        message: error.message,
+        fix: 'Try restarting the application or checking database connectivity'
       });
     }
   });
 
-  app.get('/test-openai-api', async (req, res) => {
-    try {
-      const openaiApiKey = process.env.OPENAI_API_KEY;
-      
-      if (openaiApiKey) {
-        res.json({
-          success: true,
-          message: 'OpenAI API key is configured and accessible'
-        });
-      } else {
-        res.json({
-          success: false,
-          message: 'OpenAI API key not configured'
-        });
-      }
-    } catch (error) {
-      res.json({
-        success: false,
-        message: `OpenAI API test failed: ${error.message}`
-      });
-    }
-  });
-
-  // 404 handler (must be before error handler)
-  app.use(notFoundHandler);
-
-  // Global error handler (must be last)
-  app.use((err, req, res, next) => {
-    const status = err.status || err.statusCode || 500;
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    res.status(status);
-    res.render('error', {
-      title: 'Error',
-      message: isDevelopment ? err.message : 'Internal Server Error',
-      user: req.user || null
-    });
-  });
+  // Error handling middleware
+  app.use(errorHandler);
 
   // Start the server
   const PORT = process.env.APP_PORT || process.env.PORT || 3000;
