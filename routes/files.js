@@ -25,7 +25,14 @@ function isMultimediaFile(mimetype) {
     // Audio files
     'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp3', 'audio/mp4', 'audio/aac', 'audio/ogg',
     // Image files (for OCR analysis)
-    'image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'image/tiff'
+    'image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'image/tiff',
+    // Document files (for AI text analysis)
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain',
+    'text/rtf',
+    'application/rtf'
   ];
   
   return multimediaTypes.includes(mimetype);
