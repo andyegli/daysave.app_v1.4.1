@@ -1885,7 +1885,10 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
     const fileId = req.params.id;
     const userId = req.user.id;
     
-    console.log(`🔍 Analysis request for file: ${fileId} by user: ${userId}`);
+    const { logging } = require('../config/config');
+    if (logging.enableAnalysisRequestLogging) {
+      console.log(`🔍 Analysis request for file: ${fileId} by user: ${userId}`);
+    }
     
     // Verify user owns the file
     const file = await File.findOne({ where: { id: fileId, user_id: userId } });
@@ -2320,7 +2323,9 @@ router.post('/:id/reprocess', isAuthenticated, async (req, res) => {
     const fileId = req.params.id;
     const userId = req.user.id;
     
-    console.log(`🔄 Reprocess analysis request for file: ${fileId} by user: ${userId}`);
+    if (logging.enableAnalysisRequestLogging) {
+      console.log(`🔄 Reprocess analysis request for file: ${fileId} by user: ${userId}`);
+    }
     
     // Find the file
     const file = await File.findOne({

@@ -204,8 +204,8 @@ checkDatabaseConnection().then(async (connected) => {
     timestamp: new Date().toISOString()
   });
 
-  // Log all users in development mode
-  if (process.env.NODE_ENV === 'development') {
+  // Log all users in development mode (only when enabled)
+  if (process.env.NODE_ENV === 'development' && process.env.ENABLE_STARTUP_VALIDATION_LOGGING === 'true') {
     const { User } = require('./models');
     User.findAll({ attributes: ['username', 'email'] }).then(users => {
       console.log('Registered users:');
