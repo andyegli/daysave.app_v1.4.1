@@ -321,34 +321,133 @@ async function showKeyDetails(keyId) {
         const result = await response.json();
         const key = result.data;
         
+        // Use improved key display
+        const keyDisplay = formatApiKeyDisplay(key.key_prefix, key.id);
+        const statusIcon = key.enabled ? 'fas fa-check-circle text-success' : 'fas fa-times-circle text-danger';
+        const statusText = key.enabled ? 'Enabled' : 'Disabled';
+        
         const content = `
-            <div class="row">
-                <div class="col-md-6">
-                    <h6>Basic Information</h6>
-                    <p><strong>Name:</strong> ${escapeHtml(key.key_name)}</p>
-                    <p><strong>Description:</strong> ${escapeHtml(key.description || 'No description')}</p>
-                    <p><strong>Key Prefix:</strong> <code>${escapeHtml(key.key_prefix)}••••••••</code></p>
-                    <p><strong>Created:</strong> ${new Date(key.createdAt).toLocaleString()}</p>
-                    <p><strong>Last Used:</strong> ${key.last_used_at ? new Date(key.last_used_at).toLocaleString() : 'Never'}</p>
-                    <p><strong>Expires:</strong> ${key.expires_at ? new Date(key.expires_at).toLocaleString() : 'Never'}</p>
+            <!-- Key Identification Section -->
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-key me-2"></i>API Key Identification
                 </div>
-                <div class="col-md-6">
-                    <h6>Configuration</h6>
-                    <p><strong>Status:</strong> ${key.enabled ? 'Enabled' : 'Disabled'}</p>
-                    <p><strong>Usage Count:</strong> ${key.usage_count.toLocaleString()}</p>
-                    <p><strong>Rate Limits:</strong></p>
-                    <ul class="list-unstyled ms-3">
-                        <li>Per minute: ${key.rate_limit_per_minute}</li>
-                        <li>Per hour: ${key.rate_limit_per_hour}</li>
-                        <li>Per day: ${key.rate_limit_per_day}</li>
-                    </ul>
-                    ${key.allowed_origins ? `<p><strong>Allowed Origins:</strong> ${key.allowed_origins.join(', ')}</p>` : ''}
-                    ${key.allowed_ips ? `<p><strong>Allowed IPs:</strong> ${key.allowed_ips.join(', ')}</p>` : ''}
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5 class="mb-2">${escapeHtml(key.key_name)}</h5>
+                            <p class="text-muted mb-2">${escapeHtml(key.description || 'No description provided')}</p>
+                            <div class="key-preview">
+                                <label class="form-label fw-bold">API Key Preview:</label>
+                                <div class="api-key-display p-2 bg-light border rounded">
+                                    <code class="fs-6">${escapeHtml(keyDisplay)}</code>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="status-badge">
+                                <span class="badge bg-${key.enabled ? 'success' : 'danger'} fs-6 p-2">
+                                    <i class="${statusIcon} me-1"></i>${statusText}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="row mt-3">
-                <div class="col-12">
-                    <h6>Permissions</h6>
+            
+            <!-- Usage & Activity Section -->
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-chart-line me-2"></i>Usage & Activity
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="metric-card border-end">
+                                <h6 class="text-primary">Total Usage</h6>
+                                <p class="fs-4 fw-bold mb-1">${key.usage_count.toLocaleString()}</p>
+                                <small class="text-muted">API calls made</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="metric-card">
+                                <h6 class="text-success">Last Used</h6>
+                                <p class="mb-1">${key.last_used_at ? new Date(key.last_used_at).toLocaleString() : 'Never used'}</p>
+                                <small class="text-muted">Most recent activity</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Configuration Section -->
+            <div class="card mb-3">
+                <div class="card-header bg-warning text-dark">
+                    <i class="fas fa-cogs me-2"></i>Configuration & Limits
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Rate Limits</h6>
+                            <div class="rate-limits">
+                                <div class="d-flex justify-content-between py-1">
+                                    <span>Per minute:</span>
+                                    <strong>${key.rate_limit_per_minute.toLocaleString()}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1">
+                                    <span>Per hour:</span>
+                                    <strong>${key.rate_limit_per_hour.toLocaleString()}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1">
+                                    <span>Per day:</span>
+                                    <strong>${key.rate_limit_per_day.toLocaleString()}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-success">Dates & Expiry</h6>
+                            <div class="dates-info">
+                                <div class="d-flex justify-content-between py-1">
+                                    <span>Created:</span>
+                                    <strong>${new Date(key.createdAt).toLocaleDateString()}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1">
+                                    <span>Expires:</span>
+                                    <strong class="${key.expires_at ? 'text-warning' : 'text-success'}">${key.expires_at ? new Date(key.expires_at).toLocaleDateString() : 'Never'}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${key.allowed_origins && key.allowed_origins.length > 0 ? `
+                        <hr>
+                        <h6 class="text-info">Security Restrictions</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Allowed Origins:</strong>
+                                <div class="mt-1">
+                                    ${key.allowed_origins.map(origin => `<span class="badge bg-secondary me-1">${escapeHtml(origin)}</span>`).join('')}
+                                </div>
+                            </div>
+                            ${key.allowed_ips && key.allowed_ips.length > 0 ? `
+                                <div class="col-md-6">
+                                    <strong>Allowed IPs:</strong>
+                                    <div class="mt-1">
+                                        ${key.allowed_ips.map(ip => `<span class="badge bg-dark me-1">${escapeHtml(ip)}</span>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            
+            <!-- Permissions Section -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-shield-alt me-2"></i>API Permissions
+                </div>
+                <div class="card-body">
                     <div class="permissions-detail">
                         ${renderPermissions(key.permissions)}
                     </div>
