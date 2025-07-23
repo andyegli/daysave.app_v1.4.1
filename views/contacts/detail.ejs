@@ -283,14 +283,21 @@
                 <div class="info-card">
                   <h5><i class="fas fa-map-marker-alt text-danger"></i> Addresses</h5>
                   <% contact.addresses.forEach(function(address) { %>
-                    <% if (address.value) { %>
+                    <% if (address && address.value && address.value.trim() !== '') { %>
                       <div class="info-item">
                         <div class="info-label"><%= address.label || 'Address' %></div>
                         <div class="info-value">
                           <%= address.value %>
-                          <a href="#" class="map-link show-map" data-address="<%= address.value.replace(/'/g, '&#39;') %>" title="Show on map">
+                          <a href="#" class="map-link show-map" data-address="<%= address.value.replace(/'/g, '&#39;').replace(/"/g, '&quot;') %>" title="Show on map">
                             <i class="fas fa-map"></i> View on Map
                           </a>
+                        </div>
+                      </div>
+                    <% } else if (address && address.label) { %>
+                      <div class="info-item">
+                        <div class="info-label"><%= address.label || 'Address' %></div>
+                        <div class="info-value">
+                          <span class="text-muted">(No address provided)</span>
                         </div>
                       </div>
                     <% } %>
@@ -391,7 +398,7 @@
   </div>
 
   <!-- Google Map Modal -->
-  <div class="modal fade" id="mapModal" tabindex="-1" aria-labelledby="mapModalLabel" aria-hidden="true">
+  <div class="modal fade" id="mapModal" tabindex="-1" aria-labelledby="mapModalLabel">
     <div class="modal-dialog modal-lg modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">

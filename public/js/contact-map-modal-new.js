@@ -20,8 +20,14 @@ class ModernContactMapModal {
       if (mapButton) {
         e.preventDefault();
         const address = mapButton.getAttribute('data-address');
-        if (address) {
+        
+        console.log('Map button clicked. Address data:', address);
+        
+        if (address && address !== 'undefined' && address !== 'null' && address.trim() !== '') {
           this.showAddressOnMap(address);
+        } else {
+          console.warn('ModernContactMapModal: Invalid address data:', address);
+          this.showAddressError('Address information is not available for this contact.');
         }
       }
     });
@@ -229,6 +235,28 @@ class ModernContactMapModal {
 
   getAppleMapsUrl(location, address) {
     return `https://maps.apple.com/?q=${encodeURIComponent(address)}&ll=${location.lat},${location.lng}`;
+  }
+
+  showAddressError(message) {
+    // Show error modal for address issues
+    const modal = new bootstrap.Modal(document.getElementById('mapModal'));
+    modal.show();
+    
+    const mapContainer = document.getElementById('map');
+    mapContainer.innerHTML = `
+      <div class="d-flex flex-column justify-content-center align-items-center h-100 text-center p-4">
+        <i class="fas fa-exclamation-circle text-danger fa-4x mb-3"></i>
+        <h5 class="mb-2">Address Not Available</h5>
+        <p class="text-muted mb-3">${message}</p>
+        <div class="alert alert-info small">
+          <i class="fas fa-info-circle me-1"></i>
+          This contact may not have a complete address or the address data could not be found.
+        </div>
+        <button class="btn btn-primary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-2"></i>Close
+        </button>
+      </div>
+    `;
   }
 
   showMapError(message) {

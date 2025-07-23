@@ -111,16 +111,21 @@
                 </td>
                 <td>
                   <% if (contact.addresses && contact.addresses.length) { %>
-                    <% contact.addresses.forEach(function(address, aidx) { %>
-                      <span>
-                        <%= address.label %>: <%= address.value %>
-                        <a href="#" class="text-primary ms-1 show-map" data-address="<%= address.value.replace(/'/g, '&#39;') %>" title="Show on map">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-geo-alt-fill" viewBox="0 0 16 16">
-                            <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
-                          </svg>
-                        </a>
-                      </span><% if (aidx < contact.addresses.length - 1) { %>, <% } %>
-                    <% }) %>
+                    <% const validAddresses = contact.addresses.filter(addr => addr && addr.value && addr.value.trim() !== ''); %>
+                    <% if (validAddresses.length > 0) { %>
+                      <% validAddresses.forEach(function(address, aidx) { %>
+                        <span>
+                          <%= address.label %>: <%= address.value %>
+                          <a href="#" class="text-primary ms-1 show-map" data-address="<%= address.value.replace(/'/g, '&#39;').replace(/"/g, '&quot;') %>" title="Show on map">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-geo-alt-fill" viewBox="0 0 16 16">
+                              <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+                            </svg>
+                          </a>
+                        </span><% if (aidx < validAddresses.length - 1) { %>, <% } %>
+                      <% }) %>
+                    <% } else { %>
+                      <span class="text-muted">(Incomplete addresses)</span>
+                    <% } %>
                   <% } else { %>
                     -
                   <% } %>
@@ -150,7 +155,7 @@
     </div>
   </div>
   <!-- Google Map Modal -->
-  <div class="modal fade" id="mapModal" tabindex="-1" aria-labelledby="mapModalLabel" aria-hidden="true">
+  <div class="modal fade" id="mapModal" tabindex="-1" aria-labelledby="mapModalLabel">
     <div class="modal-dialog modal-lg modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
