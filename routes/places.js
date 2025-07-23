@@ -278,71 +278,7 @@ router.post('/geocode', isAuthenticated, async (req, res) => {
   }
 });
 
-// Static map endpoint (serves as a proxy to hide API key)
-router.get('/static-map', isAuthenticated, async (req, res) => {
-  try {
-    const apiKey = getApiKey();
-    
-    if (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY') {
-      return res.status(400).send('API key not configured');
-    }
-
-    const { lat, lng, address } = req.query;
-    
-    if (!lat || !lng) {
-      return res.status(400).send('Latitude and longitude required');
-    }
-
-    // Build Google Static Maps URL
-    const baseUrl = 'https://maps.googleapis.com/maps/api/staticmap';
-    const params = new URLSearchParams({
-      center: `${lat},${lng}`,
-      zoom: '15',
-      size: '600x400',
-      maptype: 'roadmap',
-      markers: `color:red|${lat},${lng}`,
-      key: apiKey
-    });
-
-    const staticMapUrl = `${baseUrl}?${params.toString()}`;
-    
-    console.log('Static map request:', { lat, lng, address });
-    
-    // Fetch the map image and send it back
-    const response = await fetch(staticMapUrl);
-    
-    if (!response.ok) {
-      console.error('Google Static Maps API error:', response.status, response.statusText);
-      throw new Error(`Static Maps API returned ${response.status}: ${response.statusText}`);
-    }
-    
-    // Get the image as buffer (node-fetch v2 compatible)
-    const imageBuffer = await response.buffer();
-    
-    // Set appropriate headers
-    res.set({
-      'Content-Type': response.headers.get('content-type') || 'image/png',
-      'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
-      'Content-Length': imageBuffer.length
-    });
-    
-    // Send the image buffer
-    res.send(imageBuffer);
-    
-  } catch (error) {
-    console.error('Static map error:', error);
-    
-    // Send a placeholder image or error message
-    res.status(500).send(`
-      <svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100%" height="100%" fill="#f8f9fa"/>
-        <text x="50%" y="50%" text-anchor="middle" fill="#6c757d" font-family="Arial" font-size="16">
-          Map unavailable
-        </text>
-      </svg>
-    `);
-  }
-});
+// Note: Static map endpoint removed as we now use location verification interface instead
 
 // Health check endpoint for Places API
 router.get('/health', isAuthenticated, async (req, res) => {
