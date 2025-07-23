@@ -194,22 +194,78 @@ class DocumentProcessor extends BaseMediaProcessor {
      * Perform AI analysis on extracted text
      */
     async performAIAnalysis(text, metadata = {}) {
-        if (!this.model) {
-            return this.createFallbackAnalysis(text, metadata);
+        // Try Google AI (Gemini) first
+        if (this.model) {
+            try {
+                const prompt = this.createAnalysisPrompt(text, metadata);
+                const result = await this.model.generateContent(prompt);
+                const response = result.response;
+                const analysisText = response.text();
+
+                return this.parseAIResponse(analysisText, text);
+
+            } catch (error) {
+                console.error('Google AI analysis failed:', error);
+                // Continue to try OpenAI fallback
+            }
         }
 
-        try {
-            const prompt = this.createAnalysisPrompt(text, metadata);
-            const result = await this.model.generateContent(prompt);
-            const response = result.response;
-            const analysisText = response.text();
-
-            return this.parseAIResponse(analysisText, text);
-
-        } catch (error) {
-            console.error('AI analysis failed:', error);
-            return this.createFallbackAnalysis(text, metadata);
+        // Try OpenAI as fallback
+        if (process.env.OPENAI_API_KEY) {
+            try {
+                console.log('🔄 Falling back to OpenAI for document analysis...');
+                return await this.performOpenAIAnalysis(text, metadata);
+            } catch (error) {
+                console.error('OpenAI analysis failed:', error);
+            }
         }
+
+        // Use fallback analysis
+        console.log('⚠️ No AI service available, using fallback analysis');
+        return this.createFallbackAnalysis(text, metadata);
+    }
+
+    /**
+     * Perform AI analysis using OpenAI
+     */
+    async performOpenAIAnalysis(text, metadata = {}) {
+        if (!this.openai) {
+            const { OpenAI } = require('openai');
+            this.openai = new OpenAI({
+                apiKey: process.env.OPENAI_API_KEY
+            });
+        }
+
+        const preview = text.length > 3000 ? text.substring(0, 3000) + '...' : text;
+        
+        const prompt = `Please analyze this document and provide a JSON response with the following structure:
+{
+    "title": "Suggested title for the document (max 100 chars)",
+    "summary": "Comprehensive summary in 2-3 sentences (max 300 chars)",
+    "tags": ["tag1", "tag2", "tag3"],
+    "category": "document type category",
+    "confidence": 0.95
+}
+
+Document content:
+${preview}
+
+Requirements:
+- Title should be descriptive and capture the main topic
+- Summary should be concise but informative
+- Tags should be relevant keywords (3-5 tags)
+- Category should describe the document type (report, letter, manual, etc.)
+- Return only valid JSON, no additional text`;
+
+        const response = await this.openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [{ role: "user", content: prompt }],
+            max_tokens: 500,
+            temperature: 0.3
+        });
+
+        const analysisText = response.choices[0].message.content;
+        return this.parseAIResponse(analysisText, text);
     }
 
     /**
