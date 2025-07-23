@@ -69,7 +69,7 @@ function initializeAIIndicators() {
  */
 async function loadAIIndicators(contentId, itemType = 'content') {
   try {
-    const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
+    const endpoint = itemType === 'file' ? getCorrectUrl(`/files/${contentId}/analysis`) : getCorrectUrl(`/content/${contentId}/analysis`);
     
     // Use XMLHttpRequest instead of fetch for better compatibility
     const result = await new Promise((resolve, reject) => {
@@ -194,7 +194,7 @@ async function showComprehensiveAnalysisModal(contentId, itemType = 'content') {
     showLoadingModal();
     
     // Determine endpoint based on item type
-    const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
+    const endpoint = itemType === 'file' ? getCorrectUrl(`/files/${contentId}/analysis`) : getCorrectUrl(`/content/${contentId}/analysis`);
     
     // Fetch analysis data using XMLHttpRequest for better compatibility
     const result = await new Promise((resolve, reject) => {

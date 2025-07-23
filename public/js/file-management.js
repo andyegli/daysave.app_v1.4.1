@@ -3,6 +3,14 @@
  * Handles file operations, modals, drag & drop, and AI analysis integration
  */
 
+// Helper function to fix localhost SSL protocol issues
+function getCorrectUrl(path) {
+  if (window.location.hostname === 'localhost') {
+    return `http://localhost:${window.location.port || 3000}${path}`;
+  }
+  return path;
+}
+
 $(document).ready(function() {
   console.log('File Management JavaScript loaded');
   
@@ -67,7 +75,7 @@ $(document).ready(function() {
         submitBtn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Uploading...');
         
         $.ajax({
-          url: '/files/upload',
+          url: getCorrectUrl('/files/upload'),
           type: 'POST',
           data: formData,
           processData: false,
@@ -143,7 +151,7 @@ $(document).ready(function() {
    */
   function deleteFile(fileId) {
     $.ajax({
-      url: `/files/${fileId}`,
+      url: getCorrectUrl(`/files/${fileId}`),
       type: 'DELETE',
       success: function(response) {
         if (response.success) {
@@ -168,8 +176,11 @@ $(document).ready(function() {
    * Share a file
    */
   function shareFile(fileId) {
-    // Create share URL
-    const shareUrl = `${window.location.origin}/files/${fileId}`;
+    // Create share URL with correct protocol
+    const baseUrl = window.location.hostname === 'localhost' ? 
+      `http://localhost:${window.location.port || 3000}` : 
+      window.location.origin;
+    const shareUrl = `${baseUrl}/files/${fileId}`;
     
     // Copy to clipboard
     if (navigator.clipboard) {
@@ -250,13 +261,16 @@ $(document).ready(function() {
     `);
     
     $.ajax({
-      url: `/files/${fileId}`,
+      url: getCorrectUrl(`/files/${fileId}`),
       type: 'GET',
       success: function(response) {
         // Since this is likely to return HTML, we'll show a simple message for now
+        const viewUrl = window.location.hostname === 'localhost' ? 
+          `http://localhost:${window.location.port || 3000}/files/${fileId}` : 
+          `/files/${fileId}`;
         modalBody.html(`
           <p>File details loaded successfully.</p>
-          <p><a href="/files/${fileId}" target="_blank" class="btn btn-primary">
+          <p><a href="${viewUrl}" target="_blank" class="btn btn-primary">
             <i class="bi bi-box-arrow-up-right"></i> View Full Details
           </a></p>
         `);
@@ -309,7 +323,7 @@ $(document).ready(function() {
    */
   function checkAnalysisStatus(fileId, indicatorContainer) {
     $.ajax({
-      url: `/files/${fileId}/analysis`,
+      url: getCorrectUrl(`/files/${fileId}/analysis`),
       type: 'GET',
       success: function(response) {
         if (response.success) {

@@ -1,6 +1,14 @@
 // Content Management JavaScript
 // This file handles all content management functionality
 
+// Helper function to fix localhost SSL protocol issues
+function getCorrectUrl(path) {
+  if (window.location.hostname === 'localhost') {
+    return `http://localhost:${window.location.port || 3000}${path}`;
+  }
+  return path;
+}
+
 // Force correct protocol for localhost on page load
 if (window.location.hostname === 'localhost' && window.location.protocol === 'https:') {
   console.log('Redirecting from HTTPS to HTTP for localhost...');
@@ -233,9 +241,7 @@ async function handleFileUpload(form) {
       };
       
       // Ensure correct protocol for localhost (fix SSL errors)
-      const uploadUrl = window.location.hostname === 'localhost' ? 
-        `http://localhost:${window.location.port || 3000}/files/upload` : 
-        '/files/upload';
+      const uploadUrl = getCorrectUrl('/files/upload');
       
       xhr.open('POST', uploadUrl);
       xhr.send(formData);

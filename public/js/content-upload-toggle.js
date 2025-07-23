@@ -351,9 +351,7 @@ async function handleFileUploadSubmission() {
       xhr.timeout = 300000; // 5 minute timeout
       
       // Ensure correct protocol for localhost (fix SSL errors)
-      const uploadUrl = window.location.hostname === 'localhost' ? 
-        `http://localhost:${window.location.port || 3000}/files/upload` : 
-        '/files/upload';
+      const uploadUrl = getCorrectUrl('/files/upload');
       
       xhr.open('POST', uploadUrl);
       xhr.send(formData);

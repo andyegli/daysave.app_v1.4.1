@@ -3,6 +3,14 @@
  * Handles progressive status updates (waiting → processing → analysed/incomplete)
  */
 
+// Helper function to fix localhost SSL protocol issues
+function getCorrectUrl(path) {
+  if (window.location.hostname === 'localhost') {
+    return `http://localhost:${window.location.port || 3000}${path}`;
+  }
+  return path;
+}
+
 $(document).ready(function() {
   console.log('🔄 Status Button System: Initializing...');
   initializeStatusButtons();
@@ -37,10 +45,8 @@ function initializeStatusButtons() {
 function updateStatusButton(contentId, itemType) {
   const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/api/${contentId}/status`;
   
-  // Use HTTP for localhost to avoid SSL errors
-  const url = window.location.hostname === 'localhost' ? 
-    `http://localhost:${window.location.port || 3000}${endpoint}` : 
-    endpoint;
+  // Use helper function to get correct URL with proper protocol
+  const url = getCorrectUrl(endpoint);
   
   $.ajax({
     url: url,
@@ -188,10 +194,8 @@ function showAnalysisProgress(contentId, itemType) {
   // Otherwise fetch fresh data
   const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/api/${contentId}/status`;
   
-  // Use HTTP for localhost to avoid SSL errors
-  const url = window.location.hostname === 'localhost' ? 
-    `http://localhost:${window.location.port || 3000}${endpoint}` : 
-    endpoint;
+  // Use helper function to get correct URL with proper protocol
+  const url = getCorrectUrl(endpoint);
   
   $.ajax({
     url: url,
