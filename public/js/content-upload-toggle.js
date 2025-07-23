@@ -6,7 +6,15 @@
 // Helper function to fix localhost SSL protocol issues
 function getCorrectUrl(path) {
   if (window.location.hostname === 'localhost') {
-    return `http://localhost:${window.location.port || 3000}${path}`;
+    // If path is already a full URL, don't modify it
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      // Convert HTTPS to HTTP for localhost
+      return path.replace('https://localhost', 'http://localhost');
+    }
+    // If it's a relative path, make it absolute HTTP
+    if (path.startsWith('/')) {
+      return `http://localhost:${window.location.port || 3000}${path}`;
+    }
   }
   return path;
 }
@@ -31,12 +39,10 @@ if (window.location.hostname === 'localhost') {
       url = newUrl;
     }
     
-    // Force HTTP for ANY localhost request
-    if (typeof url === 'string' && url.includes('localhost') && !url.startsWith('http://')) {
-      if (url.startsWith('/')) {
-        url = `http://localhost:${window.location.port || 3000}${url}`;
-        console.log('🔧 XHR Relative URL Fixed:', url);
-      }
+    // Fix relative URLs to absolute HTTP URLs for localhost
+    if (typeof url === 'string' && url.startsWith('/') && window.location.hostname === 'localhost') {
+      url = `http://localhost:${window.location.port || 3000}${url}`;
+      console.log('🔧 XHR Relative URL Fixed:', url);
     }
     
     // Handle timeout conflict for sync requests
@@ -58,12 +64,10 @@ if (window.location.hostname === 'localhost') {
       url = newUrl;
     }
     
-    // Force HTTP for ANY localhost request
-    if (typeof url === 'string' && url.includes('localhost') && !url.startsWith('http://')) {
-      if (url.startsWith('/')) {
-        url = `http://localhost:${window.location.port || 3000}${url}`;
-        console.log('🔧 Fetch Relative URL Fixed:', url);
-      }
+    // Fix relative URLs to absolute HTTP URLs for localhost
+    if (typeof url === 'string' && url.startsWith('/') && window.location.hostname === 'localhost') {
+      url = `http://localhost:${window.location.port || 3000}${url}`;
+      console.log('🔧 Fetch Relative URL Fixed:', url);
     }
     
     return _originalFetch.call(this, url, options);

@@ -19,7 +19,15 @@
 // Helper function to fix localhost SSL protocol issues
 function getCorrectUrl(path) {
   if (window.location.hostname === 'localhost') {
-    return `http://localhost:${window.location.port || 3000}${path}`;
+    // If path is already a full URL, don't modify it
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      // Convert HTTPS to HTTP for localhost
+      return path.replace('https://localhost', 'http://localhost');
+    }
+    // If it's a relative path, make it absolute HTTP
+    if (path.startsWith('/')) {
+      return `http://localhost:${window.location.port || 3000}${path}`;
+    }
   }
   return path;
 }
