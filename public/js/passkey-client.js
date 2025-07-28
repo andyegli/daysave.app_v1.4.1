@@ -389,4 +389,7 @@ window.PasskeyUtils = {
     };
     return types[deviceType] || types.unknown;
   }
-}; 
+};
+
+// Initialize global passkey client instance
+window.passkeyClient = new PasskeyClient(); 
