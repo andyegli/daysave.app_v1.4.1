@@ -193,10 +193,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Add new passkey
   addPasskeyBtn.addEventListener('click', async function() {
+    console.log('🔘 Add passkey button clicked!');
     try {
+      console.log('🔄 Setting button loading state...');
       PasskeyUtils.setButtonLoading(this, true);
       
       const deviceName = newPasskeyNameInput.value.trim() || null;
+      console.log('📝 Device name:', deviceName);
+      console.log('🚀 Calling registerPasskey...');
       const result = await window.passkeyClient.registerPasskey(deviceName);
       
       if (result.success) {

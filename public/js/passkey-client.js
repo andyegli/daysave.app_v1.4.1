@@ -64,11 +64,15 @@ class PasskeyClient {
    * Register a new passkey
    */
   async registerPasskey(deviceName = null) {
+    console.log('🔐 Starting passkey registration...', { deviceName, isSupported: this.isSupported });
+    
     if (!this.isSupported) {
+      console.error('❌ WebAuthn not supported');
       throw new Error('Passkeys are not supported on this device or browser.');
     }
 
     try {
+      console.log('📡 Fetching registration challenge...');
       // Get registration challenge from server
       const challengeResponse = await fetch(`${this.apiBase}/register/begin`, {
         method: 'GET',
@@ -79,13 +83,17 @@ class PasskeyClient {
         credentials: 'same-origin'
       });
 
+      console.log('📡 Challenge response status:', challengeResponse.status);
+
       if (!challengeResponse.ok) {
         const errorData = await challengeResponse.json();
+        console.error('❌ Challenge failed:', errorData);
         throw new Error(errorData.error || 'Failed to start registration');
       }
 
       const challengeData = await challengeResponse.json();
       const options = challengeData.options;
+      console.log('✅ Challenge received:', { options });
 
       // Convert challenge and user ID from base64url to ArrayBuffer
       options.challenge = this.base64urlToArrayBuffer(options.challenge);
@@ -99,14 +107,18 @@ class PasskeyClient {
         }));
       }
 
+      console.log('🔐 Creating WebAuthn credential...');
       // Create the credential
       const credential = await navigator.credentials.create({
         publicKey: options
       });
 
       if (!credential) {
+        console.error('❌ Credential creation cancelled');
         throw new Error('Passkey creation was cancelled');
       }
+
+      console.log('✅ Credential created:', credential.id);
 
       // Prepare the credential for server verification
       const credentialData = {
@@ -119,6 +131,7 @@ class PasskeyClient {
         }
       };
 
+      console.log('📡 Sending credential for verification...');
       // Send to server for verification
       const verificationResponse = await fetch(`${this.apiBase}/register/finish`, {
         method: 'POST',
@@ -133,16 +146,21 @@ class PasskeyClient {
         })
       });
 
+      console.log('📡 Verification response status:', verificationResponse.status);
+
       if (!verificationResponse.ok) {
         const errorData = await verificationResponse.json();
+        console.error('❌ Verification failed:', errorData);
         throw new Error(errorData.error || 'Failed to verify registration');
       }
 
       const result = await verificationResponse.json();
+      console.log('✅ Passkey registration successful:', result);
       return result;
 
     } catch (error) {
-      console.error('Passkey registration error:', error);
+      console.error('❌ Passkey registration error:', error);
+      console.error('❌ Error details:', { name: error.name, message: error.message, stack: error.stack });
       throw new Error(this.getErrorMessage(error));
     }
   }
