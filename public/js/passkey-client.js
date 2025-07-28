@@ -410,4 +410,246 @@ window.PasskeyUtils = {
 };
 
 // Initialize global passkey client instance
-window.passkeyClient = new PasskeyClient(); 
+window.passkeyClient = new PasskeyClient();
+
+// Initialize passkey management modal functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('passkeyManagementModal');
+  if (!modal) return; // Exit if modal doesn't exist on this page
+  
+  const addPasskeyBtn = document.getElementById('addPasskeyBtn');
+  const refreshBtn = document.getElementById('refreshPasskeysBtn');
+  const passkeyList = document.getElementById('passkeyList');
+  const noPasskeysMessage = document.getElementById('noPasskeysMessage');
+  const passkeyCount = document.getElementById('passkeyCount');
+  const newPasskeyNameInput = document.getElementById('newPasskeyName');
+  
+  // Rename modal elements
+  const renameModal = document.getElementById('renamePasskeyModal');
+  const renameInput = document.getElementById('renamePasskeyInput');
+  const saveNameBtn = document.getElementById('savePasskeyNameBtn');
+  let currentRenamePasskeyId = null;
+
+  // Check passkey support
+  if (!window.passkeyClient.isSupported) {
+    document.getElementById('passkeyNotSupported').classList.remove('d-none');
+    document.getElementById('addPasskeySection').style.display = 'none';
+  }
+
+  // Load passkeys when modal opens
+  modal.addEventListener('shown.bs.modal', function() {
+    loadPasskeys();
+  });
+
+  // Add new passkey
+  addPasskeyBtn.addEventListener('click', async function() {
+    console.log('🔘 Add passkey button clicked!');
+    try {
+      console.log('🔄 Setting button loading state...');
+      PasskeyUtils.setButtonLoading(this, true);
+      
+      const deviceName = newPasskeyNameInput.value.trim() || null;
+      console.log('📝 Device name:', deviceName);
+      console.log('🚀 Calling registerPasskey...');
+      const result = await window.passkeyClient.registerPasskey(deviceName);
+      
+      if (result.success) {
+        PasskeyUtils.showSuccess('Passkey added successfully!');
+        newPasskeyNameInput.value = '';
+        loadPasskeys();
+      } else {
+        PasskeyUtils.showError(result.error || 'Failed to add passkey');
+      }
+    } catch (error) {
+      console.error('Add passkey error:', error);
+      PasskeyUtils.showError(error.message || 'Failed to add passkey');
+    } finally {
+      PasskeyUtils.setButtonLoading(this, false);
+    }
+  });
+
+  // Refresh passkeys
+  refreshBtn.addEventListener('click', function() {
+    loadPasskeys();
+  });
+
+  // Save renamed passkey
+  saveNameBtn && saveNameBtn.addEventListener('click', async function() {
+    if (!currentRenamePasskeyId) return;
+    
+    try {
+      PasskeyUtils.setButtonLoading(this, true);
+      
+      const newName = renameInput.value.trim();
+      if (!newName) {
+        PasskeyUtils.showError('Please enter a device name');
+        return;
+      }
+      
+      const result = await window.passkeyClient.updatePasskey(currentRenamePasskeyId, {
+        device_name: newName
+      });
+      
+      if (result.success) {
+        PasskeyUtils.showSuccess('Passkey renamed successfully!');
+        bootstrap.Modal.getInstance(renameModal).hide();
+        loadPasskeys();
+      } else {
+        PasskeyUtils.showError(result.error || 'Failed to rename passkey');
+      }
+    } catch (error) {
+      console.error('Rename passkey error:', error);
+      PasskeyUtils.showError(error.message || 'Failed to rename passkey');
+    } finally {
+      PasskeyUtils.setButtonLoading(this, false);
+    }
+  });
+
+  // Load and display passkeys
+  async function loadPasskeys() {
+    try {
+      const result = await window.passkeyClient.getUserPasskeys();
+      
+      if (result.success) {
+        displayPasskeys(result.passkeys);
+        passkeyCount.textContent = result.count;
+      } else {
+        PasskeyUtils.showError('Failed to load passkeys');
+      }
+    } catch (error) {
+      console.error('Load passkeys error:', error);
+      PasskeyUtils.showError('Failed to load passkeys');
+    }
+  }
+
+  // Display passkeys in the list
+  function displayPasskeys(passkeys) {
+    passkeyList.innerHTML = '';
+    
+    if (passkeys.length === 0) {
+      noPasskeysMessage.style.display = 'block';
+      return;
+    }
+    
+    noPasskeysMessage.style.display = 'none';
+    
+    passkeys.forEach(passkey => {
+      const passkeyItem = createPasskeyItem(passkey);
+      passkeyList.appendChild(passkeyItem);
+    });
+  }
+
+  // Create passkey list item
+  function createPasskeyItem(passkey) {
+    const item = document.createElement('div');
+    item.className = 'list-group-item passkey-item';
+    
+    const lastUsed = passkey.last_used_at 
+      ? PasskeyUtils.formatDate(passkey.last_used_at)
+      : 'Never used';
+    
+    const statusBadge = passkey.is_active 
+      ? '<span class="badge bg-success device-status-badge">Active</span>'
+      : '<span class="badge bg-secondary device-status-badge">Inactive</span>';
+    
+    item.innerHTML = `
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <div class="passkey-device-icon ${passkey.device_type} me-3">
+            <i class="${passkey.device_icon}"></i>
+          </div>
+          <div>
+            <h6 class="mb-1 fw-semibold">${passkey.device_name}</h6>
+            <div class="d-flex align-items-center gap-2">
+              ${statusBadge}
+              <small class="last-used-text">Last used: ${lastUsed}</small>
+            </div>
+            <small class="text-muted">Added ${PasskeyUtils.formatDate(passkey.created_at)}</small>
+          </div>
+        </div>
+        
+        <div class="passkey-actions">
+          <button class="btn btn-outline-primary btn-sm rename-passkey-btn" 
+                  data-passkey-id="${passkey.id}" 
+                  data-current-name="${passkey.device_name}"
+                  title="Rename">
+            <i class="fas fa-edit"></i>
+          </button>
+          
+          <button class="btn ${passkey.is_active ? 'btn-outline-warning' : 'btn-outline-success'} btn-sm toggle-passkey-btn" 
+                  data-passkey-id="${passkey.id}" 
+                  data-is-active="${passkey.is_active}"
+                  title="${passkey.is_active ? 'Disable' : 'Enable'}">
+            <i class="fas ${passkey.is_active ? 'fa-pause' : 'fa-play'}"></i>
+          </button>
+          
+          <button class="btn btn-outline-danger btn-sm delete-passkey-btn" 
+                  data-passkey-id="${passkey.id}"
+                  title="Delete">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Add event listeners
+    item.querySelector('.rename-passkey-btn').addEventListener('click', function() {
+      currentRenamePasskeyId = this.dataset.passkeyId;
+      renameInput.value = this.dataset.currentName;
+      new bootstrap.Modal(renameModal).show();
+    });
+
+    item.querySelector('.toggle-passkey-btn').addEventListener('click', async function() {
+      const passkeyId = this.dataset.passkeyId;
+      const isActive = this.dataset.isActive === 'true';
+      
+      try {
+        PasskeyUtils.setButtonLoading(this, true);
+        
+        const result = await window.passkeyClient.updatePasskey(passkeyId, {
+          is_active: !isActive
+        });
+        
+        if (result.success) {
+          PasskeyUtils.showSuccess(`Passkey ${!isActive ? 'enabled' : 'disabled'} successfully!`);
+          loadPasskeys();
+        } else {
+          PasskeyUtils.showError(result.error || 'Failed to update passkey');
+        }
+      } catch (error) {
+        console.error('Toggle passkey error:', error);
+        PasskeyUtils.showError(error.message || 'Failed to update passkey');
+      } finally {
+        PasskeyUtils.setButtonLoading(this, false);
+      }
+    });
+
+    item.querySelector('.delete-passkey-btn').addEventListener('click', async function() {
+      const passkeyId = this.dataset.passkeyId;
+      
+      if (!confirm('Are you sure you want to delete this passkey? This action cannot be undone.')) {
+        return;
+      }
+      
+      try {
+        PasskeyUtils.setButtonLoading(this, true);
+        
+        const result = await window.passkeyClient.deletePasskey(passkeyId);
+        
+        if (result.success) {
+          PasskeyUtils.showSuccess('Passkey deleted successfully!');
+          loadPasskeys();
+        } else {
+          PasskeyUtils.showError(result.error || 'Failed to delete passkey');
+        }
+      } catch (error) {
+        console.error('Delete passkey error:', error);
+        PasskeyUtils.showError(error.message || 'Failed to delete passkey');
+      } finally {
+        PasskeyUtils.setButtonLoading(this, false);
+      }
+    });
+
+    return item;
+  }
+}); 
