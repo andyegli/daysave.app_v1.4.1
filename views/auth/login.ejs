@@ -60,6 +60,18 @@
             background: #333;
             border-color: #333;
         }
+        .passkey-login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            background: linear-gradient(45deg, #5a6fd8, #6a3d94) !important;
+        }
+        .alert-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            max-width: 400px;
+        }
         .divider {
             position: relative;
             text-align: center;
@@ -140,6 +152,21 @@
                         </div>
                     <% } %>
 
+                    <!-- Passkey Authentication (Prominent) -->
+                    <div class="mb-4">
+                        <button type="button" class="btn oauth-btn w-100 passkey-login-btn" 
+                                style="background: linear-gradient(45deg, #667eea, #764ba2); color: white; border: 2px solid transparent;">
+                            <i class="fas fa-fingerprint me-2"></i>Sign in with Passkey
+                        </button>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">Use Face ID, Touch ID, or your security key</small>
+                        </div>
+                    </div>
+
+                    <div class="text-center my-3">
+                        <span class="text-muted">or continue with</span>
+                    </div>
+
                     <!-- OAuth Buttons -->
                     <div class="d-grid gap-3">
                         <a href="/auth/google" class="btn oauth-btn btn-google">
@@ -176,6 +203,19 @@
                         <button type="submit" class="btn btn-primary w-100">Login</button>
                     </form>
 
+                    <!-- Forgot Password/Passkey Links -->
+                    <div class="text-center mt-3">
+                        <small class="text-muted d-block mb-2">Having trouble signing in?</small>
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="/auth/forgot-passkey" class="text-decoration-none small">
+                                <i class="fas fa-fingerprint me-1"></i>Lost Passkey?
+                            </a>
+                            <a href="#" class="text-decoration-none small text-muted" onclick="alert('Password reset coming soon!')">
+                                <i class="fas fa-key me-1"></i>Forgot Password?
+                            </a>
+                        </div>
+                    </div>
+
                     <!-- Coming Soon -->
                     <div class="text-center">
                         <p class="text-muted mb-3">More options coming soon:</p>
@@ -199,6 +239,46 @@
         </div>
     </div>
 
+    <!-- Alert Container for Passkey Messages -->
+    <div class="alert-container"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Passkey Client Library -->
+    <script src="/js/passkey-client.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const passkeyBtn = document.querySelector('.passkey-login-btn');
+            
+            if (!window.passkeyClient.isSupported) {
+                passkeyBtn.style.display = 'none';
+                return;
+            }
+
+            passkeyBtn.addEventListener('click', async function() {
+                try {
+                    PasskeyUtils.setButtonLoading(this, true);
+                    
+                    const result = await window.passkeyClient.authenticateWithPasskey();
+                    
+                    if (result.success) {
+                        PasskeyUtils.showSuccess(result.message || 'Authentication successful!');
+                        
+                        // Redirect to dashboard
+                        setTimeout(() => {
+                            window.location.href = result.redirectUrl || '/dashboard';
+                        }, 1000);
+                    } else {
+                        PasskeyUtils.showError(result.error || 'Authentication failed');
+                    }
+                } catch (error) {
+                    console.error('Passkey login error:', error);
+                    PasskeyUtils.showError(error.message || 'Authentication failed');
+                } finally {
+                    PasskeyUtils.setButtonLoading(this, false);
+                }
+            });
+        });
+    </script>
 </body>
 </html> 

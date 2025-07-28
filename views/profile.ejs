@@ -29,7 +29,7 @@
                         <h4 class="mb-0"><i class="fas fa-user-circle me-2"></i>Profile</h4>
                     </div>
                     <div class="card-body">
-                        <dl class="row mb-0">
+                        <dl class="row mb-4">
                             <dt class="col-sm-4">First Name</dt>
                             <dd class="col-sm-8"><%= user.first_name || '-' %></dd>
                             <dt class="col-sm-4">Last Name</dt>
@@ -47,11 +47,46 @@
                             <dt class="col-sm-4">Language</dt>
                             <dd class="col-sm-8"><%= user.language %></dd>
                         </dl>
+
+                        <!-- Security Settings Section -->
+                        <div class="border-top pt-4">
+                            <h5 class="mb-3">
+                                <i class="fas fa-shield-alt me-2 text-primary"></i>Security Settings
+                            </h5>
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#passkeyManagementModal">
+                                    <i class="fas fa-fingerprint me-2"></i>Manage Passkeys
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" disabled>
+                                    <i class="fas fa-key me-2"></i>Change Password (Coming Soon)
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" disabled>
+                                    <i class="fas fa-mobile-alt me-2"></i>Two-Factor Authentication (Coming Soon)
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Alert Container for Messages -->
+    <div class="alert-container"></div>
+
+    <%- include('partials/passkey-management-modal') %>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/passkey-client.js"></script>
+
+    <style>
+        .alert-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            max-width: 400px;
+        }
+    </style>
 </body>
 </html> 

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        .recovery-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .recovery-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 20px 20px 0 0;
+            padding: 2rem;
+            text-align: center;
+        }
+        .passkey-item {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        .passkey-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.95);
+        }
+        .device-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
+        .btn-recovery {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-recovery:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            background: linear-gradient(45deg, #5a6fd8, #6a3d94);
+            color: white;
+        }
+        .alert-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="recovery-container">
+            <!-- Header -->
+            <div class="recovery-header">
+                <i class="fas fa-shield-alt fa-3x mb-3"></i>
+                <h2 class="mb-2">Passkey Recovery</h2>
+                <p class="mb-0">Welcome back, <%= user.username %>! Manage your passkeys below.</p>
+            </div>
+
+            <!-- Content -->
+            <div class="p-4">
+                <!-- Success/Error Messages -->
+                <% if (error) { %>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <%= error %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <% } %>
+                
+                <% if (success) { %>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <%= success %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <% } %>
+
+                <!-- Add New Passkey Section -->
+                <div class="card mb-4" style="border-radius: 15px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="device-icon me-3">
+                                <i class="fas fa-plus"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-1">Add New Passkey</h5>
+                                <small class="text-muted">Set up a passkey for your current device</small>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="newPasskeyName" 
+                                   placeholder="Device name (e.g., My iPhone, Work Laptop)">
+                        </div>
+                        <button type="button" class="btn btn-recovery" id="addPasskeyBtn">
+                            <i class="fas fa-fingerprint me-2"></i>Create Passkey
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Current Passkeys -->
+                <div class="card" style="border-radius: 15px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 15px 15px 0 0;">
+                        <h5 class="mb-0">
+                            <i class="fas fa-key me-2"></i>Your Passkeys (<%= passkeys.length %>)
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <% if (passkeys.length > 0) { %>
+                            <% passkeys.forEach(function(passkey) { %>
+                                <div class="passkey-item p-3" data-passkey-id="<%= passkey.id %>">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center">
+                                            <div class="device-icon me-3 <%= passkey.device_type %>">
+                                                <i class="<%= passkey.getDeviceIcon() %>"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1 fw-semibold"><%= passkey.getDeviceDisplayName() %></h6>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <% if (passkey.is_active) { %>
+                                                        <span class="badge bg-success">Active</span>
+                                                    <% } else { %>
+                                                        <span class="badge bg-secondary">Inactive</span>
+                                                    <% } %>
+                                                    <small class="text-muted">
+                                                        Last used: <%= passkey.last_used_at ? new Date(passkey.last_used_at).toLocaleDateString() : 'Never' %>
+                                                    </small>
+                                                </div>
+                                                <small class="text-muted">
+                                                    Added <%= new Date(passkey.created_at).toLocaleDateString() %>
+                                                </small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="d-flex gap-2">
+                                            <% if (passkey.is_active) { %>
+                                                <button class="btn btn-outline-warning btn-sm disable-passkey-btn" 
+                                                        data-passkey-id="<%= passkey.id %>"
+                                                        title="Disable">
+                                                    <i class="fas fa-pause"></i>
+                                                </button>
+                                            <% } else { %>
+                                                <button class="btn btn-outline-success btn-sm enable-passkey-btn" 
+                                                        data-passkey-id="<%= passkey.id %>"
+                                                        title="Enable">
+                                                    <i class="fas fa-play"></i>
+                                                </button>
+                                            <% } %>
+                                            
+                                            <button class="btn btn-outline-danger btn-sm delete-passkey-btn" 
+                                                    data-passkey-id="<%= passkey.id %>"
+                                                    title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        <% } else { %>
+                            <div class="text-center py-4 text-muted">
+                                <i class="fas fa-key fa-2x mb-3 opacity-50"></i>
+                                <p class="mb-0">No passkeys found</p>
+                                <small>Add your first passkey above for enhanced security</small>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="text-center mt-4">
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="/auth/login" class="btn btn-outline-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Continue to Login
+                        </a>
+                        <a href="/dashboard" class="btn btn-recovery">
+                            <i class="fas fa-tachometer-alt me-2"></i>Go to Dashboard
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Security Notice -->
+                <div class="alert alert-info mt-4" style="border-radius: 12px; border: none; background: rgba(13, 202, 240, 0.1);">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-info-circle text-info me-3 mt-1"></i>
+                        <div>
+                            <h6 class="text-info mb-2">Security Tip</h6>
+                            <p class="small mb-0 text-muted">
+                                For optimal security, remove any passkeys from lost or compromised devices 
+                                and add new ones for your current devices. Each device should have its own passkey.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div class="alert-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/passkey-client.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const addPasskeyBtn = document.getElementById('addPasskeyBtn');
+            const newPasskeyNameInput = document.getElementById('newPasskeyName');
+
+            // Add new passkey
+            if (addPasskeyBtn) {
+                addPasskeyBtn.addEventListener('click', async function() {
+                    try {
+                        PasskeyUtils.setButtonLoading(this, true);
+                        
+                        const deviceName = newPasskeyNameInput.value.trim() || null;
+                        const result = await window.passkeyClient.registerPasskey(deviceName);
+                        
+                        if (result.success) {
+                            PasskeyUtils.showSuccess('Passkey added successfully!');
+                            newPasskeyNameInput.value = '';
+                            // Reload page to show new passkey
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000);
+                        } else {
+                            PasskeyUtils.showError(result.error || 'Failed to add passkey');
+                        }
+                    } catch (error) {
+                        console.error('Add passkey error:', error);
+                        PasskeyUtils.showError(error.message || 'Failed to add passkey');
+                    } finally {
+                        PasskeyUtils.setButtonLoading(this, false);
+                    }
+                });
+            }
+
+            // Disable passkey buttons
+            document.querySelectorAll('.disable-passkey-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const passkeyId = this.dataset.passkeyId;
+                    
+                    try {
+                        PasskeyUtils.setButtonLoading(this, true);
+                        
+                        const result = await window.passkeyClient.updatePasskey(passkeyId, {
+                            is_active: false
+                        });
+                        
+                        if (result.success) {
+                            PasskeyUtils.showSuccess('Passkey disabled successfully!');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            PasskeyUtils.showError(result.error || 'Failed to disable passkey');
+                        }
+                    } catch (error) {
+                        console.error('Disable passkey error:', error);
+                        PasskeyUtils.showError(error.message || 'Failed to disable passkey');
+                    } finally {
+                        PasskeyUtils.setButtonLoading(this, false);
+                    }
+                });
+            });
+
+            // Enable passkey buttons
+            document.querySelectorAll('.enable-passkey-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const passkeyId = this.dataset.passkeyId;
+                    
+                    try {
+                        PasskeyUtils.setButtonLoading(this, true);
+                        
+                        const result = await window.passkeyClient.updatePasskey(passkeyId, {
+                            is_active: true
+                        });
+                        
+                        if (result.success) {
+                            PasskeyUtils.showSuccess('Passkey enabled successfully!');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            PasskeyUtils.showError(result.error || 'Failed to enable passkey');
+                        }
+                    } catch (error) {
+                        console.error('Enable passkey error:', error);
+                        PasskeyUtils.showError(error.message || 'Failed to enable passkey');
+                    } finally {
+                        PasskeyUtils.setButtonLoading(this, false);
+                    }
+                });
+            });
+
+            // Delete passkey buttons
+            document.querySelectorAll('.delete-passkey-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const passkeyId = this.dataset.passkeyId;
+                    
+                    if (!confirm('Are you sure you want to delete this passkey? This action cannot be undone.')) {
+                        return;
+                    }
+                    
+                    try {
+                        PasskeyUtils.setButtonLoading(this, true);
+                        
+                        const result = await window.passkeyClient.deletePasskey(passkeyId);
+                        
+                        if (result.success) {
+                            PasskeyUtils.showSuccess('Passkey deleted successfully!');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            PasskeyUtils.showError(result.error || 'Failed to delete passkey');
+                        }
+                    } catch (error) {
+                        console.error('Delete passkey error:', error);
+                        PasskeyUtils.showError(error.message || 'Failed to delete passkey');
+                    } finally {
+                        PasskeyUtils.setButtonLoading(this, false);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

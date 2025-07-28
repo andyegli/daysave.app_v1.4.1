@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .recovery-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 500px;
+            width: 100%;
+        }
+        .recovery-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+        .btn-recovery {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-recovery:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            background: linear-gradient(45deg, #5a6fd8, #6a3d94);
+            color: white;
+        }
+        .info-box {
+            background: rgba(13, 202, 240, 0.1);
+            border: 1px solid rgba(13, 202, 240, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/header', { user: user, title: 'Lost/Forgot Passkey' }) %>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="recovery-card p-4 p-md-5">
+                    <!-- Icon -->
+                    <div class="text-center mb-4">
+                        <div class="recovery-icon">
+                            <i class="fas fa-key"></i>
+                        </div>
+                        <h2 class="fw-bold text-dark mb-2">Lost/Forgot Passkey?</h2>
+                        <p class="text-muted">We'll help you regain access to your account</p>
+                    </div>
+
+                    <!-- Error Messages -->
+                    <% if (error) { %>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <% if (error === 'invalid_token') { %>
+                                Invalid or expired recovery link. Please request a new one.
+                            <% } else if (error === 'expired_token') { %>
+                                Recovery link has expired. Please request a new one.
+                            <% } else if (error === 'recovery_failed') { %>
+                                Recovery process failed. Please try again.
+                            <% } else { %>
+                                <%= error %>
+                            <% } %>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    <% } %>
+
+                    <!-- Success Messages -->
+                    <% if (success) { %>
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <%= success %>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    <% } %>
+
+                    <!-- Recovery Form -->
+                    <form action="/auth/forgot-passkey" method="POST" class="mb-4">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email" required 
+                                   placeholder="Enter your email address" autocomplete="email">
+                        </div>
+                        <button type="submit" class="btn btn-recovery w-100">
+                            <i class="fas fa-paper-plane me-2"></i>Send Recovery Instructions
+                        </button>
+                    </form>
+
+                    <!-- Information Box -->
+                    <div class="info-box mb-4">
+                        <h6 class="text-info mb-2">
+                            <i class="fas fa-info-circle me-2"></i>What happens next?
+                        </h6>
+                        <ul class="small mb-0 text-muted">
+                            <li>We'll send recovery instructions to your email</li>
+                            <li>You can remove lost or compromised passkeys</li>
+                            <li>Add new passkeys for your current devices</li>
+                            <li>Review and secure your account</li>
+                        </ul>
+                    </div>
+
+                    <!-- Alternative Options -->
+                    <div class="text-center">
+                        <p class="text-muted mb-3">Other sign-in options:</p>
+                        <div class="d-grid gap-2">
+                            <a href="/auth/login" class="btn btn-outline-primary">
+                                <i class="fas fa-sign-in-alt me-2"></i>Sign in with Password
+                            </a>
+                            <a href="/auth/google" class="btn btn-outline-secondary">
+                                <i class="fab fa-google me-2"></i>Continue with Google
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="text-center mt-4 pt-3 border-top">
+                        <small class="text-muted">
+                            Need help? <a href="/support" class="text-decoration-none">Contact Support</a>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

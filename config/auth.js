@@ -2,7 +2,8 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const MicrosoftStrategy = require('passport-microsoft').Strategy;
 const AppleStrategy = require('passport-apple').Strategy;
-const { User, SocialAccount, Role } = require('../models');
+const WebAuthnStrategy = require('passport-fido2-webauthn');
+const { User, SocialAccount, Role, UserPasskey } = require('../models');
 const { logOAuthFlow, logOAuthError, logAuthEvent, logAuthError } = require('./logger');
 
 // OAuth Configuration
@@ -26,6 +27,15 @@ const oauthConfig = {
   }
 };
 
+// WebAuthn Configuration
+const webauthnConfig = {
+  rpID: process.env.WEBAUTHN_RP_ID || 'localhost',
+  rpName: process.env.WEBAUTHN_RP_NAME || 'DaySave',
+  origin: process.env.WEBAUTHN_ORIGIN || `http://localhost:${process.env.APP_PORT || 3000}`,
+  timeout: 60000,
+  challengeTimeout: 60000
+};
+
 // Helper function to get the default role
 const getDefaultRole = async () => {
   try {
@@ -39,6 +49,36 @@ const getDefaultRole = async () => {
     logAuthError('GET_DEFAULT_ROLE_ERROR', error, {});
     throw error; // Rethrow to be caught by the strategy's catch block
   }
+};
+
+// Helper function to detect device type from user agent
+const detectDeviceType = (userAgent) => {
+  if (!userAgent) return 'unknown';
+  
+  const ua = userAgent.toLowerCase();
+  if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
+    return 'phone';
+  } else if (ua.includes('tablet') || ua.includes('ipad')) {
+    return 'tablet';
+  } else if (ua.includes('macintosh') || ua.includes('mac os')) {
+    return 'laptop';
+  } else if (ua.includes('windows') || ua.includes('linux')) {
+    return 'desktop';
+  }
+  return 'unknown';
+};
+
+// Helper function to generate device name
+const generateDeviceName = (userAgent, deviceType) => {
+  if (!userAgent) return `${deviceType.charAt(0).toUpperCase() + deviceType.slice(1)} Device`;
+  
+  const ua = userAgent.toLowerCase();
+  if (ua.includes('chrome')) return `Chrome on ${deviceType}`;
+  if (ua.includes('firefox')) return `Firefox on ${deviceType}`;
+  if (ua.includes('safari') && !ua.includes('chrome')) return `Safari on ${deviceType}`;
+  if (ua.includes('edge')) return `Edge on ${deviceType}`;
+  
+  return `${deviceType.charAt(0).toUpperCase() + deviceType.slice(1)} Device`;
 };
 
 // Passport serialization
@@ -95,6 +135,141 @@ passport.deserializeUser(async (id, done) => {
     done(error, null);
   }
 });
+
+// WebAuthn Strategy
+passport.use(new WebAuthnStrategy(
+  {
+    ...webauthnConfig,
+    store: {
+      challenge: (req, challenge) => {
+        req.session.challenge = challenge;
+      },
+      getChallenge: (req) => {
+        return req.session.challenge;
+      }
+    }
+  },
+  async (id, userHandle, req, done) => {
+    try {
+      const requestDetails = {
+        credentialId: Buffer.from(id).toString('base64url'),
+        userHandle: userHandle ? Buffer.from(userHandle).toString('base64url') : null,
+        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown'
+      };
+
+      logAuthEvent('WEBAUTHN_AUTHENTICATION_START', requestDetails);
+
+      // Find passkey by credential ID
+      const passkey = await UserPasskey.findByCredentialId(requestDetails.credentialId);
+      
+      if (!passkey) {
+        logAuthError('WEBAUTHN_PASSKEY_NOT_FOUND', new Error('Passkey not found'), requestDetails);
+        return done(null, false, { message: 'Passkey not found' });
+      }
+
+      if (!passkey.is_active) {
+        logAuthError('WEBAUTHN_PASSKEY_INACTIVE', new Error('Passkey is inactive'), {
+          ...requestDetails,
+          passkeyId: passkey.id,
+          userId: passkey.user_id
+        });
+        return done(null, false, { message: 'Passkey is inactive' });
+      }
+
+      // Update last used timestamp
+      await passkey.updateLastUsed();
+
+      // Get the user
+      const user = passkey.user;
+      if (!user) {
+        logAuthError('WEBAUTHN_USER_NOT_FOUND', new Error('User not found for passkey'), {
+          ...requestDetails,
+          passkeyId: passkey.id,
+          userId: passkey.user_id
+        });
+        return done(null, false, { message: 'User not found' });
+      }
+
+      logAuthEvent('WEBAUTHN_AUTHENTICATION_SUCCESS', {
+        ...requestDetails,
+        userId: user.id,
+        username: user.username,
+        passkeyId: passkey.id,
+        deviceType: passkey.device_type
+      });
+
+      return done(null, user);
+    } catch (error) {
+      logAuthError('WEBAUTHN_AUTHENTICATION_ERROR', error, {
+        credentialId: id ? Buffer.from(id).toString('base64url') : 'unknown',
+        ip: req.ip || 'unknown'
+      });
+      return done(error);
+    }
+  },
+  async (user, id, publicKey, counter, req, done) => {
+    try {
+      const requestDetails = {
+        userId: user ? user.id : 'new_user',
+        credentialId: Buffer.from(id).toString('base64url'),
+        counter: counter,
+        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown'
+      };
+
+      logAuthEvent('WEBAUTHN_REGISTRATION_START', requestDetails);
+
+      // If user is provided, this is adding a passkey to existing account
+      if (user) {
+        // Check if credential already exists
+        const existingPasskey = await UserPasskey.findByCredentialId(requestDetails.credentialId);
+        if (existingPasskey) {
+          logAuthError('WEBAUTHN_CREDENTIAL_EXISTS', new Error('Credential already exists'), requestDetails);
+          return done(null, false, { message: 'This passkey is already registered' });
+        }
+
+        // Detect device information
+        const deviceType = detectDeviceType(requestDetails.userAgent);
+        const deviceName = generateDeviceName(requestDetails.userAgent, deviceType);
+
+        // Create new passkey
+        const newPasskey = await UserPasskey.create({
+          user_id: user.id,
+          credential_id: requestDetails.credentialId,
+          credential_public_key: Buffer.from(publicKey).toString('base64url'),
+          credential_counter: counter,
+          device_name: deviceName,
+          device_type: deviceType,
+          browser_info: {
+            userAgent: requestDetails.userAgent,
+            ip: requestDetails.ip,
+            timestamp: new Date().toISOString()
+          }
+        });
+
+        logAuthEvent('WEBAUTHN_REGISTRATION_SUCCESS', {
+          ...requestDetails,
+          passkeyId: newPasskey.id,
+          deviceType: deviceType,
+          deviceName: deviceName
+        });
+
+        return done(null, user);
+      }
+
+      // This shouldn't happen in our flow (we always require existing user for registration)
+      logAuthError('WEBAUTHN_NO_USER_PROVIDED', new Error('No user provided for passkey registration'), requestDetails);
+      return done(null, false, { message: 'User authentication required for passkey registration' });
+    } catch (error) {
+      logAuthError('WEBAUTHN_REGISTRATION_ERROR', error, {
+        userId: user ? user.id : 'unknown',
+        credentialId: id ? Buffer.from(id).toString('base64url') : 'unknown'
+      });
+      return done(error);
+    }
+  }
+));
 
 // Google OAuth Strategy
 passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshToken, profile, done) => {

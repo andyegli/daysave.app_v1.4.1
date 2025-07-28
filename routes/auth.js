@@ -720,6 +720,161 @@ router.get('/verify-link', async (req, res) => {
   }
 });
 
+// Forgot Passkey Recovery - Start recovery process
+router.get('/forgot-passkey', (req, res) => {
+  res.render('auth/forgot-passkey', {
+    title: 'Lost/Forgot Passkey - DaySave',
+    user: null,
+    error: null,
+    success: null
+  });
+});
+
+// Forgot Passkey Recovery - Send recovery email
+router.post('/forgot-passkey', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return res.render('auth/forgot-passkey', {
+      title: 'Lost/Forgot Passkey - DaySave',
+      user: null,
+      error: 'Please enter a valid email address.',
+      success: null
+    });
+  }
+  
+  try {
+    const user = await User.findOne({ where: { email } });
+    
+    if (!user) {
+      // Don't reveal if email exists for security
+      return res.render('auth/forgot-passkey', {
+        title: 'Lost/Forgot Passkey - DaySave',
+        user: null,
+        error: null,
+        success: 'If an account with this email exists, you will receive recovery instructions.'
+      });
+    }
+    
+    // Check if user has any passkeys
+    const passkeyCount = await UserPasskey.countUserPasskeys(user.id, true);
+    
+    if (passkeyCount === 0) {
+      return res.render('auth/forgot-passkey', {
+        title: 'Lost/Forgot Passkey - DaySave',
+        user: null,
+        error: 'No passkeys found for this account. You can log in with your password instead.',
+        success: null
+      });
+    }
+    
+    // Generate recovery token
+    const crypto = require('crypto');
+    const recoveryToken = crypto.randomBytes(32).toString('hex');
+    
+    // Store recovery token in user record (you might want to create a separate table for this)
+    user.email_verification_token = recoveryToken; // Reusing this field for recovery
+    user.updated_at = new Date();
+    await user.save();
+    
+    // Send recovery email
+    const sendMail = require('../utils/send-mail');
+    await sendMail({
+      to: email,
+      subject: 'Passkey Recovery - DaySave',
+      html: `
+        <h2>Passkey Recovery Request</h2>
+        <p>Hello ${user.username},</p>
+        <p>You requested to recover access to your passkeys for your DaySave account.</p>
+        <p>Click the link below to manage your passkeys and recover access:</p>
+        <p><a href="${process.env.BASE_URL || `http://localhost:${process.env.APP_PORT || 3000}`}/auth/recover-passkey?token=${recoveryToken}" style="display: inline-block; padding: 12px 24px; background-color: #667eea; color: white; text-decoration: none; border-radius: 8px;">Recover Passkeys</a></p>
+        <p><strong>What you can do:</strong></p>
+        <ul>
+          <li>Remove lost or compromised passkeys</li>
+          <li>Add new passkeys for your current devices</li>
+          <li>Review your account security</li>
+        </ul>
+        <p>This link will expire in 1 hour for security.</p>
+        <p>If you did not request this recovery, please ignore this email and ensure your account is secure.</p>
+        <hr>
+        <p><small>DaySave - Secure Content Management</small></p>
+      `
+    });
+    
+    logAuthEvent('PASSKEY_RECOVERY_EMAIL_SENT', {
+      userId: user.id,
+      email: user.email,
+      ip: req.ip || req.headers['x-forwarded-for'] || 'unknown'
+    });
+    
+    res.render('auth/forgot-passkey', {
+      title: 'Lost/Forgot Passkey - DaySave',
+      user: null,
+      error: null,
+      success: 'Recovery instructions have been sent to your email address.'
+    });
+    
+  } catch (error) {
+    logAuthError('PASSKEY_RECOVERY_ERROR', error, {
+      email: email,
+      ip: req.ip || 'unknown'
+    });
+    
+    res.render('auth/forgot-passkey', {
+      title: 'Lost/Forgot Passkey - DaySave',
+      user: null,
+      error: 'An error occurred. Please try again.',
+      success: null
+    });
+  }
+});
+
+// Passkey Recovery - Verify token and show recovery page
+router.get('/recover-passkey', async (req, res) => {
+  const { token } = req.query;
+  
+  if (!token) {
+    return res.redirect('/auth/forgot-passkey?error=invalid_token');
+  }
+  
+  try {
+    const user = await User.findOne({ 
+      where: { email_verification_token: token },
+      include: [{ model: Role, as: 'Role' }]
+    });
+    
+    if (!user) {
+      return res.redirect('/auth/forgot-passkey?error=invalid_token');
+    }
+    
+    // Check if token is recent (1 hour)
+    const tokenAge = Date.now() - user.updated_at.getTime();
+    if (tokenAge > 60 * 60 * 1000) {
+      return res.redirect('/auth/forgot-passkey?error=expired_token');
+    }
+    
+    // Get user's passkeys
+    const passkeys = await UserPasskey.getUserPasskeys(user.id, false);
+    
+    res.render('auth/recover-passkey', {
+      title: 'Recover Passkeys - DaySave',
+      user: user,
+      passkeys: passkeys,
+      token: token,
+      error: null,
+      success: null
+    });
+    
+  } catch (error) {
+    logAuthError('PASSKEY_RECOVERY_PAGE_ERROR', error, {
+      token: token ? token.substr(0, 8) + '...' : 'none',
+      ip: req.ip || 'unknown'
+    });
+    
+    res.redirect('/auth/forgot-passkey?error=recovery_failed');
+  }
+});
+
 // Username/password login
 router.post('/login', isNotAuthenticated, async (req, res, next) => {
   const { username, password } = req.body;
