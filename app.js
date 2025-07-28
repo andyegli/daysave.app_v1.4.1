@@ -217,6 +217,7 @@ checkDatabaseConnection().then(async (connected) => {
 
   // Routes
   app.use('/auth', require('./routes/auth'));
+  app.use('/passkeys', require('./routes/passkeys'));
   app.use('/admin', require('./routes/admin'));
   app.use('/contacts', require('./routes/contacts'));
   app.use('/files', require('./routes/files'));

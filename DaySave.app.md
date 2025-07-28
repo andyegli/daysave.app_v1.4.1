@@ -1,516 +1,219 @@
-# Prompt for AI: Refactored Production-Ready DaySave.app with File Uploads and Enhanced Features
+# DaySave.app - Personal Content Management and AI Analysis Platform
 
 ## Overview
-Create a production-ready web application called **DaySave.app** version 1.4.1 using **Node.js**, **Express**, **EJS** (with **Bootstrap 5** via CDN), and **MySQL** with **Sequelize ORM** locally, and later deployed on **Google Cloud** (project ID: `daysave`) using a cost-effective, small-scale setup (e.g., App Engine F1 instance, Cloud SQL db-f1-micro). The app targets international, diverse social media consumers, supporting 100 concurrent users for the MVP with scalability for future growth. It allows users to register for a trial or subscribe to plans via Apple, Google, Microsoft, or username/password authentication (with 2FA), link social media accounts from 11 platforms (Facebook, YouTube, Instagram, TikTok, WeChat, Facebook Messenger, Telegram, Snapchat, Pinterest, Twitter/X, WhatsApp), submit URLs or upload files for processing (extracting metadata, transcription, summary, sentiment, tags, objects detected), and manage processed items with user-added tags, comments, and groups. The app includes a landing page, a footer with terms of trade, privacy policy, contact us page with a form, a contacts management system mirroring Apple iPhone contacts with relationships (e.g., father, mother, child, spouse, sibling, friend, colleague, partner, work), a CRUD page for contacts with advanced features (dynamic forms, autocomplete, Google Maps integration, custom labels), sharing of processed content with contacts or groups of contacts, filter/search functionality with live search and autocomplete, and an admin page featuring statistics, logs, security config settings. The app must carefully log all changes in an audit log. The app also keeps track of the device the user typically logs in from. The app supports roles permissions such as guest, trial, subscriber, monitor, admin. It supports multiple languages (English, German, French, Italian, Spanish) for UI, static content, and dynamic content, with RTL compatibility for future expansion. All database tables use UUIDs (GUIDs). The app features state-of-the-art security, input sanitization, device fingerprinting (including Screensize, locales, TOR, VPN detection), IP and country whitelisting/blacklisting, login attempt blocking, and Content Security Policy (CSP), with alerts/reminders via email and SMS (future push notification option).
+DaySave.app is a comprehensive personal content management platform that allows users to save, organize, and analyze various types of digital content through AI-powered insights. The platform supports multimedia content analysis, automated transcription, summarization, and intelligent organization.
 
-## Functional Requirements
+**Current Status**: Passkey authentication system implemented and operational. Currently debugging passkey add feature in user profile.
 
-### 1. Pages
-- **Landing Page**:
-  - Engaging design with a hero section, app features, and call-to-action (CTA) buttons for trial registration or subscription.
-  - Built with EJS, styled with Bootstrap 5 via CDN, using a custom color scheme (#2596be, #a1d8c9, #fbda6a, #d8e2a8, #f0e28b, #87c0a9, #fbce3c, #309b9c, #bfcc8d).
-  - Mobile friendly Responsive, SEO-optimized, accessible (WCAG 2.1 AA compliant).
-  - Links to terms of trade, privacy policy, contact us, and contacts pages in footer and nafbar menu.
-  - Localized content in English, German, French, Italian, Spanish using `i18n`.
-- **Terms of Trade**:
-  - Static EJS page with legal terms for app usage, subscription, trial policies, content sharing, file uploads, and contact relationships.
-  - Styled with Bootstrap 5 via CDN, custom colors.
-  - Localized in all supported languages.
-  - Include sections on invoices, payment, refunds, and user responsibilities.
-- **Privacy Policy**:
-  - Static EJS page detailing data collection (e.g., user info, device fingerprint, social media tokens, contacts, relationships, files), usage, and GDPR/CCPA compliance.
-  - Styled with Bootstrap 5 via CDN, custom colors.
-  - Localized in all supported languages.
-  - Explain third-party integrations (e.g., social media APIs, Google APIs, payment providers).
-- **Contact Us**:
-  - EJS page with a Bootstrap form to collect name, email, subject, and message.
-  - Use Google reCAPTCHA to prevent spam.
-  - Store submissions in MySQL and send email notifications (SendGrid) in the user's preferred language.
-  - Success/error feedback using Bootstrap alerts.
-- **Contacts Management Page**:
-  - EJS card style with toggle to list page with a CRUD interface to add, edit, view, and delete contacts.
-  - Mirror Apple iPhone contacts schema (all fields: name, nickname, organization, job title, phones, emails, addresses, social profiles, instant messages, URLs, dates, notes) with support for multiples (e.g., multiple addresses, emails, phone numbers, notes, social accounts).
-  - Contacts can organised in groups and have relationships (e.g., father, mother, child, spouse, sibling, friend, colleague, partner, work)
-  - Validate phones as `+CountryCode(AreaCode)Number[Extension][DTMF]` with country code lookup by name (e.g., "United States" → `+1`) using `libphonenumber-js`.
-  - Optional Google Maps API integration for address lookup/search.
-  - Support contact groups (e.g., "Friends," "Work") and relationships (father, mother, child, spouse, sibling, friend, colleague, partner, work, custom ≤ 50 characters).
-  - Display contacts in a Bootstrap tabular view with configurable fields (sortable, orderable) and a detail page for all fields, relationships graph button, and shared posts table.
-  - Support vCard import/export (including relationships via custom fields).
-  - Localized UI and form labels.
-- **Content Management Page**:
-  - EJS card style with toggle to list page with a CRUD interface to add, edit, view, and delete contacts.
-  - Cards have a Thumbnail on the left a tile on the top with comment unde rtitle and to the right of the thumnail. there are clickable tag associated with the centent item, the source and date added is also on the content card as wll as buttons.
-  - dooubble clicking the content card opens the edit content detail page
-  - Content can organised groups 
-  - content can be filered by date range, tags from tags, category from categories
-  - content can via a drop down by category, source,  date added asc, date added desc, 
-  - Display contacts in a Bootstrap tabular view with configurable fields (sortable, orderable) and a detail page for all fields, relationships graph button, and shared posts table.
-  - Support vCard import/export (including relationships via custom fields).
-  - Localized UI and form labels.
-  **Content Item Detail Page**
-  - has all content dails allow edit, delete, archive 
-  - has graph button to show related conent items
-- **DEV Mode User Logins**
-  - when started in dev mode the login page features 3 test users 2 admins to coose from on a dropdown 
-    allowing to login for testing without having to enter password every time
-- **Dashboard**:
-  - EJS page displaying linked social accounts, submitted URLs/files, and processing status.
-  - Use Bootstrap cards for content, a tabular view for contacts, and a card view for URLs/files.
-  - Include forms to submit URLs/files, add tags/comments, assign groups, and share content.
-  - Add filter dropdowns (platform, group, tags, date), search bar, and order-by dropdown.
-  - Selector and "select all" for bulk actions (add to group, archive, delete).
-  - Localized UI, labels, and messages.
-- **Profile Config Page**:
-  - EJS page with a Bootstrap form to link/unlink social media accounts, select language, and manage subscription.
-  - Display linked accounts in a Bootstrap table.
-  - Localized UI.
-- **Admin/Security Config Page**:
-  - EJS page with Bootstrap forms to configure:
-    - Login attempts limit (default: 5).
-    - Lock duration (default: 24 hours).
-    - Auto-unlock toggle (default: enabled).
-    - Allowed file types (default: PNG, JPEG, MP4, PDF).
-    - Max file size (default: 25MB).
-    - IP whitelisting/blacklisting.
-    - VPN detection settings.
-  - Table to view/manage locked accounts (unlock, view status).
-  - Admin only CRUD for user data, backup/restore, alerts for new users, trial endings, subscribers.
-  - Localized UI.
+## Core Features
 
-### 2. Authentication
-- **Registration Options**:
-  - OAuth 2.0 login via Apple, Google, Microsoft.
-  - Username/password registration with email verification (Nodemailer) and 2FA (TOTP via `speakeasy`) in the user's preferred language.
-- **Subscription Plans**:
-  - Free trial (7 days, limited API calls).
-  - Paid plans (Basic, Pro) via Stripe for Apple/Google/Microsoft in-app purchases or card payments.
-  - Store subscription status in MySQL.
-  - Localized subscription UI.
-- **Security**:
-  - Passwords hashed with bcrypt.
-  - JWT-based session management with refresh tokens.
-  - API payload encryption using pki AES
-  - Email verification and password reset with localized emails.
-  - Track login attempts, block users/devices after configurable attempts (default: 5) for configurable duration (default: 24 hours) with auto-unlock toggle.
-  - Device fingerprinting with `fingerprintjs2` (including VPN detection with `maxmind`).
-  - Store user's source country (via `geoip-lite`) and fingerprint in MySQL.
-  - Localized error messages.
+### 1. Content Management
+- **Multi-format Support**: Text, images, videos, audio files, documents (PDF, DOCX, etc.)
+- **URL Content Extraction**: Automatic content retrieval from web URLs
+- **AI-Powered Analysis**: Automated transcription, summarization, and content insights
+- **Thumbnail Generation**: Automatic thumbnail creation for all media types
+- **Content Search**: Advanced search across all content types and AI-generated metadata
 
-### 3. Social Media Integration
-- **Supported Platforms**: Facebook, YouTube, Instagram, TikTok, WeChat, Facebook Messenger, Telegram, Snapchat, Pinterest, Twitter/X, WhatsApp.
-- **Profile Config Page**:
-  - UI to link/unlink accounts via OAuth 2.0 (or bot tokens for Telegram).
-  - Fetch metadata and content (title, thumbnail, link) from DMs/mentions.
-  - Ignore unrelated inbound messages.
-  - Securely store access tokens/refresh tokens in MySQL (encrypted with `crypto`).
-  - Localized UI.
-- **OAuth Flow**:
-  - Redirect-based OAuth for each platform.
-  - Handle token refresh with `node-cron`.
-  - Use business APIs for WhatsApp/WeChat if needed.
+### 2. Authentication & Security ⭐ **ENHANCED**
+- **Multi-Provider OAuth**: Google, Microsoft, Apple Sign-In integration
+- **Email Verification**: Secure account activation and verification system
+- **Passkey Authentication**: FIDO2/WebAuthn implementation for passwordless login 🆕
+  - **Biometric Support**: Face ID, Touch ID, Windows Hello compatibility
+  - **Security Key Support**: Hardware security keys (YubiKey, etc.)
+  - **Multi-Device**: Support for multiple passkeys per user account
+  - **Recovery Flow**: Secure passkey recovery via email verification
+  - **Device Management**: Named devices with type detection and management
+- **Role-Based Access Control**: Admin, user roles with granular permissions
+- **Session Management**: Secure session handling with audit logging
 
-### 4. URL and File Submission/Processing with Multimedia Analysis
-- **CRUD API**:
-  - **POST /api/urls**: Submit a URL, validate format, extract metadata (thumbnail, title, link, user tags, comments, category, AI-summary, AI-sentiment, AI-transcription, AI-tags, objects, additional metadata, location), store in MySQL.
-  - **GET /api/urls**: List URLs with all metadata.
-  - **PUT /api/urls/:id**: Update tags, comments, category.
-  - **DELETE /api/urls/:id**: Remove URL.
-  - **POST /api/files**: Upload file, validate type/size (admin-configurable), store in Google Cloud Storage, process (summary, sentiment, transcription, objects), store link/metadata in MySQL.
-  - **GET /api/files**: List files with metadata.
-  - **PUT /api/files/:id**: Update tags, comments, category.
-  - **DELETE /api/files/:id**: Remove file and storage.
-  - Secure with JWT and rate limiting (`express-rate-limit`).
-- **API Key Management for 3rd Party Access**:
-  - **User API Key Generation**: Users can generate, download, enable/disable API keys
-  - **Granular Permissions**: Route-specific access control with read/write privileges
-  - **Usage Analytics**: Comprehensive statistics, cost tracking, and performance metrics
-  - **Admin Oversight**: Administrator dashboard for key management and monitoring
-  - **Security Features**: Expiry dates, failed attempt monitoring, audit logging
-  - **Rate Limiting**: Per-key rate limits and IP restrictions
-- **Multimedia Analysis Integration**:
-  - **Automatic Processing**: When multimedia URLs are submitted, automatic AI analysis runs in background
-  - **Supported Platforms**: YouTube, Vimeo, TikTok, Instagram, Facebook, Twitter, SoundCloud, Spotify, direct video/audio files
-  - **Analysis Features**:
-    - **Audio Transcription**: Google Cloud Speech-to-Text with speaker identification
-    - **Speaker Recognition**: Voice print identification with confidence scoring
-    - **Sentiment Analysis**: Emotional tone detection and scoring
-    - **Thumbnail Generation**: Key moment thumbnails for video content
-    - **OCR Text Extraction**: Text recognition from video frames and images
-    - **Content Summarization**: AI-generated summaries and auto-tagging
-  - **Non-blocking Workflow**: Users get immediate response while analysis runs in background
-  - **Progressive Enhancement**: Real-time updates with live status indicators
-- **Content Handling**:
-  - **Text Posts**: Extract text, summarize, tag.
-  - **Images**: Use Google Vision API for objects/text.
-  - **Videos**: Transcribe with Google Speech-to-Text, extract thumbnail, identify speakers, generate key moments.
-  - **Audio**: Full transcription with speaker identification, sentiment analysis, voice print recognition.
-  - **Files**: Process based on type (e.g., OCR for PDFs, Vision for images, Speech-to-Text for audio).
-- **Grouping/Categorization**:
-  - Support hierarchical groups (e.g., fitness/upper body/shoulders).
-  - Store in `url_groups`, unlimited groups (name ≤ 50 characters).
-  - EJS form to manage groups.
-- **Sharing**:
-  - Share/unshare URLs/files with unlimited contacts/groups via email (SendGrid) or in-app.
-  - Log in `share_logs`.
-- **Filter/Search**:
-  - Bootstrap dropdowns for platform, group, tags, date.
-  - Search by date/time, location, tags, full text using MySQL full-text search.
-  - Bulk actions (add to group, archive, delete).
-  - Advanced search with field-specific queries and autocomplete suggestions.
+### 3. AI-Powered Analysis
+- **Transcription Services**: Automatic speech-to-text for audio/video content
+- **Content Summarization**: AI-generated summaries and key points extraction
+- **Image Analysis**: Object detection, OCR, and scene recognition
+- **Video Analysis**: Frame analysis, scene detection, and content identification
+- **Document Processing**: Text extraction from various document formats
+- **Automated Tagging**: Intelligent content categorization and tagging
 
-### 5. Contacts Management
-- **Schema** (Apple iPhone contacts):
-  - All fields (name, nickname, organization, job title, phones, emails, addresses, social profiles, instant messages, URLs, dates, notes) with multiples.
-  - Validate phones with `libphonenumber-js`, emails standard format.
-  - Support for custom labels for all field types (emails, phones, addresses, social profiles, notes).
-- **Relationships**:
-  - Table `relationships` with contact_id_1, contact_id_2, relationship_type (father, mother, child, spouse, sibling, friend, colleague, partner, work, custom ≤ 50 characters).
-  - UI to manage relationships with graph view button (server-side `vis.js`).
-- **CRUD API**:
-  - Manage contacts, groups, relationships.
-  - Localized responses.
-  - Advanced search endpoint with field-specific queries (e.g., `email:john@example.com`, `phone:+1234567890`).
-  - Autocomplete endpoint for all contact fields.
-- **UI**:
-  - Bootstrap tabular view with configurable fields, detail page, graph view.
-  - Dynamic form fields with "+" buttons to add multiple emails, phones, addresses, social profiles, and notes.
-  - Google Maps integration for address fields with location pin and modal map display.
-  - Live search functionality with highlighting, advanced queries, and no-results message.
-  - Autocomplete for all input fields (name, email, phone, address, social, note, custom labels).
-  - Admin features: view contact owners, filter by owner, edit/delete any contact.
-  - Content Security Policy (CSP) compliant with external JavaScript files.
+### 4. User Interface & Experience
+- **Bootstrap Design System**: Modern, responsive design with glassmorphism effects
+- **Interactive Dashboard**: Comprehensive overview of content and analytics
+- **Content Gallery**: Visual content browser with filtering and search
+- **Profile Management**: User settings, preferences, and security configuration
+- **Passkey Management**: User-friendly interface for managing biometric authentication 🆕
 
-### 6. Multilingual Support
-- **Languages**: English, German, French, Italian, Spanish.
-- **Implementation**:
-  - `i18n` with modular files (`locales/*.json`).
-  - Language selection in profile, default to browser language.
-  - RTL compatibility.
-- **Database**: `language` field in `users`, `contact_submissions`, `share_logs`.
+### 5. Administrative Features
+- **User Management**: Admin dashboard for user oversight and management
+- **API Key Management**: Secure API access with usage tracking and quotas
+- **System Monitoring**: Health checks, performance metrics, and error tracking
+- **Audit Logging**: Comprehensive activity tracking and security auditing
+- **Passkey Administration**: Admin oversight of user passkey configurations 🆕
 
-### 7. Database Schema with Multimedia Analysis
-- All tables use UUIDs (CHAR(36)) with `uuid` library.
-- **Database Strategy**: Sequelize CLI Migrations (not automatic sync)
-- **Environment Variables**: Standardized on DB_USER_PASSWORD (not DB_PASSWORD)
-- **Migration Order**: 26 migrations in correct dependency order
-- **Tables Created**: 26 tables with proper foreign key relationships including multimedia analysis
-- **Status**: All migrations successfully applied and verified
+## Technical Architecture
 
-**Core Database Tables:**
-- **users**: id, username, email, password_hash, role_id, country, device_fingerprint, subscription_status, language, created_at.
-- **user_devices**: id, user_id, device_fingerprint, is_trusted, last_login_at.
-- **roles**: id, name, description.
-- **permissions**: id, name, description.
-- **role_permissions**: id, role_id, permission_id.
-- **audit_logs**: id, user_id, action, target_type, target_id, details, created_at.
-- **social_accounts**: id, user_id, platform, handle, access_token, refresh_token, created_at.
-- **content**: id, user_id, social_account_id, url, metadata, transcription, summary, sentiment, auto_tags, user_tags, user_comments, category, location, created_at.
-- **files**: id, user_id, filename, file_path, metadata, transcription, summary, sentiment, auto_tags, user_tags, user_comments, category, location, created_at. (Supports images, videos, audio, and documents with AI analysis)
-- **contacts**: id, user_id, all Apple fields with JSON for multiples, created_at.
-- **contact_groups**: id, user_id, name, created_at.
-- **contact_group_members**: id, contact_id, group_id, created_at.
-- **content_groups**: id, user_id, name, created_at.
-- **content_group_members**: id, content_id, group_id, created_at.
-- **share_logs**: id, user_id, content_id/file_id, contact_id/group_id, share_method, language, created_at.
-- **login_attempts**: id, user_id, device_fingerprint, ip, attempt_count, last_attempt_at.
-- **contact_submissions**: id, name, email, subject, message, language, created_at.
-- **relationships**: id, user_id, contact_id_1, contact_id_2, relationship_type, created_at.
-- **contact_relations**: id, user_id, contact_id_1, contact_id_2, relation_type, created_at.
-- **content_relations**: id, user_id, content_id_1, content_id_2, relation_type, created_at.
-- **admin_settings**: id, user_id, login_attempts, lock_duration, auto_unlock, file_types, max_file_size, ip_whitelist, ip_blacklist, created_at.
+### Backend Infrastructure
+- **Framework**: Node.js with Express.js
+- **Database**: MySQL with Sequelize ORM
+- **Authentication**: Passport.js with OAuth2 and WebAuthn strategies 🆕
+- **File Storage**: Google Cloud Storage integration
+- **AI Services**: OpenAI API integration for content analysis
+- **Background Processing**: Queued job system for multimedia analysis
 
-**Multimedia Analysis Tables:**
-- **video_analysis**: id, content_id, user_id, title, description, duration, language, quality_score, processing_status, sentiment_score, sentiment_label, word_count, speaker_count, thumbnail_count, ocr_text_count, analysis_started_at, analysis_completed_at, error_message, metadata, created_at, updated_at.
-- **speakers**: id, content_id, user_id, speaker_name, voice_print_hash, confidence_score, first_appearance_time, last_appearance_time, total_speaking_time, word_count, recognition_status, voice_characteristics, training_data_quality, usage_count, last_used_at, is_verified, verification_method, notes, metadata, created_at, updated_at.
-- **thumbnails**: id, content_id, user_id, thumbnail_url, thumbnail_path, key_moment_time, confidence_score, description, width, height, file_size, format, generation_method, is_primary, view_count, last_viewed_at, expires_at, storage_location, processing_status, error_message, metadata, created_at, updated_at.
-- **ocr_captions**: id, content_id, user_id, text_content, confidence_score, start_time, end_time, bounding_box, language, font_info, text_type, processing_method, is_verified, verification_method, correction_count, last_corrected_at, usage_count, metadata, created_at, updated_at.
+### Frontend Technology
+- **Template Engine**: EJS with server-side rendering
+- **CSS Framework**: Bootstrap 5 with custom glassmorphism styling
+- **JavaScript**: Modern ES6+ with WebAuthn API integration 🆕
+- **Icons**: Font Awesome integration
+- **Responsive Design**: Mobile-first approach with progressive enhancement
 
-**Migration Commands:**
-- `npx sequelize-cli db:migrate` – run database migrations
-- `npx sequelize-cli db:migrate:status` – check migration status
-- `npx sequelize-cli db:migrate:undo` – undo last migration
+### Security Implementation
+- **Data Protection**: Encrypted credentials and secure API key management
+- **CSRF Protection**: Cross-site request forgery prevention
+- **Rate Limiting**: API endpoint protection and abuse prevention
+- **Input Validation**: Comprehensive request validation and sanitization
+- **WebAuthn Security**: FIDO2 standard implementation with challenge-response authentication 🆕
 
-### 8. Security and Input Sanitization
-- **Input Sanitization**: `express-validator`, `sanitize-html`, `libphonenumber-js`.
-- **Security Features**: HTTPS (Let's Encrypt), Helmet, CSRF, AES-256 encryption, OWASP practices.
-- **Content Security Policy (CSP)**: Configured to allow Google Maps, Google Fonts, and external scripts while blocking inline scripts for security.
-- **Login Blocking**: Configurable attempts/duration, auto-unlock, admin management.
-- **IP/VPN**: Whitelisting/blacklisting, fingerprinting with `maxmind`.
+### Database Schema
+- **Users & Authentication**: User accounts, roles, permissions, passkey credentials 🆕
+- **Content Management**: Files, content metadata, processing jobs
+- **AI Analysis Results**: Transcriptions, summaries, image analysis, video analysis
+- **Social Features**: Contacts, groups, sharing logs
+- **Administrative**: Audit logs, API keys, system settings
+- **Biometric Authentication**: Passkey storage with device management 🆕
 
-### 9. Alerts/Reminders
-- Email (SendGrid), SMS (Twilio), future push notifications.
-- Triggered for contacts (e.g., birthdays), posts (e.g., follow-ups).
+## Deployment
 
-### 10. Technical Requirements
-- **Backend**: Node.js, Express, MySQL (Cloud SQL).
-- **Frontend**: EJS, Bootstrap 5 via CDN (`https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css`, `https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js`).
-- **Database**: Sequelize ORM, indexes on key fields.
-- **APIs**: Apple/Google/Microsoft OAuth, Stripe, social media APIs, Google (Speech-to-Text, Vision, Maps), OpenAI, MonkeyLearn, SendGrid, Twilio, reCAPTCHA.
-- **Multimedia Processing**: 
-  - **Google Cloud Speech-to-Text**: Audio transcription with speaker identification
-  - **Google Cloud Vision**: OCR text extraction from video frames and images
-  - **FFmpeg**: Video processing, thumbnail generation, audio extraction
-  - **Node-fetch**: URL content fetching and metadata extraction
-  - **Cheerio**: HTML parsing for social media content
-  - **Document Processing**: PDF, Word, and text file analysis with AI-powered summaries
-    - **PDF Analysis**: Text extraction using pdf-parse library with AI title/summary generation
-    - **Word Document Processing**: .doc/.docx text extraction using mammoth library
-    - **Text File Processing**: Plain text and RTF file analysis with intelligent content summarization
-    - **AI-Powered Analysis**: Google Gemini AI generates meaningful titles, summaries, and relevant tags
-    - **Unified Content Display**: Documents display with same 4-line format as videos (title → comment → summary → tags)
-- **Caching**: Redis.
-- **Security**: `bcrypt`, `jsonwebtoken`, `crypto`, `helmet`, `csurf`, `fingerprintjs2`, `maxmind`, `speakeasy`.
-- **Logging**: Winston (sessions, API calls, shares, alerts, multimedia analysis).
-- **JavaScript**: External JS files for CSP compliance, autocomplete functionality, dynamic form handling, AI analysis modals.
+### Container Infrastructure (Production-Ready)
+- **Docker Compose**: Multi-service orchestration with health checks
+- **Multi-Stage Builds**: Optimized production containers with security hardening
+- **Volume Management**: Persistent data storage with backup strategies
+- **Networking**: Isolated service communication with external access controls
+- **Health Monitoring**: Automated health checks and restart policies
 
-### 11. Deployment
+### Environment & Configuration
+- **Environment Variables**: Comprehensive configuration via .env files
+- **Secret Management**: Secure credential injection without git exposure
+- **Docker Override**: Development and production environment customization
+- **SSL/TLS**: Let's Encrypt integration for production HTTPS
+- **Reverse Proxy**: Nginx configuration for load balancing and security
 
-#### 11.1 Container Infrastructure (Production-Ready)
-- **Docker Support**: Complete containerization with multi-stage builds and optimized layers
-  - **Enhanced Dockerfile**: Includes MySQL client, document processing libraries (poppler-utils, antiword, unrtf, tesseract-ocr), Google Cloud SDK, ImageMagick, and all system dependencies
-  - **Docker Compose**: Advanced configuration with custom networking, persistent volumes, health checks, and service orchestration
-  - **Container Optimization**: Comprehensive .dockerignore, security hardening with non-root user, and minimal attack surface
-  - **Volume Management**: Persistent data volumes for logs, uploads, backups, multimedia temp files, and Google Cloud credentials
+### Production Deployment Options
 
-#### 11.2 Environment & Configuration
-- **Multi-Environment Support**: Separate configurations for development, staging, and production
-- **Environment Templates**: docker-env.example with all required variables for container deployment
-- **Secrets Management**: Google Cloud credentials mounting, secure environment variable handling
-- **Network Isolation**: Custom Docker networks for service communication and security
+#### Option 1: Google Cloud Run (Serverless)
+- Automatic scaling and serverless architecture
+- Integrated with Google Cloud services
+- Cost-effective for variable workloads
+- Built-in SSL/TLS and global distribution
 
-#### 11.3 Production Deployment Options
-- **Google Cloud Platform**:
-  - **App Engine**: F1 instance with automatic scaling
-  - **Cloud Run**: Containerized deployment with pay-per-use pricing
-  - **GKE**: Kubernetes deployment for enterprise scaling
-- **Alternative Platforms**: AWS ECS, Azure Container Instances, DigitalOcean Droplets
-- **Self-Hosted**: Docker Compose on VPS with reverse proxy (nginx/Traefik)
+#### Option 2: Google Compute Engine (Recommended) ⭐
+- Full control over infrastructure and database
+- Custom MySQL installation and optimization
+- Nginx reverse proxy with Let's Encrypt
+- Blue-green deployment for zero-downtime updates
+- Comprehensive monitoring and backup strategies
 
-#### 11.4 Infrastructure Components
-- **Database**: MySQL 8.0 in container with optimized configuration, persistent volumes, and automated backups
-- **Caching**: Redis container ready for implementation with volume persistence
-- **Load Balancing**: nginx or Traefik reverse proxy with SSL/TLS termination
-- **Monitoring**: Health check endpoints, container monitoring, and logging aggregation
-- **CI/CD**: GitHub Actions with Docker registry integration and automated deployments
-- **SSL**: Let's Encrypt with automatic renewal
-- **Scaling**: Horizontal pod autoscaling, Redis caching, CDN integration
-- **Backup**: Automated database backups with multiple restore options (mysqldump, raw SQL, Sequelize-based)
+#### Option 3: Google Kubernetes Engine (Enterprise)
+- Container orchestration at scale
+- Advanced deployment strategies
+- Multi-zone high availability
+- Integrated monitoring and logging
 
-### 12. Non-Functional Requirements
-- **Performance**: Page load < 2s, API response < 500ms.
-- **Scalability**: 100 concurrent users (MVP), scalable later.
-- **Availability**: 99.9% uptime.
-- **Security**: OWASP Top 10, GDPR/CCPA.
-- **Accessibility**: WCAG 2.1 AA.
-- **SEO**: Meta tags, sitemap, localized URLs.
+### Infrastructure Components
+- **Application Server**: Node.js/Express container with multimedia processing
+- **Database**: MySQL with automated backups and performance optimization
+- **Web Server**: Nginx for SSL termination, static files, and reverse proxy
+- **Storage**: Google Cloud Storage for file uploads and backup retention
+- **Monitoring**: Google Cloud Monitoring with custom dashboards and alerting
+- **CI/CD**: GitHub Actions for automated testing, building, and deployment
 
-### 13. Deliverables
-1. **Source Code**:
-   - Backend: `app.js`, `routes/*.js`, `models/*.js`.
-   - Frontend: `views/*.ejs`.
-   - Styles: `public/styles.css`.
-   - Translations: `locales/*.json`.
-2. **Documentation**:
-   - Setup guide, API specs, user guide (`docs/*.md`).
-   - Inline comments, modular code (≤ 500 lines/file).
-3. **Deployment Scripts**: 
-   - Docker Compose (`docker-compose.yml`) with advanced networking and volume management
-   - Enhanced Dockerfile with comprehensive system dependencies
-   - Docker environment template (`docker-env.example`)
-   - Container optimization (`.dockerignore`)
-   - Google Cloud App Engine (`app.yaml`)
-   - Production deployment configurations
-4. **Tests**: Jest (unit), Cypress (E2E).
+## API Architecture
 
-### 14. Success Criteria
-- Users can register/login with OAuth/2FA.
-- Link/unlink 11 social media accounts, process DMs/mentions.
-- Submit URLs/files, extract all specified metadata, manage with tags/comments/groups.
-- Manage contacts (CRUD), groups, relationships (with graph view), share with contacts/groups.
-- Advanced contact search with autocomplete, field-specific queries, and highlighting.
-- Dynamic contact forms with custom labels, Google Maps integration, and autocomplete for all fields.
-- Admin features: view contact owners, filter by owner, edit/delete any contact.
-- Filter/search URLs/files, bulk actions.
-- Admin configures security, file types/size, manages users/locks.
-- Supports English, German, French, Italian, Spanish with RTL compatibility.
-- Security features (sanitization, fingerprinting, IP management, CSP) functional.
-- All tables use UUIDs.
-- Deployed on `daysave.app`, handles 100 users, meets performance metrics.
-- Pages are accessible, SEO-optimized, styled with custom Bootstrap.
+### RESTful Endpoints
+- **Authentication**: `/auth/*` - Login, logout, OAuth, email verification, passkey flows 🆕
+- **Content Management**: `/content/*` - CRUD operations, search, analysis
+- **File Operations**: `/files/*` - Upload, download, metadata, thumbnail generation
+- **User Management**: `/admin/*` - User administration, system settings
+- **API Access**: `/api/*` - Programmatic access with key-based authentication
+- **Passkey Management**: `/passkeys/*` - Biometric authentication management 🆕
 
-### 15. Latest Implemented Features (v1.4.1)
-- **Multimedia Analysis Integration**:
-  - **Automatic AI Analysis**: When multimedia URLs are submitted, comprehensive analysis runs in background
-  - **Audio Transcription**: Google Cloud Speech-to-Text with speaker identification and voice print recognition
-  - **Video Processing**: Thumbnail generation, key moment detection, OCR text extraction
-  - **Sentiment Analysis**: Real-time emotion detection and scoring with visual indicators
-  - **Speaker Management**: Voice print database with confidence scoring and usage statistics
-  - **AI Analysis UI**: Enhanced content cards with visual analysis indicators and detailed modal views
-    - **Scrollable Modal**: AI Analysis Results Modal supports scrollable content for large analysis results
-    - **Summary Editing**: Inline edit functionality for AI-generated summaries with save/cancel options
-    - **Copy to Clipboard**: One-click copy functionality for summaries with visual feedback
-    - **Content Card Copy**: Copy buttons in transcription summaries on content cards with smart validation
-    - **Smart Placeholders**: Informative placeholders when AI summaries are not available
-    - **Enhanced UX**: Success notifications, error handling, and responsive design
-  - **Advanced AI Tag Generation System V2 (Latest)**:
-    - **Intelligent Content Analysis**: Completely replaced generic platform tags with AI-powered content understanding
-    - **Enhanced AI Prompting**: GPT-4 powered tag generation with specific examples and anti-generic term filtering
-    - **Quality-First Approach**: Strict filtering rejects generic terms like "video", "audio", "youtube", "social", "media"
-    - **Content-Based Tags**: Generates specific, meaningful tags like "recognition-challenges", "rowan-atkinson", "british-humor", "celebrity-lookalike" instead of generic "youtube", "video"
-    - **Smart Priority System**: AI-generated content tags take priority over platform-detection tags
-    - **15+ Category Support**: Enhanced fallback system for cooking, technology, sports, news, education, entertainment
-    - **Context-Aware Platform Tags**: Platform identifiers only added when they provide actual context value
-  - **Face Recognition Infrastructure (Latest)**:
-    - **Comprehensive Face Database**: UUID-based faces table with full audit trail and relationship tracking
-    - **AI-Powered Name Suggestions**: OpenAI integration for intelligent face identification and naming
-    - **Privacy-First Design**: Built-in privacy controls and user confirmation systems for face identification
-    - **Face Grouping**: Advanced face grouping system for organizing related detections across content
-    - **Quality Assessment**: Face quality scoring and primary face detection for content thumbnails
-    - **Learning System**: Machine learning data storage for improving recognition accuracy over time
-    - **Processing Integration**: Seamless integration with existing multimedia analysis workflow
-  - **Automated Image Analysis**: Complete pipeline for image content analysis and description generation
-    - **Image URL Detection**: Automatic detection of image URLs from major hosting platforms (Imgur, Flickr, Pinterest, etc.)
-    - **AI Image Description**: Google Vision AI object detection combined with OpenAI GPT-4 natural language descriptions
-    - **Summary Generation**: Automatic summarization of image descriptions using the same pipeline as video transcriptions
-    - **Sentiment Analysis**: Mood and emotional context detection from image descriptions
-    - **Unified Display**: Images descriptions displayed in content cards and AI Analysis Modal like video transcriptions
-    - **Smart Indicators**: Different icons and labels for image descriptions vs video transcriptions
-    - **Copy Support**: Full copy functionality for image descriptions with appropriate user feedback
-  - **Real-time Updates**: Progressive enhancement with live status updates every 10 seconds
-      - **Platform Support**: YouTube, Vimeo, TikTok, Instagram, Facebook, Twitter, SoundCloud, Spotify, Imgur, Flickr, Pinterest, direct files (video/audio/image)
-  - **Database Integration**: 4 new multimedia analysis tables with UUID architecture
-  - **RESTful API**: Comprehensive multimedia analysis endpoints with proper error handling
-- **Contact Management Enhancements**:
-  - Dynamic form fields with "+" buttons for adding multiple emails, phones, addresses, social profiles, and notes.
-  - Custom label support for all field types with "Other..." option and prompt for custom labels.
-  - Google Maps integration with location pins and modal map display for addresses.
-  - Advanced search functionality with server-side processing, highlighting, and field-specific queries.
-  - Live search with AJAX, highlighting matches, and no-results message.
-  - Autocomplete for all contact form fields (name, email, phone, address, social, note, custom labels).
-  - Admin features: view contact owners in list, filter contacts by owner, edit/delete any contact.
-- **Security Improvements**:
-  - Content Security Policy (CSP) implementation blocking inline scripts.
-  - External JavaScript files for CSP compliance.
-  - Google Maps and Google Fonts domains whitelisted in CSP.
-- **User Experience**:
-  - Responsive design with Bootstrap 5 styling.
-  - Keyboard navigation support for autocomplete (arrow keys, enter, escape).
-  - Debounced search to reduce server load.
-  - Mobile-friendly interface with proper touch targets.
+### Middleware Stack
+- **Security**: CORS, CSRF protection, rate limiting, input validation
+- **Authentication**: Session management, role verification, API key validation
+- **Logging**: Request/response logging, error tracking, audit trails
+- **Performance**: Compression, caching headers, static file optimization
 
-### 16. Notes
-- Use Twitter/X as WhatsApp/WeChat fallback.
-- Respect API rate limits with caching/retry logic.
-- Submit social media apps for review early.
-- Use `.env` for secrets.
-- Monitor with Sentry/New Relic.
-- Validate data with `validator.js`.
-- Plan for mobile apps/browser extensions with "share to" functionality.
-- Add alerts/reminders for contacts/posts.
+## WebAuthn/Passkey Implementation 🆕
 
-### Sequelize Model Pattern
-- All models must export a function (sequelize, DataTypes) => Model.
-- Do not import sequelize or DataTypes directly in model files; use the arguments provided by models/index.js.
-- See AGENT.md for the full specification and rationale.
+### Technical Specifications
+- **Standard**: FIDO2/WebAuthn compliant implementation
+- **Library**: `passport-fido2-webauthn` for Passport.js integration
+- **Challenge Storage**: Secure session-based challenge management
+- **Credential Storage**: Dedicated `user_passkeys` table with encryption
+- **Device Detection**: Automatic device type and browser identification
 
-## Requirements & Features (2024-06-26)
+### Security Features
+- **Anti-Phishing**: Domain-bound authentication prevents credential theft
+- **Biometric Privacy**: Biometric data never leaves the user's device
+- **Replay Protection**: Challenge-response protocol prevents replay attacks
+- **User Verification**: Configurable user presence and verification requirements
 
-- Authentication: Apple, Google, Microsoft OAuth; email/password; 2FA for admin (optional for users, user-selectable); cost-effective email verification (SendGrid recommended).
-- User Management: Username non-editable; users disabled not deleted; self-service account closure; Free/Small/Medium/Large/Unlimited plans; Stripe & PayPal (Stripe setup needed); admin UI for CRUD/backup/restore.
-- Social Media: YouTube, Facebook, Instagram prioritized; tokens in .env preferred; automatic metadata extraction.
-- File/URL: Admin-configurable file types/size; local storage per user in dev, Google Cloud in prod; AI features (summary, sentiment, transcription, tagging) run automatically.
-- Contacts: CSV import at launch (sample in docs/README); custom fields; graph and count visualization of relationships.
-- Multilingual: English, German, Italian, French, Spanish (auto-translate for now); generate locales/*.json; mobile/tablet friendly.
-- UI/UX: Use provided color scheme; public landing page.
-- DevOps: Staging/prod best practices; manual DB backup at start; cost-effective monitoring/alerting (suggestions pending).
-- Testing: Unit > Integration > E2E; OpenAPI/Swagger docs; best practice linting/style.
+### User Experience
+- **Registration Flow**: Seamless passkey setup during account creation
+- **Login Integration**: Prominent passkey option alongside traditional login
+- **Device Management**: User-friendly interface for managing multiple passkeys
+- **Recovery Process**: Email-based recovery for lost or compromised passkeys
 
-See AGENT.md for full specification and rationale.
+## Development Status ⚠️
 
-## Contact Form Dynamic Features & Google Maps Autocomplete
+### ✅ Completed Systems
+1. **Core Authentication**: OAuth, email verification, passkey authentication
+2. **Content Pipeline**: File upload, AI analysis, thumbnail generation
+3. **User Interface**: Responsive design, interactive components
+4. **Administrative Tools**: User management, system monitoring
+5. **Container Infrastructure**: Production-ready deployment
+6. **CI/CD Pipeline**: Automated testing and deployment
 
-- The contact form supports dynamic addition/removal of emails, phones, addresses, socials, and notes.
-- Each address field is automatically initialized with Google Maps Places Autocomplete, using robust selector logic to ensure all fields are found, regardless of naming or rendering order.
-- The autocomplete initialization is triggered on page load, window load, and after a short delay to ensure all fields are handled, even if rendered late.
-- If you change the address input naming convention, update the selector logic in `public/js/contact-maps-autocomplete.js`.
-- All code is thoroughly commented for maintainability.
+### 🔧 Current Issue (Debug Required)
+- **Passkey Profile Management**: Add passkey feature in user profile not functioning
+  - Backend implementation complete and tested
+  - Frontend components implemented with proper styling
+  - Application startup issues resolved
+  - **Status**: Investigating JavaScript console errors and API connectivity
 
-### Script Order & Initialization
-- Ensure that `contact-maps-autocomplete.js` is loaded after the Google Maps API script and before any dynamic field scripts.
-- The global callback `initContactMaps` is used for Google Maps API loading.
+### 🚀 Ready for Production
+- **Infrastructure**: Complete Docker and deployment automation
+- **Security**: Comprehensive authentication and authorization
+- **Monitoring**: Health checks, logging, and error tracking
+- **Documentation**: Deployment guides and operational procedures
 
-### Troubleshooting
-- If address autocomplete does not work, check the browser console for selector logs and errors.
-- Ensure the API key is valid and the required APIs are enabled.
-- For new field types, update the selector logic as needed.
+## Deliverables
 
-## Database Backup System (v1.4.1)
+### Core Application
+- **Web Application**: Complete Node.js/Express application with EJS templates
+- **Database Schema**: MySQL database with 25+ tables and comprehensive relationships
+- **Authentication System**: Multi-provider OAuth and WebAuthn/passkey implementation
+- **AI Integration**: OpenAI-powered content analysis and summarization
+- **File Processing**: Multimedia analysis pipeline with Google Cloud integration
 
-### Enterprise-Grade Data Protection
-DaySave implements a comprehensive database backup system with three independent backup methods for complete data protection and disaster recovery:
+### Container Infrastructure
+- **Docker Compose**: Multi-service orchestration (`docker-compose.yml`)
+- **Production Dockerfile**: Optimized container builds (`Dockerfile.production`)
+- **Environment Templates**: Configuration templates (`docker-env.example`)
+- **Deployment Configuration**: Production deployment setup (`app.yaml`)
 
-#### MySQLDump Backup Method
-- **Traditional SQL Backup**: Industry-standard backup using MySQL client tools
-- **File Format**: Standard SQL files (1.65 MB average) with complete schema and data
-- **Compatibility**: Cross-platform compatible, widely supported by database tools
-- **Restore Process**: Simple MySQL import with standard restoration procedures
-- **Use Case**: Traditional database backups, migration between environments, industry compliance
+### Deployment Automation
+- **CI/CD Pipeline**: GitHub Actions workflow (`.github/workflows/docker-ci-cd.yml`)
+- **Production Scripts**: Automated deployment (`scripts/deploy-production.sh`)
+- **Zero-Downtime Updates**: Blue-green deployment (`scripts/update-production.sh`)
+- **SSL Automation**: Let's Encrypt integration and renewal
 
-#### Raw SQL Backup Method  
-- **Complete Database Dump**: Comprehensive backup using direct SQL queries
-- **Coverage**: All 41 database tables including system tables (SequelizeMeta, Sessions)
-- **File Format**: Structured JSON export (2.1 MB) with complete metadata
-- **Data Scope**: 634+ total records including system state and legacy data
-- **Use Case**: Complete disaster recovery, full system snapshots, forensic analysis
+### Documentation
+- **API Documentation**: Comprehensive endpoint documentation
+- **Deployment Guides**: Step-by-step production deployment
+- **Security Guidelines**: Best practices and configuration guides
+- **User Manuals**: End-user and administrative guides
 
-#### Sequelize Model-Based Backup
-- **Application-Focused**: Clean backup using defined Sequelize models
-- **Coverage**: 38 application tables with 580+ application records  
-- **File Format**: Structured JSON with auto-generated restore scripts
-- **Data Quality**: Only includes tables with defined models (cleaner, application-focused)
-- **Use Case**: Application data backups, structured data exports, development snapshots
+---
 
-### Administrative Features
-- **Automated Scheduling**: Configurable backup intervals and retention policies
-- **Backup Management**: Organized storage with timestamps and comprehensive metadata
-- **Restore Capabilities**: Multiple restore options with validation and rollback support
-- **Security**: Encrypted backups with access control and audit logging
-- **Monitoring**: Backup health monitoring with notification alerts
-- **Storage Options**: Local storage and cloud storage integration support
+**Next Steps**: Debug passkey add functionality in profile page, then proceed with comprehensive testing and production deployment preparation.
 
-### Technical Implementation
-- **Schema Validation**: Automatic detection and resolution of database schema issues
-- **Error Handling**: Robust error handling with graceful degradation and retry mechanisms
-- **Performance**: Optimized for minimal impact on production operations
-- **Documentation**: Complete setup guides, troubleshooting, and recovery procedures
-- **Integration**: Seamless integration with existing admin panel and monitoring systems
-
-## Recent Updates & Fixes (January 2025)
-
-### Content Management System Improvements
-- **Fixed Logger Errors**: Resolved critical logger method errors that were preventing content updates and tag management. Changed non-existent `logger.user.contentUpdate` and `logger.user.contentGroupUpdate` calls to use the correct `logger.user.contentEdit` method.
-- **Enhanced Summary Display**: Improved content card summary display from 1 line to 4+ lines (100px height) with better readability (line-height: 1.6, font-size: 0.85rem) and scrollable overflow for longer summaries.
-- **Removed UI Clutter**: Eliminated redundant "Transcription Summary" label to optimize space usage and improve visual hierarchy.
-
-### File Analysis & Image Description Integration  
-- **New File Analysis Endpoint**: Created `/files/:id/analysis` endpoint to retrieve analysis data for uploaded files, handling image descriptions and summaries with proper content type detection.
-- **Frontend Analysis Detection**: Updated JavaScript to automatically detect file vs content pages and use appropriate analysis endpoints (`/files/:id/analysis` vs `/content/:id/analysis`).
-- **Copy to Clipboard**: Added copy buttons for both summary and description in detail modal with proper styling and user feedback.
-- **Fixed Image Analysis Display**: Resolved missing image descriptions and summaries in both content cards and detail modals for uploaded files.
-
-### User Experience Enhancements
-- **Seamless File/Content Integration**: Frontend now handles both uploaded files and URL-based content uniformly with intelligent content type detection.
-- **Improved Modal Interactions**: Enhanced detail modals with copy functionality and better data presentation.
-- **Enhanced Error Handling**: Added proper error logging, improved user feedback, and better debugging capabilities.
-- **Consistent Behavior**: Ensured consistent analysis display behavior between file and content management systems.
-
-## Content Management UX
-
-### Advanced Filter Bar Features
-- Filter bar above content cards with:
-  - **Category filter:** Dropdown with all unique categories, clear button, and auto-submit on change.
-  - **Tag filter:** Text input with autocomplete (all unique tags), supports multiple tags (comma/space separated, OR logic, partial/case-insensitive match), clear button, and auto-submit on Enter or clear.
-  - **Date range filter:** From/To date pickers, clear buttons, and auto-submit on change.
-- All filters update the view instantly when changed (no need to click Filter button, but button is still available).
-- Each filter has a small clear/reset button to clear only that field and immediately update the view.
-- Filtering is robust, user-friendly, and works with large tag/category sets.
+*Last Updated: January 23, 2025*

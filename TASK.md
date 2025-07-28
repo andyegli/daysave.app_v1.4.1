@@ -1423,3 +1423,137 @@ openssl rand -base64 32
   - [x] Added navigation links from content and file lists to dedicated analysis pages
   - [x] Maintains backward compatibility with existing analysis modal
   - [x] Committed changes to git
+
+# DaySave.app Task Management
+
+## Current Status
+**Last Updated**: 2025-01-23
+**Current Priority**: Debugging passkey add feature in profile page
+
+## 🔥 CRITICAL - In Progress
+- `passkey_profile_debug`: **[IN PROGRESS]** Debug and fix the "add passkey" feature not working in the profile page
+  - **Issue**: User reports passkey add feature doesn't work in profile
+  - **Status**: Application startup crash fixed (requireRole -> isAdmin), now debugging frontend functionality
+  - **Next**: Check JavaScript console errors, API connectivity, and modal functionality
+
+## 📋 Recently Completed (Last 24 Hours)
+
+### ✅ Passkey Authentication System - Backend Complete
+- ✅ `passkey_database_migration`: Created user_passkeys table migration (20250123000000-create-user-passkeys.js)
+- ✅ `passkey_model`: Created UserPasskey Sequelize model with full functionality
+- ✅ `passkey_auth_integration`: Integrated WebAuthnStrategy into Passport.js (config/auth.js)
+- ✅ `passkey_routes`: Created comprehensive passkey API routes (routes/passkeys.js)
+- ✅ `passkey_admin_routes`: Added passkey management to admin routes (routes/admin.js)
+- ✅ `passkey_recovery_routes`: Implemented passkey recovery flow (routes/auth.js)
+- ✅ `passkey_startup_fix`: Fixed application startup crash (requireRole -> isAdmin middleware)
+
+### ✅ Passkey Authentication System - Frontend Complete
+- ✅ `passkey_client_library`: Created comprehensive WebAuthn client library (public/js/passkey-client.js)
+- ✅ `passkey_login_ui`: Updated login page with passkey button and functionality
+- ✅ `passkey_register_ui`: Updated registration page with post-signup passkey setup
+- ✅ `passkey_profile_ui`: Added passkey management section to profile page
+- ✅ `passkey_management_modal`: Created comprehensive passkey management modal
+- ✅ `passkey_recovery_pages`: Created forgot-passkey and recover-passkey pages
+- ✅ `passkey_styling`: Applied Bootstrap glassmorphism styling consistent with app design
+
+### ✅ Infrastructure & Deployment
+- ✅ `docker_infrastructure`: Complete Docker setup with multi-stage builds, health checks, volume management
+- ✅ `docker_secrets_management`: Secure secret injection via docker-compose.override.yml
+- ✅ `production_deployment_scripts`: Complete GCP VM deployment automation (deploy-production.sh, update-production.sh)
+- ✅ `production_nginx_config`: SSL/TLS setup with Let's Encrypt, reverse proxy configuration
+- ✅ `cicd_pipeline`: GitHub Actions workflow for automated testing, security scanning, deployments
+
+## 🚀 Immediate Next Steps (After Passkey Debug)
+
+### Testing & Validation
+- `passkey_browser_testing`: Test passkey functionality across different browsers and devices
+- `passkey_integration_testing`: Comprehensive testing of registration, login, management flows
+- `passkey_security_testing`: Verify WebAuthn security implementation and credential handling
+
+### Documentation & Completion
+- `passkey_user_documentation`: Create user guide for passkey setup and usage
+- `passkey_admin_documentation`: Document admin passkey management procedures
+
+## 🎯 Production Deployment Tasks (Ready to Execute)
+
+### Environment Setup
+- `enable_gcp_apis`: Enable required Google Cloud APIs: Compute Engine API, Container Registry API, Cloud Storage API, Speech-to-Text API, Vision API, IAM API
+- `configure_gcp_billing`: Verify Google Cloud project has billing enabled and set up budget alerts for cost monitoring
+- `setup_gcp_iam_permissions`: Configure proper IAM permissions for deployment user account - need Project Editor or specific compute/storage permissions
+- `purchase_configure_domain`: Purchase domain name (if not already owned) and configure DNS provider for production deployment
+- `create_production_env_file`: Create .env.production with actual production values: database passwords, API keys (OpenAI, Google Maps), OAuth credentials, session secrets
+- `update_deployment_config`: Update deployment configuration files with actual domain: scripts/deploy-production.sh (DOMAIN, EMAIL), nginx/sites-available/daysave.conf (server_name)
+- `setup_google_storage_bucket`: Create Google Cloud Storage bucket for file uploads and backups: daysave-uploads, daysave-v1412-backups
+
+### Deployment Execution
+- `execute_initial_production_deployment`: Run initial production deployment: ./scripts/deploy-production.sh full (creates VM, SSL certificates, deploys containers)
+- `configure_dns_pointing`: Point domain DNS A record to production VM external IP address after VM creation
+- `verify_ssl_certificates`: Verify Let's Encrypt SSL certificates are properly installed and HTTPS is working at production domain
+- `test_production_application`: Test production application functionality: user registration, file uploads, Google Cloud integrations, database operations
+
+### Production Operations
+- `setup_production_monitoring`: Configure production monitoring: Google Cloud Monitoring, log aggregation, alerting for downtime and errors
+- `test_zero_downtime_updates`: Test zero-downtime deployment process: ./scripts/update-production.sh deploy and verify blue-green deployment works
+- `setup_automated_backups`: Verify automated database backups are working and test restore procedure from Cloud Storage
+- `document_production_procedures`: Document production maintenance procedures: update process, backup/restore, troubleshooting, monitoring
+
+## 📝 System Architecture Status
+
+### ✅ Completed Major Systems
+1. **Authentication & Authorization**: OAuth (Google, Microsoft, Apple), Email verification, Role-based access, **Passkey authentication**
+2. **Content Management**: File uploads, AI analysis, Thumbnail generation, Search functionality
+3. **Multimedia Processing**: Modular pipeline, AI transcription/summarization, Video/audio/image analysis
+4. **Container Infrastructure**: Docker Compose, Production-ready containers, Secret management
+5. **CI/CD Pipeline**: Automated testing, Security scanning, Multi-environment deployment
+6. **Database**: MySQL with Sequelize ORM, Comprehensive migrations, Audit logging
+
+### 🔄 Development Workflow
+```bash
+# Start development
+npm start
+
+# Run in Docker
+docker-compose up --build
+
+# Deploy to production (when ready)
+./scripts/deploy-production.sh full
+
+# Update production (zero-downtime)
+./scripts/update-production.sh deploy
+```
+
+### 📊 Current Metrics
+- **Database Tables**: 25+ with full relationships
+- **API Routes**: 50+ RESTful endpoints
+- **Middleware**: Security, Authentication, Validation, Error handling
+- **Frontend Pages**: 15+ responsive views with Bootstrap styling
+- **Container Services**: App, Database, Nginx, Redis (optional)
+- **Authentication Methods**: Password, OAuth (3 providers), **Passkeys**
+
+## 🔍 Debug Information for Cursor Restart
+
+### Current Issue Context
+- **Problem**: Passkey add feature not working in user profile page
+- **Completed**: Backend implementation, frontend UI, application startup fixed
+- **Investigation Needed**: 
+  - Check browser console for JavaScript errors
+  - Verify passkey API routes are accessible
+  - Test WebAuthn browser support detection
+  - Validate modal JavaScript functionality
+
+### Key Files for Current Issue
+- `views/profile.ejs` - Profile page with passkey management button
+- `views/partials/passkey-management-modal.ejs` - Modal for adding/managing passkeys  
+- `public/js/passkey-client.js` - WebAuthn client library
+- `routes/passkeys.js` - Passkey API endpoints
+- `config/auth.js` - WebAuthn strategy configuration
+
+### Environment Variables Needed for Passkeys
+```
+WEBAUTHN_RP_ID=localhost
+WEBAUTHN_RP_NAME=DaySave.app
+WEBAUTHN_ORIGIN=http://localhost:3000
+```
+
+---
+*This document tracks all development tasks and current status. Update when completing tasks or identifying new requirements.*

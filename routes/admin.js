@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { User, Role } = require('../models');
+const { User, Role, UserPasskey } = require('../models');
 const { logAuthEvent, logAuthError } = require('../config/logger');
 const { isAuthenticated, isAdmin, requireTesterPermission } = require('../middleware');
 const { body, validationResult, param } = require('express-validator');
@@ -1805,6 +1805,158 @@ router.post('/tests/run', isAuthenticated, isAdmin, async (req, res) => {
       error: error.message,
       timestamp: new Date().toISOString()
     });
+  }
+});
+
+// Get user passkeys for admin management
+router.get('/users/:userId/passkeys', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = await User.findByPk(userId, {
+      include: [{ model: Role, as: 'Role' }]
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const passkeys = await UserPasskey.getUserPasskeys(userId, false); // Include inactive
+    
+    const passkeyData = passkeys.map(passkey => ({
+      id: passkey.id,
+      device_name: passkey.getDeviceDisplayName(),
+      device_type: passkey.device_type,
+      device_icon: passkey.getDeviceIcon(),
+      last_used_at: passkey.last_used_at,
+      created_at: passkey.created_at,
+      is_active: passkey.is_active,
+      browser_info: passkey.browser_info
+    }));
+    
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email
+      },
+      passkeys: passkeyData,
+      count: passkeyData.length
+    });
+    
+  } catch (error) {
+    console.error('Admin get user passkeys error:', error);
+    res.status(500).json({ error: 'Failed to retrieve user passkeys' });
+  }
+});
+
+// Disable a user's passkey (admin action)
+router.patch('/users/:userId/passkeys/:passkeyId/disable', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { userId, passkeyId } = req.params;
+    
+    const passkey = await UserPasskey.findOne({
+      where: { 
+        id: passkeyId,
+        user_id: userId 
+      },
+      include: [{
+        model: User,
+        as: 'user'
+      }]
+    });
+    
+    if (!passkey) {
+      return res.status(404).json({ error: 'Passkey not found' });
+    }
+    
+    await passkey.deactivate();
+    
+    res.json({
+      success: true,
+      message: `Passkey disabled for user ${passkey.user.username}`,
+      passkey: {
+        id: passkey.id,
+        device_name: passkey.getDeviceDisplayName(),
+        is_active: passkey.is_active
+      }
+    });
+    
+  } catch (error) {
+    console.error('Admin disable passkey error:', error);
+    res.status(500).json({ error: 'Failed to disable passkey' });
+  }
+});
+
+// Enable a user's passkey (admin action)
+router.patch('/users/:userId/passkeys/:passkeyId/enable', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { userId, passkeyId } = req.params;
+    
+    const passkey = await UserPasskey.findOne({
+      where: { 
+        id: passkeyId,
+        user_id: userId 
+      },
+      include: [{
+        model: User,
+        as: 'user'
+      }]
+    });
+    
+    if (!passkey) {
+      return res.status(404).json({ error: 'Passkey not found' });
+    }
+    
+    await passkey.activate();
+    
+    res.json({
+      success: true,
+      message: `Passkey enabled for user ${passkey.user.username}`,
+      passkey: {
+        id: passkey.id,
+        device_name: passkey.getDeviceDisplayName(),
+        is_active: passkey.is_active
+      }
+    });
+    
+  } catch (error) {
+    console.error('Admin enable passkey error:', error);
+    res.status(500).json({ error: 'Failed to enable passkey' });
+  }
+});
+
+// Delete a user's passkey (admin action)
+router.delete('/users/:userId/passkeys/:passkeyId', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { userId, passkeyId } = req.params;
+    
+    const passkey = await UserPasskey.findOne({
+      where: { 
+        id: passkeyId,
+        user_id: userId 
+      },
+      include: [{
+        model: User,
+        as: 'user'
+      }]
+    });
+    
+    if (!passkey) {
+      return res.status(404).json({ error: 'Passkey not found' });
+    }
+    
+    await passkey.destroy();
+    
+    res.json({
+      success: true,
+      message: `Passkey deleted for user ${passkey.user.username}`
+    });
+    
+  } catch (error) {
+    console.error('Admin delete passkey error:', error);
+    res.status(500).json({ error: 'Failed to delete passkey' });
   }
 });
 
