@@ -3,6 +3,8 @@
  * Handles WebAuthn passkey registration and authentication using native browser APIs
  */
 
+console.log('🎯 PASSKEY-CLIENT.JS LOADED - Starting initialization...');
+
 class PasskeyClient {
   constructor() {
     this.isSupported = this.checkSupport();
@@ -410,12 +412,19 @@ window.PasskeyUtils = {
 };
 
 // Initialize global passkey client instance
+console.log('🚀 Loading passkey-client.js...');
 window.passkeyClient = new PasskeyClient();
+console.log('✅ PasskeyClient instantiated:', window.passkeyClient);
 
 // Initialize passkey management modal functionality
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('📄 DOM Content Loaded - Initializing passkey modal...');
   const modal = document.getElementById('passkeyManagementModal');
-  if (!modal) return; // Exit if modal doesn't exist on this page
+  if (!modal) {
+    console.log('❌ Passkey modal not found on this page');
+    return; // Exit if modal doesn't exist on this page
+  }
+  console.log('✅ Modal found:', modal);
   
   const addPasskeyBtn = document.getElementById('addPasskeyBtn');
   const refreshBtn = document.getElementById('refreshPasskeysBtn');
@@ -423,6 +432,15 @@ document.addEventListener('DOMContentLoaded', function() {
   const noPasskeysMessage = document.getElementById('noPasskeysMessage');
   const passkeyCount = document.getElementById('passkeyCount');
   const newPasskeyNameInput = document.getElementById('newPasskeyName');
+  
+  console.log('🔍 Elements found:', {
+    addPasskeyBtn: !!addPasskeyBtn,
+    refreshBtn: !!refreshBtn,
+    passkeyList: !!passkeyList,
+    noPasskeysMessage: !!noPasskeysMessage,
+    passkeyCount: !!passkeyCount,
+    newPasskeyNameInput: !!newPasskeyNameInput
+  });
   
   // Rename modal elements
   const renameModal = document.getElementById('renamePasskeyModal');
@@ -442,7 +460,9 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Add new passkey
-  addPasskeyBtn.addEventListener('click', async function() {
+  if (addPasskeyBtn) {
+    console.log('✅ Attaching click event listener to addPasskeyBtn');
+    addPasskeyBtn.addEventListener('click', async function() {
     console.log('🔘 Add passkey button clicked!');
     try {
       console.log('🔄 Setting button loading state...');
@@ -467,11 +487,20 @@ document.addEventListener('DOMContentLoaded', function() {
       PasskeyUtils.setButtonLoading(this, false);
     }
   });
+  } else {
+    console.log('❌ addPasskeyBtn not found!');
+  }
 
   // Refresh passkeys
-  refreshBtn.addEventListener('click', function() {
-    loadPasskeys();
-  });
+  if (refreshBtn) {
+    console.log('✅ Attaching click event listener to refreshBtn');
+    refreshBtn.addEventListener('click', function() {
+      console.log('🔄 Refresh button clicked!');
+      loadPasskeys();
+    });
+  } else {
+    console.log('❌ refreshBtn not found!');
+  }
 
   // Save renamed passkey
   saveNameBtn && saveNameBtn.addEventListener('click', async function() {
