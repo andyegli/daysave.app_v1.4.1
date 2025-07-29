@@ -149,6 +149,11 @@ passport.use(new WebAuthnStrategy(
       },
       getUser: (req) => {
         // Return the authenticated user for passkey registration
+        console.log('WebAuthn getUser called:', { 
+          hasUser: !!req.user, 
+          userId: req.user?.id, 
+          username: req.user?.username 
+        });
         return req.user;
       },
       verify: async (req, challenge, callback) => {
@@ -170,7 +175,8 @@ passport.use(new WebAuthnStrategy(
           }
           
           console.log('WebAuthn store verify: Challenge verified successfully');
-          return callback(null, { success: true });
+          // Return success and let getUser function provide the user context
+          return callback(null, true);
         } catch (error) {
           console.error('WebAuthn store verify error:', error);
           return callback(error);
