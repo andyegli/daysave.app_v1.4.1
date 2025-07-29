@@ -150,6 +150,31 @@ passport.use(new WebAuthnStrategy(
       getUser: (req) => {
         // Return the authenticated user for passkey registration
         return req.user;
+      },
+      verify: async (req, id, publicKey, counter) => {
+        // This function is called during registration to verify the credential
+        // Return true to accept the credential, false to reject
+        try {
+          // Convert credential ID to base64url for checking
+          const credentialIdBase64 = Buffer.from(id).toString('base64url');
+          
+          // Basic validation - check if credential ID already exists
+          const existingPasskey = await UserPasskey.findByCredentialId(credentialIdBase64);
+          
+          if (existingPasskey) {
+            // Credential already exists - reject
+            console.log('WebAuthn store verify: Credential already exists, rejecting');
+            return false;
+          }
+          
+          // Additional validation can be added here
+          // For now, accept all new credentials
+          console.log('WebAuthn store verify: New credential accepted');
+          return true;
+        } catch (error) {
+          console.error('WebAuthn store verify error:', error);
+          return false;
+        }
       }
     }
   },
