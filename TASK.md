@@ -1573,14 +1573,35 @@ WEBAUTHN_ORIGIN=http://localhost:3000
   - [x] Updated EJS template to use external script tag instead of inline JavaScript
   - [x] Preserved all existing test functionality (Google Vision API, OpenAI API, pipeline tests)
   - [x] Added missing test endpoints for complete AI pipeline testing:
-    - [x] `/admin/test-object-detection` - Tests object detection service availability
-    - [x] `/admin/test-ocr` - Tests OCR text extraction service availability
-    - [x] `/admin/test-image-description` - Tests image description service via OpenAI
-    - [x] `/admin/test-sentiment` - Tests sentiment analysis service via OpenAI
+    - [x] `/test-google-api` - Tests Google Vision API availability and method
+    - [x] `/test-openai-api` - Tests OpenAI API key configuration
+    - [x] `/test-object-detection` - Tests object detection service availability  
+    - [x] `/test-ocr` - Tests OCR text extraction service availability
+    - [x] `/test-image-description` - Tests image description service via OpenAI
+    - [x] `/test-sentiment` - Tests sentiment analysis service via OpenAI
+  - [x] Fixed test endpoint routing issue:
+    - [x] Moved test endpoints from `/admin/` to root level for public access
+    - [x] Test endpoints now accessible without authentication as intended
   - [x] Enhanced test coverage for multimedia analysis features
   - [x] Resolved "Refused to execute inline script" CSP violation error
   - [x] Admin tests page now loads and executes without security policy violations
   - [x] All test endpoints now available for comprehensive AI service validation
+
+## 🧪 **Admin Test Suite Details**
+When you click "Run Tests" in the admin interface, it executes the AI Pipeline Test Suite which performs:
+
+1. **Server Connection Test** - Verifies DaySave server is running and accessible
+2. **Google Vision API Test** - Checks Google Cloud Vision API credentials and accessibility
+3. **OpenAI Vision API Test** - Verifies OpenAI API key configuration and availability
+4. **Image Upload Pipeline Test** - Tests file upload endpoint (expects auth requirement)
+5. **AI Analysis Features Tests** - Tests availability of:
+   - Object Detection service (Google Vision + OpenAI fallback)
+   - OCR Text Extraction service (Google Vision + OpenAI fallback)  
+   - Image Description service (OpenAI Vision)
+   - Sentiment Analysis service (OpenAI)
+6. **Test Report Generation** - Comprehensive status report with recommendations
+
+The test suite validates that all AI services are properly configured and provides fallback redundancy assessment.
 
 - [x] **Fixed Database Backup System on macOS**
   - [x] Installed MySQL client tools via Homebrew (mysql-client 9.3.0)
