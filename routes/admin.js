@@ -2361,7 +2361,7 @@ router.get('/api/analytics/performance', isAuthenticated, isAdmin, async (req, r
 });
 
 // Admin Dashboard Stats API Endpoints
-router.get('/api/admin/stats/users', isAuthenticated, isAdmin, async (req, res) => {
+router.get('/api/stats/users', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { User } = require('../models');
     const count = await User.count();
@@ -2371,7 +2371,7 @@ router.get('/api/admin/stats/users', isAuthenticated, isAdmin, async (req, res) 
   }
 });
 
-router.get('/api/admin/stats/active', isAuthenticated, isAdmin, async (req, res) => {
+router.get('/api/stats/active', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { User } = require('../models');
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -2386,7 +2386,7 @@ router.get('/api/admin/stats/active', isAuthenticated, isAdmin, async (req, res)
   }
 });
 
-router.get('/api/admin/stats/content', isAuthenticated, isAdmin, async (req, res) => {
+router.get('/api/stats/content', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { Content } = require('../models');
     const count = await Content.count();
@@ -2396,7 +2396,7 @@ router.get('/api/admin/stats/content', isAuthenticated, isAdmin, async (req, res
   }
 });
 
-router.get('/api/admin/stats/health', isAuthenticated, isAdmin, async (req, res) => {
+router.get('/api/stats/health', isAuthenticated, isAdmin, async (req, res) => {
   try {
     // Simple health check based on database connectivity
     const { User } = require('../models');
