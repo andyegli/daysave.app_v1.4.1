@@ -147,6 +147,10 @@ passport.use(new WebAuthnStrategy(
       getChallenge: (req) => {
         return req.session.challenge;
       },
+      getUser: (req) => {
+        // Return the authenticated user for passkey registration
+        return req.user;
+      },
       verify: async (req, id, publicKey, counter) => {
         // This function is called during registration to verify the credential
         // Return true to accept the credential, false to reject
