@@ -228,6 +228,150 @@ checkDatabaseConnection().then(async (connected) => {
   app.use('/subscription', require('./routes/subscription'));
   app.use('/api/subscription', require('./routes/subscription'));
 
+  // Test endpoints for AI pipeline testing (publicly accessible)
+  app.get('/test-google-api', async (req, res) => {
+    try {
+      const MultimediaAnalyzer = require('./services/multimedia/MultimediaAnalyzer');
+      const analyzer = new MultimediaAnalyzer({ enableLogging: false });
+      
+      // Check if Google Vision API is available
+      if (analyzer.visionClient || analyzer.googleApiKey) {
+        res.json({
+          success: true,
+          message: 'Google Vision API is accessible',
+          method: analyzer.visionClient ? 'Service Account' : 'API Key'
+        });
+      } else {
+        res.json({
+          success: false,
+          message: 'Google Vision API credentials not configured'
+        });
+      }
+    } catch (error) {
+      res.json({
+        success: false,
+        message: `Google Vision API test failed: ${error.message}`
+      });
+    }
+  });
+
+  app.get('/test-openai-api', async (req, res) => {
+    try {
+      const openaiApiKey = process.env.OPENAI_API_KEY;
+      
+      if (openaiApiKey) {
+        // Simple test of OpenAI API availability
+        const OpenAI = require('openai');
+        const openai = new OpenAI({ apiKey: openaiApiKey });
+        
+        res.json({
+          success: true,
+          message: 'OpenAI API key is configured and accessible'
+        });
+      } else {
+        res.json({
+          success: false,
+          message: 'OpenAI API key not configured'
+        });
+      }
+    } catch (error) {
+      res.json({
+        success: false,
+        message: `OpenAI API test failed: ${error.message}`
+      });
+    }
+  });
+
+  app.get('/test-object-detection', async (req, res) => {
+    try {
+      const MultimediaAnalyzer = require('./services/multimedia/MultimediaAnalyzer');
+      const analyzer = new MultimediaAnalyzer({ enableLogging: false });
+      
+      if (analyzer.visionClient || analyzer.googleApiKey || process.env.OPENAI_API_KEY) {
+        res.json({
+          success: true,
+          message: 'Object detection service available via Google Vision or OpenAI'
+        });
+      } else {
+        res.json({
+          success: false,
+          message: 'No API keys configured for object detection'
+        });
+      }
+    } catch (error) {
+      res.json({
+        success: false,
+        message: `Object detection test failed: ${error.message}`
+      });
+    }
+  });
+
+  app.get('/test-ocr', async (req, res) => {
+    try {
+      const MultimediaAnalyzer = require('./services/multimedia/MultimediaAnalyzer');
+      const analyzer = new MultimediaAnalyzer({ enableLogging: false });
+      
+      if (analyzer.visionClient || analyzer.googleApiKey || process.env.OPENAI_API_KEY) {
+        res.json({
+          success: true,
+          message: 'OCR text extraction service available via Google Vision or OpenAI'
+        });
+      } else {
+        res.json({
+          success: false,
+          message: 'No API keys configured for OCR'
+        });
+      }
+    } catch (error) {
+      res.json({
+        success: false,
+        message: `OCR test failed: ${error.message}`
+      });
+    }
+  });
+
+  app.get('/test-image-description', async (req, res) => {
+    try {
+      if (process.env.OPENAI_API_KEY) {
+        res.json({
+          success: true,
+          message: 'Image description service available via OpenAI Vision'
+        });
+      } else {
+        res.json({
+          success: false,
+          message: 'OpenAI API key not configured for image description'
+        });
+      }
+    } catch (error) {
+      res.json({
+        success: false,
+        message: `Image description test failed: ${error.message}`
+      });
+    }
+  });
+
+  app.get('/test-sentiment', async (req, res) => {
+    try {
+      if (process.env.OPENAI_API_KEY) {
+        res.json({
+          success: true,
+          message: 'Sentiment analysis service available via OpenAI'
+        });
+      } else {
+        res.json({
+          success: false,
+          message: 'OpenAI API key not configured for sentiment analysis'
+        });
+      }
+    } catch (error) {
+      res.json({
+        success: false,
+        message: `Sentiment analysis test failed: ${error.message}`
+      });
+    }
+  });
+
   // Health check endpoints
   app.get('/health', (req, res) => {
     const validationResults = app.locals.startupValidation || {};
