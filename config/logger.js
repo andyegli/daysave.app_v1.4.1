@@ -320,13 +320,41 @@ enhancedLogger.logWarning = (message, context = {}) => {
 };
 
 // Export specific functions for backward compatibility
-const logAuthEvent = (event, data = {}) => {
+const logAuthEvent = async (event, data = {}) => {
+  // Log to files (existing functionality)
   enhancedLogger.info(`AUTH_EVENT: ${event}`, {
     channel: 'auth',
     event,
     ...data,
     timestamp: new Date().toISOString()
   });
+  
+  // Also store in database for analytics
+  try {
+    // Dynamically import AuditLog to avoid circular dependency issues
+    const { AuditLog } = require('../models');
+    
+    await AuditLog.create({
+      action: event,
+      user_id: data.userId || data.adminId || data.user?.id || null,
+      target_type: data.targetType || null,
+      target_id: data.targetId || null,
+      details: {
+        ...data,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    // Silently fail database logging to avoid breaking the application
+    // Still log the error for debugging
+    enhancedLogger.error('Failed to store audit log in database', {
+      channel: 'system',
+      event: 'AUDIT_LOG_DB_ERROR',
+      originalEvent: event,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 const logAuthError = (event, error, data = {}) => {

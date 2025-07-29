@@ -297,7 +297,9 @@
           page: page
         });
 
-        const response = await fetch(`/admin/api/logs?${params}`);
+        const response = await fetch(`/admin/api/logs?${params}`, {
+      credentials: 'include'
+    });
         const data = await response.json();
 
         if (data.success) {

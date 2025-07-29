@@ -344,7 +344,9 @@
     // Load overview statistics
     async function loadOverviewData() {
       try {
-        const response = await fetch('/admin/api/analytics/overview');
+        const response = await fetch('/admin/api/analytics/overview', {
+          credentials: 'include'
+        });
         const data = await response.json();
         
         if (data.success) {
@@ -372,7 +374,9 @@
     // Load user trends
     async function loadUserTrends() {
       try {
-        const response = await fetch('/admin/api/analytics/user-trends?days=30');
+        const response = await fetch('/admin/api/analytics/user-trends?days=30', {
+          credentials: 'include'
+        });
         const data = await response.json();
         
         if (data.success) {
@@ -387,7 +391,9 @@
     // Load content statistics
     async function loadContentStats() {
       try {
-        const response = await fetch('/admin/api/analytics/content-stats');
+        const response = await fetch('/admin/api/analytics/content-stats', {
+          credentials: 'include'
+        });
         const data = await response.json();
         
         if (data.success) {
@@ -402,7 +408,9 @@
     // Load performance data
     async function loadPerformanceData() {
       try {
-        const response = await fetch('/admin/api/analytics/performance?hours=24');
+        const response = await fetch('/admin/api/analytics/performance?hours=24', {
+          credentials: 'include'
+        });
         const data = await response.json();
         
         if (data.success) {

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Access - DaySave</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .access-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 3rem;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            max-width: 500px;
+        }
+        .btn-admin {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            margin: 10px;
+            border-radius: 10px;
+        }
+        .btn-admin:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="access-card">
+        <h1 class="mb-4">🔧 Admin Access Helper</h1>
+        <p class="text-muted mb-4">Choose your destination:</p>
+        
+        <div class="d-grid gap-3">
+            <a href="/admin/dashboard" class="btn btn-primary btn-admin">
+                🏠 Admin Dashboard
+                <br>
+                <small>Access analytics, user management, and more</small>
+            </a>
+            
+            <a href="/admin/analytics" class="btn btn-success btn-admin">
+                📊 Analytics Dashboard
+                <br>
+                <small>Direct access to analytics and statistics</small>
+            </a>
+            
+            <a href="/dashboard" class="btn btn-secondary btn-admin">
+                👤 User Dashboard
+                <br>
+                <small>Regular user dashboard</small>
+            </a>
+        </div>
+        
+        <hr class="my-4">
+        
+        <div class="text-start">
+            <h6>🚫 Having popup issues?</h6>
+            <ul class="small text-muted">
+                <li>Clear browser cache (Ctrl+Shift+Delete)</li>
+                <li>Try incognito/private browsing mode</li>
+                <li>Hard refresh after login (Ctrl+F5)</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- No other JavaScript to prevent conflicts -->
+</body>
+</html> 
