@@ -1908,4 +1908,390 @@ router.delete('/users/:userId/passkeys/:passkeyId', isAuthenticated, isAdmin, as
   }
 });
 
+// Analytics Dashboard Route
+router.get('/analytics', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    logAuthEvent('ADMIN_ANALYTICS_ACCESS', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      timestamp: new Date().toISOString()
+    });
+
+    res.render('admin/analytics', {
+      user: req.user,
+      title: 'Analytics Dashboard - Admin'
+    });
+  } catch (error) {
+    handleAdminError(req, res, error, {
+      action: 'view_analytics'
+    });
+  }
+});
+
+// Analytics API - System Overview
+router.get('/api/analytics/overview', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { User, Content, File, AuditLog, ApiKeyUsage } = require('../models');
+    const { Op } = require('sequelize');
+    
+    // Time ranges
+    const now = new Date();
+    const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+    const oneWeekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+    const oneMonthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+
+    // User statistics
+    const totalUsers = await User.count();
+    const activeUsers24h = await User.count({
+      where: {
+        updatedAt: { [Op.gte]: oneDayAgo }
+      }
+    });
+    const newUsersWeek = await User.count({
+      where: {
+        createdAt: { [Op.gte]: oneWeekAgo }
+      }
+    });
+
+    // Content statistics
+    const totalContent = await Content.count();
+    const totalFiles = await File.count();
+    const contentThisWeek = await Content.count({
+      where: {
+        createdAt: { [Op.gte]: oneWeekAgo }
+      }
+    });
+
+    // Activity statistics
+    const totalAuditLogs = await AuditLog.count();
+    const recentActivity = await AuditLog.count({
+      where: {
+        createdAt: { [Op.gte]: oneDayAgo }
+      }
+    });
+
+    // API usage statistics
+    const apiCalls24h = await ApiKeyUsage.count({
+      where: {
+        createdAt: { [Op.gte]: oneDayAgo }
+      }
+    });
+
+    const overview = {
+      users: {
+        total: totalUsers,
+        active24h: activeUsers24h,
+        newThisWeek: newUsersWeek,
+        growthRate: totalUsers > 0 ? ((newUsersWeek / totalUsers) * 100).toFixed(1) : 0
+      },
+      content: {
+        totalContent,
+        totalFiles,
+        newThisWeek: contentThisWeek,
+        averagePerUser: totalUsers > 0 ? (totalContent / totalUsers).toFixed(1) : 0
+      },
+      activity: {
+        totalEvents: totalAuditLogs,
+        recent24h: recentActivity,
+        apiCalls24h,
+        eventsPerHour: (recentActivity / 24).toFixed(1)
+      },
+      system: {
+        uptime: process.uptime(),
+        memoryUsage: process.memoryUsage(),
+        nodeVersion: process.version
+      }
+    };
+
+    logAuthEvent('ADMIN_ANALYTICS_OVERVIEW_API', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      dataPoints: Object.keys(overview).length,
+      ip: req.ip,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      data: overview,
+      timestamp: now.toISOString()
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_ANALYTICS_OVERVIEW_ERROR', error, {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      ip: req.ip
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch analytics overview'
+    });
+  }
+});
+
+// Analytics API - User Activity Trends
+router.get('/api/analytics/user-trends', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { User, AuditLog } = require('../models');
+    const { Op, sequelize } = require('sequelize');
+    const days = parseInt(req.query.days) || 30;
+    
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    // Daily user registrations
+    const registrations = await User.findAll({
+      attributes: [
+        [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      where: {
+        createdAt: { [Op.gte]: startDate }
+      },
+      group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
+      order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']]
+    });
+
+    // Daily activity (login events)
+    const loginActivity = await AuditLog.findAll({
+      attributes: [
+        [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      where: {
+        action: { [Op.like]: '%LOGIN%' },
+        createdAt: { [Op.gte]: startDate }
+      },
+      group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
+      order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']]
+    });
+
+    // User role distribution
+    const roleDistribution = await User.findAll({
+      attributes: [
+        'role_id',
+        [sequelize.fn('COUNT', sequelize.col('User.id')), 'count']
+      ],
+      include: [{
+        model: require('../models').Role,
+        attributes: ['name', 'display_name']
+      }],
+      group: ['role_id', 'Role.id'],
+      order: [[sequelize.fn('COUNT', sequelize.col('User.id')), 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: {
+        registrations: registrations.map(r => ({
+          date: r.dataValues.date,
+          count: parseInt(r.dataValues.count)
+        })),
+        loginActivity: loginActivity.map(a => ({
+          date: a.dataValues.date,
+          count: parseInt(a.dataValues.count)
+        })),
+        roleDistribution: roleDistribution.map(r => ({
+          role: r.Role ? r.Role.display_name || r.Role.name : 'No Role',
+          count: parseInt(r.dataValues.count)
+        }))
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_ANALYTICS_USER_TRENDS_ERROR', error, {
+      adminId: req.user.id,
+      ip: req.ip
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch user trends'
+    });
+  }
+});
+
+// Analytics API - Content Statistics
+router.get('/api/analytics/content-stats', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { Content, File } = require('../models');
+    const { Op, sequelize } = require('sequelize');
+    
+    // Content type distribution
+    const contentTypes = await Content.findAll({
+      attributes: [
+        'content_type',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group: ['content_type'],
+      order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
+    });
+
+    // File type distribution
+    const fileTypes = await File.findAll({
+      attributes: [
+        'content_type',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        [sequelize.fn('SUM', sequelize.col('file_size')), 'totalSize']
+      ],
+      group: ['content_type'],
+      order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
+    });
+
+    // Storage usage by user
+    const storageByUser = await File.findAll({
+      attributes: [
+        'user_id',
+        [sequelize.fn('COUNT', sequelize.col('File.id')), 'fileCount'],
+        [sequelize.fn('SUM', sequelize.col('file_size')), 'totalSize']
+      ],
+      include: [{
+        model: User,
+        attributes: ['username', 'email']
+      }],
+      group: ['user_id', 'User.id'],
+      order: [[sequelize.fn('SUM', sequelize.col('file_size')), 'DESC']],
+      limit: 10
+    });
+
+    // Weekly content creation trend
+    const weeklyContent = await Content.findAll({
+      attributes: [
+        [sequelize.fn('WEEK', sequelize.col('createdAt')), 'week'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      where: {
+        createdAt: { [Op.gte]: new Date(Date.now() - 12 * 7 * 24 * 60 * 60 * 1000) } // 12 weeks
+      },
+      group: [sequelize.fn('WEEK', sequelize.col('createdAt'))],
+      order: [[sequelize.fn('WEEK', sequelize.col('createdAt')), 'ASC']]
+    });
+
+    res.json({
+      success: true,
+      data: {
+        contentTypes: contentTypes.map(ct => ({
+          type: ct.content_type || 'Unknown',
+          count: parseInt(ct.dataValues.count)
+        })),
+        fileTypes: fileTypes.map(ft => ({
+          type: ft.content_type || 'Unknown',
+          count: parseInt(ft.dataValues.count),
+          totalSize: parseInt(ft.dataValues.totalSize) || 0
+        })),
+        topUsers: storageByUser.map(user => ({
+          username: user.User ? user.User.username : 'Unknown',
+          fileCount: parseInt(user.dataValues.fileCount),
+          totalSize: parseInt(user.dataValues.totalSize) || 0
+        })),
+        weeklyTrend: weeklyContent.map(wc => ({
+          week: wc.dataValues.week,
+          count: parseInt(wc.dataValues.count)
+        }))
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_ANALYTICS_CONTENT_STATS_ERROR', error, {
+      adminId: req.user.id,
+      ip: req.ip
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch content statistics'
+    });
+  }
+});
+
+// Analytics API - System Performance
+router.get('/api/analytics/performance', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { TestMetric, ProcessingJob } = require('../models');
+    const { Op, sequelize } = require('sequelize');
+    
+    const hours = parseInt(req.query.hours) || 24;
+    const startTime = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+    // Processing performance metrics
+    const performanceMetrics = await TestMetric.findAll({
+      attributes: [
+        'ai_job',
+        [sequelize.fn('AVG', sequelize.col('metric_value')), 'avgValue'],
+        [sequelize.fn('MIN', sequelize.col('metric_value')), 'minValue'],
+        [sequelize.fn('MAX', sequelize.col('metric_value')), 'maxValue'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      where: {
+        metric_type: 'performance',
+        collected_at: { [Op.gte]: startTime }
+      },
+      group: ['ai_job'],
+      order: [[sequelize.fn('AVG', sequelize.col('metric_value')), 'DESC']]
+    });
+
+    // Processing job status distribution
+    const jobStatus = await ProcessingJob.findAll({
+      attributes: [
+        'status',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      where: {
+        createdAt: { [Op.gte]: startTime }
+      },
+      group: ['status']
+    });
+
+    // System resource usage (from process)
+    const memUsage = process.memoryUsage();
+    const systemStats = {
+      memory: {
+        used: Math.round(memUsage.heapUsed / 1024 / 1024), // MB
+        total: Math.round(memUsage.heapTotal / 1024 / 1024), // MB
+        external: Math.round(memUsage.external / 1024 / 1024), // MB
+        percentage: Math.round((memUsage.heapUsed / memUsage.heapTotal) * 100)
+      },
+      uptime: Math.round(process.uptime() / 3600), // hours
+      nodeVersion: process.version,
+      platform: process.platform
+    };
+
+    res.json({
+      success: true,
+      data: {
+        performance: performanceMetrics.map(pm => ({
+          aiJob: pm.ai_job,
+          avgTime: parseFloat(pm.dataValues.avgValue).toFixed(2),
+          minTime: parseFloat(pm.dataValues.minValue).toFixed(2),
+          maxTime: parseFloat(pm.dataValues.maxValue).toFixed(2),
+          jobCount: parseInt(pm.dataValues.count)
+        })),
+        jobStatus: jobStatus.map(js => ({
+          status: js.status,
+          count: parseInt(js.dataValues.count)
+        })),
+        system: systemStats
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_ANALYTICS_PERFORMANCE_ERROR', error, {
+      adminId: req.user.id,
+      ip: req.ip
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch performance metrics'
+    });
+  }
+});
+
 module.exports = router; 
