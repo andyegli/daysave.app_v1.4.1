@@ -151,29 +151,29 @@ passport.use(new WebAuthnStrategy(
         // Return the authenticated user for passkey registration
         return req.user;
       },
-      verify: async (req, id, publicKey, counter) => {
-        // This function is called during registration to verify the credential
-        // Return true to accept the credential, false to reject
+      verify: async (req, challenge, callback) => {
+        // This function is called during registration to verify the challenge
         try {
-          // Convert credential ID to base64url for checking
-          const credentialIdBase64 = Buffer.from(id).toString('base64url');
+          // Get the challenge from session
+          const sessionChallenge = req.session.challenge;
           
-          // Basic validation - check if credential ID already exists
-          const existingPasskey = await UserPasskey.findByCredentialId(credentialIdBase64);
-          
-          if (existingPasskey) {
-            // Credential already exists - reject
-            console.log('WebAuthn store verify: Credential already exists, rejecting');
-            return false;
+          if (!sessionChallenge) {
+            console.log('WebAuthn store verify: No session challenge found');
+            return callback(new Error('No session challenge found'));
           }
           
-          // Additional validation can be added here
-          // For now, accept all new credentials
-          console.log('WebAuthn store verify: New credential accepted');
-          return true;
+          // Compare challenges
+          const sessionChallengeBuffer = Buffer.from(sessionChallenge, 'base64url');
+          if (!challenge.equals(sessionChallengeBuffer)) {
+            console.log('WebAuthn store verify: Challenge mismatch');
+            return callback(new Error('Challenge mismatch'));
+          }
+          
+          console.log('WebAuthn store verify: Challenge verified successfully');
+          return callback(null, { success: true });
         } catch (error) {
           console.error('WebAuthn store verify error:', error);
-          return false;
+          return callback(error);
         }
       }
     }
@@ -238,12 +238,12 @@ passport.use(new WebAuthnStrategy(
       return cb(error);
     }
   },
-  // Register function for adding new passkeys
-  async (user, id, publicKey, cb) => {
+  // Register function for adding new passkeys - 6 parameter version
+  async (user, credentialId, publicKey, flags, signCount, cb) => {
     try {
       const requestDetails = {
         userId: user ? user.id : 'unknown',
-        credentialId: Buffer.from(id).toString('base64url')
+        credentialId: credentialId
       };
 
       logAuthEvent('WEBAUTHN_REGISTRATION_START', requestDetails);
@@ -254,25 +254,27 @@ passport.use(new WebAuthnStrategy(
       }
 
       // Check if credential already exists
-      const existingPasskey = await UserPasskey.findByCredentialId(requestDetails.credentialId);
+      const existingPasskey = await UserPasskey.findByCredentialId(credentialId);
       if (existingPasskey) {
         logAuthError('WEBAUTHN_CREDENTIAL_EXISTS', new Error('Credential already exists'), requestDetails);
         return cb(null, false, { message: 'This passkey is already registered' });
       }
 
       // Detect device information from user agent (if available in request)
-      const deviceType = 'unknown'; // We'll update this later if needed
+      const deviceType = 'security_key'; // Default to security key type
       const deviceName = `Passkey Device ${Date.now()}`;
 
       // Create new passkey
       const newPasskey = await UserPasskey.create({
         user_id: user.id,
-        credential_id: requestDetails.credentialId,
-        credential_public_key: Buffer.from(publicKey).toString('base64url'),
-        credential_counter: 0, // Start with 0, will be updated on use
+        credential_id: credentialId,
+        credential_public_key: publicKey, // This is already a PEM string from the library
+        credential_counter: signCount,
         device_name: deviceName,
         device_type: deviceType,
         browser_info: {
+          flags: flags,
+          signCount: signCount,
           timestamp: new Date().toISOString()
         }
       });
@@ -281,14 +283,15 @@ passport.use(new WebAuthnStrategy(
         ...requestDetails,
         passkeyId: newPasskey.id,
         deviceType: deviceType,
-        deviceName: deviceName
+        deviceName: deviceName,
+        signCount: signCount
       });
 
       return cb(null, user);
     } catch (error) {
       logAuthError('WEBAUTHN_REGISTRATION_ERROR', error, {
         userId: user ? user.id : 'unknown',
-        credentialId: id ? Buffer.from(id).toString('base64url') : 'unknown'
+        credentialId: credentialId || 'unknown'
       });
       return cb(error);
     }
