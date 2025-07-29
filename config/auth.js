@@ -193,8 +193,16 @@ passport.use(new WebAuthnStrategy(
   // Verify function for authentication (login)
   async (id, userHandle, cb) => {
     try {
+      console.log('WebAuthn authentication verify called:', { 
+        id, 
+        idType: typeof id,
+        userHandle,
+        userHandleType: typeof userHandle 
+      });
+      
+      // The id parameter should already be a string credential ID
       const requestDetails = {
-        credentialId: Buffer.from(id).toString('base64url'),
+        credentialId: id, // Use directly without conversion
         userHandle: userHandle ? Buffer.from(userHandle).toString('base64url') : null
       };
 
@@ -245,7 +253,7 @@ passport.use(new WebAuthnStrategy(
       return cb(null, user, publicKey);
     } catch (error) {
       logAuthError('WEBAUTHN_AUTHENTICATION_ERROR', error, {
-        credentialId: id ? Buffer.from(id).toString('base64url') : 'unknown'
+        credentialId: id || 'unknown'
       });
       return cb(error);
     }
