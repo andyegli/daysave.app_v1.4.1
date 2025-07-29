@@ -1731,6 +1731,97 @@ router.get('/test-openai-api', async (req, res) => {
   }
 });
 
+// Additional test endpoints for AI analysis features
+router.get('/test-object-detection', async (req, res) => {
+  try {
+    const MultimediaAnalyzer = require('../services/multimedia/MultimediaAnalyzer');
+    const analyzer = new MultimediaAnalyzer({ enableLogging: false });
+    
+    if (analyzer.visionClient || analyzer.googleApiKey || process.env.OPENAI_API_KEY) {
+      res.json({
+        success: true,
+        message: 'Object detection service available via Google Vision or OpenAI'
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'No API keys configured for object detection'
+      });
+    }
+  } catch (error) {
+    res.json({
+      success: false,
+      message: `Object detection test failed: ${error.message}`
+    });
+  }
+});
+
+router.get('/test-ocr', async (req, res) => {
+  try {
+    const MultimediaAnalyzer = require('../services/multimedia/MultimediaAnalyzer');
+    const analyzer = new MultimediaAnalyzer({ enableLogging: false });
+    
+    if (analyzer.visionClient || analyzer.googleApiKey || process.env.OPENAI_API_KEY) {
+      res.json({
+        success: true,
+        message: 'OCR text extraction service available via Google Vision or OpenAI'
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'No API keys configured for OCR'
+      });
+    }
+  } catch (error) {
+    res.json({
+      success: false,
+      message: `OCR test failed: ${error.message}`
+    });
+  }
+});
+
+router.get('/test-image-description', async (req, res) => {
+  try {
+    if (process.env.OPENAI_API_KEY) {
+      res.json({
+        success: true,
+        message: 'Image description service available via OpenAI Vision'
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'OpenAI API key not configured for image description'
+      });
+    }
+  } catch (error) {
+    res.json({
+      success: false,
+      message: `Image description test failed: ${error.message}`
+    });
+  }
+});
+
+router.get('/test-sentiment', async (req, res) => {
+  try {
+    if (process.env.OPENAI_API_KEY) {
+      res.json({
+        success: true,
+        message: 'Sentiment analysis service available via OpenAI'
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'OpenAI API key not configured for sentiment analysis'
+      });
+    }
+  } catch (error) {
+    res.json({
+      success: false,
+      message: `Sentiment analysis test failed: ${error.message}`
+    });
+  }
+});
+
 // Admin test routes
 router.get('/tests', isAuthenticated, isAdmin, async (req, res) => {
   try {
