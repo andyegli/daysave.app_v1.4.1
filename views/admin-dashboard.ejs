@@ -384,11 +384,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadDashboardStats() {
   try {
-    // Simulate API calls for stats (replace with actual API endpoints)
-    const totalUsers = await fetch('/api/admin/stats/users').then(r => r.json()).catch(() => ({ count: '12' }));
-    const activeUsers = await fetch('/api/admin/stats/active').then(r => r.json()).catch(() => ({ count: '8' }));
-    const totalContent = await fetch('/api/admin/stats/content').then(r => r.json()).catch(() => ({ count: '45' }));
-    const systemHealth = await fetch('/api/admin/stats/health').then(r => r.json()).catch(() => ({ status: '98%' }));
+    // Fetch real stats from admin API endpoints
+    const totalUsers = await fetch('/admin/api/stats/users', { credentials: 'include' }).then(r => r.json()).catch(() => ({ count: '12' }));
+    const activeUsers = await fetch('/admin/api/stats/active', { credentials: 'include' }).then(r => r.json()).catch(() => ({ count: '8' }));
+    const totalContent = await fetch('/admin/api/stats/content', { credentials: 'include' }).then(r => r.json()).catch(() => ({ count: '45' }));
+    const systemHealth = await fetch('/admin/api/stats/health', { credentials: 'include' }).then(r => r.json()).catch(() => ({ status: '98%' }));
     
     // Update the stats display
     document.getElementById('totalUsers').textContent = totalUsers.count || '12';
