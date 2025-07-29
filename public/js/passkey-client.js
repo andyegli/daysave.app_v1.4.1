@@ -681,4 +681,49 @@ document.addEventListener('DOMContentLoaded', function() {
 
     return item;
   }
+});
+
+// Initialize passkey login functionality for login page
+document.addEventListener('DOMContentLoaded', function() {
+  const passkeyBtn = document.querySelector('.passkey-login-btn');
+  
+  if (!passkeyBtn) return; // Exit if not on login page
+  
+  if (!window.passkeyClient.isSupported) {
+    passkeyBtn.style.display = 'none';
+    return;
+  }
+
+  passkeyBtn.addEventListener('click', async function() {
+    try {
+      PasskeyUtils.setButtonLoading(this, true);
+      
+      const result = await window.passkeyClient.authenticateWithPasskey();
+      
+      if (result.success) {
+        PasskeyUtils.showSuccess(result.message || 'Authentication successful!');
+        
+        // Redirect to dashboard
+        setTimeout(() => {
+          window.location.href = result.redirectUrl || '/dashboard';
+        }, 1000);
+      } else {
+        PasskeyUtils.showError(result.error || 'Authentication failed');
+      }
+    } catch (error) {
+      console.error('Passkey login error:', error);
+      PasskeyUtils.showError(error.message || 'Authentication failed');
+    } finally {
+      PasskeyUtils.setButtonLoading(this, false);
+    }
+  });
+
+  // Handle forgot password link
+  const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+  if (forgotPasswordLink) {
+    forgotPasswordLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      alert('Password reset coming soon!');
+    });
+  }
 }); 

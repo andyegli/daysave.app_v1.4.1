@@ -210,7 +210,7 @@
                             <a href="/auth/forgot-passkey" class="text-decoration-none small">
                                 <i class="fas fa-fingerprint me-1"></i>Lost Passkey?
                             </a>
-                            <a href="#" class="text-decoration-none small text-muted" onclick="alert('Password reset coming soon!')">
+                            <a href="#" class="text-decoration-none small text-muted" id="forgotPasswordLink">
                                 <i class="fas fa-key me-1"></i>Forgot Password?
                             </a>
                         </div>
@@ -246,39 +246,5 @@
     
     <!-- Passkey Client Library -->
     <script src="/js/passkey-client.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const passkeyBtn = document.querySelector('.passkey-login-btn');
-            
-            if (!window.passkeyClient.isSupported) {
-                passkeyBtn.style.display = 'none';
-                return;
-            }
-
-            passkeyBtn.addEventListener('click', async function() {
-                try {
-                    PasskeyUtils.setButtonLoading(this, true);
-                    
-                    const result = await window.passkeyClient.authenticateWithPasskey();
-                    
-                    if (result.success) {
-                        PasskeyUtils.showSuccess(result.message || 'Authentication successful!');
-                        
-                        // Redirect to dashboard
-                        setTimeout(() => {
-                            window.location.href = result.redirectUrl || '/dashboard';
-                        }, 1000);
-                    } else {
-                        PasskeyUtils.showError(result.error || 'Authentication failed');
-                    }
-                } catch (error) {
-                    console.error('Passkey login error:', error);
-                    PasskeyUtils.showError(error.message || 'Authentication failed');
-                } finally {
-                    PasskeyUtils.setButtonLoading(this, false);
-                }
-            });
-        });
-    </script>
 </body>
 </html> 

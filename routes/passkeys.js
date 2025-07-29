@@ -126,6 +126,11 @@ router.post('/register/finish', isAuthenticated, async (req, res) => {
       });
     }
 
+    // Prepare credential data for passport strategy
+    // The strategy expects the credential data directly in the request body
+    const originalBody = req.body;
+    req.body = credential; // Set the credential as the body directly
+    
     // Use passport authenticate for verification
     passport.authenticate('webauthn', { session: false }, async (err, authUser, info) => {
       if (err) {
@@ -165,6 +170,9 @@ router.post('/register/finish', isAuthenticated, async (req, res) => {
         }
       }
 
+      // Restore original request body
+      req.body = originalBody;
+      
       // Clear challenge from session
       delete req.session.challenge;
       delete req.session.challengeType;
