@@ -175,8 +175,14 @@ passport.use(new WebAuthnStrategy(
           }
           
           console.log('WebAuthn store verify: Challenge verified successfully');
-          // Return success and let getUser function provide the user context
-          return callback(null, true);
+          // Return success with user context for registration
+          const user = req.user;
+          console.log('WebAuthn store verify: Providing user context:', { 
+            hasUser: !!user, 
+            userId: user?.id, 
+            username: user?.username 
+          });
+          return callback(null, true, { user: user });
         } catch (error) {
           console.error('WebAuthn store verify error:', error);
           return callback(error);
