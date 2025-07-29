@@ -150,41 +150,15 @@ passport.use(new WebAuthnStrategy(
       getUser: (req) => {
         // Return the authenticated user for passkey registration
         return req.user;
-      },
-      verify: async (req, id, publicKey, counter) => {
-        // This function is called during registration to verify the credential
-        // Return true to accept the credential, false to reject
-        try {
-          // Convert credential ID to base64url for checking
-          const credentialIdBase64 = Buffer.from(id).toString('base64url');
-          
-          // Basic validation - check if credential ID already exists
-          const existingPasskey = await UserPasskey.findByCredentialId(credentialIdBase64);
-          
-          if (existingPasskey) {
-            // Credential already exists - reject
-            console.log('WebAuthn verify: Credential already exists, rejecting');
-            return false;
-          }
-          
-          // Additional validation can be added here
-          // For now, accept all new credentials
-          console.log('WebAuthn verify: New credential accepted');
-          return true;
-        } catch (error) {
-          console.error('WebAuthn store verify error:', error);
-          return false;
-        }
       }
     }
   },
-  async (id, userHandle, req, done) => {
+  // Verify function for authentication (login)
+  async (id, userHandle, cb) => {
     try {
       const requestDetails = {
         credentialId: Buffer.from(id).toString('base64url'),
-        userHandle: userHandle ? Buffer.from(userHandle).toString('base64url') : null,
-        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown'
+        userHandle: userHandle ? Buffer.from(userHandle).toString('base64url') : null
       };
 
       logAuthEvent('WEBAUTHN_AUTHENTICATION_START', requestDetails);
@@ -194,7 +168,7 @@ passport.use(new WebAuthnStrategy(
       
       if (!passkey) {
         logAuthError('WEBAUTHN_PASSKEY_NOT_FOUND', new Error('Passkey not found'), requestDetails);
-        return done(null, false, { message: 'Passkey not found' });
+        return cb(null, false, { message: 'Passkey not found' });
       }
 
       if (!passkey.is_active) {
@@ -203,7 +177,7 @@ passport.use(new WebAuthnStrategy(
           passkeyId: passkey.id,
           userId: passkey.user_id
         });
-        return done(null, false, { message: 'Passkey is inactive' });
+        return cb(null, false, { message: 'Passkey is inactive' });
       }
 
       // Update last used timestamp
@@ -217,9 +191,12 @@ passport.use(new WebAuthnStrategy(
           passkeyId: passkey.id,
           userId: passkey.user_id
         });
-        return done(null, false, { message: 'User not found' });
+        return cb(null, false, { message: 'User not found' });
       }
 
+      // Return user and public key for verification
+      const publicKey = passkey.credential_public_key;
+      
       logAuthEvent('WEBAUTHN_AUTHENTICATION_SUCCESS', {
         ...requestDetails,
         userId: user.id,
@@ -228,74 +205,67 @@ passport.use(new WebAuthnStrategy(
         deviceType: passkey.device_type
       });
 
-      return done(null, user);
+      return cb(null, user, publicKey);
     } catch (error) {
       logAuthError('WEBAUTHN_AUTHENTICATION_ERROR', error, {
-        credentialId: id ? Buffer.from(id).toString('base64url') : 'unknown',
-        ip: req.ip || 'unknown'
+        credentialId: id ? Buffer.from(id).toString('base64url') : 'unknown'
       });
-      return done(error);
+      return cb(error);
     }
   },
-  async (user, id, publicKey, counter, req, done) => {
+  // Register function for adding new passkeys
+  async (user, id, publicKey, cb) => {
     try {
       const requestDetails = {
-        userId: user ? user.id : 'new_user',
-        credentialId: Buffer.from(id).toString('base64url'),
-        counter: counter,
-        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown'
+        userId: user ? user.id : 'unknown',
+        credentialId: Buffer.from(id).toString('base64url')
       };
 
       logAuthEvent('WEBAUTHN_REGISTRATION_START', requestDetails);
 
-      // If user is provided, this is adding a passkey to existing account
-      if (user) {
-        // Check if credential already exists
-        const existingPasskey = await UserPasskey.findByCredentialId(requestDetails.credentialId);
-        if (existingPasskey) {
-          logAuthError('WEBAUTHN_CREDENTIAL_EXISTS', new Error('Credential already exists'), requestDetails);
-          return done(null, false, { message: 'This passkey is already registered' });
-        }
-
-        // Detect device information
-        const deviceType = detectDeviceType(requestDetails.userAgent);
-        const deviceName = generateDeviceName(requestDetails.userAgent, deviceType);
-
-        // Create new passkey
-        const newPasskey = await UserPasskey.create({
-          user_id: user.id,
-          credential_id: requestDetails.credentialId,
-          credential_public_key: Buffer.from(publicKey).toString('base64url'),
-          credential_counter: counter,
-          device_name: deviceName,
-          device_type: deviceType,
-          browser_info: {
-            userAgent: requestDetails.userAgent,
-            ip: requestDetails.ip,
-            timestamp: new Date().toISOString()
-          }
-        });
-
-        logAuthEvent('WEBAUTHN_REGISTRATION_SUCCESS', {
-          ...requestDetails,
-          passkeyId: newPasskey.id,
-          deviceType: deviceType,
-          deviceName: deviceName
-        });
-
-        return done(null, user);
+      if (!user) {
+        logAuthError('WEBAUTHN_NO_USER_PROVIDED', new Error('No user provided for passkey registration'), requestDetails);
+        return cb(null, false, { message: 'User authentication required for passkey registration' });
       }
 
-      // This shouldn't happen in our flow (we always require existing user for registration)
-      logAuthError('WEBAUTHN_NO_USER_PROVIDED', new Error('No user provided for passkey registration'), requestDetails);
-      return done(null, false, { message: 'User authentication required for passkey registration' });
+      // Check if credential already exists
+      const existingPasskey = await UserPasskey.findByCredentialId(requestDetails.credentialId);
+      if (existingPasskey) {
+        logAuthError('WEBAUTHN_CREDENTIAL_EXISTS', new Error('Credential already exists'), requestDetails);
+        return cb(null, false, { message: 'This passkey is already registered' });
+      }
+
+      // Detect device information from user agent (if available in request)
+      const deviceType = 'unknown'; // We'll update this later if needed
+      const deviceName = `Passkey Device ${Date.now()}`;
+
+      // Create new passkey
+      const newPasskey = await UserPasskey.create({
+        user_id: user.id,
+        credential_id: requestDetails.credentialId,
+        credential_public_key: Buffer.from(publicKey).toString('base64url'),
+        credential_counter: 0, // Start with 0, will be updated on use
+        device_name: deviceName,
+        device_type: deviceType,
+        browser_info: {
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      logAuthEvent('WEBAUTHN_REGISTRATION_SUCCESS', {
+        ...requestDetails,
+        passkeyId: newPasskey.id,
+        deviceType: deviceType,
+        deviceName: deviceName
+      });
+
+      return cb(null, user);
     } catch (error) {
       logAuthError('WEBAUTHN_REGISTRATION_ERROR', error, {
         userId: user ? user.id : 'unknown',
         credentialId: id ? Buffer.from(id).toString('base64url') : 'unknown'
       });
-      return done(error);
+      return cb(error);
     }
   }
 ));
