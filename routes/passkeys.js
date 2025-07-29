@@ -282,8 +282,16 @@ router.post('/authenticate/finish', async (req, res) => {
       });
     }
 
+    // Prepare credential data for passport strategy
+    // The strategy expects the credential data directly in the request body
+    const originalBody = req.body;
+    req.body = credential; // Set the credential as the body directly
+    
     // Use passport authenticate for verification
     passport.authenticate('webauthn', (err, user, info) => {
+      // Restore original request body
+      req.body = originalBody;
+      
       if (err) {
         logAuthError('PASSKEY_AUTHENTICATION_VERIFICATION_ERROR', err, clientDetails);
         return res.status(500).json({
