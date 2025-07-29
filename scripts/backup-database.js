@@ -109,22 +109,21 @@ class DatabaseBackup {
     console.log('💾 Creating database backup...');
     
     return new Promise((resolve, reject) => {
-      // mysqldump command with comprehensive options
+      // mysqldump command with compatible options (no special privileges required)
       const dumpCommand = `mysqldump ` +
         `--host=${this.dbConfig.host} ` +
         `--port=${this.dbConfig.port} ` +
         `--user=${this.dbConfig.username} ` +
         `--password='${this.dbConfig.password}' ` +
         `--single-transaction ` +
-        `--routines ` +
-        `--triggers ` +
-        `--events ` +
         `--add-drop-table ` +
-        `--add-locks ` +
         `--disable-keys ` +
         `--extended-insert ` +
         `--quick ` +
         `--lock-tables=false ` +
+        `--no-tablespaces ` +
+        `--skip-comments ` +
+        `--skip-dump-date ` +
         `${this.dbConfig.database} > "${this.backupFilePath}"`;
       
       console.log('⏳ Running mysqldump...');
