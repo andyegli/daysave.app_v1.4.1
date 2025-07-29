@@ -174,17 +174,10 @@ passport.use(new WebAuthnStrategy(
             return callback(new Error('Challenge mismatch'));
           }
           
-          console.log('WebAuthn store verify: Challenge verified successfully');
           // Return success with user context for registration
           const user = req.user;
-          console.log('WebAuthn store verify: Providing user context:', { 
-            hasUser: !!user, 
-            userId: user?.id, 
-            username: user?.username 
-          });
           return callback(null, true, { user: user });
         } catch (error) {
-          console.error('WebAuthn store verify error:', error);
           return callback(error);
         }
       }
@@ -193,13 +186,6 @@ passport.use(new WebAuthnStrategy(
   // Verify function for authentication (login)
   async (id, userHandle, cb) => {
     try {
-      console.log('WebAuthn authentication verify called:', { 
-        id, 
-        idType: typeof id,
-        userHandle,
-        userHandleType: typeof userHandle 
-      });
-      
       // The id parameter should already be a string credential ID
       const requestDetails = {
         credentialId: id, // Use directly without conversion
