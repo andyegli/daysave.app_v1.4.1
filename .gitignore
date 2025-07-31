@@ -89,3 +89,4 @@ google-credentials.json
 *.crt
 
 commands.md
+db_backup/
