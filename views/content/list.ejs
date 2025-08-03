@@ -376,7 +376,7 @@
         <div class="col-md-2">
           <label for="filterSort" class="form-label mb-0">Sort by</label>
           <div class="input-group">
-            <select class="form-select" id="filterSort" name="sort" onchange="this.form.submit()">
+            <select class="form-select" id="filterSort" name="sort">
               <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>📅 Newest First</option>
               <option value="oldest" <%= sort === 'oldest' ? 'selected' : '' %>>📅 Oldest First</option>
               <option value="channel" <%= sort === 'channel' ? 'selected' : '' %>>📺 By Channel</option>
@@ -391,7 +391,7 @@
         <div class="col-md-2">
           <label for="filterLimit" class="form-label mb-0">Items per page</label>
           <div class="input-group">
-            <select class="form-select" id="filterLimit" name="limit" onchange="this.form.submit()">
+            <select class="form-select" id="filterLimit" name="limit">
               <option value="5" <%= (pagination && pagination.limit === 5) ? 'selected' : '' %>>5 items</option>
               <option value="10" <%= (pagination && pagination.limit === 10) ? 'selected' : '' %>>10 items</option>
               <option value="20" <%= (pagination && pagination.limit === 20) ? 'selected' : '' %>>20 items</option>
@@ -440,12 +440,12 @@
                       <% if (item.metadata && item.metadata.thumbnail) { %>
                         <img src="<%= item.metadata.thumbnail %>" alt="Thumbnail" 
                              data-fallback="true" data-fallback-icon="<%= item.sourceInfo.logo %>" data-fallback-color="<%= item.sourceInfo.color %>"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                             >
                         <i class="<%= item.sourceInfo.logo %> fallback-icon" style="color: <%= item.sourceInfo.color %>; display: none;"></i>
                       <% } else if (item.url && item.url.match(/\.(jpg|jpeg|png|gif)$/i)) { %>
                         <img src="<%= item.url %>" alt="Thumbnail"
                              data-fallback="true" data-fallback-icon="<%= item.sourceInfo.logo %>" data-fallback-color="<%= item.sourceInfo.color %>"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                             >
                         <i class="<%= item.sourceInfo.logo %> fallback-icon" style="color: <%= item.sourceInfo.color %>; display: none;"></i>
                       <% } else { %>
                         <i class="<%= item.sourceInfo.logo %> fallback-icon" style="color: <%= item.sourceInfo.color %>"></i>
@@ -1061,6 +1061,15 @@ You can add as many file paths as needed - the field will scroll automatically."
   <!-- Enhanced Status Button System -->
   <script src="/js/status-buttons.js?v=<%= Date.now() %>"></script>
   
+  <!-- Content Reprocessing -->
+  <script src="/js/content-reprocess.js?v=<%= Date.now() %>"></script>
+  
+  <!-- Form Handlers -->
+  <script src="/js/form-handlers.js?v=<%= Date.now() %>"></script>
+  
+  <!-- Image Error Handlers -->
+  <script src="/js/image-error-handlers.js?v=<%= Date.now() %>"></script>
+  
   <style>
     /* ✨ FIXED: Restore proper 4-line display for transcription/summary text */
     body .container .content-card .transcription-summary .transcription-preview .force-4-lines,
@@ -1121,93 +1130,7 @@ You can add as many file paths as needed - the field will scroll automatically."
     </div>
   </div>
 
-  <!-- Reprocess functionality script -->
-  <script>
-    // Handle reprocess button clicks
-    document.addEventListener('DOMContentLoaded', function() {
-      // Reprocess content functionality
-      document.querySelectorAll('.reprocess-content-btn').forEach(function(button) {
-        button.addEventListener('click', function() {
-          const contentId = this.getAttribute('data-id');
-          const itemType = this.getAttribute('data-item-type');
-          
-          // Confirm reprocessing
-          if (!confirm('Are you sure you want to reprocess this item? This will re-run the AI analysis pipeline.')) {
-            return;
-          }
-          
-          // Disable button and show loading state
-          const originalHtml = this.innerHTML;
-          this.disabled = true;
-          this.innerHTML = '<i class="bi bi-arrow-clockwise spin" style="font-size: 0.8rem;"></i>';
-          
-          // Make API request
-          const endpoint = itemType === 'file' ? `/files/${contentId}/reprocess` : `/content/${contentId}/reprocess`;
-          
-          fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Requested-With': 'XMLHttpRequest'
-            }
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              // Show success message (fallback if SweetAlert not available)
-              if (typeof Swal !== 'undefined') {
-                const Toast = Swal.mixin({
-                  toast: true,
-                  position: 'top-end',
-                  showConfirmButton: false,
-                  timer: 3000,
-                  timerProgressBar: true
-                });
-                
-                Toast.fire({
-                  icon: 'success',
-                  title: 'Reprocessing started! Analysis will update shortly.'
-                });
-              } else {
-                alert('Reprocessing started! Analysis will update shortly.');
-              }
-              
-              // Update status button to show processing
-              const statusBtn = document.getElementById(`status-btn-${contentId}`);
-              if (statusBtn) {
-                statusBtn.innerHTML = '<span class="status-text">Processing...</span><div class="progress-fill"></div>';
-                statusBtn.className = 'btn btn-sm w-100 analysis-status-btn btn-warning';
-              }
-            } else {
-              throw new Error(data.message || 'Reprocessing failed');
-            }
-          })
-          .catch(error => {
-            console.error('Reprocess error:', error);
-            alert('Error starting reprocessing: ' + error.message);
-          })
-          .finally(() => {
-            // Restore button state
-            this.disabled = false;
-            this.innerHTML = originalHtml;
-          });
-        });
-      });
-    });
-    
-    // Add spinning animation for loading state
-    const style = document.createElement('style');
-    style.textContent = `
-      .spin {
-        animation: spin 1s linear infinite;
-      }
-      @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-    `;
-    document.head.appendChild(style);
-  </script>
+
 
 </body>
 </html> 

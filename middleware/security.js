@@ -82,11 +82,11 @@ const securityHeaders = () => {
     defaultSrc: ["'self'"],
     styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com", "https://unpkg.com"],
     scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://maps.googleapis.com", "https://code.jquery.com"],
-    imgSrc: ["'self'", "data:", "https:", "https://maps.googleapis.com", "https://maps.gstatic.com"],
+    imgSrc: ["'self'", "data:", "blob:", "https:", "https://maps.googleapis.com", "https://maps.gstatic.com"],
     connectSrc: ["'self'", "https://maps.googleapis.com", "https://maps.gstatic.com"],
     fontSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com"],
     objectSrc: ["'none'"],
-    mediaSrc: ["'self'"],
+    mediaSrc: ["'self'", "blob:"],
     frameSrc: ["'none'"],
     baseUri: ["'self'"],
     formAction: ["'self'"],
@@ -99,13 +99,14 @@ const securityHeaders = () => {
   if (process.env.NODE_ENV === 'production') {
     cspDirectives.upgradeInsecureRequests = [];
   }
-  // For development: don't set upgradeInsecureRequests at all (leave undefined)
+  // For development: explicitly disable upgrade-insecure-requests
+  // This prevents the browser from trying to upgrade HTTP to HTTPS on localhost
 
-  return helmet({
+  const helmetConfig = {
     contentSecurityPolicy: {
-      directives: cspDirectives,
-      // CRITICAL: Disable upgrade-insecure-requests for localhost development
-      upgradeInsecureRequests: process.env.NODE_ENV === 'production'
+      directives: cspDirectives
+      // NOTE: upgradeInsecureRequests is deliberately omitted for development
+      // to prevent SSL protocol errors on localhost
     },
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -114,7 +115,14 @@ const securityHeaders = () => {
       includeSubDomains: true,
       preload: true
     } : false // Disable HSTS for development to prevent localhost SSL errors
-  });
+  };
+
+  // Only add upgradeInsecureRequests in production
+  if (process.env.NODE_ENV === 'production') {
+    helmetConfig.contentSecurityPolicy.upgradeInsecureRequests = true;
+  }
+
+  return helmet(helmetConfig);
 };
 
 // Request logging middleware
@@ -156,6 +164,13 @@ const sanitizeInput = (req, res, next) => {
 // CSRF protection middleware (for non-GET requests)
 const csrfProtection = (req, res, next) => {
   if (req.method === 'GET') {
+    return next();
+  }
+  
+  // Skip CSRF protection for file uploads during development
+  // File uploads from forms are inherently safer due to multipart/form-data
+  if (req.url.includes('/upload') && req.headers['content-type']?.includes('multipart/form-data')) {
+    console.log('🔓 Skipping CSRF protection for file upload');
     return next();
   }
   

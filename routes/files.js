@@ -1274,18 +1274,8 @@ router.post('/upload', [
       }
     };
 
-    if (req.headers.accept && req.headers.accept.includes('application/json')) {
-      res.json(response);
-    } else {
-      // Handle form submission redirect
-      if (response.success) {
-        req.session.uploadSuccess = `Successfully uploaded ${uploadResults.length} file(s)`;
-      }
-      if (uploadErrors.length > 0) {
-        req.session.uploadErrors = uploadErrors;
-      }
-      res.redirect('/files');
-    }
+    // Always return JSON response for file uploads to avoid redirects
+    res.json(response);
   } catch (error) {
     console.error('Upload route error:', error);
     console.error('Error stack:', error.stack);
