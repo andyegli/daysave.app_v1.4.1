@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Fingerprinting Analytics - Admin Dashboard</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .analytics-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            border-radius: 0 0 20px 20px;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            transition: transform 0.2s;
+            height: 100%;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+
+        .table-container {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .flag-icon {
+            width: 20px;
+            height: 15px;
+            margin-right: 8px;
+        }
+
+        .risk-badge {
+            font-size: 0.8rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 15px;
+        }
+
+        .risk-low { background: #d4edda; color: #155724; }
+        .risk-medium { background: #fff3cd; color: #856404; }
+        .risk-high { background: #f8d7da; color: #721c24; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .country-flag {
+            display: inline-block;
+            width: 24px;
+            height: 16px;
+            margin-right: 8px;
+            background-size: cover;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Analytics Header -->
+    <div class="analytics-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-0">
+                        <i class="fas fa-chart-line me-3"></i>
+                        Device Fingerprinting Analytics
+                    </h1>
+                    <p class="mb-0 opacity-75">Comprehensive security and geographic analytics</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="/admin/device-fingerprinting" class="btn btn-light me-2">
+                        <i class="fas fa-fingerprint me-2"></i>Security Dashboard
+                    </a>
+                    <a href="/admin" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left me-2"></i>Admin
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Key Metrics Grid -->
+        <div class="stats-grid">
+            <!-- Devices Per User Top 10 -->
+            <div class="card glassmorphism metric-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        Devices Per User (Top 10)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table class="table table-sm" id="devicesPerUserTable">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Devices</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data loaded via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Geographic Distribution -->
+            <div class="card glassmorphism metric-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-globe-americas me-2"></i>
+                        Devices by Country
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table class="table table-sm" id="devicesPerCountryTable">
+                            <thead>
+                                <tr>
+                                    <th>Country</th>
+                                    <th>Devices</th>
+                                    <th>Users</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data loaded via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suspicious IPs -->
+            <div class="card glassmorphism metric-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Suspicious IP Addresses
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table class="table table-sm" id="suspiciousIPsTable">
+                            <thead>
+                                <tr>
+                                    <th>IP Address</th>
+                                    <th>Location</th>
+                                    <th>Attempts</th>
+                                    <th>Fail Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data loaded via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VPN/Proxy Statistics -->
+            <div class="card glassmorphism metric-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        VPN/Proxy Usage
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="vpnStatsContainer">
+                        <!-- Data loaded via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <!-- Daily Trends Chart -->
+            <div class="col-12">
+                <div class="card glassmorphism">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-area me-2"></i>
+                            Login Activity Trends (Last 30 Days)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="trendsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Geographic Analysis Row -->
+        <div class="row mb-4">
+            <!-- Geographic Login Distribution -->
+            <div class="col-md-6">
+                <div class="card glassmorphism">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-map-marked-alt me-2"></i>
+                            Geographic Login Distribution
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table class="table table-sm" id="geographicTable">
+                                <thead>
+                                    <tr>
+                                        <th>Location</th>
+                                        <th>Logins</th>
+                                        <th>Users</th>
+                                        <th>VPN %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data loaded via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk by Location -->
+            <div class="col-md-6">
+                <div class="card glassmorphism">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Risk Analysis by Country
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table class="table table-sm" id="riskByLocationTable">
+                                <thead>
+                                    <tr>
+                                        <th>Country</th>
+                                        <th>Attempts</th>
+                                        <th>Fail Rate</th>
+                                        <th>Risk Level</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data loaded via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security Alerts -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card glassmorphism">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Device Fingerprint Collisions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Security Alert:</strong> The following device fingerprints are shared by multiple users, which may indicate device sharing or fingerprint spoofing.
+                        </div>
+                        <div class="table-container">
+                            <table class="table table-sm" id="fingerprintCollisionsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Device Fingerprint</th>
+                                        <th>Number of Users</th>
+                                        <th>Risk Level</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data loaded via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Fingerprinting Analytics Script -->
+    <script src="/js/admin-fingerprinting-analytics.js?v=<%= Date.now() %>"></script>
+</body>
+</html>

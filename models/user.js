@@ -39,6 +39,22 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('free', 'trial', 'basic', 'pro'),
       defaultValue: 'trial'
     },
+    // Last known location tracking
+    last_login_country: {
+      type: DataTypes.STRING(2),
+      allowNull: true,
+      comment: 'Last login country code'
+    },
+    last_login_city: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: 'Last login city'
+    },
+    location_changed_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Timestamp when location significantly changed'
+    },
     language: {
       type: DataTypes.STRING,
       defaultValue: 'en'

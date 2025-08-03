@@ -39,6 +39,24 @@ class ModernContactMapModal {
       modal.addEventListener('shown.bs.modal', () => {
         this.initializeMap();
       });
+      
+      // Fix accessibility issue by managing focus properly
+      modal.addEventListener('hide.bs.modal', () => {
+        // Remove focus from any focused elements inside the modal
+        const focusedElement = modal.querySelector(':focus');
+        if (focusedElement) {
+          focusedElement.blur();
+        }
+      });
+      
+      // Ensure modal is properly cleaned up when hidden
+      modal.addEventListener('hidden.bs.modal', () => {
+        const mapContainer = document.getElementById('map');
+        if (mapContainer) {
+          mapContainer.innerHTML = '';
+        }
+        this.currentAddress = null;
+      });
     }
   }
 
@@ -46,8 +64,21 @@ class ModernContactMapModal {
     console.log('ModernContactMapModal: Showing address on map:', address);
     this.currentAddress = address;
     
-    // Show the modal
-    const modal = new bootstrap.Modal(document.getElementById('mapModal'));
+    // Get the modal element
+    const modalElement = document.getElementById('mapModal');
+    if (!modalElement) {
+      console.error('ModernContactMapModal: Modal element not found');
+      return;
+    }
+    
+    // Clear any existing content before showing
+    const mapContainer = document.getElementById('map');
+    if (mapContainer) {
+      mapContainer.innerHTML = '';
+    }
+    
+    // Show the modal with proper focus management
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
     modal.show();
   }
 
@@ -238,8 +269,15 @@ class ModernContactMapModal {
   }
 
   showAddressError(message) {
+    // Get the modal element
+    const modalElement = document.getElementById('mapModal');
+    if (!modalElement) {
+      console.error('ModernContactMapModal: Modal element not found');
+      return;
+    }
+    
     // Show error modal for address issues
-    const modal = new bootstrap.Modal(document.getElementById('mapModal'));
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
     modal.show();
     
     const mapContainer = document.getElementById('map');

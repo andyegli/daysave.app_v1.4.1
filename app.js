@@ -16,7 +16,8 @@ const {
   sanitizeInput,
   corsMiddleware,
   ensureRoleLoaded,
-  isAuthenticated
+  isAuthenticated,
+  deviceFingerprintMiddleware
 } = require('./middleware');
 
 const app = express();
@@ -29,6 +30,13 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(securityHeaders());
 // app.use(require('./middleware').logAllHeaders); // Disabled - too verbose for normal operation
 app.use(corsMiddleware);
+
+// Device fingerprinting middleware (for fraud detection)
+app.use(deviceFingerprintMiddleware({
+  enableFraudDetection: true,
+  logAllRequests: false,
+  skipRoutes: ['/health', '/favicon.ico', '/uploads', '/js', '/css', '/images']
+}));
 
 // Request logging middleware
 app.use(requestLogger);
