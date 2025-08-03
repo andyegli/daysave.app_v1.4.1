@@ -660,25 +660,43 @@ class MultimediaAnalyzer {
                 // Add video-specific tags
                 results.auto_tags.push('video', 'social_media');
                 
-                // Extract frame for object detection
+                // Enhanced object, label, and text detection
                 if (analysisOptions.enableObjectDetection && facebookResult.filePath) {
                   try {
                     if (user_id && content_id) {
                       const logger = require('../../config/logger');
-                      logger.multimedia.progress(user_id, content_id, 'object_detection_start', 35);
+                      logger.multimedia.progress(user_id, content_id, 'enhanced_detection_start', 35);
                     }
                     
-                    console.log(`🔍 Extracting frame for object detection from Facebook video: ${facebookResult.filePath}`);
+                    console.log(`🔍 Extracting frame for enhanced detection from Facebook video: ${facebookResult.filePath}`);
                     const framePath = await this.extractVideoFrame(facebookResult.filePath);
                     
-                    console.log(`🔍 Running object detection on extracted frame: ${framePath}`);
-                    results.objects = await this.detectObjects(framePath);
+                    console.log(`🤖 Running enhanced detection (objects + labels + text) on frame: ${framePath}`);
                     
-                    if (results.objects && results.objects.length > 0) {
-                      console.log(`✅ Detected ${results.objects.length} objects in Facebook video:`, 
-                        results.objects.map(obj => `${obj.name} (${obj.confidence.toFixed(2)})`).join(', '));
-                    } else {
-                      console.log('ℹ️ No objects detected in Facebook video frame');
+                    // Use enhanced detection with lower confidence threshold
+                    const enhancedResults = await this.detectObjectsEnhanced(framePath);
+                    
+                    // Store comprehensive results
+                    results.objects = enhancedResults.objects || [];
+                    results.labels = enhancedResults.labels || [];
+                    results.detectedText = enhancedResults.text || '';
+                    results.textAnnotations = enhancedResults.textAnnotations || [];
+                    
+                    // Log detailed results
+                    console.log(`🎯 Enhanced Detection Results for Facebook video:`);
+                    console.log(`   📦 Objects: ${results.objects.length}`);
+                    console.log(`   🏷️  Labels: ${results.labels.length}`);
+                    console.log(`   📝 Text detected: ${results.detectedText.length > 0 ? 'Yes (' + results.detectedText.length + ' chars)' : 'No'}`);
+                    
+                    if (results.objects.length > 0) {
+                      console.log(`🔍 Objects found:`, results.objects.map(obj => `${obj.name} (${(obj.confidence * 100).toFixed(1)}%)`).join(', '));
+                    }
+                    if (results.labels.length > 0) {
+                      const topLabels = results.labels.slice(0, 8).map(label => `${label.description} (${(label.confidence * 100).toFixed(1)}%)`);
+                      console.log(`🏷️ Top labels:`, topLabels.join(', '));
+                    }
+                    if (results.detectedText) {
+                      console.log(`📝 Text content preview:`, results.detectedText.substring(0, 100) + (results.detectedText.length > 100 ? '...' : ''));
                     }
                     
                     // Clean up temporary frame
@@ -688,13 +706,17 @@ class MultimediaAnalyzer {
                     
                     if (user_id && content_id) {
                       const logger = require('../../config/logger');
-                      logger.multimedia.progress(user_id, content_id, 'object_detection_complete', 40, {
-                        objectsDetected: results.objects ? results.objects.length : 0
+                      logger.multimedia.progress(user_id, content_id, 'enhanced_detection_complete', 40, {
+                        objectsDetected: results.objects ? results.objects.length : 0,
+                        labelsDetected: results.labels ? results.labels.length : 0,
+                        textDetected: results.detectedText ? results.detectedText.length : 0
                       });
                     }
                   } catch (objectDetectionError) {
-                    console.error('❌ Failed to detect objects in Facebook video:', objectDetectionError);
+                    console.error('❌ Enhanced detection failed for Facebook video:', objectDetectionError);
                     results.objects = []; // Ensure we have an empty array
+                    results.labels = [];
+                    results.detectedText = '';
                   }
                 }
                 
@@ -1537,10 +1559,13 @@ class MultimediaAnalyzer {
   /**
    * Detect objects in image using Google Vision API or OpenAI Vision as fallback
    * @param {string} imagePath - Path to image file
+   * @param {Object} options - Detection options
    * @returns {Promise<Array>} Array of detected objects
    */
-  async detectObjects(imagePath) {
+  async detectObjects(imagePath, options = {}) {
     try {
+      const confidenceThreshold = options.confidenceThreshold || 0.3; // Lower threshold for more detections
+      
       // Try Google Vision API first
       if (this.visionClient && this.googleApiKey) {
         if (this.enableLogging) {
@@ -1550,12 +1575,21 @@ class MultimediaAnalyzer {
         const [result] = await this.visionClient.objectLocalization(imagePath);
         const objects = result.localizedObjectAnnotations || [];
 
-        return objects.map(object => ({
-          name: object.name,
-          confidence: object.score,
-          boundingBox: object.boundingPoly.normalizedVertices,
-          provider: 'google'
-        }));
+        // Apply confidence filtering
+        const filteredObjects = objects
+          .filter(object => object.score >= confidenceThreshold)
+          .map(object => ({
+            name: object.name,
+            confidence: object.score,
+            boundingBox: object.boundingPoly.normalizedVertices,
+            provider: 'google'
+          }));
+
+        if (this.enableLogging) {
+          console.log(`🔍 Google Vision: ${objects.length} raw objects, ${filteredObjects.length} above ${confidenceThreshold} confidence`);
+        }
+
+        return filteredObjects;
       }
 
       // Fallback to OpenAI Vision
@@ -2173,51 +2207,90 @@ Return only the extracted text, preserving line breaks and formatting where poss
         throw new Error('OpenAI client not initialized');
       }
 
-      // Prepare content for analysis - prioritize summary over transcription
+      // Prepare comprehensive content for analysis with visual and audio context
       let contentToAnalyze = '';
+      let visualContext = '';
+      let audioContext = '';
 
-      // Use summary if available (more focused content)
-      if (results.summary && results.summary.trim()) {
-        contentToAnalyze = `Summary: ${results.summary.trim()}`;
-      } 
-      // Fallback to transcription
-      else if (results.transcription && results.transcription.trim() && results.transcription.length > 50) {
-        // Use first 2000 characters to avoid token limits
-        const truncatedTranscription = results.transcription.trim().substring(0, 2000);
-        contentToAnalyze = `Transcription: ${truncatedTranscription}`;
+      // Build visual context from object detection and labels
+      if (results.objects && results.objects.length > 0) {
+        const topObjects = results.objects.slice(0, 10).map(obj => `${obj.name} (${(obj.confidence * 100).toFixed(0)}%)`);
+        visualContext += `Visual Objects Detected: ${topObjects.join(', ')}\n`;
       }
 
-      if (!contentToAnalyze) {
+      if (results.labels && results.labels.length > 0) {
+        const topLabels = results.labels.slice(0, 10).map(label => `${label.description} (${(label.confidence * 100).toFixed(0)}%)`);
+        visualContext += `Visual Context/Scene: ${topLabels.join(', ')}\n`;
+      }
+
+      if (results.detectedText && results.detectedText.trim()) {
+        const textPreview = results.detectedText.trim().substring(0, 200);
+        visualContext += `Text in Image/Video: "${textPreview}${results.detectedText.length > 200 ? '...' : ''}"\n`;
+      }
+
+      // Build audio context
+      if (results.summary && results.summary.trim()) {
+        audioContext = `Content Summary: ${results.summary.trim()}`;
+      } else if (results.transcription && results.transcription.trim() && results.transcription.length > 50) {
+        // Use first 1500 characters to leave room for visual context
+        const truncatedTranscription = results.transcription.trim().substring(0, 1500);
+        audioContext = `Audio Transcription: ${truncatedTranscription}`;
+      }
+
+      // Combine all contexts
+      contentToAnalyze = [visualContext, audioContext].filter(ctx => ctx.trim()).join('\n');
+
+      if (!contentToAnalyze.trim()) {
         console.log('⚠️ No content available for AI tag generation');
         return [];
       }
 
+      console.log(`🤖 Enhanced content analysis including:`, {
+        hasVisualObjects: !!(results.objects && results.objects.length > 0),
+        hasLabels: !!(results.labels && results.labels.length > 0),
+        hasDetectedText: !!(results.detectedText && results.detectedText.length > 0),
+        hasAudioContent: !!(audioContext),
+        totalContentLength: contentToAnalyze.length
+      });
+
       console.log(`🤖 Sending content to OpenAI for tag analysis (${contentToAnalyze.length} chars)`);
 
-      const prompt = `Analyze this multimedia content and generate 5-8 highly specific, descriptive tags that capture the actual content, NOT platform or generic media terms.
+      const prompt = `Analyze this multimedia content using BOTH visual and audio information to generate 5-8 highly specific, descriptive tags that capture the actual content, NOT platform or generic media terms.
+
+ENHANCED ANALYSIS APPROACH:
+• Combine visual objects/scenes with audio content for deeper understanding
+• Use detected objects and labels to understand the setting, activity, or context
+• Cross-reference visual elements with spoken content for accurate categorization
+• Consider the relationship between what's seen and what's heard
 
 FOCUS ON:
-• Specific topics, subjects, or themes discussed
-• Emotions, tone, and mood (funny, serious, dramatic, uplifting)
-• Content style (tutorial, interview, review, documentary, vlog)
-• Specific people, brands, or entities mentioned
-• Genre or category (comedy, technology, cooking, sports, etc.)
-• Target audience or expertise level
-• Cultural context or geographic relevance
+• Specific topics, subjects, or themes (fitness, cooking, technology, education, etc.)
+• Activities and actions (workout, tutorial, review, demonstration, interview)
+• Objects and equipment present (gym equipment, kitchen tools, electronic devices)
+• Setting and environment (gym, kitchen, office, outdoor, studio)
+• Emotions, tone, and mood (motivational, relaxing, educational, entertaining)
+• Target audience or expertise level (beginner, advanced, professional, casual)
+• Specific brands, people, or entities mentioned in audio or visible in video
 
-AVOID GENERIC TERMS LIKE:
-❌ "video", "audio", "youtube", "social", "content", "media"
-❌ Platform names unless specifically relevant to the content topic
+VISUAL CONTEXT EXAMPLES:
+- If objects show "kettlebell" + "fitness model" → fitness/workout tags
+- If labels show "food" + "kitchen" + transcription about recipes → cooking tags
+- If text shows brand names + tech objects → product review tags
 
-EXAMPLES OF GOOD TAGS:
-✅ For Mr. Bean content: ["comedy", "rowan-atkinson", "british-humor", "physical-comedy", "awkward-situations"]
-✅ For cooking video: ["italian-cuisine", "pasta-making", "beginner-friendly", "traditional-recipes"]
-✅ For tech review: ["smartphone-review", "budget-devices", "performance-testing", "consumer-advice"]
+AVOID GENERIC TERMS:
+❌ "video", "audio", "youtube", "social", "content", "media", "detection"
+❌ Platform names unless specifically relevant to content topic
+❌ Basic object names without context (just "person", "object", "item")
 
-Content to analyze:
+EXAMPLES OF ENHANCED TAGS:
+✅ Visual: kettlebell + Audio: workout → ["kettlebell-training", "strength-fitness", "home-workout", "functional-training"]
+✅ Visual: kitchen + Audio: recipe → ["cooking-tutorial", "healthy-recipes", "meal-preparation", "kitchen-skills"]
+✅ Visual: smartphone + Audio: review → ["smartphone-review", "tech-comparison", "consumer-guide", "mobile-technology"]
+
+Content Analysis Data:
 ${contentToAnalyze}
 
-Return ONLY a JSON array of specific, meaningful tags. No explanations.`;
+Return ONLY a JSON array of specific, contextual tags based on the combined visual and audio analysis. No explanations.`;
 
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4',
@@ -3979,16 +4052,32 @@ Respond with just the description, no additional formatting or labels.`;
 
   /**
    * Enhanced object detection for images
-   * Uses Google Vision API to detect objects, labels, and text
+   * Uses Google Vision API to detect objects, labels, and text with improved filtering
    * 
    * @param {string} imagePath - Path to image file
+   * @param {Object} options - Detection options
    * @returns {Promise<Object>} - Enhanced detection results
    */
-  async detectObjectsEnhanced(imagePath) {
+  async detectObjectsEnhanced(imagePath, options = {}) {
     try {
       if (!this.visionClient) {
         // Fallback to basic object detection if Vision client not available
-        return await this.detectObjects(imagePath);
+        const basicObjects = await this.detectObjects(imagePath, options);
+        return {
+          objects: basicObjects,
+          labels: [],
+          text: '',
+          textAnnotations: [],
+          averageConfidence: basicObjects.length > 0 ? 
+            basicObjects.reduce((sum, obj) => sum + obj.confidence, 0) / basicObjects.length : 0
+        };
+      }
+
+      const objectConfidenceThreshold = options.objectConfidence || 0.25; // Very low for more objects
+      const labelConfidenceThreshold = options.labelConfidence || 0.5;   // Medium for quality labels
+
+      if (this.enableLogging) {
+        console.log(`🔍 Running enhanced detection with thresholds: objects=${objectConfidenceThreshold}, labels=${labelConfidenceThreshold}`);
       }
 
       const [objectResult, labelResult, textResult] = await Promise.all([
@@ -3997,33 +4086,77 @@ Respond with just the description, no additional formatting or labels.`;
         this.visionClient.textDetection(imagePath)
       ]);
 
-      const objects = objectResult[0].localizedObjectAnnotations || [];
-      const labels = labelResult[0].labelAnnotations || [];
+      const rawObjects = objectResult[0].localizedObjectAnnotations || [];
+      const rawLabels = labelResult[0].labelAnnotations || [];
       const textAnnotations = textResult[0].textAnnotations || [];
+
+      // Filter and map objects with lower threshold
+      const objects = rawObjects
+        .filter(obj => obj.score >= objectConfidenceThreshold)
+        .map(obj => ({
+          name: obj.name,
+          confidence: obj.score,
+          boundingBox: obj.boundingPoly
+        }))
+        .slice(0, 20); // Limit to top 20 objects
+
+      // Filter and map labels
+      const labels = rawLabels
+        .filter(label => label.score >= labelConfidenceThreshold)
+        .map(label => ({
+          description: label.description,
+          confidence: label.score
+        }))
+        .slice(0, 15); // Limit to top 15 labels
 
       // Extract full text if available
       const fullText = textAnnotations.length > 0 ? textAnnotations[0].description : '';
 
+      if (this.enableLogging) {
+        console.log(`🔍 Enhanced detection results: ${rawObjects.length}→${objects.length} objects, ${rawLabels.length}→${labels.length} labels, text: ${fullText.length} chars`);
+      }
+
       return {
-        objects: objects.map(obj => ({
-          name: obj.name,
-          confidence: obj.score,
-          boundingBox: obj.boundingPoly
-        })),
-        labels: labels.map(label => ({
-          description: label.description,
-          confidence: label.score
-        })),
+        objects,
+        labels,
         text: fullText,
         textAnnotations: textAnnotations.slice(1), // Skip the first one which is the full text
         averageConfidence: objects.length > 0 ? 
-          objects.reduce((sum, obj) => sum + obj.score, 0) / objects.length : 0
+          objects.reduce((sum, obj) => sum + obj.confidence, 0) / objects.length : 0,
+        stats: {
+          rawObjectsFound: rawObjects.length,
+          filteredObjects: objects.length,
+          rawLabelsFound: rawLabels.length,
+          filteredLabels: labels.length,
+          textLength: fullText.length
+        }
       };
 
     } catch (error) {
       console.error('❌ Enhanced object detection failed:', error);
       // Fallback to basic detection
-      return await this.detectObjects(imagePath);
+      try {
+        const basicObjects = await this.detectObjects(imagePath, options);
+        return {
+          objects: basicObjects,
+          labels: [],
+          text: '',
+          textAnnotations: [],
+          averageConfidence: basicObjects.length > 0 ? 
+            basicObjects.reduce((sum, obj) => sum + obj.confidence, 0) / basicObjects.length : 0,
+          fallback: true
+        };
+      } catch (fallbackError) {
+        console.error('❌ Fallback detection also failed:', fallbackError);
+        return {
+          objects: [],
+          labels: [],
+          text: '',
+          textAnnotations: [],
+          averageConfidence: 0,
+          error: true
+        };
+      }
     }
   }
 
