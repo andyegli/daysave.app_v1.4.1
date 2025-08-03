@@ -3,13 +3,18 @@
  * Handles creation, editing, deletion and membership of contact groups
  */
 
-// Global variables
-let contactGroups = [];
-let allContacts = [];
+// Scoped variables to avoid conflicts
+const ContactGroupsManager = {
+  contactGroups: [],
+  allContacts: []
+};
 
-// Initialize contact groups functionality
+// Initialize contact groups functionality only if container exists
 document.addEventListener('DOMContentLoaded', function() {
-    initializeContactGroups();
+    const container = document.getElementById('contactGroupsContainer');
+    if (container) {
+        initializeContactGroups();
+    }
 });
 
 async function initializeContactGroups() {
@@ -31,7 +36,7 @@ async function loadContactGroups() {
         const data = await response.json();
         
         if (data.success) {
-            contactGroups = data.groups || [];
+            ContactGroupsManager.contactGroups = data.groups || [];
         } else {
             throw new Error(data.error || 'Failed to load contact groups');
         }
@@ -45,10 +50,10 @@ async function loadContactGroups() {
 async function loadAllContacts() {
     try {
         const response = await fetch('/contacts/search?q=');
-        allContacts = await response.json();
+        ContactGroupsManager.allContacts = await response.json();
     } catch (error) {
         console.error('Error loading contacts:', error);
-        allContacts = [];
+        ContactGroupsManager.allContacts = [];
     }
 }
 
@@ -66,7 +71,7 @@ function renderContactGroupsUI() {
         </div>
     `;
 
-    if (contactGroups.length === 0) {
+    if (ContactGroupsManager.contactGroups.length === 0) {
         html += `
             <div class="alert alert-info">
                 <i class="fas fa-info-circle me-2"></i>
@@ -76,7 +81,7 @@ function renderContactGroupsUI() {
     } else {
         html += '<div class="row g-3">';
         
-        contactGroups.forEach(group => {
+        ContactGroupsManager.contactGroups.forEach(group => {
             const memberCount = group.ContactGroupMembers ? group.ContactGroupMembers.length : 0;
             
             html += `
@@ -204,7 +209,7 @@ async function createGroup() {
 
 // Edit a group
 function editGroup(groupId) {
-    const group = contactGroups.find(g => g.id === groupId);
+    const group = ContactGroupsManager.contactGroups.find(g => g.id === groupId);
     if (!group) return;
 
     const modalHtml = `
@@ -285,7 +290,7 @@ async function updateGroup(groupId) {
 
 // Delete a group
 async function deleteGroup(groupId) {
-    const group = contactGroups.find(g => g.id === groupId);
+    const group = ContactGroupsManager.contactGroups.find(g => g.id === groupId);
     if (!group) return;
 
     if (!confirm(`Are you sure you want to delete the group "${group.name}"? This action cannot be undone.`)) {
@@ -316,7 +321,7 @@ async function deleteGroup(groupId) {
 
 // Manage group members
 function manageGroupMembers(groupId) {
-    const group = contactGroups.find(g => g.id === groupId);
+    const group = ContactGroupsManager.contactGroups.find(g => g.id === groupId);
     if (!group) return;
 
     const members = group.ContactGroupMembers || [];
@@ -362,7 +367,7 @@ function manageGroupMembers(groupId) {
                                 <div class="border rounded p-3" style="min-height: 200px; max-height: 300px; overflow-y: auto;">
     `;
     
-    const availableContacts = allContacts.filter(contact => !memberIds.includes(contact.id));
+    const availableContacts = ContactGroupsManager.allContacts.filter(contact => !memberIds.includes(contact.id));
     
     if (availableContacts.length === 0) {
         modalHtml += '<p class="text-muted">All contacts are already in this group</p>';

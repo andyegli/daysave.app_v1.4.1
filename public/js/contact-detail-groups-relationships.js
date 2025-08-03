@@ -360,7 +360,7 @@ async function showQuickAddRelationship(contactId) {
             fetch('/contacts/relationship-types')
         ]);
         
-        const allContacts = await contactsResponse.json();
+        const allContactsFromAPI = await contactsResponse.json();
         const typesData = await typesResponse.json();
         
         if (!typesData.success) {
@@ -368,7 +368,7 @@ async function showQuickAddRelationship(contactId) {
         }
         
         const relationshipTypes = typesData.relationshipTypes || {};
-        const availableContacts = allContacts.filter(contact => contact.id !== contactId);
+        const availableContacts = allContactsFromAPI.filter(contact => contact.id !== contactId);
         
         if (availableContacts.length === 0) {
             alert('No other contacts available for creating relationships.');
