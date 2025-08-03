@@ -1029,15 +1029,110 @@ class MultimediaAnalyzer {
           results.generatedTitle = await this.generateTitle(results);
         }
       } else {
-        // For non-multimedia URLs, provide basic metadata only
-        results.transcription = 'Content type does not support transcription.';
-        
+        // For non-multimedia URLs, perform comprehensive web content analysis
         if (user_id && content_id) {
           const logger = require('../../config/logger');
-          logger.multimedia.progress(user_id, content_id, 'non_multimedia_detected', 100, {
+          logger.multimedia.progress(user_id, content_id, 'web_content_detected', 20, {
             isMultimedia: false,
-            reason: 'url_pattern_not_matched'
+            contentType: 'web_article'
           });
+        }
+        
+        try {
+          console.log('🌐 Processing web content with enhanced analysis...');
+          
+          // Extract web content using curl
+          if (user_id && content_id) {
+            const logger = require('../../config/logger');
+            logger.multimedia.progress(user_id, content_id, 'web_extraction_start', 30);
+          }
+          
+          const webContent = await this.extractWebContent(url);
+          
+          if (webContent && webContent.content && webContent.content.length > 100) {
+            // Create comprehensive content for analysis
+            const contentForAnalysis = [
+              webContent.title ? `Title: ${webContent.title}` : '',
+              webContent.description ? `Description: ${webContent.description}` : '',
+              `Content: ${webContent.content}`
+            ].filter(Boolean).join('\n\n');
+            
+            // Set transcription to extracted content for further processing
+            results.transcription = contentForAnalysis;
+            results.metadata.extractedTitle = webContent.title;
+            results.metadata.extractedDescription = webContent.description;
+            results.metadata.contentLength = webContent.fullLength;
+            
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.progress(user_id, content_id, 'web_extraction_complete', 40, {
+                contentLength: webContent.fullLength,
+                extractedTitle: !!webContent.title
+              });
+            }
+            
+            // Generate comprehensive summary
+            if (analysisOptions.enableSummarization) {
+              if (user_id && content_id) {
+                const logger = require('../../config/logger');
+                logger.multimedia.progress(user_id, content_id, 'summary_generation', 60);
+              }
+              
+              const mockResults = {
+                transcription: contentForAnalysis,
+                objects: [],
+                labels: [],
+                detectedText: `${webContent.title || ''} ${webContent.description || ''}`.trim(),
+                textAnnotations: []
+              };
+              
+              results.summary = await this.generateComprehensiveSummary(mockResults);
+            }
+            
+            // Generate AI tags and metadata
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.progress(user_id, content_id, 'generating_metadata', 90);
+            }
+            
+            // Generate AI tags
+            results.auto_tags = await this.generateAITags({
+              transcription: contentForAnalysis,
+              summary: results.summary,
+              objects: [],
+              labels: [],
+              detectedText: mockResults.detectedText
+            });
+            
+            // Generate AI category  
+            results.category = await this.generateAICategory({
+              transcription: contentForAnalysis,
+              summary: results.summary
+            });
+            
+            // Generate AI title
+            results.generated_title = await this.generateTitle({
+              transcription: contentForAnalysis,
+              summary: results.summary
+            });
+            
+            console.log(`✅ Web content analysis completed: ${results.summary?.length || 0} char summary, ${results.auto_tags?.length || 0} tags`);
+            
+          } else {
+            results.transcription = 'Unable to extract sufficient content from web page.';
+            console.log('⚠️ Insufficient web content extracted for analysis');
+          }
+          
+        } catch (webError) {
+          console.error('❌ Web content analysis failed:', webError.message);
+          results.transcription = 'Web content extraction failed.';
+          
+          if (user_id && content_id) {
+            const logger = require('../../config/logger');
+            logger.multimedia.progress(user_id, content_id, 'web_extraction_failed', 100, {
+              error: webError.message
+            });
+          }
         }
       }
       
@@ -4340,6 +4435,141 @@ Respond with just the description, no additional formatting or labels.`;
       
     } catch (error) {
       console.error('❌ Failed to update content record:', error);
+    }
+  }
+
+  /**
+   * Extract web content from URL using curl
+   * @param {string} url - URL to extract content from
+   * @returns {Promise<Object>} Extracted content object
+   */
+  async extractWebContent(url) {
+    try {
+      const { execSync } = require('child_process');
+      
+      if (this.enableLogging) {
+        console.log(`🌐 Extracting web content from: ${url}`);
+      }
+      
+      // Download the webpage with timeout and user agent
+      const htmlContent = execSync(`curl -s -L --max-time 15 --user-agent "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" "${url}"`, { 
+        encoding: 'utf8',
+        timeout: 20000,
+        maxBuffer: 1024 * 1024 * 5 // 5MB buffer limit
+      });
+      
+      if (!htmlContent || htmlContent.length < 100) {
+        throw new Error('Insufficient content received from URL');
+      }
+      
+      // Enhanced content extraction with better HTML stripping
+      let textContent = htmlContent
+        // Remove scripts, styles, and navigation elements
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+        .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, '')
+        .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, '')
+        .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, '')
+        .replace(/<aside\b[^<]*(?:(?!<\/aside>)<[^<]*)*<\/aside>/gi, '')
+        .replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/gi, '')
+        // Remove HTML tags
+        .replace(/<[^>]*>/g, ' ')
+        // Clean up whitespace and entities
+        .replace(/\s+/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&#\d+;/g, ' ') // Remove numeric entities
+        .trim();
+      
+      // Extract title
+      const titleMatch = htmlContent.match(/<title[^>]*>([^<]+)<\/title>/i);
+      let title = titleMatch ? titleMatch[1].trim() : '';
+      
+      // Clean title of common suffixes
+      title = title
+        .replace(/\s*[-|]\s*.+$/i, '') // Remove everything after - or |
+        .replace(/\s*\|\s*.+$/i, '')   // Remove everything after |
+        .trim();
+      
+      // Extract meta description
+      const descMatches = [
+        /<meta[^>]*name="description"[^>]*content="([^"]*)"[^>]*>/i,
+        /<meta[^>]*property="og:description"[^>]*content="([^"]*)"[^>]*>/i,
+        /<meta[^>]*name="twitter:description"[^>]*content="([^"]*)"[^>]*>/i
+      ];
+      
+      let description = '';
+      for (const regex of descMatches) {
+        const match = htmlContent.match(regex);
+        if (match && match[1]) {
+          description = match[1].trim();
+          break;
+        }
+      }
+      
+      // Try to extract main article content
+      const articlePatterns = [
+        /<article[^>]*>(.*?)<\/article>/gis,
+        /<main[^>]*>(.*?)<\/main>/gis,
+        /<div[^>]*class="[^"]*content[^"]*"[^>]*>(.*?)<\/div>/gis,
+        /<div[^>]*class="[^"]*article[^"]*"[^>]*>(.*?)<\/div>/gis,
+        /<div[^>]*id="[^"]*content[^"]*"[^>]*>(.*?)<\/div>/gis
+      ];
+      
+      let articleContent = '';
+      for (const pattern of articlePatterns) {
+        const matches = htmlContent.match(pattern);
+        if (matches && matches.length > 0) {
+          // Take the longest match (likely the main content)
+          const longestMatch = matches.reduce((longest, current) => 
+            current.length > longest.length ? current : longest, '');
+          
+          articleContent = longestMatch
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          if (articleContent.length > 500) { // Only use if substantial content
+            break;
+          }
+        }
+      }
+      
+      // Use article content if found and substantial, otherwise use full text
+      const finalContent = (articleContent.length > 500) ? articleContent : textContent;
+      
+      // Limit content size for processing efficiency
+      const processedContent = finalContent.substring(0, 8000);
+      
+      if (this.enableLogging) {
+        console.log(`✅ Web content extracted: ${finalContent.length} chars (using ${processedContent.length})`);
+      }
+      
+      return {
+        url,
+        title: title || 'Untitled',
+        description: description || '',
+        content: processedContent,
+        fullLength: finalContent.length,
+        extractionMethod: 'enhanced-curl',
+        hasArticleContent: articleContent.length > 500
+      };
+      
+    } catch (error) {
+      console.error(`❌ Web content extraction failed for ${url}:`, error.message);
+      return {
+        url,
+        title: '',
+        description: '',
+        content: '',
+        fullLength: 0,
+        error: error.message,
+        extractionMethod: 'failed'
+      };
     }
   }
 }

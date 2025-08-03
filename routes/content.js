@@ -1057,20 +1057,18 @@ async function handleBulkUrlSubmission(req, res) {
           success: true
         });
         
-        // Trigger multimedia analysis if detected
-        if (isMultimediaURL(url)) {
-          console.log(`🎬 [${i+1}/${urls.length}] Multimedia detected, triggering analysis: ${content.id}`);
-          
-          // Trigger analysis in background
-          setImmediate(async () => {
-            try {
-              await triggerMultimediaAnalysis(content, req.user);
-              console.log(`✅ Background analysis started for ${content.id}`);
-            } catch (analysisError) {
-              console.error(`❌ Analysis failed for ${content.id}:`, analysisError.message);
-            }
-          });
-        }
+        // Trigger comprehensive AI analysis for all content
+        console.log(`🧠 [${i+1}/${urls.length}] Triggering AI analysis for content: ${content.id}`);
+        
+        // Trigger analysis in background
+        setImmediate(async () => {
+          try {
+            await triggerMultimediaAnalysis(content, req.user);
+            console.log(`✅ Background analysis started for ${content.id}`);
+          } catch (analysisError) {
+            console.error(`❌ Analysis failed for ${content.id}:`, analysisError.message);
+          }
+        });
         
       } catch (urlError) {
         console.error(`❌ [${i+1}/${urls.length}] Failed to process URL: ${url}`, urlError.message);
@@ -1174,39 +1172,39 @@ router.post('/', [
       await ContentGroupMember.bulkCreate(groupMemberships);
     }
 
-    // Check if URL contains multimedia content and trigger analysis
-    if (isMultimediaURL(url)) {
+    // Trigger comprehensive AI analysis for all content types
+    console.log(`🧠 CONTENT ANALYSIS: Triggering AI analysis for content: ${content.id}`);
+    
+    // Trigger comprehensive analysis in background (don't wait for it)
+    setImmediate(async () => {
+      const startTime = Date.now();
+      const automationId = `AUTO-${content.id.substring(0, 8)}`;
       
-      // Trigger multimedia analysis in background (don't wait for it)
-      setImmediate(async () => {
-        const startTime = Date.now();
-        const automationId = `AUTO-${content.id.substring(0, 8)}`;
+      try {
+        console.log(`🚀 [${automationId}] AUTOMATION TRIGGER: Starting comprehensive AI analysis for content: ${content.id}`);
+        console.log(`📊 [${automationId}] System status: Memory usage being monitored...`);
         
-        try {
-          console.log(`🚀 [${automationId}] AUTOMATION TRIGGER: Starting multimedia analysis for content: ${content.id}`);
-          console.log(`📊 [${automationId}] System status: Memory usage being monitored...`);
-          
-          // Check if we have the required services before starting
-          if (!req.user) {
-            throw new Error('User object is missing');
-          }
-          
-          console.log(`🎯 [${automationId}] User: ${req.user.id}, Content: ${content.id}, URL: ${content.url}`);
-          
-          // Add process monitoring
-          const beforeMemory = process.memoryUsage();
-          console.log(`📈 [${automationId}] Memory before: ${Math.round(beforeMemory.heapUsed / 1024 / 1024)}MB`);
-          
-          await triggerMultimediaAnalysis(content, req.user);
-          
-          const afterMemory = process.memoryUsage();
-          const duration = Date.now() - startTime;
-          
-          console.log(`✅ [${automationId}] AUTOMATION TRIGGER: Analysis started successfully for content: ${content.id}`);
-          console.log(`📊 [${automationId}] Duration: ${duration}ms, Memory after: ${Math.round(afterMemory.heapUsed / 1024 / 1024)}MB`);
-          
-        } catch (error) {
-          const duration = Date.now() - startTime;
+        // Check if we have the required services before starting
+        if (!req.user) {
+          throw new Error('User object is missing');
+        }
+        
+        console.log(`🎯 [${automationId}] User: ${req.user.id}, Content: ${content.id}, URL: ${content.url}`);
+        
+        // Add process monitoring
+        const beforeMemory = process.memoryUsage();
+        console.log(`📈 [${automationId}] Memory before: ${Math.round(beforeMemory.heapUsed / 1024 / 1024)}MB`);
+        
+        await triggerMultimediaAnalysis(content, req.user);
+        
+        const afterMemory = process.memoryUsage();
+        const duration = Date.now() - startTime;
+        
+        console.log(`✅ [${automationId}] AUTOMATION TRIGGER: Analysis started successfully for content: ${content.id}`);
+        console.log(`📊 [${automationId}] Duration: ${duration}ms, Memory after: ${Math.round(afterMemory.heapUsed / 1024 / 1024)}MB`);
+        
+      } catch (error) {
+        const duration = Date.now() - startTime;
           console.error(`❌ [${automationId}] AUTOMATION TRIGGER: Failed to start analysis for content: ${content.id}`);
           console.error(`❌ [${automationId}] Error details:`, {
             error: error.message,
@@ -1234,14 +1232,11 @@ router.post('/', [
       res.json({ 
         success: true, 
         content,
-        multimedia_analysis: {
+        ai_analysis: {
           status: 'started',
-          message: 'Multimedia analysis has been started and will update content when complete'
+          message: 'Comprehensive AI analysis has been started and will update content when complete'
         }
       });
-    } else {
-      res.json({ success: true, content });
-    }
   } catch (error) {
     console.error('ERROR creating content:', error);
     res.status(500).json({ error: 'Failed to create content.' });
