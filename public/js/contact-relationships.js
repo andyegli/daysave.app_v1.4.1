@@ -3,14 +3,19 @@
  * Handles creation, editing, deletion and viewing of relationships between contacts
  */
 
-// Global variables
-let contactRelationships = [];
-let allContacts = [];
-let relationshipTypes = {};
+// Scoped variables to avoid conflicts
+const ContactRelationshipsManager = {
+  contactRelationships: [],
+  allContacts: [],
+  relationshipTypes: {}
+};
 
-// Initialize contact relationships functionality
+// Initialize contact relationships functionality only if container exists
 document.addEventListener('DOMContentLoaded', function() {
-    initializeContactRelationships();
+    const container = document.getElementById('contactRelationshipsContainer');
+    if (container) {
+        initializeContactRelationships();
+    }
 });
 
 async function initializeContactRelationships() {
@@ -33,7 +38,7 @@ async function loadContactRelationships() {
         const data = await response.json();
         
         if (data.success) {
-            contactRelationships = data.relationships || [];
+            ContactRelationshipsManager.contactRelationships = data.relationships || [];
         } else {
             throw new Error(data.error || 'Failed to load contact relationships');
         }
@@ -47,10 +52,10 @@ async function loadContactRelationships() {
 async function loadAllContacts() {
     try {
         const response = await fetch('/contacts/search?q=');
-        allContacts = await response.json();
+        ContactRelationshipsManager.allContacts = await response.json();
     } catch (error) {
         console.error('Error loading contacts:', error);
-        allContacts = [];
+        ContactRelationshipsManager.allContacts = [];
     }
 }
 
@@ -61,13 +66,13 @@ async function loadRelationshipTypes() {
         const data = await response.json();
         
         if (data.success) {
-            relationshipTypes = data.relationshipTypes || {};
+            ContactRelationshipsManager.relationshipTypes = data.relationshipTypes || {};
         } else {
             throw new Error(data.error || 'Failed to load relationship types');
         }
     } catch (error) {
         console.error('Error loading relationship types:', error);
-        relationshipTypes = {};
+        ContactRelationshipsManager.relationshipTypes = {};
     }
 }
 
@@ -85,7 +90,7 @@ function renderContactRelationshipsUI() {
         </div>
     `;
 
-    if (contactRelationships.length === 0) {
+    if (ContactRelationshipsManager.contactRelationships.length === 0) {
         html += `
             <div class="alert alert-info">
                 <i class="fas fa-info-circle me-2"></i>
@@ -94,7 +99,7 @@ function renderContactRelationshipsUI() {
         `;
     } else {
         // Group relationships by type
-        const groupedRelationships = groupRelationshipsByType(contactRelationships);
+        const groupedRelationships = groupRelationshipsByType(ContactRelationshipsManager.contactRelationships);
         
         Object.keys(groupedRelationships).forEach(category => {
             if (groupedRelationships[category].length > 0) {
@@ -168,7 +173,7 @@ function groupRelationshipsByType(relationships) {
         let category = 'other';
 
         // Determine category based on relationship type
-        for (const [cat, types] of Object.entries(relationshipTypes)) {
+        for (const [cat, types] of Object.entries(ContactRelationshipsManager.relationshipTypes)) {
             if (types.some(type => type.toLowerCase() === relationType)) {
                 category = cat;
                 break;
@@ -194,7 +199,7 @@ function getCategoryIcon(category) {
 
 // Show create relationship modal
 function showCreateRelationshipModal() {
-    if (allContacts.length < 2) {
+    if (ContactRelationshipsManager.allContacts.length < 2) {
         showError('You need at least 2 contacts to create relationships');
         return;
     }
@@ -216,7 +221,7 @@ function showCreateRelationshipModal() {
                                         <option value="">Select first contact...</option>
     `;
 
-    allContacts.forEach(contact => {
+    ContactRelationshipsManager.allContacts.forEach(contact => {
         modalHtml += `<option value="${contact.id}">${escapeHtml(contact.name)}</option>`;
     });
 
@@ -234,7 +239,7 @@ function showCreateRelationshipModal() {
                                         <option value="">Select second contact...</option>
     `;
 
-    allContacts.forEach(contact => {
+    ContactRelationshipsManager.allContacts.forEach(contact => {
         modalHtml += `<option value="${contact.id}">${escapeHtml(contact.name)}</option>`;
     });
 
@@ -252,9 +257,9 @@ function showCreateRelationshipModal() {
                                                 <option value="">Choose from categories...</option>
     `;
 
-    Object.keys(relationshipTypes).forEach(category => {
+    Object.keys(ContactRelationshipsManager.relationshipTypes).forEach(category => {
         modalHtml += `<optgroup label="${category.charAt(0).toUpperCase() + category.slice(1)}">`;
-        relationshipTypes[category].forEach(type => {
+        ContactRelationshipsManager.relationshipTypes[category].forEach(type => {
             modalHtml += `<option value="${type}">${type}</option>`;
         });
         modalHtml += `</optgroup>`;
@@ -357,7 +362,7 @@ async function createRelationship() {
 
 // Delete a relationship
 async function deleteRelationship(relationshipId) {
-    const relationship = contactRelationships.find(r => r.id === relationshipId);
+    const relationship = ContactRelationshipsManager.contactRelationships.find(r => r.id === relationshipId);
     if (!relationship) return;
 
     const contact1Name = relationship.Contact1?.name || 'Unknown';
@@ -398,7 +403,7 @@ async function showContactRelationships(contactId) {
         
         if (data.success) {
             const relationships = data.relationships || [];
-            const contact = allContacts.find(c => c.id === contactId);
+            const contact = ContactRelationshipsManager.allContacts.find(c => c.id === contactId);
             
             if (!contact) {
                 showError('Contact not found');
