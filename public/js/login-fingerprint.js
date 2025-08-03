@@ -161,19 +161,10 @@ document.addEventListener('DOMContentLoaded', function() {
    * Handle OAuth link clicks
    */
   function handleOAuthClick(event) {
-    if (!fingerprintData) {
-      console.warn('⚠️ OAuth proceeding without fingerprint');
-      return;
-    }
-
-    const link = event.target.closest('a');
-    const originalHref = link.getAttribute('href');
-    const fingerprintedUrl = addFingerprintToUrl(originalHref);
-    
-    // Update href with fingerprint
-    link.setAttribute('href', fingerprintedUrl);
-    
-    console.log('🔗 OAuth link updated with fingerprint');
+    // OAuth providers handle their own security, no need for additional fingerprinting
+    // which can cause HTTP 431 "Request Header Fields Too Large" errors
+    console.log('🔗 OAuth proceeding without fingerprint (OAuth provider handles security)');
+    return;
   }
 
   /**
@@ -214,13 +205,13 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('📝 Login form fingerprinting enabled');
     }
 
-    // OAuth links
+    // OAuth links - fingerprinting disabled to prevent HTTP 431 errors
     oauthLinks.forEach(link => {
       link.addEventListener('click', handleOAuthClick);
     });
     
     if (oauthLinks.length > 0) {
-      console.log('🔗 OAuth fingerprinting enabled for', oauthLinks.length, 'providers');
+      console.log('🔗 OAuth links prepared for', oauthLinks.length, 'providers (fingerprinting disabled)');
     }
 
     // Passkey button
