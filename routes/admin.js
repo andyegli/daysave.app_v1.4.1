@@ -2717,37 +2717,44 @@ router.get('/api/fingerprinting/analytics', isAuthenticated, isAdmin, async (req
     const { Op, fn, col, literal } = require('sequelize');
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    // 1. Unique devices per user
+    // 1. Unique devices per user - simplified version
     const devicesPerUser = await UserDevice.findAll({
       attributes: [
         'user_id',
-        [fn('COUNT', col('device_fingerprint')), 'deviceCount']
+        [fn('COUNT', fn('DISTINCT', col('device_fingerprint'))), 'deviceCount']
       ],
       include: [{
         model: User,
-        attributes: ['username', 'email']
+        attributes: ['username', 'email'],
+        required: true
       }],
-      group: ['user_id', 'User.id'],
-      order: [[fn('COUNT', col('device_fingerprint')), 'DESC']],
+      group: ['user_id', 'User.id', 'User.username', 'User.email'],
+      order: [[fn('COUNT', fn('DISTINCT', col('device_fingerprint'))), 'DESC']],
       limit: 20
+    }).catch(err => {
+      console.warn('devicesPerUser query failed:', err.message);
+      return [];
     });
 
-    // 2. Devices per country
+    // 2. Devices per country - with error handling
     const devicesPerCountry = await UserDevice.findAll({
       attributes: [
         'country',
-        [fn('COUNT', col('device_fingerprint')), 'deviceCount'],
+        [fn('COUNT', fn('DISTINCT', col('device_fingerprint'))), 'deviceCount'],
         [fn('COUNT', fn('DISTINCT', col('user_id'))), 'uniqueUsers']
       ],
       where: {
         country: { [Op.not]: null }
       },
       group: ['country'],
-      order: [[fn('COUNT', col('device_fingerprint')), 'DESC']],
+      order: [[fn('COUNT', fn('DISTINCT', col('device_fingerprint'))), 'DESC']],
       limit: 15
+    }).catch(err => {
+      console.warn('devicesPerCountry query failed:', err.message);
+      return [];
     });
 
-    // 3. Login attempts per IP (top suspicious IPs)
+    // 3. Login attempts per IP (top suspicious IPs) - with error handling
     const loginsPerIP = await LoginAttempt.findAll({
       attributes: [
         'ip_address',
@@ -2765,9 +2772,12 @@ router.get('/api/fingerprinting/analytics', isAuthenticated, isAdmin, async (req
       having: literal('COUNT(id) > 5'), // Only IPs with more than 5 attempts
       order: [[fn('COUNT', col('id')), 'DESC']],
       limit: 25
+    }).catch(err => {
+      console.warn('loginsPerIP query failed:', err.message);
+      return [];
     });
 
-    // 4. Geographic distribution
+    // 4. Geographic distribution - with error handling
     const geographicDistribution = await LoginAttempt.findAll({
       attributes: [
         'country',
@@ -2783,9 +2793,12 @@ router.get('/api/fingerprinting/analytics', isAuthenticated, isAdmin, async (req
       group: ['country', 'city'],
       order: [[fn('COUNT', col('id')), 'DESC']],
       limit: 30
+    }).catch(err => {
+      console.warn('geographicDistribution query failed:', err.message);
+      return [];
     });
 
-    // 5. VPN/Proxy usage statistics
+    // 5. VPN/Proxy usage statistics - with error handling
     const vpnStats = await LoginAttempt.findAll({
       attributes: [
         'is_vpn',
@@ -2797,9 +2810,12 @@ router.get('/api/fingerprinting/analytics', isAuthenticated, isAdmin, async (req
         attempted_at: { [Op.gte]: thirtyDaysAgo }
       },
       group: ['is_vpn']
+    }).catch(err => {
+      console.warn('vpnStats query failed:', err.message);
+      return [];
     });
 
-    // 6. Time-based trends (last 30 days)
+    // 6. Time-based trends (last 30 days) - with error handling
     const dailyTrends = await LoginAttempt.findAll({
       attributes: [
         [fn('DATE', col('attempted_at')), 'date'],
@@ -2813,6 +2829,9 @@ router.get('/api/fingerprinting/analytics', isAuthenticated, isAdmin, async (req
       },
       group: [fn('DATE', col('attempted_at'))],
       order: [[fn('DATE', col('attempted_at')), 'ASC']]
+    }).catch(err => {
+      console.warn('dailyTrends query failed:', err.message);
+      return [];
     });
 
     // 7. Risk analysis by location
