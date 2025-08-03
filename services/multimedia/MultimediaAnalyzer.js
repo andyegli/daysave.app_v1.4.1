@@ -228,9 +228,9 @@ class MultimediaAnalyzer {
           throw new Error(`Unsupported file type: ${fileType}`);
       }
 
-      // Generate content summary and categorization
-      if (analysisOptions.enableSummarization && results.transcription) {
-        results.summary = await this.generateSummary(results.transcription);
+      // Generate comprehensive summary using visual + audio + OCR data
+      if (analysisOptions.enableSummarization) {
+        results.summary = await this.generateComprehensiveSummary(results);
       }
 
       // Perform sentiment analysis
@@ -396,18 +396,18 @@ class MultimediaAnalyzer {
                 });
               }
               
-              // Generate summary if transcription was successful
-              if (analysisOptions.enableSummarization && results.transcription) {
+              // Generate comprehensive summary using visual + audio + OCR data
+              if (analysisOptions.enableSummarization) {
                 if (user_id && content_id) {
                   const logger = require('../../config/logger');
                   logger.multimedia.progress(user_id, content_id, 'summary_generation', 60);
                 }
                 
-                results.summary = await this.generateSummary(results.transcription);
+                results.summary = await this.generateComprehensiveSummary(results);
                 
                 if (results.summary && user_id && content_id) {
                   const logger = require('../../config/logger');
-                  logger.multimedia.summary(user_id, content_id, results.summary.length, results.transcription.length);
+                  logger.multimedia.summary(user_id, content_id, results.summary.length, results.transcription?.length || 0);
                 }
               }
               
@@ -571,13 +571,13 @@ class MultimediaAnalyzer {
               }
               
               // Generate summary and perform sentiment analysis if we have content
-              if (analysisOptions.enableSummarization && results.transcription) {
+              if (analysisOptions.enableSummarization) {
                 if (user_id && content_id) {
                   const logger = require('../../config/logger');
                   logger.multimedia.progress(user_id, content_id, 'summary_generation', 60);
                 }
                 
-                results.summary = await this.generateSummary(results.transcription);
+                results.summary = await this.generateComprehensiveSummary(results);
               }
               
               if (analysisOptions.enableSentimentAnalysis && results.transcription) {
@@ -794,13 +794,13 @@ class MultimediaAnalyzer {
               }
               
               // Generate summary and perform sentiment analysis if we have content
-              if (analysisOptions.enableSummarization && results.transcription) {
+              if (analysisOptions.enableSummarization) {
                 if (user_id && content_id) {
                   const logger = require('../../config/logger');
                   logger.multimedia.progress(user_id, content_id, 'summary_generation', 60);
                 }
                 
-                results.summary = await this.generateSummary(results.transcription);
+                results.summary = await this.generateComprehensiveSummary(results);
               }
               
               if (analysisOptions.enableSentimentAnalysis && results.transcription) {
@@ -947,17 +947,17 @@ class MultimediaAnalyzer {
               }
               
               // Generate summary from image description
-              if (analysisOptions.enableSummarization && results.transcription) {
+              if (analysisOptions.enableSummarization) {
                 if (user_id && content_id) {
                   const logger = require('../../config/logger');
                   logger.multimedia.progress(user_id, content_id, 'summary_generation', 60);
                 }
                 
-                results.summary = await this.generateSummary(results.transcription);
+                results.summary = await this.generateComprehensiveSummary(results);
                 
                 if (results.summary && user_id && content_id) {
                   const logger = require('../../config/logger');
-                  logger.multimedia.summary(user_id, content_id, results.summary.length, results.transcription.length);
+                  logger.multimedia.summary(user_id, content_id, results.summary.length, results.transcription?.length || 0);
                 }
               }
               
@@ -1956,7 +1956,131 @@ Return only the extracted text, preserving line breaks and formatting where poss
   }
 
   /**
-   * Generate summary using OpenAI with rate limit handling
+   * Generate comprehensive summary using visual + audio + OCR data
+   * @param {Object} results - Complete analysis results with objects, labels, transcription, OCR, etc.
+   * @returns {Promise<string>} Comprehensive summary text
+   */
+  async generateComprehensiveSummary(results) {
+    try {
+      if (!this.openai) return '';
+
+      // Debug: Log the actual data structure being passed
+      if (this.enableLogging) {
+        console.log('🐛 DEBUG: generateComprehensiveSummary called with results structure:');
+        console.log('   Results keys:', Object.keys(results || {}));
+        console.log('   Objects available:', !!(results && results.objects));
+        console.log('   Labels available:', !!(results && results.labels)); 
+        console.log('   DetectedText available:', !!(results && results.detectedText));
+        console.log('   Transcription available:', !!(results && results.transcription));
+      }
+
+      // Build comprehensive content context from all available data
+      let contextData = '';
+      let hasVisualData = false;
+      let hasAudioData = false;
+      let hasTextData = false;
+
+      // Add visual context (objects and labels)
+      if (results.objects && results.objects.length > 0) {
+        const topObjects = results.objects.slice(0, 8).map(obj => `${obj.name} (${(obj.confidence * 100).toFixed(0)}%)`);
+        contextData += `Visual Objects Detected: ${topObjects.join(', ')}\n`;
+        hasVisualData = true;
+      }
+
+      if (results.labels && results.labels.length > 0) {
+        const topLabels = results.labels.slice(0, 10).map(label => `${label.description} (${(label.confidence * 100).toFixed(0)}%)`);
+        contextData += `Scene/Context Labels: ${topLabels.join(', ')}\n`;
+        hasVisualData = true;
+      }
+
+      // Add detected text from OCR
+      if (results.detectedText && results.detectedText.trim()) {
+        const textPreview = results.detectedText.trim().substring(0, 300);
+        contextData += `Text Visible in Content: "${textPreview}${results.detectedText.length > 300 ? '...' : ''}"\n`;
+        hasTextData = true;
+      }
+
+      // Add audio transcription
+      if (results.transcription && results.transcription.trim()) {
+        const transcriptPreview = results.transcription.trim().substring(0, 500);
+        contextData += `Audio/Speech Content: "${transcriptPreview}${results.transcription.length > 500 ? '...' : ''}"\n`;
+        hasAudioData = true;
+      }
+
+      // If no content available, return empty
+      if (!contextData.trim()) {
+        if (this.enableLogging) {
+          console.log('⚠️ No content available for comprehensive summary generation');
+        }
+        return '';
+      }
+
+      // Log what data we're using
+      if (this.enableLogging) {
+        console.log(`🤖 Generating comprehensive summary using:`, {
+          hasVisualData,
+          hasAudioData,
+          hasTextData,
+          objects: results.objects?.length || 0,
+          labels: results.labels?.length || 0,
+          detectedTextLength: results.detectedText?.length || 0,
+          transcriptionLength: results.transcription?.length || 0
+        });
+      }
+
+      const prompt = `Analyze this multimedia content and create a comprehensive summary that describes what the content is about.
+
+MULTI-MODAL CONTENT DATA:
+${contextData}
+
+INSTRUCTIONS:
+• Create a summary that describes the main subject, activity, or content theme
+• Combine visual elements (objects/scenes) with any audio content for complete understanding
+• Focus on what's actually happening or being shown/discussed
+• If audio is minimal (like "thanks for watching"), prioritize visual content
+• If no audio exists, create summary entirely from visual elements
+• Be specific about activities, settings, objects, and context
+• Keep summary concise but informative (max 250 words)
+
+Create a summary that accurately describes what this content contains:`;
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert at analyzing multimedia content using both visual and audio information. Create accurate, descriptive summaries that capture the essence of what the content is about by combining all available data sources.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 400, // Room for comprehensive summaries
+        temperature: 0.3
+      });
+
+      const summary = response.choices[0].message.content.trim();
+      
+      if (this.enableLogging && summary) {
+        console.log(`✅ Comprehensive summary generated: ${summary.length} chars (visual: ${hasVisualData}, audio: ${hasAudioData}, text: ${hasTextData})`);
+      }
+
+      return summary;
+    } catch (error) {
+      console.error('❌ Comprehensive summary generation failed:', error);
+      
+      // Fallback to basic summary if available
+      if (results.transcription) {
+        return await this.generateSummary(results.transcription);
+      }
+      
+      return '';
+    }
+  }
+
+  /**
+   * Generate summary using OpenAI with rate limit handling (legacy method)
    * @param {string} text - Text to summarize
    * @returns {Promise<string>} Summary text
    */
