@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Contact, Role, User } = require('../models');
+const { Contact, ContactGroup, ContactGroupMember, ContactRelation, Role, User } = require('../models');
 const { isAuthenticated, ensureRoleLoaded, checkUsageLimit, updateUsage } = require('../middleware');
 const { getGoogleMapsScriptUrl } = require('../config/maps');
 const { logAuthEvent, logAuthError } = require('../config/logger');
@@ -495,6 +495,397 @@ router.get('/autocomplete', isAuthenticated, async (req, res) => {
     console.error('Autocomplete error:', err);
     res.json([]);
   }
+});
+
+// Groups and Relationships Management Page
+router.get('/groups-relationships', isAuthenticated, async (req, res) => {
+  try {
+    res.render('contacts/groups-relationships', { 
+      user: req.user,
+      error: null,
+      success: req.query.success || null
+    });
+  } catch (error) {
+    console.error('Error loading groups-relationships page:', error);
+    res.status(500).render('error', { 
+      error: 'Failed to load groups and relationships page',
+      user: req.user 
+    });
+  }
+});
+
+// ================================
+// CONTACT GROUPS ROUTES
+// ================================
+
+// List all contact groups for the current user
+router.get('/groups', isAuthenticated, async (req, res) => {
+  try {
+    const groups = await ContactGroup.findAll({
+      where: { user_id: req.user.id },
+      include: [{
+        model: ContactGroupMember,
+        include: [{ model: Contact, attributes: ['id', 'name'] }]
+      }],
+      order: [['name', 'ASC']]
+    });
+    
+    res.json({ success: true, groups });
+  } catch (error) {
+    console.error('Error fetching contact groups:', error);
+    res.status(500).json({ error: 'Failed to fetch contact groups.' });
+  }
+});
+
+// Create a new contact group
+router.post('/groups', [
+  checkUsageLimit('contact_groups'),
+  updateUsage('contact_groups')
+], async (req, res) => {
+  try {
+    const { name } = req.body;
+    
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ error: 'Group name is required.' });
+    }
+    
+    // Check if group already exists for this user
+    const existingGroup = await ContactGroup.findOne({
+      where: { user_id: req.user.id, name: name.trim() }
+    });
+    
+    if (existingGroup) {
+      return res.status(400).json({ error: 'A group with this name already exists.' });
+    }
+    
+    const group = await ContactGroup.create({
+      user_id: req.user.id,
+      name: name.trim()
+    });
+    
+    res.json({ success: true, group });
+  } catch (error) {
+    console.error('Error creating contact group:', error);
+    res.status(500).json({ error: 'Failed to create contact group.' });
+  }
+});
+
+// Update a contact group
+router.put('/groups/:groupId', isAuthenticated, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { name } = req.body;
+    
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ error: 'Group name is required.' });
+    }
+    
+    const group = await ContactGroup.findOne({
+      where: { id: groupId, user_id: req.user.id }
+    });
+    
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found.' });
+    }
+    
+    // Check if another group with the same name exists
+    const existingGroup = await ContactGroup.findOne({
+      where: { 
+        user_id: req.user.id, 
+        name: name.trim(),
+        id: { [require('sequelize').Op.ne]: groupId }
+      }
+    });
+    
+    if (existingGroup) {
+      return res.status(400).json({ error: 'A group with this name already exists.' });
+    }
+    
+    await group.update({ name: name.trim() });
+    
+    res.json({ success: true, group });
+  } catch (error) {
+    console.error('Error updating contact group:', error);
+    res.status(500).json({ error: 'Failed to update contact group.' });
+  }
+});
+
+// Delete a contact group
+router.delete('/groups/:groupId', isAuthenticated, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    
+    const group = await ContactGroup.findOne({
+      where: { id: groupId, user_id: req.user.id }
+    });
+    
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found.' });
+    }
+    
+    // Delete all group memberships first
+    await ContactGroupMember.destroy({
+      where: { group_id: groupId }
+    });
+    
+    // Delete the group
+    await group.destroy();
+    
+    res.json({ success: true, message: 'Group deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting contact group:', error);
+    res.status(500).json({ error: 'Failed to delete contact group.' });
+  }
+});
+
+// Add contact to group
+router.post('/groups/:groupId/members', isAuthenticated, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { contact_id } = req.body;
+    
+    // Verify group belongs to user
+    const group = await ContactGroup.findOne({
+      where: { id: groupId, user_id: req.user.id }
+    });
+    
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found.' });
+    }
+    
+    // Verify contact belongs to user
+    const contact = await Contact.findOne({
+      where: { id: contact_id, user_id: req.user.id }
+    });
+    
+    if (!contact) {
+      return res.status(404).json({ error: 'Contact not found.' });
+    }
+    
+    // Check if membership already exists
+    const existingMembership = await ContactGroupMember.findOne({
+      where: { contact_id, group_id: groupId }
+    });
+    
+    if (existingMembership) {
+      return res.status(400).json({ error: 'Contact is already in this group.' });
+    }
+    
+    const membership = await ContactGroupMember.create({
+      contact_id,
+      group_id: groupId
+    });
+    
+    res.json({ success: true, membership });
+  } catch (error) {
+    console.error('Error adding contact to group:', error);
+    res.status(500).json({ error: 'Failed to add contact to group.' });
+  }
+});
+
+// Remove contact from group
+router.delete('/groups/:groupId/members/:contactId', isAuthenticated, async (req, res) => {
+  try {
+    const { groupId, contactId } = req.params;
+    
+    // Verify group belongs to user
+    const group = await ContactGroup.findOne({
+      where: { id: groupId, user_id: req.user.id }
+    });
+    
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found.' });
+    }
+    
+    // Remove membership
+    const deleted = await ContactGroupMember.destroy({
+      where: { contact_id: contactId, group_id: groupId }
+    });
+    
+    if (deleted === 0) {
+      return res.status(404).json({ error: 'Contact is not in this group.' });
+    }
+    
+    res.json({ success: true, message: 'Contact removed from group.' });
+  } catch (error) {
+    console.error('Error removing contact from group:', error);
+    res.status(500).json({ error: 'Failed to remove contact from group.' });
+  }
+});
+
+// ================================
+// CONTACT RELATIONSHIPS ROUTES
+// ================================
+
+// List all relationships for the current user
+router.get('/relationships', isAuthenticated, async (req, res) => {
+  try {
+    const relationships = await ContactRelation.findAll({
+      where: { user_id: req.user.id },
+      include: [
+        { model: Contact, as: 'Contact1', attributes: ['id', 'name'] },
+        { model: Contact, as: 'Contact2', attributes: ['id', 'name'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    
+    res.json({ success: true, relationships });
+  } catch (error) {
+    console.error('Error fetching relationships:', error);
+    res.status(500).json({ error: 'Failed to fetch relationships.' });
+  }
+});
+
+// Get relationships for a specific contact
+router.get('/:contactId/relationships', isAuthenticated, async (req, res) => {
+  try {
+    const { contactId } = req.params;
+    
+    // Verify contact belongs to user
+    const contact = await Contact.findOne({
+      where: { id: contactId, user_id: req.user.id }
+    });
+    
+    if (!contact) {
+      return res.status(404).json({ error: 'Contact not found.' });
+    }
+    
+    const relationships = await ContactRelation.findAll({
+      where: {
+        user_id: req.user.id,
+        [require('sequelize').Op.or]: [
+          { contact_id_1: contactId },
+          { contact_id_2: contactId }
+        ]
+      },
+      include: [
+        { model: Contact, as: 'Contact1', attributes: ['id', 'name'] },
+        { model: Contact, as: 'Contact2', attributes: ['id', 'name'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    
+    res.json({ success: true, relationships });
+  } catch (error) {
+    console.error('Error fetching contact relationships:', error);
+    res.status(500).json({ error: 'Failed to fetch contact relationships.' });
+  }
+});
+
+// Create a new relationship
+router.post('/relationships', [
+  checkUsageLimit('relationships'),
+  updateUsage('relationships')
+], async (req, res) => {
+  try {
+    const { contact_id_1, contact_id_2, relation_type } = req.body;
+    
+    if (!contact_id_1 || !contact_id_2 || !relation_type) {
+      return res.status(400).json({ error: 'Both contacts and relationship type are required.' });
+    }
+    
+    if (contact_id_1 === contact_id_2) {
+      return res.status(400).json({ error: 'Cannot create relationship between the same contact.' });
+    }
+    
+    // Verify both contacts belong to user
+    const contacts = await Contact.findAll({
+      where: { 
+        id: [contact_id_1, contact_id_2], 
+        user_id: req.user.id 
+      }
+    });
+    
+    if (contacts.length !== 2) {
+      return res.status(404).json({ error: 'One or both contacts not found.' });
+    }
+    
+    // Check if relationship already exists
+    const existingRelation = await ContactRelation.findOne({
+      where: {
+        user_id: req.user.id,
+        [require('sequelize').Op.or]: [
+          { contact_id_1, contact_id_2, relation_type },
+          { contact_id_1: contact_id_2, contact_id_2: contact_id_1, relation_type }
+        ]
+      }
+    });
+    
+    if (existingRelation) {
+      return res.status(400).json({ error: 'This relationship already exists.' });
+    }
+    
+    const relationship = await ContactRelation.create({
+      user_id: req.user.id,
+      contact_id_1,
+      contact_id_2,
+      relation_type: relation_type.trim()
+    });
+    
+    // Fetch the created relationship with contact details
+    const relationshipWithContacts = await ContactRelation.findOne({
+      where: { id: relationship.id },
+      include: [
+        { model: Contact, as: 'Contact1', attributes: ['id', 'name'] },
+        { model: Contact, as: 'Contact2', attributes: ['id', 'name'] }
+      ]
+    });
+    
+    res.json({ success: true, relationship: relationshipWithContacts });
+  } catch (error) {
+    console.error('Error creating relationship:', error);
+    res.status(500).json({ error: 'Failed to create relationship.' });
+  }
+});
+
+// Delete a relationship
+router.delete('/relationships/:relationshipId', isAuthenticated, async (req, res) => {
+  try {
+    const { relationshipId } = req.params;
+    
+    const relationship = await ContactRelation.findOne({
+      where: { id: relationshipId, user_id: req.user.id }
+    });
+    
+    if (!relationship) {
+      return res.status(404).json({ error: 'Relationship not found.' });
+    }
+    
+    await relationship.destroy();
+    
+    res.json({ success: true, message: 'Relationship deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting relationship:', error);
+    res.status(500).json({ error: 'Failed to delete relationship.' });
+  }
+});
+
+// Get predefined relationship types
+router.get('/relationship-types', (req, res) => {
+  const relationshipTypes = {
+    family: [
+      'Parent', 'Child', 'Spouse', 'Sibling', 
+      'Mother', 'Father', 'Son', 'Daughter',
+      'Wife', 'Husband', 'Brother', 'Sister',
+      'Grandmother', 'Grandfather', 'Grandson', 'Granddaughter',
+      'Aunt', 'Uncle', 'Niece', 'Nephew', 'Cousin'
+    ],
+    professional: [
+      'Colleague', 'Boss', 'Employee', 'Manager', 'Supervisor',
+      'Business Partner', 'Client', 'Vendor', 'Contractor',
+      'Mentor', 'Mentee', 'Coworker'
+    ],
+    social: [
+      'Friend', 'Best Friend', 'Acquaintance', 'Neighbor', 
+      'Classmate', 'Roommate', 'Ex', 'Dating'
+    ],
+    other: [
+      'Doctor', 'Lawyer', 'Accountant', 'Teacher', 'Student',
+      'Landlord', 'Tenant', 'Emergency Contact'
+    ]
+  };
+  
+  res.json({ success: true, relationshipTypes });
 });
 
 module.exports = router; 
