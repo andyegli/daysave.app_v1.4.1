@@ -7,6 +7,7 @@ const { AutomationOrchestrator } = require('../services/multimedia');
 const BackwardCompatibilityService = require('../services/BackwardCompatibilityService');
 const { ContentTypeDetector } = require('../scripts/populate-content-types');
 const logger = require('../config/logger');
+const { logging } = require('../config/config');
 
 // Initialize automation orchestrator (singleton)
 const orchestrator = AutomationOrchestrator.getInstance();

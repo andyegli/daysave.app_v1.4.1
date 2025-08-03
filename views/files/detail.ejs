@@ -49,13 +49,13 @@
               </div>
             </div>
             <div class="btn-group">
-              <button class="btn btn-outline-primary" onclick="downloadFile()">
+              <button class="btn btn-outline-primary" data-action="download-file">
                 <i class="fas fa-download"></i> Download
               </button>
-              <button class="btn btn-outline-warning" onclick="editFileMetadata()">
+              <button class="btn btn-outline-warning" data-action="edit-metadata">
                 <i class="fas fa-edit"></i> Edit
               </button>
-              <button class="btn btn-outline-danger" onclick="deleteFileConfirm()">
+              <button class="btn btn-outline-danger" data-action="delete-file">
                 <i class="fas fa-trash"></i> Delete
               </button>
             </div>
@@ -239,17 +239,17 @@
             </div>
             <div class="card-body">
               <div class="d-grid gap-2">
-                <button class="btn btn-primary" onclick="downloadFile()">
+                <button class="btn btn-primary" data-action="download-file">
                   <i class="fas fa-download"></i> Download File
                 </button>
-                <button class="btn btn-outline-secondary" onclick="copyFileUrl()">
+                <button class="btn btn-outline-secondary" data-action="copy-url">
                   <i class="fas fa-copy"></i> Copy File URL
                 </button>
-                <button class="btn btn-outline-warning" onclick="editFileMetadata()">
+                <button class="btn btn-outline-warning" data-action="edit-metadata">
                   <i class="fas fa-edit"></i> Edit Metadata
                 </button>
                 <hr>
-                <button class="btn btn-outline-danger" onclick="deleteFileConfirm()">
+                <button class="btn btn-outline-danger" data-action="delete-file">
                   <i class="fas fa-trash"></i> Delete File
                 </button>
               </div>
@@ -295,128 +295,13 @@
   </div>
 </div>
 
+<%- include('../partials/footer') %>
+
+<!-- File Detail JavaScript (CSP Compliant) -->
+<script src="/js/file-management.js?v=<%= Date.now() %>"></script>
 <script>
-/**
- * File Detail Page JavaScript
- */
-
-// Download file
-function downloadFile() {
-  window.open('<%= fileUrl %>', '_blank');
-}
-
-// Copy file URL to clipboard
-async function copyFileUrl() {
-  try {
-    await navigator.clipboard.writeText('<%= fileUrl %>');
-    
-    // Show success feedback
-    const button = event.target.closest('button');
-    const originalHtml = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-check"></i> Copied!';
-    button.classList.add('btn-success');
-    button.classList.remove('btn-outline-secondary');
-    
-    setTimeout(() => {
-      button.innerHTML = originalHtml;
-      button.classList.remove('btn-success');
-      button.classList.add('btn-outline-secondary');
-    }, 2000);
-  } catch (error) {
-    alert('Failed to copy URL to clipboard');
-  }
-}
-
-// Edit file metadata
-function editFileMetadata() {
-  const editModal = new bootstrap.Modal(document.getElementById('editModal'));
-  editModal.show();
-}
-
-// Handle edit form submission
-document.getElementById('editForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  
-  try {
-    const formData = new FormData(e.target);
-    const data = {
-      comments: formData.get('comments'),
-      tags: formData.get('tags')
-    };
-    
-    const response = await fetch(`/files/<%= file.id %>`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      // Close modal and reload page
-      bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
-      location.reload();
-    } else {
-      throw new Error(result.message || 'Update failed');
-    }
-  } catch (error) {
-    alert('Failed to update file: ' + error.message);
-  }
-});
-
-// Delete file confirmation
-function deleteFileConfirm() {
-  if (confirm('Are you sure you want to delete "<%= file.filename %>"? This action cannot be undone.')) {
-    deleteFileAction();
-  }
-}
-
-// Delete file action
-async function deleteFileAction() {
-  try {
-    const response = await fetch(`/files/<%= file.id %>`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      // Redirect to files list with success message
-      sessionStorage.setItem('deleteSuccess', 'File deleted successfully');
-      // Fix for localhost HTTPS/HTTP protocol issues
-      if (window.location.hostname === 'localhost') {
-        window.location.href = `http://localhost:${window.location.port || 3000}/files`;
-      } else {
-        window.location.href = '/files';
-      }
-    } else {
-      throw new Error(result.message || 'Delete failed');
-    }
-  } catch (error) {
-    alert('Failed to delete file: ' + error.message);
-  }
-}
-
-// Show delete success message if redirected from delete
-document.addEventListener('DOMContentLoaded', () => {
-  const deleteSuccess = sessionStorage.getItem('deleteSuccess');
-  if (deleteSuccess) {
-    sessionStorage.removeItem('deleteSuccess');
-    
-    const alertHtml = `
-      <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="fas fa-check-circle"></i> ${deleteSuccess}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-    `;
-    document.querySelector('.container').insertAdjacentHTML('afterbegin', alertHtml);
-  }
-});
-</script>
-
-<%- include('../partials/footer') %> 
+  // Make file data available to JavaScript (minimal inline script)
+  window.fileId = '<%= file.id %>';
+  window.filename = '<%= file.name %>';
+  window.fileUrl = '<%= file.url %>';
+</script> 

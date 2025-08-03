@@ -136,10 +136,10 @@
           <div class="d-flex align-items-center">
             <span class="status-indicator connected" id="connectionStatus"></span>
             <span id="connectionText">Connected</span>
-            <button class="btn btn-outline-primary btn-sm ms-3" onclick="clearLogs()">
+            <button class="btn btn-outline-primary btn-sm ms-3" data-action="clear-logs">
               <i class="bi bi-trash me-1"></i>Clear Display
             </button>
-            <button class="btn btn-outline-success btn-sm ms-2" onclick="exportLogs()">
+            <button class="btn btn-outline-success btn-sm ms-2" data-action="export-logs">
               <i class="bi bi-download me-1"></i>Export
             </button>
           </div>
@@ -150,7 +150,7 @@
           <div class="row g-3">
             <div class="col-md-2">
               <label for="channelFilter" class="form-label">Channel</label>
-              <select class="form-select form-select-sm" id="channelFilter" onchange="applyFilters()">
+              <select class="form-select form-select-sm" id="channelFilter" data-action="apply-filters">
                 <option value="all">All Channels</option>
                 <option value="multimedia">Multimedia</option>
                 <option value="auth">Authentication</option>
@@ -161,7 +161,7 @@
             </div>
             <div class="col-md-2">
               <label for="levelFilter" class="form-label">Level</label>
-              <select class="form-select form-select-sm" id="levelFilter" onchange="applyFilters()">
+              <select class="form-select form-select-sm" id="levelFilter" data-action="apply-filters">
                 <option value="all">All Levels</option>
                 <option value="error">Error</option>
                 <option value="warn">Warning</option>
@@ -171,15 +171,15 @@
             </div>
             <div class="col-md-2">
               <label for="userFilter" class="form-label">User ID</label>
-              <input type="text" class="form-control form-control-sm" id="userFilter" placeholder="Filter by user" onkeyup="applyFilters()">
+              <input type="text" class="form-control form-control-sm" id="userFilter" placeholder="Filter by user" data-action="apply-filters-keyup">
             </div>
             <div class="col-md-3">
               <label for="searchFilter" class="form-label">Search</label>
-              <input type="text" class="form-control form-control-sm" id="searchFilter" placeholder="Search logs..." onkeyup="applyFilters()">
+              <input type="text" class="form-control form-control-sm" id="searchFilter" placeholder="Search logs..." data-action="apply-filters-keyup">
             </div>
             <div class="col-md-2">
               <label for="limitFilter" class="form-label">Limit</label>
-              <select class="form-select form-select-sm" id="limitFilter" onchange="applyFilters()">
+              <select class="form-select form-select-sm" id="limitFilter" data-action="apply-filters">
                 <option value="50">50 entries</option>
                 <option value="100" selected>100 entries</option>
                 <option value="200">200 entries</option>
@@ -189,7 +189,7 @@
             <div class="col-md-1">
               <label class="form-label">&nbsp;</label>
               <div>
-                <button class="btn btn-primary btn-sm w-100" onclick="refreshLogs()">
+                <button class="btn btn-primary btn-sm w-100" data-action="refresh-logs">
                   <i class="bi bi-arrow-clockwise"></i>
                 </button>
               </div>
@@ -198,7 +198,7 @@
           <div class="row mt-2">
             <div class="col-12">
               <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="liveMode" checked onchange="toggleLiveMode()">
+                <input class="form-check-input" type="checkbox" id="liveMode" checked data-action="toggle-live-mode">
                 <label class="form-check-label" for="liveMode">
                   Live Mode (Real-time updates)
                 </label>
@@ -273,6 +273,6 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
   <!-- External JavaScript file to comply with CSP -->
-  <script src="/js/admin-logs.js"></script>
+  <script src="/js/admin-logs.js?v=<%= Date.now() %>"></script>
 </body>
 </html> 

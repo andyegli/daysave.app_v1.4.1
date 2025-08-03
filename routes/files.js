@@ -6,6 +6,7 @@ const { File, User, ContentGroup, ContentGroupMember } = require('../models');
 const { isAuthenticated, isAdmin, checkUsageLimit, checkFileSizeLimit, updateUsage } = require('../middleware');
 const { body, param, query, validationResult } = require('express-validator');
 const logger = require('../config/logger');
+const { logging } = require('../config/config');
 const { Op } = require('sequelize');
 const { AutomationOrchestrator } = require('../services/multimedia');
 const { ContentTypeDetector } = require('../scripts/populate-content-types');
@@ -2351,17 +2352,94 @@ router.post('/:id/reprocess', isAuthenticated, async (req, res) => {
       // Trigger analysis in background using the multimedia orchestrator
       setImmediate(async () => {
         try {
-          // Get file buffer or path for reprocessing
-          const filePath = file.file_path || `uploads/${file.filename}`;
+          // Get file buffer for reprocessing
+          const fs = require('fs').promises;
+          const path = require('path');
+          
+          let filePath = file.file_path;
+          let fileBuffer;
+          
+          if (filePath && filePath.startsWith('gs://')) {
+            // File is in Google Cloud Storage - download it first
+            const tempDir = path.join(__dirname, '../temp');
+            await fs.mkdir(tempDir, { recursive: true }).catch(() => {});
+            const tempPath = path.join(tempDir, `${fileId}-temp`);
+            
+            await FileUploadService.downloadFromGCS(
+              process.env.GOOGLE_CLOUD_STORAGE_BUCKET,
+              filePath.replace('gs://' + process.env.GOOGLE_CLOUD_STORAGE_BUCKET + '/', ''),
+              tempPath
+            );
+            fileBuffer = await fs.readFile(tempPath);
+            // Clean up temp file
+            await fs.unlink(tempPath).catch(() => {});
+          } else {
+            // File is local
+            const localPath = filePath || path.join(__dirname, '../uploads', file.filename);
+            fileBuffer = await fs.readFile(localPath);
+          }
           
           // Use the automation orchestrator for reprocessing
-          const fileUploadService = new FileUploadService();
-          await fileUploadService.triggerFileAnalysis(file, userId, {
+          const result = await orchestrator.processContent(fileBuffer, {
+            filename: file.filename,
+            mimetype: file.metadata?.mimetype,
+            userId: userId,
+            fileId: fileId,
             source: 'reprocess',
             forceReprocess: true
           });
           
-          console.log(`✅ Reprocessing triggered for file ${fileId}`);
+          console.log(`🎯 Processing result received:`, {
+            jobId: result.jobId,
+            mediaType: result.mediaType,
+            processingTime: result.processingTime,
+            hasResults: !!result.results,
+            dataKeys: result.results?.data ? Object.keys(result.results.data) : []
+          });
+          
+          // Save the results to the database
+          if (result.results?.data) {
+            const updateData = {};
+            const data = result.results.data;
+            
+            // Save summary
+            if (data.summary) {
+              updateData.summary = data.summary;
+              console.log(`💾 Saving summary: "${data.summary.substring(0, 100)}..."`);
+            }
+            
+            // Save tags
+            if (data.tags && Array.isArray(data.tags)) {
+              updateData.auto_tags = data.tags;
+              console.log(`🏷️  Saving ${data.tags.length} tags: [${data.tags.join(', ')}]`);
+            }
+            
+            // Save generated title
+            if (data.title) {
+              updateData.generated_title = data.title;
+              console.log(`📝 Saving generated title: "${data.title}"`);
+            }
+            
+            // Save category if available
+            if (data.category) {
+              updateData.category = data.category;
+              console.log(`📂 Saving category: "${data.category}"`);
+            }
+            
+            // Update the file record with AI analysis results
+            if (Object.keys(updateData).length > 0) {
+              await File.update(updateData, {
+                where: { id: fileId, user_id: userId }
+              });
+              
+              console.log(`✅ Successfully saved analysis results to database for file ${fileId}`);
+              console.log(`📊 Updated fields: ${Object.keys(updateData).join(', ')}`);
+            } else {
+              console.log(`⚠️  No analysis results to save for file ${fileId}`);
+            }
+          }
+          
+          console.log(`✅ Reprocessing completed for file ${fileId}`);
         } catch (reprocessError) {
           console.error(`❌ Reprocessing failed for file ${fileId}:`, reprocessError);
         }

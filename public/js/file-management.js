@@ -50,6 +50,65 @@ $(document).ready(function() {
       shareFile(fileId);
     });
     
+    // File detail action handlers (CSP-compliant)
+    $(document).on('click', '[data-action="download-file"]', function(e) {
+      e.preventDefault();
+      downloadFileAction();
+    });
+    
+    $(document).on('click', '[data-action="copy-url"]', function(e) {
+      e.preventDefault();
+      copyFileUrlAction();
+    });
+    
+    $(document).on('click', '[data-action="edit-metadata"]', function(e) {
+      e.preventDefault();
+      editFileMetadataAction();
+    });
+    
+    $(document).on('click', '[data-action="delete-file"]', function(e) {
+      e.preventDefault();
+      deleteFileConfirmAction();
+    });
+    
+    // Handle edit form submission (CSP-compliant)
+    $(document).on('submit', '#editForm', async function(e) {
+      e.preventDefault();
+      
+      try {
+        const formData = new FormData(e.target);
+        const data = {
+          comments: formData.get('comments'),
+          tags: formData.get('tags')
+        };
+        
+        const fileId = window.fileId;
+        if (!fileId) {
+          throw new Error('File ID not found');
+        }
+        
+        const response = await fetch(`/files/${fileId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // Close modal and reload page
+          bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+          location.reload();
+        } else {
+          throw new Error(result.message || 'Update failed');
+        }
+      } catch (error) {
+        showAlert('Failed to update file: ' + error.message, 'error');
+      }
+    });
+    
     // Copy summary handler
     $(document).on('click', '.copy-summary-btn', function(e) {
       e.preventDefault();
@@ -425,11 +484,101 @@ $(document).ready(function() {
     }, 5000);
   }
   
+  /**
+   * File detail action functions (CSP-compliant)
+   */
+  function downloadFileAction() {
+    const fileUrl = window.fileUrl;
+    if (fileUrl) {
+      const correctedUrl = getCorrectUrl(fileUrl);
+      window.open(correctedUrl, '_blank');
+    } else {
+      showAlert('File URL not found', 'error');
+    }
+  }
+  
+  async function copyFileUrlAction() {
+    const fileUrl = window.fileUrl || getCorrectUrl(`/files/${window.fileId}`);
+    if (fileUrl) {
+      try {
+        await navigator.clipboard.writeText(fileUrl);
+        showAlert('File URL copied to clipboard', 'success');
+      } catch (error) {
+        showAlert('Failed to copy URL to clipboard', 'error');
+      }
+    } else {
+      showAlert('File URL not found', 'error');
+    }
+  }
+  
+  function editFileMetadataAction() {
+    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    editModal.show();
+  }
+  
+  function deleteFileConfirmAction() {
+    const fileId = window.fileId || $('[data-file-id]').data('file-id');
+    const filename = window.filename || $('[data-filename]').data('filename') || 'this file';
+    
+    if (fileId) {
+      if (confirm(`Are you sure you want to delete "${filename}"? This action cannot be undone.`)) {
+        deleteFileAction(fileId);
+      }
+    } else {
+      showAlert('File ID not found', 'error');
+    }
+  }
+  
+  /**
+   * Delete file action - moved from inline script for CSP compliance
+   */
+  async function deleteFileAction(fileId) {
+    try {
+      const response = await fetch(`/files/${fileId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Redirect to files list with success message
+        sessionStorage.setItem('deleteSuccess', 'File deleted successfully');
+        const redirectUrl = getCorrectUrl('/files');
+        window.location.href = redirectUrl;
+      } else {
+        throw new Error(result.message || 'Delete failed');
+      }
+    } catch (error) {
+      showAlert('Failed to delete file: ' + error.message, 'error');
+    }
+  }
+  
+  /**
+   * Show delete success message if redirected from delete
+   */
+  function checkDeleteSuccess() {
+    const deleteSuccess = sessionStorage.getItem('deleteSuccess');
+    if (deleteSuccess) {
+      sessionStorage.removeItem('deleteSuccess');
+      showAlert(deleteSuccess, 'success');
+    }
+  }
+  
+  // Check for delete success message on page load
+  checkDeleteSuccess();
+
   // Export functions for global access if needed
   window.FileManager = {
     deleteFile,
     shareFile,
     showAlert,
-    loadAIIndicators
+    loadAIIndicators,
+    downloadFileAction,
+    copyFileUrlAction,
+    editFileMetadataAction,
+    deleteFileConfirmAction
   };
 }); 

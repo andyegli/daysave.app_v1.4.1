@@ -15,7 +15,43 @@ document.addEventListener('DOMContentLoaded', function() {
   if (isLiveMode) {
     startLiveMode();
   }
+  
+  // Add CSP-compliant event handlers
+  setupEventHandlers();
 });
+
+// Setup CSP-compliant event handlers
+function setupEventHandlers() {
+  // Handle filter changes
+  $(document).on('change', '[data-action="apply-filters"]', function() {
+    applyFilters();
+  });
+  
+  // Handle search keyup
+  $(document).on('keyup', '[data-action="apply-filters-keyup"]', function() {
+    applyFilters();
+  });
+  
+  // Handle button clicks
+  $(document).on('click', '[data-action="clear-logs"]', function(e) {
+    e.preventDefault();
+    clearLogs();
+  });
+  
+  $(document).on('click', '[data-action="export-logs"]', function(e) {
+    e.preventDefault();
+    exportLogs();
+  });
+  
+  $(document).on('click', '[data-action="refresh-logs"]', function(e) {
+    e.preventDefault();
+    refreshLogs();
+  });
+  
+  $(document).on('change', '[data-action="toggle-live-mode"]', function() {
+    toggleLiveMode();
+  });
+}
 
 // Load logs from API
 async function loadLogs(page = 1) {
