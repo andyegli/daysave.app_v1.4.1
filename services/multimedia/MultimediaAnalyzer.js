@@ -469,6 +469,50 @@ class MultimediaAnalyzer {
               });
             }
           }
+        }
+        
+        // For YouTube URLs, generate thumbnails
+        if ((url.includes('youtube.com') || url.includes('youtu.be')) && analysisOptions.thumbnails) {
+          try {
+            // Log thumbnail generation start
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.progress(user_id, content_id, 'thumbnail_generation_start', 60, {
+                provider: 'youtube_direct'
+              });
+            }
+            
+            // Generate YouTube thumbnails
+            const youtubeThumbnails = await this.generateYouTubeThumbnails(url, user_id, content_id);
+            
+            if (youtubeThumbnails && youtubeThumbnails.length > 0) {
+              results.thumbnails = youtubeThumbnails;
+              
+              // Log thumbnail success
+              if (user_id && content_id) {
+                const logger = require('../../config/logger');
+                logger.multimedia.progress(user_id, content_id, 'thumbnail_generation_complete', 70, {
+                  thumbnailCount: youtubeThumbnails.length
+                });
+              }
+              
+              if (this.enableLogging) {
+                console.log('✅ YouTube thumbnails generated:', {
+                  count: youtubeThumbnails.length
+                });
+              }
+            }
+          } catch (thumbnailError) {
+            console.error('❌ YouTube thumbnail generation failed:', thumbnailError);
+            
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.error(user_id, content_id, thumbnailError, {
+                step: 'thumbnail_generation',
+                url
+              });
+            }
+          }
         } else if (url.includes('instagram.com') && analysisOptions.transcription) {
           // For Instagram URLs, attempt to download and analyze content using yt-dlp
           try {
@@ -2604,6 +2648,96 @@ Respond with only the title, no quotes or additional text.`;
       return allThumbnails;
     } catch (error) {
       console.error('❌ Video thumbnail generation failed:', error);
+      throw error;
+    }
+  }
+
+  async generateYouTubeThumbnails(url, userId, contentId) {
+    try {
+      const { v4: uuidv4 } = require('uuid');
+      const https = require('https');
+      const http = require('http');
+      const fs = require('fs');
+      const path = require('path');
+      const { Thumbnail } = require('../../models');
+      
+      // Extract YouTube video ID
+      const videoId = this.extractYouTubeVideoId(url);
+      if (!videoId) {
+        throw new Error('Could not extract video ID from YouTube URL');
+      }
+      
+      if (this.enableLogging) {
+        console.log('🎬 Generating YouTube thumbnails for video ID:', videoId);
+      }
+      
+      const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      
+      // Create filename and path
+      const fileName = `${uuidv4()}_youtube_hqdefault.jpg`;
+      const thumbnailDir = path.join(__dirname, '../../uploads/thumbnails');
+      const filePath = path.join(thumbnailDir, fileName);
+      
+      // Ensure directory exists
+      if (!fs.existsSync(thumbnailDir)) {
+        fs.mkdirSync(thumbnailDir, { recursive: true });
+      }
+      
+      // Download and save the thumbnail
+      await new Promise((resolve, reject) => {
+        const protocol = thumbnailUrl.startsWith('https:') ? https : http;
+        
+        protocol.get(thumbnailUrl, (response) => {
+          if (response.statusCode === 200) {
+            const writeStream = fs.createWriteStream(filePath);
+            response.pipe(writeStream);
+            
+            writeStream.on('finish', resolve);
+            writeStream.on('error', reject);
+          } else {
+            reject(new Error(`HTTP ${response.statusCode}: Failed to download thumbnail`));
+          }
+        }).on('error', reject);
+      });
+      
+      // Get file stats
+      const stats = fs.statSync(filePath);
+      
+      // Create database record
+      const thumbnail = await Thumbnail.create({
+        id: uuidv4(),
+        user_id: userId,
+        content_id: contentId,
+        file_id: null,
+        thumbnail_type: 'main',
+        file_path: path.relative(process.cwd(), filePath),
+        file_name: fileName,
+        file_size: stats.size,
+        mime_type: 'image/jpeg',
+        width: 480,
+        height: 360,
+        quality: 'medium',
+        generation_method: 'ffmpeg', // Use existing enum value
+        metadata: {
+          originalUrl: thumbnailUrl,
+          videoId: videoId,
+          size: 'hqdefault',
+          generatedAt: new Date().toISOString(),
+          source: 'youtube_direct'
+        },
+        status: 'ready'
+      });
+      
+      if (this.enableLogging) {
+        console.log(`✅ Created YouTube thumbnail: ${fileName} (480x360, ${Math.round(stats.size / 1024)}KB)`);
+      }
+      
+      return [thumbnail];
+      
+    } catch (error) {
+      if (this.enableLogging) {
+        console.error('❌ YouTube thumbnail generation failed:', error);
+      }
       throw error;
     }
   }
