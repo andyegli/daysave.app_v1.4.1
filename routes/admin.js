@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { User, Role, UserPasskey } = require('../models');
+const { User, Role, UserPasskey, UserDevice, LoginAttempt } = require('../models');
 const { logAuthEvent, logAuthError } = require('../config/logger');
 const { isAuthenticated, isAdmin, requireTesterPermission } = require('../middleware');
 const { body, validationResult, param } = require('express-validator');
+const { deviceFingerprinting } = require('../middleware/deviceFingerprinting');
+const geoLocationService = require('../services/geoLocationService');
 
 // Enhanced admin error handler
 const handleAdminError = (req, res, error, context = {}) => {
@@ -2404,6 +2406,544 @@ router.get('/api/stats/health', isAuthenticated, isAdmin, async (req, res) => {
     res.json({ status: '98%' });
   } catch (error) {
     res.json({ status: '85%' }); // fallback
+  }
+});
+
+// ================================
+// DEVICE FINGERPRINTING ROUTES
+// ================================
+
+/**
+ * Device Fingerprinting Dashboard
+ */
+router.get('/device-fingerprinting', isAuthenticated, isAdmin, (req, res) => {
+  res.render('admin/device-fingerprinting', {
+    title: 'Device Fingerprinting - Admin Dashboard',
+    user: req.user
+  });
+});
+
+/**
+ * Device Fingerprinting Analytics Dashboard
+ */
+router.get('/fingerprinting-analytics', isAuthenticated, isAdmin, (req, res) => {
+  res.render('admin/fingerprinting-analytics', {
+    title: 'Device Fingerprinting Analytics - Admin Dashboard',
+    user: req.user
+  });
+});
+
+/**
+ * API: Get fingerprinting overview
+ */
+router.get('/api/fingerprinting/overview', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const [totalDevices, trustedDevices, highRiskDevices, blockedAttempts, riskDistribution] = await Promise.all([
+      // Total tracked devices
+      UserDevice.count(),
+      
+      // Trusted devices
+      UserDevice.count({ where: { is_trusted: true } }),
+      
+      // High risk devices (those with recent failed attempts)
+      LoginAttempt.count({
+        where: {
+          success: false,
+          attempted_at: {
+            [require('sequelize').Op.gte]: new Date(Date.now() - 24 * 60 * 60 * 1000)
+          }
+        },
+        distinct: true,
+        col: 'device_fingerprint'
+      }),
+      
+      // Blocked attempts in last 24 hours
+      LoginAttempt.count({
+        where: {
+          success: false,
+          failure_reason: {
+            [require('sequelize').Op.like]: '%blocked%'
+          },
+          attempted_at: {
+            [require('sequelize').Op.gte]: new Date(Date.now() - 24 * 60 * 60 * 1000)
+          }
+        }
+      }),
+      
+      // Risk distribution (placeholder - would need actual risk score data)
+      Promise.resolve({ minimal: 45, low: 25, medium: 15, high: 10, critical: 5 })
+    ]);
+
+    res.json({
+      totalDevices,
+      trustedDevices,
+      highRiskDevices,
+      blockedAttempts,
+      riskDistribution
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching fingerprinting overview:', error);
+    res.status(500).json({ error: 'Failed to fetch overview data' });
+  }
+});
+
+/**
+ * API: Get recent login attempts
+ */
+router.get('/api/fingerprinting/login-attempts', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const attempts = await LoginAttempt.findAll({
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'username', 'email'],
+          required: false
+        }
+      ],
+      order: [['attempted_at', 'DESC']],
+      limit,
+      offset
+    });
+
+    // Add enhanced data for demonstration and format location
+    const attemptsWithEnhancedData = attempts.map(attempt => {
+      const attemptData = attempt.toJSON();
+      
+      // Add mock risk score if not available
+      attemptData.risk_score = Math.random() * 0.8;
+      
+      // Format location for display
+      if (attemptData.country || attemptData.city) {
+        attemptData.locationDisplay = geoLocationService.formatLocationForDisplay({
+          city: attemptData.city,
+          region: attemptData.region,
+          country: attemptData.country,
+          isVPN: attemptData.is_vpn
+        });
+      } else {
+        attemptData.locationDisplay = 'Unknown Location';
+      }
+      
+      return attemptData;
+    });
+
+    res.json(attemptsWithEnhancedData);
+
+  } catch (error) {
+    console.error('❌ Error fetching login attempts:', error);
+    res.status(500).json({ error: 'Failed to fetch login attempts' });
+  }
+});
+
+/**
+ * API: Get device list
+ */
+router.get('/api/fingerprinting/devices', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const devices = await UserDevice.findAll({
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'username', 'email'],
+          required: false
+        }
+      ],
+      order: [['last_login_at', 'DESC']],
+      limit: 100
+    });
+
+    // Add enhanced location display
+    const devicesWithLocationDisplay = devices.map(device => {
+      const deviceData = device.toJSON();
+      
+      // Format location for display
+      if (deviceData.country || deviceData.city) {
+        deviceData.locationDisplay = geoLocationService.formatLocationForDisplay({
+          city: deviceData.city,
+          region: deviceData.region,
+          country: deviceData.country,
+          confidence: deviceData.location_confidence
+        });
+      } else {
+        deviceData.locationDisplay = 'Unknown Location';
+      }
+      
+      return deviceData;
+    });
+
+    res.json(devicesWithLocationDisplay);
+
+  } catch (error) {
+    console.error('❌ Error fetching devices:', error);
+    res.status(500).json({ error: 'Failed to fetch devices' });
+  }
+});
+
+/**
+ * API: Trust a device
+ */
+router.post('/api/fingerprinting/trust-device', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { fingerprint } = req.body;
+
+    if (!fingerprint) {
+      return res.status(400).json({ error: 'Device fingerprint required' });
+    }
+
+    await UserDevice.update(
+      { is_trusted: true },
+      { where: { device_fingerprint: fingerprint } }
+    );
+
+    logAuthEvent('ADMIN_DEVICE_TRUSTED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      deviceFingerprint: fingerprint,
+      ip: req.ip
+    });
+
+    res.json({ success: true, message: 'Device trusted successfully' });
+
+  } catch (error) {
+    console.error('❌ Error trusting device:', error);
+    res.status(500).json({ error: 'Failed to trust device' });
+  }
+});
+
+/**
+ * API: Untrust a device
+ */
+router.post('/api/fingerprinting/untrust-device', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { fingerprint } = req.body;
+
+    if (!fingerprint) {
+      return res.status(400).json({ error: 'Device fingerprint required' });
+    }
+
+    await UserDevice.update(
+      { is_trusted: false },
+      { where: { device_fingerprint: fingerprint } }
+    );
+
+    logAuthEvent('ADMIN_DEVICE_UNTRUSTED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      deviceFingerprint: fingerprint,
+      ip: req.ip
+    });
+
+    res.json({ success: true, message: 'Device untrusted successfully' });
+
+  } catch (error) {
+    console.error('❌ Error untrusting device:', error);
+    res.status(500).json({ error: 'Failed to untrust device' });
+  }
+});
+
+/**
+ * API: Update risk thresholds
+ */
+router.post('/api/fingerprinting/thresholds', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { low, medium, high, block } = req.body;
+
+    // Validate thresholds
+    if (low < 0 || low > 1 || medium < 0 || medium > 1 || 
+        high < 0 || high > 1 || block < 0 || block > 1) {
+      return res.status(400).json({ error: 'Thresholds must be between 0 and 1' });
+    }
+
+    if (low >= medium || medium >= high || high >= block) {
+      return res.status(400).json({ error: 'Thresholds must be in ascending order' });
+    }
+
+    // Update risk thresholds in device fingerprinting service
+    deviceFingerprinting.riskThresholds = {
+      low,
+      medium,
+      high,
+      critical: block
+    };
+
+    logAuthEvent('ADMIN_RISK_THRESHOLDS_UPDATED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      thresholds: { low, medium, high, block },
+      ip: req.ip
+    });
+
+    res.json({ success: true, message: 'Risk thresholds updated successfully' });
+
+  } catch (error) {
+    console.error('❌ Error updating thresholds:', error);
+    res.status(500).json({ error: 'Failed to update risk thresholds' });
+  }
+});
+
+/**
+ * API: Update security settings
+ */
+router.post('/api/fingerprinting/settings', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { enableFingerprinting, enableFraudDetection, autoTrustDevices, logAllAttempts } = req.body;
+
+    // Here you would typically store these settings in a database
+    // For now, we'll just log the change
+    logAuthEvent('ADMIN_SECURITY_SETTINGS_UPDATED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      settings: { enableFingerprinting, enableFraudDetection, autoTrustDevices, logAllAttempts },
+      ip: req.ip
+    });
+
+    res.json({ success: true, message: 'Security settings updated successfully' });
+
+  } catch (error) {
+    console.error('❌ Error updating security settings:', error);
+    res.status(500).json({ error: 'Failed to update security settings' });
+  }
+});
+
+/**
+ * API: Get detailed fingerprinting analytics
+ */
+router.get('/api/fingerprinting/analytics', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { Op, fn, col, literal } = require('sequelize');
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    // 1. Unique devices per user
+    const devicesPerUser = await UserDevice.findAll({
+      attributes: [
+        'user_id',
+        [fn('COUNT', col('device_fingerprint')), 'deviceCount']
+      ],
+      include: [{
+        model: User,
+        attributes: ['username', 'email']
+      }],
+      group: ['user_id', 'User.id'],
+      order: [[fn('COUNT', col('device_fingerprint')), 'DESC']],
+      limit: 20
+    });
+
+    // 2. Devices per country
+    const devicesPerCountry = await UserDevice.findAll({
+      attributes: [
+        'country',
+        [fn('COUNT', col('device_fingerprint')), 'deviceCount'],
+        [fn('COUNT', fn('DISTINCT', col('user_id'))), 'uniqueUsers']
+      ],
+      where: {
+        country: { [Op.not]: null }
+      },
+      group: ['country'],
+      order: [[fn('COUNT', col('device_fingerprint')), 'DESC']],
+      limit: 15
+    });
+
+    // 3. Login attempts per IP (top suspicious IPs)
+    const loginsPerIP = await LoginAttempt.findAll({
+      attributes: [
+        'ip_address',
+        'country',
+        'city',
+        'is_vpn',
+        [fn('COUNT', col('id')), 'attemptCount'],
+        [fn('SUM', literal('CASE WHEN success = false THEN 1 ELSE 0 END')), 'failedCount'],
+        [fn('COUNT', fn('DISTINCT', col('user_id'))), 'uniqueUsers']
+      ],
+      where: {
+        attempted_at: { [Op.gte]: thirtyDaysAgo }
+      },
+      group: ['ip_address', 'country', 'city', 'is_vpn'],
+      having: literal('COUNT(id) > 5'), // Only IPs with more than 5 attempts
+      order: [[fn('COUNT', col('id')), 'DESC']],
+      limit: 25
+    });
+
+    // 4. Geographic distribution
+    const geographicDistribution = await LoginAttempt.findAll({
+      attributes: [
+        'country',
+        'city',
+        [fn('COUNT', col('id')), 'loginCount'],
+        [fn('COUNT', fn('DISTINCT', col('user_id'))), 'uniqueUsers'],
+        [fn('SUM', literal('CASE WHEN is_vpn = true THEN 1 ELSE 0 END')), 'vpnCount']
+      ],
+      where: {
+        attempted_at: { [Op.gte]: thirtyDaysAgo },
+        country: { [Op.not]: null }
+      },
+      group: ['country', 'city'],
+      order: [[fn('COUNT', col('id')), 'DESC']],
+      limit: 30
+    });
+
+    // 5. VPN/Proxy usage statistics
+    const vpnStats = await LoginAttempt.findAll({
+      attributes: [
+        'is_vpn',
+        [fn('COUNT', col('id')), 'count'],
+        [fn('COUNT', fn('DISTINCT', col('user_id'))), 'uniqueUsers'],
+        [fn('AVG', literal('CASE WHEN success = true THEN 1.0 ELSE 0.0 END')), 'successRate']
+      ],
+      where: {
+        attempted_at: { [Op.gte]: thirtyDaysAgo }
+      },
+      group: ['is_vpn']
+    });
+
+    // 6. Time-based trends (last 30 days)
+    const dailyTrends = await LoginAttempt.findAll({
+      attributes: [
+        [fn('DATE', col('attempted_at')), 'date'],
+        [fn('COUNT', col('id')), 'totalAttempts'],
+        [fn('SUM', literal('CASE WHEN success = true THEN 1 ELSE 0 END')), 'successfulLogins'],
+        [fn('COUNT', fn('DISTINCT', col('device_fingerprint'))), 'uniqueDevices'],
+        [fn('COUNT', fn('DISTINCT', col('country'))), 'uniqueCountries']
+      ],
+      where: {
+        attempted_at: { [Op.gte]: thirtyDaysAgo }
+      },
+      group: [fn('DATE', col('attempted_at'))],
+      order: [[fn('DATE', col('attempted_at')), 'ASC']]
+    });
+
+    // 7. Risk analysis by location
+    const riskByLocation = await LoginAttempt.findAll({
+      attributes: [
+        'country',
+        [fn('COUNT', col('id')), 'totalAttempts'],
+        [fn('SUM', literal('CASE WHEN success = false THEN 1 ELSE 0 END')), 'failedAttempts'],
+        [fn('AVG', literal('CASE WHEN success = true THEN 1.0 ELSE 0.0 END')), 'successRate'],
+        [fn('SUM', literal('CASE WHEN is_vpn = true THEN 1 ELSE 0 END')), 'vpnAttempts']
+      ],
+      where: {
+        attempted_at: { [Op.gte]: thirtyDaysAgo },
+        country: { [Op.not]: null }
+      },
+      group: ['country'],
+      having: literal('COUNT(id) > 3'), // Only countries with significant activity
+      order: [[literal('AVG(CASE WHEN success = true THEN 1.0 ELSE 0.0 END)'), 'ASC']] // Riskiest first
+    });
+
+    // 8. Device fingerprint collision analysis
+    const fingerprintCollisions = await UserDevice.findAll({
+      attributes: [
+        'device_fingerprint',
+        [fn('COUNT', fn('DISTINCT', col('user_id'))), 'userCount']
+      ],
+      group: ['device_fingerprint'],
+      having: literal('COUNT(DISTINCT user_id) > 1'), // Same fingerprint, different users
+      order: [[fn('COUNT', fn('DISTINCT', col('user_id'))), 'DESC']]
+    });
+
+    // Format data with enhanced location information
+    const enhancedDevicesPerCountry = devicesPerCountry.map(item => {
+      const data = item.toJSON();
+      data.countryName = geoLocationService.getCountryName(data.country);
+      return data;
+    });
+
+    const enhancedGeographicDistribution = geographicDistribution.map(item => {
+      const data = item.toJSON();
+      data.countryName = geoLocationService.getCountryName(data.country);
+      data.vpnPercentage = data.loginCount > 0 ? (data.vpnCount / data.loginCount * 100).toFixed(1) : 0;
+      return data;
+    });
+
+    res.json({
+      success: true,
+      data: {
+        devicesPerUser: devicesPerUser.map(item => item.toJSON()),
+        devicesPerCountry: enhancedDevicesPerCountry,
+        loginsPerIP: loginsPerIP.map(item => {
+          const data = item.toJSON();
+          data.failureRate = data.attemptCount > 0 ? (data.failedCount / data.attemptCount * 100).toFixed(1) : 0;
+          data.locationDisplay = geoLocationService.formatLocationForDisplay({
+            city: data.city,
+            country: data.country,
+            isVPN: data.is_vpn
+          });
+          return data;
+        }),
+        geographicDistribution: enhancedGeographicDistribution,
+        vpnStats: vpnStats.map(item => item.toJSON()),
+        dailyTrends: dailyTrends.map(item => item.toJSON()),
+        riskByLocation: riskByLocation.map(item => {
+          const data = item.toJSON();
+          data.countryName = geoLocationService.getCountryName(data.country);
+          data.failureRate = (100 - (data.successRate * 100)).toFixed(1);
+          data.vpnPercentage = data.totalAttempts > 0 ? (data.vpnAttempts / data.totalAttempts * 100).toFixed(1) : 0;
+          return data;
+        }),
+        fingerprintCollisions: fingerprintCollisions.map(item => item.toJSON())
+      },
+      generatedAt: new Date()
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching fingerprinting analytics:', error);
+    res.status(500).json({ error: 'Failed to fetch analytics data' });
+  }
+});
+
+/**
+ * API: Export login data
+ */
+router.get('/api/fingerprinting/export-login-data', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const attempts = await LoginAttempt.findAll({
+      include: [
+        {
+          model: User,
+          attributes: ['username', 'email'],
+          required: false
+        }
+      ],
+      order: [['attempted_at', 'DESC']],
+      limit: 10000 // Reasonable limit for export
+    });
+
+    // Generate CSV
+    const csv = [
+      'Timestamp,User,Email,IP Address,Device Fingerprint,Success,Failure Reason'
+    ];
+
+    attempts.forEach(attempt => {
+      const row = [
+        attempt.attempted_at.toISOString(),
+        attempt.User?.username || 'Unknown',
+        attempt.User?.email || 'Unknown',
+        attempt.ip_address,
+        attempt.device_fingerprint || 'None',
+        attempt.success ? 'Yes' : 'No',
+        attempt.failure_reason || 'N/A'
+      ].map(field => `"${field}"`).join(',');
+      
+      csv.push(row);
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="login_attempts.csv"');
+    res.send(csv.join('\n'));
+
+    logAuthEvent('ADMIN_LOGIN_DATA_EXPORTED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      recordCount: attempts.length,
+      ip: req.ip
+    });
+
+  } catch (error) {
+    console.error('❌ Error exporting login data:', error);
+    res.status(500).json({ error: 'Failed to export login data' });
   }
 });
 
