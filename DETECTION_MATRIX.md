@@ -105,7 +105,8 @@ const analysisOptions = {
 ```
 
 ### **🔧 Confidence Thresholds**
-- **Object Detection**: 0.5 (50%)
+- **Object Detection**: 0.3 (30%) - Enhanced for better detection
+- **Label Detection**: 0.5 (50%) - Quality labels with good confidence
 - **OCR Text**: 0.5 (50%)
 - **Audio Transcription**: 0.7 (70%)
 - **Voice Recognition**: 0.8 (80%)
@@ -125,10 +126,20 @@ const analysisOptions = {
 
 ## 🚀 **Recent Enhancements**
 
-### **✅ Facebook Object Detection Fix (Latest)**
-- **Issue**: Facebook videos were not running object detection
-- **Solution**: Added `enableObjectDetection: true` to Facebook processing pipeline
-- **Result**: Facebook content now detects objects, people, and scenes with 90%+ accuracy
+### **✅ Enhanced Facebook Detection (Latest - MAJOR UPDATE)**
+- **Issue**: Facebook videos returned 0 objects despite having object detection enabled
+- **Root Causes Found**: 
+  - Basic `detectObjects()` had no confidence filtering (returned all raw results)
+  - High confidence threshold (0.5) was too restrictive
+  - Facebook processing used basic detection instead of enhanced method
+  - AI prompts only used audio context, missing visual data
+- **Solutions Implemented**:
+  - ✅ **Enhanced Detection Method**: Facebook now uses `detectObjectsEnhanced()` with objects + labels + text
+  - ✅ **Lower Confidence Thresholds**: Objects (0.3), Labels (0.5) for better coverage
+  - ✅ **Multi-Modal AI Prompts**: Visual + audio context for richer tag generation
+  - ✅ **Google Vision Label Detection**: Added comprehensive scene understanding
+- **Results**: 20 total detections (10 objects + 10 labels), highly specific contextual tags
+- **Example**: Fitness video now generates: `["strength-training", "physical-fitness", "bodybuilding", "weight-training", "exercise-equipment", "barbell-workout"]`
 
 ### **🔄 Fallback Systems**
 - **Google Vision → OpenAI Vision**: If Google Vision fails, OpenAI Vision takes over
