@@ -1,0 +1,70 @@
+# DaySave Project Cursor Rules
+
+## Security & Protocol Rules
+
+### Content Security Policy (CSP) Compliance
+- **NEVER** use inline scripts in HTML/EJS templates - always create external `.js` files
+- **NEVER** use inline event handlers (`onclick`, `onchange`, `onerror`, `onload`, etc.) - use `addEventListener` in external JS files
+- **NEVER** embed JavaScript directly in `<script>` tags within HTML - move all JavaScript to external files in `public/js/`
+- **ALWAYS** use external script files with proper CSP-compliant event handling
+- **ALWAYS** include `'unsafe-inline'` removal as a goal - prefer data attributes and external handlers
+
+### SSL/HTTPS Protocol Rules for Development
+- **NEVER** hardcode `https://localhost` URLs in JavaScript - use relative paths or protocol-relative URLs
+- **ALWAYS** use `http://localhost` for development environments
+- **NEVER** force HTTPS redirects in development mode
+- **ALWAYS** check `window.location.hostname === 'localhost'` before applying localhost-specific fixes
+- **NEVER** set `secure: true` for cookies in development
+- **ALWAYS** disable HSTS and upgrade-insecure-requests in development mode
+- **ALWAYS** use the `getCorrectUrl()` helper function for localhost protocol fixes
+
+### File Upload Security
+- **ALWAYS** return JSON responses from upload endpoints - avoid redirects that can cause protocol issues
+- **NEVER** use `multipart/form-data` with CSRF tokens - skip CSRF for file uploads
+- **ALWAYS** include `blob:` in CSP `imgSrc` and `mediaSrc` directives for file operations
+- **ALWAYS** handle file upload errors gracefully with proper error messages
+
+### JavaScript File Organization
+- Create specific external JS files for functionality:
+  - `localhost-protocol-fix.js` for protocol handling
+  - `form-handlers.js` for form event handling  
+  - `image-error-handlers.js` for image fallbacks
+  - `content-reprocess.js` for reprocessing functionality
+- **NEVER** put JavaScript directly in EJS templates
+- **ALWAYS** use proper module patterns and avoid global scope pollution
+- **ALWAYS** include cache-busting parameters: `?v=<%= Date.now() %>`
+
+### Error Prevention Patterns
+- Use `data-*` attributes instead of inline event handlers
+- Use `addEventListener` instead of `on*` attributes  
+- Use relative URLs instead of absolute localhost URLs
+- Test both HTTP and HTTPS scenarios in development
+- **ALWAYS** include error handling for AJAX requests
+- **ALWAYS** provide user feedback for async operations
+
+### Database & Model Rules
+- **ALWAYS** create database backups before model changes: `node scripts/backup-database.js`
+- **ALWAYS** test migrations in development before production
+- **ALWAYS** use proper Sequelize validation and constraints
+- **NEVER** expose sensitive data in API responses
+
+### Git & Version Control
+- **ALWAYS** commit related changes together with descriptive messages
+- **ALWAYS** update `TASK.md` and TODO lists when completing work
+- **ALWAYS** follow the pattern: `git add . && git commit -m "descriptive message" && git push`
+- **ALWAYS** include tests and documentation updates in the same commit
+
+### Code Style & Structure
+- **ALWAYS** use Bootstrap for styling (no custom CSS frameworks)
+- **ALWAYS** follow RESTful principles for API routes
+- **ALWAYS** include proper error handling middleware
+- **ALWAYS** use external JavaScript files kept in `public/js/`
+- **ALWAYS** reference the `AGENT.md` and `DaySave.app.md` for project context
+- **NEVER** expose API keys or secrets in client-side code
+
+### Testing & Quality Assurance
+- **ALWAYS** test file uploads with different file types (PDF, images, videos)
+- **ALWAYS** test both localhost and production environments
+- **ALWAYS** verify CSP compliance in browser dev tools
+- **ALWAYS** check for console errors before deploying
+- **ALWAYS** validate that all external scripts load properly

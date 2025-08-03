@@ -182,6 +182,29 @@ npm run test:health
 
 ---
 
+## 🔒 **SECURITY & PROTOCOL GUIDELINES**
+
+### **CSP Compliance**
+- ❌ **NEVER** use inline scripts or event handlers in HTML/EJS
+- ✅ **ALWAYS** create external `.js` files in `public/js/`
+- ✅ **ALWAYS** use `addEventListener` instead of `onclick` attributes
+- ✅ **ALWAYS** move JavaScript from `<script>` tags to external files
+
+### **Development SSL/HTTPS**
+- ❌ **NEVER** hardcode `https://localhost` URLs
+- ✅ **ALWAYS** use `http://localhost` for development
+- ✅ **ALWAYS** disable HSTS and upgrade-insecure-requests in dev mode
+- ✅ **ALWAYS** return JSON from upload routes (avoid redirects)
+
+### **Quick Security Check**
+```bash
+# Check for CSP violations in browser console
+# Look for "Content Security Policy directive" errors
+# Verify no "ERR_SSL_PROTOCOL_ERROR" in network tab
+```
+
+---
+
 ## 🚀 **QUICK COMMANDS REFERENCE**
 
 ```bash
