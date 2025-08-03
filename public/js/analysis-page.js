@@ -3,10 +3,23 @@
  * Handles functionality for the dedicated AI analysis results pages
  */
 
+// Initialize when DOM is loaded (vanilla JS)
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('Analysis Page JavaScript loaded');
+  
+  // Handle trigger analysis button clicks (CSP-compliant)
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('[data-action="trigger-analysis"]')) {
+      e.preventDefault();
+      triggerAnalysis(e);
+    }
+  });
+});
+
 /**
  * Trigger analysis for content/file that hasn't been processed yet
  */
-function triggerAnalysis() {
+function triggerAnalysis(event) {
   // Get the current page URL to determine if this is content or file analysis
   const currentPath = window.location.pathname;
   const isFile = currentPath.includes('/files/');
@@ -18,20 +31,60 @@ function triggerAnalysis() {
   }
   
   // Show loading state
-  const button = event.target;
-  const originalText = button.innerHTML;
-  button.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Starting Analysis...';
-  button.disabled = true;
+  const button = event ? event.target.closest('button') : null;
+  let originalText = '';
+  
+  if (button) {
+    originalText = button.innerHTML;
+    button.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Starting Analysis...';
+    button.disabled = true;
+  }
   
   // Determine the endpoint based on content type
-  const endpoint = isFile ? `/files/${id}/analysis` : `/content/${id}/analysis`;
+  const endpoint = isFile ? `/files/${id}/reprocess` : `/content/${id}/reprocess`;
   
-  // For now, show a message that this will be implemented
-  setTimeout(() => {
-    alert('Analysis trigger functionality will be implemented here.\n\nEndpoint: ' + endpoint);
-    button.innerHTML = originalText;
-    button.disabled = false;
-  }, 1000);
+  // Trigger the actual reprocessing
+  triggerReprocessing(endpoint, button, originalText);
+}
+
+/**
+ * Trigger actual reprocessing via API
+ */
+async function triggerReprocessing(endpoint, button, originalText) {
+  try {
+    console.log('🔄 Triggering reprocessing:', endpoint);
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.success) {
+      // Success - show success message and reload page to show updated analysis
+      alert('✅ Reprocessing started successfully! The page will reload to show the updated analysis.');
+      window.location.reload();
+    } else {
+      // Error from server
+      const errorMsg = result.message || result.error || 'Unknown error occurred';
+      alert('❌ Reprocessing failed: ' + errorMsg);
+      console.error('Reprocessing error:', result);
+    }
+  } catch (error) {
+    // Network or other error
+    console.error('Reprocessing request failed:', error);
+    alert('❌ Failed to start reprocessing: ' + error.message);
+  } finally {
+    // Restore button state
+    if (button && originalText) {
+      button.innerHTML = originalText;
+      button.disabled = false;
+    }
+  }
 }
 
 /**

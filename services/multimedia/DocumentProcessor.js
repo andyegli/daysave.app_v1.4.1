@@ -19,7 +19,7 @@ class DocumentProcessor extends BaseMediaProcessor {
         // Initialize Google AI
         if (process.env.GOOGLE_AI_API_KEY) {
             this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
-            this.model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+            this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         } else {
             console.warn('DocumentProcessor: Google AI API key not found. Document analysis will be limited.');
         }
@@ -33,7 +33,7 @@ class DocumentProcessor extends BaseMediaProcessor {
             // Initialize any required components
             if (!this.genAI && process.env.GOOGLE_AI_API_KEY) {
                 this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
-                this.model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+                this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             }
             
             // Set processing capabilities
@@ -191,18 +191,57 @@ class DocumentProcessor extends BaseMediaProcessor {
     }
 
     /**
+     * Clean and preprocess extracted text for AI analysis
+     */
+    cleanTextForAnalysis(text) {
+        if (!text || typeof text !== 'string') return '';
+        
+        return text
+            // Remove control characters and non-printable chars (except \n, \r, \t)
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+            // Normalize whitespace - replace multiple spaces/tabs with single space
+            .replace(/[ \t]+/g, ' ')
+            // Normalize line breaks - replace multiple newlines with double newline
+            .replace(/\r\n|\r/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            // Trim leading/trailing whitespace
+            .trim()
+            // Remove excessive leading whitespace on each line
+            .split('\n')
+            .map(line => line.trim())
+            .join('\n')
+            // Remove empty lines at start and end
+            .replace(/^\n+|\n+$/g, '')
+            // Ensure we have actual content
+            .substring(0, 50000); // Limit to 50k chars
+    }
+
+    /**
      * Perform AI analysis on extracted text
      */
     async performAIAnalysis(text, metadata = {}) {
+        // Clean the text before analysis
+        const cleanedText = this.cleanTextForAnalysis(text);
+        
+        console.log(`🧹 Text cleaning stats:
+  📊 Original length: ${text.length} chars
+  📋 Cleaned length: ${cleanedText.length} chars  
+  📖 First 200 chars: "${cleanedText.substring(0, 200)}..."`);
+        
+        if (!cleanedText || cleanedText.length < 10) {
+            console.log('⚠️ Text too short after cleaning, using fallback');
+            return this.createFallbackAnalysis(text, metadata);
+        }
+        
         // Try Google AI (Gemini) first
         if (this.model) {
             try {
-                const prompt = this.createAnalysisPrompt(text, metadata);
+                const prompt = this.createAnalysisPrompt(cleanedText, metadata);
                 const result = await this.model.generateContent(prompt);
                 const response = result.response;
                 const analysisText = response.text();
 
-                return this.parseAIResponse(analysisText, text);
+                return this.parseAIResponse(analysisText, cleanedText);
 
             } catch (error) {
                 console.error('Google AI analysis failed:', error);
@@ -214,7 +253,7 @@ class DocumentProcessor extends BaseMediaProcessor {
         if (process.env.OPENAI_API_KEY) {
             try {
                 console.log('🔄 Falling back to OpenAI for document analysis...');
-                return await this.performOpenAIAnalysis(text, metadata);
+                return await this.performOpenAIAnalysis(cleanedText, metadata);
             } catch (error) {
                 console.error('OpenAI analysis failed:', error);
             }
@@ -291,13 +330,16 @@ Document content:
 ${preview}
 
 Requirements:
-- Focus on the ACTUAL TEXT CONTENT, not technical file structure
-- If this is placeholder text (like Lorem Ipsum), identify it as such and provide appropriate description
+- CAREFULLY READ the actual text content and identify what it's about
+- This could be technical documentation, instructions, maps, guides, or educational content
+- If you see terms like "map", "tile", "robot", "track", "print", "instructions" - treat this as valid technical content
+- DO NOT assume content is "unintelligible" or "random" - look for patterns and meaning
+- For technical/instructional content: provide descriptive titles like "Robot Line Following Map Instructions" or "Technical Guide"
 - Title should describe what the document contains or its purpose
-- Summary should explain the document's content or nature
-- Tags should reflect the content type and purpose (e.g., "sample", "lorem-ipsum", "placeholder", "text-document")
-- Category should be the document's purpose (sample, template, report, letter, etc.)
-- DO NOT describe file formats, ZIP archives, or XML structure
+- Summary should explain the document's content, purpose, or instructions
+- Tags should reflect the actual content type (e.g., "robotics", "instructions", "map", "technical", "guide", "tutorial")
+- Category should match the document type (instructions, guide, manual, map, technical, educational, etc.)
+- Focus on MEANING and PURPOSE, not just surface-level text analysis
 - Return only valid JSON, no additional text
         `;
     }
