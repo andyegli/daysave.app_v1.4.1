@@ -317,6 +317,7 @@ class MultimediaAnalyzer {
       speaker_identification: true,
       enableSummarization: true,
       enableSentimentAnalysis: true,
+      enableObjectDetection: true,
       ...options
     };
 
