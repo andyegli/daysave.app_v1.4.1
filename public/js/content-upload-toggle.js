@@ -361,8 +361,19 @@ function getFileIcon(mimeType) {
   }
 }
 
+// Prevent duplicate uploads with a submission lock
+let isUploading = false;
+
 // Handle file upload form submission
 async function handleFileUploadSubmission() {
+  // Prevent duplicate submissions
+  if (isUploading) {
+    console.log('🚫 Upload already in progress, ignoring duplicate submission');
+    return;
+  }
+  
+  isUploading = true;
+  
   const fileInput = document.getElementById('contentFiles');
   const progressSection = document.getElementById('uploadProgressSection');
   const progressBar = document.getElementById('uploadProgressBar');
@@ -373,6 +384,7 @@ async function handleFileUploadSubmission() {
   // Validate files are selected
   if (!fileInput.files || fileInput.files.length === 0) {
     showUploadAlert('Please select at least one file to upload.', 'warning');
+    isUploading = false; // Reset lock
     return;
   }
   
@@ -511,7 +523,8 @@ async function handleFileUploadSubmission() {
     
     showUploadAlert(`Upload failed: ${errorMessage}`, 'danger');
   } finally {
-    // Reset UI
+    // Reset UI and upload lock
+    isUploading = false; // Reset upload lock
     submitBtn.disabled = false;
     submitBtn.innerHTML = originalBtnText;
     if (progressSection) progressSection.style.display = 'none';

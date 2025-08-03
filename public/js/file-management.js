@@ -124,17 +124,28 @@ $(document).ready(function() {
     });
   }
   
-  /**
-   * Initialize upload modal functionality
-   */
-  function initializeUploadModal() {
-    const uploadForm = $('#uploadForm');
-    
-    if (uploadForm.length) {
-      uploadForm.on('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
+  // Prevent duplicate uploads with a submission lock
+let isFileManagementUploading = false;
+
+/**
+ * Initialize upload modal functionality
+ */
+function initializeUploadModal() {
+  const uploadForm = $('#uploadForm');
+  
+  if (uploadForm.length) {
+    uploadForm.on('submit', function(e) {
+      e.preventDefault();
+      
+      // Prevent duplicate submissions
+      if (isFileManagementUploading) {
+        console.log('🚫 File management upload already in progress, ignoring duplicate submission');
+        return;
+      }
+      
+      isFileManagementUploading = true;
+      
+      const formData = new FormData(this);
         const submitBtn = $(this).find('button[type="submit"]');
         const originalText = submitBtn.html();
         
@@ -184,7 +195,8 @@ $(document).ready(function() {
             showAlert('error', errorMessage);
           },
           complete: function() {
-            // Restore button
+            // Restore button and reset upload lock
+            isFileManagementUploading = false; // Reset upload lock
             submitBtn.prop('disabled', false).html(originalText);
           }
         });

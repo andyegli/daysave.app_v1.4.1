@@ -1104,6 +1104,14 @@ router.post('/upload', [
       });
     }
 
+    // Add debugging to track duplicate uploads
+    const requestId = `${req.user.id}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    console.log(`🔧 UPLOAD REQUEST: ${requestId} - User: ${req.user.id}, Files: ${req.files.length}, Session: ${req.sessionID}`);
+    
+    for (const file of req.files) {
+      console.log(`📄 File: ${file.originalname} (${file.size} bytes) - Request: ${requestId}`);
+    }
+
     const uploadResults = [];
     const uploadErrors = [];
 
