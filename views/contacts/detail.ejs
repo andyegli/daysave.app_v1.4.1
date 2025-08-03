@@ -281,7 +281,7 @@
               <!-- Addresses -->
               <% if (contact.addresses && contact.addresses.length) { %>
                 <div class="info-card">
-                  <h5><i class="fas fa-map-marker-alt text-danger"></i> Addresses</h5>
+                  <h5><i class="fas fa-map-marker-alt text-danger" style="pointer-events: none;"></i> Addresses</h5>
                   <% contact.addresses.forEach(function(address) { %>
                     <% if (address && address.value && address.value.trim() !== '') { %>
                       <div class="info-item">
@@ -379,6 +379,49 @@
           <% } %>
         </div>
 
+        <!-- Groups and Relationships Section -->
+        <div class="row mt-4">
+          <!-- Contact Groups -->
+          <div class="col-lg-6">
+            <div class="info-card">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-users text-primary"></i> Groups</h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="showManageContactGroups('<%= contact.id %>')">
+                  <i class="fas fa-cog"></i> Manage
+                </button>
+              </div>
+              <div id="contactGroupsList">
+                <div class="text-center py-2">
+                  <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <small class="text-muted d-block mt-1">Loading groups...</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact Relationships -->
+          <div class="col-lg-6">
+            <div class="info-card">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-sitemap text-success"></i> Relationships</h5>
+                <button class="btn btn-sm btn-outline-success" onclick="showContactRelationships('<%= contact.id %>')">
+                  <i class="fas fa-eye"></i> View All
+                </button>
+              </div>
+              <div id="contactRelationshipsList">
+                <div class="text-center py-2">
+                  <div class="spinner-border spinner-border-sm text-success" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <small class="text-muted d-block mt-1">Loading relationships...</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Action Buttons -->
         <div class="action-buttons">
           <a href="/contacts/<%= contact.id %>/edit" class="btn btn-primary btn-action">
@@ -418,5 +461,8 @@
   <!-- Use modern map modal instead of old Google Maps SDK -->
   <script src="/js/contact-map-modal-new.js"></script>
   <script src="/js/contact-detail.js"></script>
+  <script src="/js/contact-groups.js?v=<%= Date.now() %>"></script>
+  <script src="/js/contact-relationships.js?v=<%= Date.now() %>"></script>
+  <script src="/js/contact-detail-groups-relationships.js?v=<%= Date.now() %>"></script>
 </body>
 </html> 

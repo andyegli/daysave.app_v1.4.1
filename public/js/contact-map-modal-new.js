@@ -16,6 +16,7 @@ class ModernContactMapModal {
   setupMapButtons() {
     // Handle map buttons in both contact list and detail views
     document.addEventListener('click', (e) => {
+      // Only handle elements with show-map class, not just any map icon
       const mapButton = e.target.closest('.show-map');
       if (mapButton) {
         e.preventDefault();
@@ -29,6 +30,14 @@ class ModernContactMapModal {
           console.warn('ModernContactMapModal: Invalid address data:', address);
           this.showAddressError('Address information is not available for this contact.');
         }
+        return;
+      }
+      
+      // Prevent accidental clicks on decorative map icons
+      const mapIcon = e.target.closest('.fa-map-marker-alt, .fa-map, .bi-geo-alt-fill');
+      if (mapIcon && !mapIcon.closest('.show-map')) {
+        console.log('Decorative map icon clicked - ignoring');
+        e.preventDefault();
       }
     });
   }
@@ -41,11 +50,16 @@ class ModernContactMapModal {
       });
       
       // Fix accessibility issue by managing focus properly
-      modal.addEventListener('hide.bs.modal', () => {
-        // Remove focus from any focused elements inside the modal
+      modal.addEventListener('hide.bs.modal', (event) => {
+        // Prevent the modal from hiding if there are focused elements
         const focusedElement = modal.querySelector(':focus');
         if (focusedElement) {
-          focusedElement.blur();
+          // Use setTimeout to handle focus after the current event loop
+          setTimeout(() => {
+            focusedElement.blur();
+            // Remove aria-hidden temporarily to prevent conflict
+            modal.removeAttribute('aria-hidden');
+          }, 0);
         }
       });
       
@@ -56,6 +70,18 @@ class ModernContactMapModal {
           mapContainer.innerHTML = '';
         }
         this.currentAddress = null;
+        // Ensure aria-hidden is properly set after cleanup
+        setTimeout(() => {
+          modal.setAttribute('aria-hidden', 'true');
+        }, 100);
+      });
+      
+      // Additional accessibility fix for button clicks inside modal
+      modal.addEventListener('click', (e) => {
+        if (e.target.matches('[data-bs-dismiss="modal"]')) {
+          // Force blur on close buttons before hiding
+          e.target.blur();
+        }
       });
     }
   }
