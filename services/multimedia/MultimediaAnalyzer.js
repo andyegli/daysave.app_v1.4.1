@@ -660,6 +660,44 @@ class MultimediaAnalyzer {
                 // Add video-specific tags
                 results.auto_tags.push('video', 'social_media');
                 
+                // Extract frame for object detection
+                if (analysisOptions.enableObjectDetection && facebookResult.filePath) {
+                  try {
+                    if (user_id && content_id) {
+                      const logger = require('../../config/logger');
+                      logger.multimedia.progress(user_id, content_id, 'object_detection_start', 35);
+                    }
+                    
+                    console.log(`🔍 Extracting frame for object detection from Facebook video: ${facebookResult.filePath}`);
+                    const framePath = await this.extractVideoFrame(facebookResult.filePath);
+                    
+                    console.log(`🔍 Running object detection on extracted frame: ${framePath}`);
+                    results.objects = await this.detectObjects(framePath);
+                    
+                    if (results.objects && results.objects.length > 0) {
+                      console.log(`✅ Detected ${results.objects.length} objects in Facebook video:`, 
+                        results.objects.map(obj => `${obj.name} (${obj.confidence.toFixed(2)})`).join(', '));
+                    } else {
+                      console.log('ℹ️ No objects detected in Facebook video frame');
+                    }
+                    
+                    // Clean up temporary frame
+                    if (require('fs').existsSync(framePath)) {
+                      require('fs').unlinkSync(framePath);
+                    }
+                    
+                    if (user_id && content_id) {
+                      const logger = require('../../config/logger');
+                      logger.multimedia.progress(user_id, content_id, 'object_detection_complete', 40, {
+                        objectsDetected: results.objects ? results.objects.length : 0
+                      });
+                    }
+                  } catch (objectDetectionError) {
+                    console.error('❌ Failed to detect objects in Facebook video:', objectDetectionError);
+                    results.objects = []; // Ensure we have an empty array
+                  }
+                }
+                
                 // Generate thumbnails for Facebook video
                 if (analysisOptions.thumbnails && facebookResult.filePath) {
                   try {
