@@ -355,6 +355,13 @@ class PerformanceOptimizer extends EventEmitter {
       'audio/wav': '.wav',
       'audio/ogg': '.ogg',
       'audio/mp4': '.m4a',
+      // Document types
+      'application/pdf': '.pdf',
+      'application/msword': '.doc',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+      'text/plain': '.txt',
+      'text/rtf': '.rtf',
+      'application/rtf': '.rtf',
       'application/octet-stream': '.bin'
     };
     
