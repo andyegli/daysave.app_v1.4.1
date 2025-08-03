@@ -40,9 +40,9 @@ class DeviceFingerprintingAdmin {
   async loadDashboardData() {
     try {
       const [overview, loginAttempts, devices] = await Promise.all([
-        this.fetchData('/api/fingerprinting/overview'),
-        this.fetchData('/api/fingerprinting/login-attempts'),
-        this.fetchData('/api/fingerprinting/devices')
+        this.fetchData('/admin/api/fingerprinting/overview'),
+        this.fetchData('/admin/api/fingerprinting/login-attempts'),
+        this.fetchData('/admin/api/fingerprinting/devices')
       ]);
 
       this.updateOverviewCards(overview);
@@ -355,7 +355,7 @@ class DeviceFingerprintingAdmin {
         block: parseFloat(document.getElementById('blockThreshold').value)
       };
 
-      const response = await fetch('/api/fingerprinting/thresholds', {
+      const response = await fetch('/admin/api/fingerprinting/thresholds', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -394,7 +394,7 @@ class DeviceFingerprintingAdmin {
 // Global functions for button onclick handlers
 window.refreshLoginAttempts = async function() {
   try {
-    const attempts = await adminDashboard.fetchData('/api/fingerprinting/login-attempts');
+    const attempts = await adminDashboard.fetchData('/admin/api/fingerprinting/login-attempts');
     adminDashboard.updateLoginAttemptsTable(attempts);
     adminDashboard.showSuccess('Login attempts refreshed');
   } catch (error) {
@@ -404,7 +404,7 @@ window.refreshLoginAttempts = async function() {
 
 window.refreshDevices = async function() {
   try {
-    const devices = await adminDashboard.fetchData('/api/fingerprinting/devices');
+    const devices = await adminDashboard.fetchData('/admin/api/fingerprinting/devices');
     adminDashboard.updateDevicesDisplay(devices);
     adminDashboard.showSuccess('Devices refreshed');
   } catch (error) {
@@ -419,7 +419,7 @@ window.viewAttemptDetails = function(attemptId) {
 
 window.trustDevice = async function(fingerprint) {
   try {
-    const response = await fetch('/api/fingerprinting/trust-device', {
+    const response = await fetch('/admin/api/fingerprinting/trust-device', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -446,7 +446,7 @@ window.viewDeviceDetails = function(fingerprint) {
 window.toggleDeviceTrust = async function(fingerprint, currentTrust) {
   try {
     const action = currentTrust ? 'untrust' : 'trust';
-    const response = await fetch(`/api/fingerprinting/${action}-device`, {
+    const response = await fetch(`/admin/api/fingerprinting/${action}-device`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -467,7 +467,7 @@ window.toggleDeviceTrust = async function(fingerprint, currentTrust) {
 
 window.exportLoginData = function() {
   // Implement CSV export
-  window.open('/api/fingerprinting/export-login-data');
+  window.open('/admin/api/fingerprinting/export-login-data');
 };
 
 window.bulkTrustDevices = function() {
@@ -489,7 +489,7 @@ window.saveSecuritySettings = async function() {
       logAllAttempts: document.getElementById('logAllAttempts').checked
     };
 
-    const response = await fetch('/api/fingerprinting/settings', {
+    const response = await fetch('/admin/api/fingerprinting/settings', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
