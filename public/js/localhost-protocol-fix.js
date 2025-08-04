@@ -11,9 +11,12 @@ if (window.location.hostname === 'localhost' && window.location.protocol === 'ht
 
 // Helper function to fix localhost SSL protocol issues
 function getCorrectUrl(path) {
-  if (window.location.hostname === 'localhost') {
-    return `http://localhost:${window.location.port || 3000}${path}`;
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    const url = `http://${window.location.hostname}:${window.location.port || 3000}${path}`;
+    console.log('🔧 getCorrectUrl: Converting', path, 'to', url);
+    return url;
   }
+  console.log('🔧 getCorrectUrl: Using relative path for', path);
   return path;
 }
 
