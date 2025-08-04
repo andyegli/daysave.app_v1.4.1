@@ -37,8 +37,9 @@ async function initializeContactGroups() {
     try {
         console.log('📝 ContactGroups: Loading contact groups...');
         await loadContactGroups();
-        console.log('👥 ContactGroups: Loading all contacts...');
-        await loadAllContacts();
+            console.log('👥 ContactGroups: Loading all contacts...');
+    await loadAllContacts();
+    console.log('👥 ContactGroups: All contacts loaded, count:', ContactGroupsManager.allContacts.length);
         console.log('🎨 ContactGroups: Rendering UI...');
         renderContactGroupsUI();
         console.log('🔗 ContactGroups: Attaching event listeners...');
@@ -89,8 +90,11 @@ async function loadContactGroups() {
 // Load all contacts for group assignment
 async function loadAllContacts() {
     try {
-        console.log('🔍 GROUP DEBUG: Loading all contacts...');
-        const response = await fetch(window.getCorrectUrl('/contacts/search?q='), {
+        console.log('🔍 GROUP DEBUG: Starting loadAllContacts...');
+        const url = window.getCorrectUrl('/contacts/search?q=');
+        console.log('🔍 GROUP DEBUG: Fetching from URL:', url);
+        
+        const response = await fetch(url, {
             method: 'GET',
             credentials: 'include',
             headers: {
@@ -98,10 +102,21 @@ async function loadAllContacts() {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         });
-        ContactGroupsManager.allContacts = await response.json();
-        console.log('🔍 GROUP DEBUG: Loaded contacts:', ContactGroupsManager.allContacts.length, ContactGroupsManager.allContacts);
+        
+        console.log('🔍 GROUP DEBUG: Response status:', response.status);
+        console.log('🔍 GROUP DEBUG: Response ok:', response.ok);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('🔍 GROUP DEBUG: Raw response data:', data);
+        
+        ContactGroupsManager.allContacts = data;
+        console.log('🔍 GROUP DEBUG: Stored in allContacts:', ContactGroupsManager.allContacts.length, ContactGroupsManager.allContacts);
     } catch (error) {
-        console.error('Error loading contacts:', error);
+        console.error('🚨 GROUP ERROR: Failed to load contacts:', error);
         ContactGroupsManager.allContacts = [];
     }
 }
@@ -392,6 +407,9 @@ async function deleteGroup(groupId) {
 
 // Manage group members
 function manageGroupMembers(groupId) {
+    console.log('🔍 GROUP DEBUG: manageGroupMembers called for group:', groupId);
+    console.log('🔍 GROUP DEBUG: allContacts at modal open:', ContactGroupsManager.allContacts.length, ContactGroupsManager.allContacts);
+    
     const group = ContactGroupsManager.contactGroups.find(g => g.id === groupId);
     if (!group) return;
 
