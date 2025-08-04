@@ -499,24 +499,84 @@ router.get('/autocomplete', isAuthenticated, async (req, res) => {
 
 // Groups and Relationships Management Page
 router.get('/groups-relationships', isAuthenticated, async (req, res) => {
+  console.log('🚀 ========== GROUPS-RELATIONSHIPS ROUTE START ==========');
+  console.log('🔍 Route accessed at:', new Date().toISOString());
+  console.log('🔍 Request URL:', req.originalUrl);
+  console.log('🔍 Request method:', req.method);
+  console.log('🔍 User authenticated:', req.isAuthenticated());
+  console.log('🔍 User object:', req.user ? { 
+    id: req.user.id, 
+    username: req.user.username,
+    email: req.user.email,
+    role: req.user.Role?.name 
+  } : 'No user');
+  console.log('🔍 Session ID:', req.sessionID);
+  console.log('🔍 Request headers:', {
+    'user-agent': req.headers['user-agent'],
+    'accept': req.headers.accept,
+    'referer': req.headers.referer
+  });
+  
   try {
-    console.log('🔍 Groups-relationships route accessed');
-    console.log('🔍 User authenticated:', req.isAuthenticated());
-    console.log('🔍 User object:', req.user ? { id: req.user.id, username: req.user.username } : 'No user');
-    console.log('🔍 Session ID:', req.sessionID);
+    console.log('🎯 Attempting to render template: contacts/groups-relationships');
     
-    res.render('contacts/groups-relationships', { 
+    // Check if we can access the view engine and views directory
+    console.log('🔍 App view engine:', req.app.get('view engine'));
+    console.log('🔍 App views directory:', req.app.get('views'));
+    
+    // Build the template data
+    const templateData = { 
       user: req.user,
       error: null,
       success: req.query.success || null
+    };
+    console.log('🔍 Template data:', {
+      hasUser: !!templateData.user,
+      error: templateData.error,
+      success: templateData.success
     });
+    
+    console.log('🎨 About to call res.render...');
+    
+    res.render('contacts/groups-relationships', templateData, (err, html) => {
+      if (err) {
+        console.error('❌ RENDER ERROR:', err);
+        console.error('❌ Error details:', {
+          message: err.message,
+          stack: err.stack,
+          name: err.name
+        });
+        
+        // Try to render a simple error page
+        return res.status(500).send(`
+          <h1>Template Render Error</h1>
+          <p>Error: ${err.message}</p>
+          <p>Template: contacts/groups-relationships</p>
+          <pre>${err.stack}</pre>
+        `);
+      }
+      
+      console.log('✅ Template rendered successfully');
+      console.log('📏 HTML length:', html ? html.length : 'No HTML');
+      res.send(html);
+    });
+    
   } catch (error) {
-    console.error('Error loading groups-relationships page:', error);
-    res.status(500).render('error', { 
-      error: 'Failed to load groups and relationships page',
-      user: req.user 
+    console.error('❌ ROUTE ERROR:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
     });
+    
+    res.status(500).send(`
+      <h1>Route Error</h1>
+      <p>Error: ${error.message}</p>
+      <pre>${error.stack}</pre>
+    `);
   }
+  
+  console.log('🏁 ========== GROUPS-RELATIONSHIPS ROUTE END ==========');
 });
 
 // ================================
