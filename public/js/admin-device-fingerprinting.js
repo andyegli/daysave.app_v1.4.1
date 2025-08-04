@@ -189,11 +189,11 @@ class DeviceFingerprintingAdmin {
         </td>
         <td>
           <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-primary" onclick="viewAttemptDetails('${attempt.id}')">
+            <button class="btn btn-outline-primary view-attempt-btn" data-attempt-id="${attempt.id}">
               <i class="fas fa-eye"></i>
             </button>
             ${attempt.device_fingerprint ? 
-              `<button class="btn btn-outline-warning" onclick="trustDevice('${attempt.device_fingerprint}')">
+              `<button class="btn btn-outline-warning trust-device-btn" data-fingerprint="${attempt.device_fingerprint}">
                 <i class="fas fa-check"></i>
               </button>` : ''}
           </div>
@@ -250,11 +250,11 @@ class DeviceFingerprintingAdmin {
             </div>
             
             <div class="btn-group btn-group-sm w-100">
-              <button class="btn btn-outline-primary" onclick="viewDeviceDetails('${device.device_fingerprint}')">
+              <button class="btn btn-outline-primary view-device-btn" data-fingerprint="${device.device_fingerprint}">
                 <i class="fas fa-eye"></i> Details
               </button>
-              <button class="btn btn-outline-${device.is_trusted ? 'warning' : 'success'}" 
-                      onclick="toggleDeviceTrust('${device.device_fingerprint}', ${device.is_trusted})">
+              <button class="btn btn-outline-${device.is_trusted ? 'warning' : 'success'} toggle-trust-btn" 
+                      data-fingerprint="${device.device_fingerprint}" data-trusted="${device.is_trusted}">
                 <i class="fas fa-${device.is_trusted ? 'times' : 'check'}"></i> 
                 ${device.is_trusted ? 'Untrust' : 'Trust'}
               </button>
@@ -321,6 +321,35 @@ class DeviceFingerprintingAdmin {
     document.getElementById('riskThresholdsForm').addEventListener('submit', (e) => {
       e.preventDefault();
       this.saveRiskThresholds();
+    });
+
+    // Event delegation for dynamically created buttons
+    document.addEventListener('click', (e) => {
+      // View attempt details
+      if (e.target.closest('.view-attempt-btn')) {
+        const attemptId = e.target.closest('.view-attempt-btn').dataset.attemptId;
+        this.viewAttemptDetails(attemptId);
+      }
+      
+      // Trust device from attempt
+      if (e.target.closest('.trust-device-btn')) {
+        const fingerprint = e.target.closest('.trust-device-btn').dataset.fingerprint;
+        this.trustDevice(fingerprint);
+      }
+      
+      // View device details
+      if (e.target.closest('.view-device-btn')) {
+        const fingerprint = e.target.closest('.view-device-btn').dataset.fingerprint;
+        this.viewDeviceDetails(fingerprint);
+      }
+      
+      // Toggle device trust
+      if (e.target.closest('.toggle-trust-btn')) {
+        const btn = e.target.closest('.toggle-trust-btn');
+        const fingerprint = btn.dataset.fingerprint;
+        const isTrusted = btn.dataset.trusted === 'true';
+        this.toggleDeviceTrust(fingerprint, isTrusted);
+      }
     });
   }
 
@@ -389,123 +418,152 @@ class DeviceFingerprintingAdmin {
     // You can implement a toast notification here
     alert(`❌ ${message}`);
   }
+
+  /**
+   * View attempt details
+   */
+  viewAttemptDetails(attemptId) {
+    // Implement modal or page to show attempt details
+    alert(`View details for attempt: ${attemptId}`);
+  }
+
+  /**
+   * Trust device
+   */
+  async trustDevice(fingerprint) {
+    try {
+      const response = await fetch('/admin/api/fingerprinting/trust-device', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ fingerprint })
+      });
+
+      if (response.ok) {
+        this.showSuccess('Device trusted successfully');
+        await this.refreshDevices();
+      } else {
+        throw new Error('Failed to trust device');
+      }
+    } catch (error) {
+      this.showError('Failed to trust device');
+    }
+  }
+
+  /**
+   * View device details
+   */
+  viewDeviceDetails(fingerprint) {
+    // Implement modal or page to show device details
+    alert(`View details for device: ${fingerprint}`);
+  }
+
+  /**
+   * Toggle device trust
+   */
+  async toggleDeviceTrust(fingerprint, currentTrust) {
+    try {
+      const action = currentTrust ? 'untrust' : 'trust';
+      const response = await fetch(`/admin/api/fingerprinting/${action}-device`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ fingerprint })
+      });
+
+      if (response.ok) {
+        this.showSuccess(`Device ${action}ed successfully`);
+        await this.refreshDevices();
+      } else {
+        throw new Error(`Failed to ${action} device`);
+      }
+    } catch (error) {
+      this.showError(`Failed to ${currentTrust ? 'untrust' : 'trust'} device`);
+    }
+  }
+
+  /**
+   * Refresh login attempts
+   */
+  async refreshLoginAttempts() {
+    try {
+      const attempts = await this.fetchData('/admin/api/fingerprinting/login-attempts');
+      this.updateLoginAttemptsTable(attempts);
+      this.showSuccess('Login attempts refreshed');
+    } catch (error) {
+      this.showError('Failed to refresh login attempts');
+    }
+  }
+
+  /**
+   * Refresh devices
+   */
+  async refreshDevices() {
+    try {
+      const devices = await this.fetchData('/admin/api/fingerprinting/devices');
+      this.updateDevicesDisplay(devices);
+      this.showSuccess('Devices refreshed');
+    } catch (error) {
+      this.showError('Failed to refresh devices');
+    }
+  }
+
+  /**
+   * Export login data
+   */
+  exportLoginData() {
+    // Implement CSV export
+    window.open('/admin/api/fingerprinting/export-login-data');
+  }
+
+  /**
+   * Bulk trust devices
+   */
+  bulkTrustDevices() {
+    // Implement bulk trust functionality
+    alert('Bulk trust devices functionality would be implemented here');
+  }
+
+  /**
+   * Bulk block devices
+   */
+  bulkBlockDevices() {
+    // Implement bulk block functionality
+    alert('Bulk block devices functionality would be implemented here');
+  }
+
+  /**
+   * Save security settings
+   */
+  async saveSecuritySettings() {
+    try {
+      const settings = {
+        enableFingerprinting: document.getElementById('enableFingerprinting').checked,
+        enableFraudDetection: document.getElementById('enableFraudDetection').checked,
+        autoTrustDevices: document.getElementById('autoTrustDevices').checked,
+        logAllAttempts: document.getElementById('logAllAttempts').checked
+      };
+
+      const response = await fetch('/admin/api/fingerprinting/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+      });
+
+      if (response.ok) {
+        this.showSuccess('Security settings saved successfully');
+      } else {
+        throw new Error('Failed to save settings');
+      }
+    } catch (error) {
+      this.showError('Failed to save security settings');
+    }
+  }
 }
-
-// Global functions for button onclick handlers
-window.refreshLoginAttempts = async function() {
-  try {
-    const attempts = await adminDashboard.fetchData('/admin/api/fingerprinting/login-attempts');
-    adminDashboard.updateLoginAttemptsTable(attempts);
-    adminDashboard.showSuccess('Login attempts refreshed');
-  } catch (error) {
-    adminDashboard.showError('Failed to refresh login attempts');
-  }
-};
-
-window.refreshDevices = async function() {
-  try {
-    const devices = await adminDashboard.fetchData('/admin/api/fingerprinting/devices');
-    adminDashboard.updateDevicesDisplay(devices);
-    adminDashboard.showSuccess('Devices refreshed');
-  } catch (error) {
-    adminDashboard.showError('Failed to refresh devices');
-  }
-};
-
-window.viewAttemptDetails = function(attemptId) {
-  // Implement modal or page to show attempt details
-  alert(`View details for attempt: ${attemptId}`);
-};
-
-window.trustDevice = async function(fingerprint) {
-  try {
-    const response = await fetch('/admin/api/fingerprinting/trust-device', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ fingerprint })
-    });
-
-    if (response.ok) {
-      adminDashboard.showSuccess('Device trusted successfully');
-      await refreshDevices();
-    } else {
-      throw new Error('Failed to trust device');
-    }
-  } catch (error) {
-    adminDashboard.showError('Failed to trust device');
-  }
-};
-
-window.viewDeviceDetails = function(fingerprint) {
-  // Implement modal or page to show device details
-  alert(`View details for device: ${fingerprint}`);
-};
-
-window.toggleDeviceTrust = async function(fingerprint, currentTrust) {
-  try {
-    const action = currentTrust ? 'untrust' : 'trust';
-    const response = await fetch(`/admin/api/fingerprinting/${action}-device`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ fingerprint })
-    });
-
-    if (response.ok) {
-      adminDashboard.showSuccess(`Device ${action}ed successfully`);
-      await refreshDevices();
-    } else {
-      throw new Error(`Failed to ${action} device`);
-    }
-  } catch (error) {
-    adminDashboard.showError(`Failed to ${currentTrust ? 'untrust' : 'trust'} device`);
-  }
-};
-
-window.exportLoginData = function() {
-  // Implement CSV export
-  window.open('/admin/api/fingerprinting/export-login-data');
-};
-
-window.bulkTrustDevices = function() {
-  // Implement bulk trust functionality
-  alert('Bulk trust devices functionality would be implemented here');
-};
-
-window.bulkBlockDevices = function() {
-  // Implement bulk block functionality
-  alert('Bulk block devices functionality would be implemented here');
-};
-
-window.saveSecuritySettings = async function() {
-  try {
-    const settings = {
-      enableFingerprinting: document.getElementById('enableFingerprinting').checked,
-      enableFraudDetection: document.getElementById('enableFraudDetection').checked,
-      autoTrustDevices: document.getElementById('autoTrustDevices').checked,
-      logAllAttempts: document.getElementById('logAllAttempts').checked
-    };
-
-    const response = await fetch('/admin/api/fingerprinting/settings', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(settings)
-    });
-
-    if (response.ok) {
-      adminDashboard.showSuccess('Security settings saved successfully');
-    } else {
-      throw new Error('Failed to save settings');
-    }
-  } catch (error) {
-    adminDashboard.showError('Failed to save security settings');
-  }
-};
 
 // Initialize dashboard when DOM is ready
 let adminDashboard;
@@ -515,31 +573,31 @@ document.addEventListener('DOMContentLoaded', () => {
   // Attach event listeners to buttons to replace inline onclick handlers
   const refreshLoginAttemptsBtn = document.getElementById('refreshLoginAttemptsBtn');
   if (refreshLoginAttemptsBtn) {
-    refreshLoginAttemptsBtn.addEventListener('click', window.refreshLoginAttempts);
+    refreshLoginAttemptsBtn.addEventListener('click', () => adminDashboard.refreshLoginAttempts());
   }
   
   const exportLoginDataBtn = document.getElementById('exportLoginDataBtn');
   if (exportLoginDataBtn) {
-    exportLoginDataBtn.addEventListener('click', window.exportLoginData);
+    exportLoginDataBtn.addEventListener('click', () => adminDashboard.exportLoginData());
   }
   
   const refreshDevicesBtn = document.getElementById('refreshDevicesBtn');
   if (refreshDevicesBtn) {
-    refreshDevicesBtn.addEventListener('click', window.refreshDevices);
+    refreshDevicesBtn.addEventListener('click', () => adminDashboard.refreshDevices());
   }
   
   const bulkTrustDevicesBtn = document.getElementById('bulkTrustDevicesBtn');
   if (bulkTrustDevicesBtn) {
-    bulkTrustDevicesBtn.addEventListener('click', window.bulkTrustDevices);
+    bulkTrustDevicesBtn.addEventListener('click', () => adminDashboard.bulkTrustDevices());
   }
   
   const bulkBlockDevicesBtn = document.getElementById('bulkBlockDevicesBtn');
   if (bulkBlockDevicesBtn) {
-    bulkBlockDevicesBtn.addEventListener('click', window.bulkBlockDevices);
+    bulkBlockDevicesBtn.addEventListener('click', () => adminDashboard.bulkBlockDevices());
   }
   
   const saveSecuritySettingsBtn = document.getElementById('saveSecuritySettingsBtn');
   if (saveSecuritySettingsBtn) {
-    saveSecuritySettingsBtn.addEventListener('click', window.saveSecuritySettings);
+    saveSecuritySettingsBtn.addEventListener('click', () => adminDashboard.saveSecuritySettings());
   }
 });
