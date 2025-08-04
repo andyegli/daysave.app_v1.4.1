@@ -239,6 +239,7 @@ checkDatabaseConnection().then(async (connected) => {
   app.use('/api/places', require('./routes/places'));
   app.use('/subscription', require('./routes/subscription'));
   app.use('/api/subscription', require('./routes/subscription'));
+  app.use('/profile', require('./routes/profile'));
 
   // Test endpoints for AI pipeline testing (publicly accessible)
   app.get('/test-google-api', async (req, res) => {

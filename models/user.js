@@ -74,6 +74,27 @@ module.exports = (sequelize, DataTypes) => {
     last_name: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    totp_secret: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'TOTP secret for two-factor authentication'
+    },
+    totp_enabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+      comment: 'Whether two-factor authentication is enabled'
+    },
+    totp_backup_codes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'JSON array of backup codes for 2FA recovery'
+    },
+    last_password_change: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Timestamp of last password change'
     }
   }, {
     tableName: 'users',
