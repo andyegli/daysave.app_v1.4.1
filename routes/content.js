@@ -1883,12 +1883,8 @@ router.post('/:id/reprocess', isAuthenticated, async (req, res) => {
       // Trigger analysis in background using the multimedia orchestrator
       setImmediate(async () => {
         try {
-          // Use the automation orchestrator for reprocessing
-          await triggerMultimediaAnalysis(content.url, req.user.id, {
-            source: 'reprocess',
-            contentId: content.id,
-            forceReprocess: true
-          });
+          // Use the correct function signature: triggerMultimediaAnalysis(content, user)
+          await triggerMultimediaAnalysis(content, req.user);
           console.log(`✅ Reprocessing triggered for ${contentId}`);
         } catch (reprocessError) {
           console.error(`❌ Reprocessing failed for ${contentId}:`, reprocessError);
