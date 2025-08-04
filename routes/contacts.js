@@ -250,7 +250,8 @@ router.get('/groups-relationships', isAuthenticated, async (req, res) => {
 // Server-side search endpoint
 router.get('/search', isAuthenticated, async (req, res) => {
   const q = (req.query.q || '').trim().toLowerCase();
-  if (!q) return res.json([]);
+  console.log('🔍 SEARCH DEBUG: Query:', q, 'User ID:', req.user?.id);
+  // Don't return empty for no query - groups page needs all contacts
   const advanced = {};
   // Parse advanced queries (e.g., email:john)
   q.split(/\s+/).forEach(token => {
@@ -282,9 +283,9 @@ router.get('/search', isAuthenticated, async (req, res) => {
         if (!fields.includes(advanced[key].toLowerCase())) return false;
       }
     }
-    // General search
-    if (Object.keys(advanced).length === 0 && !fields.includes(q)) return false;
-    return true;
+      // General search - if no query, return all contacts
+  if (Object.keys(advanced).length === 0 && q && !fields.includes(q)) return false;
+  return true;
   };
   const filtered = contacts.filter(filterContact);
   // Return only fields needed for the table
