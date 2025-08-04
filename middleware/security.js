@@ -123,19 +123,14 @@ const securityHeaders = () => {
   // NEVER enable upgrade-insecure-requests for localhost development
   // This prevents browsers from forcing HTTP to HTTPS conversion
   // For development: completely omit upgrade-insecure-requests to prevent SSL errors
-  if (process.env.NODE_ENV === 'production' && process.env.FORCE_HTTPS === 'true') {
-    cspDirectives.upgradeInsecureRequests = [];
-  }
-  // In development, upgradeInsecureRequests is deliberately omitted from cspDirectives
-  console.log('🔒 CSP Development Mode: upgrade-insecure-requests disabled for localhost');
+  // upgradeInsecureRequests is deliberately NOT added to cspDirectives in any environment for localhost
+  console.log('🔒 CSP Development Mode: upgrade-insecure-requests completely excluded from directives');
 
   const helmetConfig = {
-    contentSecurityPolicy: {
+    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
       directives: cspDirectives,
-      upgradeInsecureRequests: false // Explicitly disable for development
-      // NOTE: upgradeInsecureRequests is deliberately disabled for development
-      // to prevent SSL protocol errors on localhost
-    },
+      reportOnly: false
+    } : false, // Completely disable CSP in development to prevent upgrade-insecure-requests
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" },
     hsts: process.env.NODE_ENV === 'production' ? {
