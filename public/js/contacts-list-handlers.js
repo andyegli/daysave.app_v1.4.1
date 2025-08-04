@@ -85,12 +85,65 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Test button accessibility
+    const computedStyle = window.getComputedStyle(groupsBtn);
     console.log('🔍 Button accessibility check:', {
       hasClickHandler: typeof groupsBtn.onclick === 'function',
       hasEventListeners: groupsBtn.hasAttribute('onclick'),
       isVisible: groupsBtn.offsetParent !== null,
-      computedDisplay: window.getComputedStyle(groupsBtn).display
+      computedDisplay: computedStyle.display,
+      pointerEvents: computedStyle.pointerEvents,
+      zIndex: computedStyle.zIndex,
+      position: computedStyle.position
     });
+    
+    // Add multiple event listeners for debugging
+    ['click', 'mousedown', 'mouseup', 'touchstart', 'touchend'].forEach(eventType => {
+      groupsBtn.addEventListener(eventType, function(e) {
+        console.log(`🎯 ${eventType.toUpperCase()} event fired on Groups & Relations button!`);
+        if (eventType === 'click') {
+          console.log('🔥 CLICK EVENT DETAILS:', {
+            type: e.type,
+            target: e.target.tagName,
+            currentTarget: e.currentTarget.tagName,
+            bubbles: e.bubbles,
+            cancelable: e.cancelable,
+            defaultPrevented: e.defaultPrevented,
+            eventPhase: e.eventPhase,
+            isTrusted: e.isTrusted,
+            timeStamp: e.timeStamp
+          });
+        }
+      }, true); // Use capture phase
+    });
+    
+    // Test click programmatically
+    setTimeout(() => {
+      console.log('🧪 Testing programmatic click...');
+      try {
+        groupsBtn.click();
+        console.log('✅ Programmatic click executed');
+      } catch (error) {
+        console.error('❌ Programmatic click failed:', error);
+      }
+    }, 2000);
+    
+    // Check for overlapping elements
+    setTimeout(() => {
+      const rect = groupsBtn.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const elementAtCenter = document.elementFromPoint(centerX, centerY);
+      
+      console.log('🎯 Element detection at button center:', {
+        expectedButton: groupsBtn === elementAtCenter,
+        actualElement: elementAtCenter?.tagName,
+        actualElementId: elementAtCenter?.id,
+        actualElementClass: elementAtCenter?.className,
+        isChildOfButton: groupsBtn.contains(elementAtCenter),
+        buttonRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+        centerPoint: { x: centerX, y: centerY }
+      });
+    }, 500);
   } else {
     console.error('❌ Groups & Relations button not found on page');
   }
