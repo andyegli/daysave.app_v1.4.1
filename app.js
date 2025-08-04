@@ -164,7 +164,7 @@ checkDatabaseConnection().then(async (connected) => {
       secure: false, // Always false for local development; set to true in production with HTTPS
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: 'lax' // 'strict' can cause issues with some OAuth flows
+      sameSite: 'lax' // Keep lax for compatibility
     },
     name: 'daysave.sid' // Change default session name for security
   }));
