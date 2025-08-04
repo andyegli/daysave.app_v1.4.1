@@ -224,26 +224,6 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/js/contact-groups.js?v=<%= Date.now() %>"></script>
   <script src="/js/contact-relationships.js?v=<%= Date.now() %>"></script>
-  
-  <script>
-    // Handle tab switching to load appropriate data
-    document.addEventListener('DOMContentLoaded', function() {
-      const tabs = document.querySelectorAll('[data-bs-toggle="tab"]');
-      
-      tabs.forEach(tab => {
-        tab.addEventListener('shown.bs.tab', function(event) {
-          const targetTab = event.target.getAttribute('data-bs-target');
-          
-          if (targetTab === '#relationships' && typeof initializeContactRelationships === 'function') {
-            // Reload relationships when switching to relationships tab
-            initializeContactRelationships();
-          } else if (targetTab === '#groups' && typeof initializeContactGroups === 'function') {
-            // Reload groups when switching to groups tab
-            initializeContactGroups();
-          }
-        });
-      });
-    });
-  </script>
+  <script src="/js/groups-relationships-tabs.js?v=<%= Date.now() %>"></script>
 </body>
 </html>
