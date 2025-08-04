@@ -245,73 +245,7 @@ router.get('/groups-relationships', isAuthenticated, async (req, res) => {
 
 // MOVED TO END: Edit contact - moved to avoid intercepting /groups
 
-// MOVED TO END: Update contact POST - moved to avoid intercepting /groups
-// router.post('/:id', async (req, res) => {
-  try {
-    const contact = await Contact.findByPk(req.params.id);
-    if (!contact) return res.redirect('/contacts?error=Contact not found');
-    
-    // Check if user can edit this contact
-    if (contact.user_id !== req.user.id && !(req.user.Role && req.user.Role.name === 'admin')) {
-      return res.redirect('/contacts?error=Permission denied');
-    }
-    
-    // Process and clean the form data
-    const contactData = processContactFormData(req.body);
-    
-    // Validate required fields
-    if (!contactData.name || contactData.name.trim().length === 0) {
-      const googleMapsScriptUrl = getGoogleMapsScriptUrl();
-      return res.render('contacts/form', { 
-        user: req.user, 
-        contact: { ...contact.toJSON(), ...req.body }, 
-        formAction: `/contacts/${req.params.id}`, 
-        method: 'POST', 
-        error: 'Contact name is required.', 
-        success: null,
-        googleMapsScriptUrl 
-      });
-    }
-    
-    await contact.update(contactData);
-    res.redirect(`/contacts/${contact.id}?success=Contact updated successfully`);
-  } catch (err) {
-    console.error('Error updating contact:', err);
-    const googleMapsScriptUrl = getGoogleMapsScriptUrl();
-    res.render('contacts/form', { 
-      user: req.user, 
-      contact: { ...req.body, id: req.params.id }, 
-      formAction: `/contacts/${req.params.id}`, 
-      method: 'POST', 
-      error: 'Failed to update contact. Please try again.', 
-      success: null,
-      googleMapsScriptUrl 
-    });
-  }
-});
-
-// Delete contact
-router.post('/:id/delete', async (req, res) => {
-  try {
-    const contact = await Contact.findByPk(req.params.id);
-    if (!contact) {
-      return res.redirect('/contacts?error=Contact not found');
-    }
-    
-    // Check if user can delete this contact
-    if (contact.user_id !== req.user.id && !(req.user.Role && req.user.Role.name === 'admin')) {
-      return res.redirect('/contacts?error=Permission denied');
-    }
-    
-    const contactName = contact.name || 'Contact';
-    await contact.destroy();
-    
-    res.redirect('/contacts?success=' + encodeURIComponent(`${contactName} has been deleted successfully`));
-  } catch (err) {
-    console.error('Error deleting contact:', err);
-    res.redirect('/contacts?error=Failed to delete contact. Please try again.');
-  }
-});
+// MOVED TO END: Dynamic routes moved to avoid intercepting /groups
 
 // Server-side search endpoint
 router.get('/search', isAuthenticated, async (req, res) => {
