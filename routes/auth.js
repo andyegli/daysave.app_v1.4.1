@@ -2,10 +2,8 @@ const express = require('express');
 const passport = require('passport');
 const router = express.Router();
 const { logAuthEvent, logAuthError, logOAuthFlow, logOAuthError } = require('../config/logger');
-const { User, Role, Sequelize, SocialAccount, SubscriptionPlan, UserDevice, LoginAttempt } = require('../models');
+const { User, Role, Sequelize, SocialAccount, SubscriptionPlan } = require('../models');
 const subscriptionService = require('../services/subscriptionService');
-const { deviceFingerprinting } = require('../middleware/deviceFingerprinting');
-const geoLocationService = require('../services/geoLocationService');
 
 // Import middleware
 const {
@@ -879,29 +877,15 @@ router.get('/recover-passkey', async (req, res) => {
 
 // Username/password login
 router.post('/login', isNotAuthenticated, async (req, res, next) => {
-  const { username, password, deviceFingerprint } = req.body;
-  
-  // Client information for logging
-  const clientInfo = {
-    ip: req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
-    userAgent: req.headers['user-agent'] || 'unknown',
-    timestamp: new Date()
-  };
-
-  // Get geolocation for IP
-  const geoLocation = geoLocationService.getLocationInfo(clientInfo.ip);
-
+  const { username, password } = req.body;
   if (!username || !password) {
-    await logLoginAttempt(null, false, 'Missing credentials', clientInfo, deviceFingerprint, geoLocation);
     return res.render('auth/login', {
       title: 'Login - DaySave',
       error: 'Please enter both username/email and password.',
       user: null
     });
   }
-
   try {
-    // Find user
     const user = await User.findOne({
       where: {
         [Sequelize.Op.or]: [
@@ -910,125 +894,36 @@ router.post('/login', isNotAuthenticated, async (req, res, next) => {
         ]
       }
     });
-
     if (!user) {
-      await logLoginAttempt(null, false, 'User not found', clientInfo, deviceFingerprint, geoLocation);
       return res.render('auth/login', {
         title: 'Login - DaySave',
         error: 'Invalid username/email or password.',
         user: null
       });
     }
-
     if (!user.email_verified) {
-      await logLoginAttempt(user.id, false, 'Email not verified', clientInfo, deviceFingerprint, geoLocation);
       return res.render('auth/login', {
         title: 'Login - DaySave',
         error: 'Please verify your email before logging in.',
         user: null
       });
     }
-
-    // Verify password
     const bcrypt = require('bcryptjs');
     const valid = await bcrypt.compare(password, user.password_hash);
-    
     if (!valid) {
-      await logLoginAttempt(user.id, false, 'Invalid password', clientInfo, deviceFingerprint, geoLocation);
       return res.render('auth/login', {
         title: 'Login - DaySave',
         error: 'Invalid username/email or password.',
         user: null
       });
     }
-
-    // Process device fingerprint
-    let fingerprintData = null;
-    let riskAssessment = null;
-    
-    if (deviceFingerprint) {
-      try {
-        fingerprintData = typeof deviceFingerprint === 'string' 
-          ? JSON.parse(deviceFingerprint) 
-          : deviceFingerprint;
-        
-        // Perform risk assessment
-        riskAssessment = await assessLoginRisk(user.id, fingerprintData, clientInfo, geoLocation);
-        
-        // Check if login should be blocked
-        if (riskAssessment.blocked) {
-          await logLoginAttempt(user.id, false, `Blocked: ${riskAssessment.reason}`, clientInfo, fingerprintData, geoLocation);
-          
-          logAuthError('LOGIN_BLOCKED', {
-            userId: user.id,
-            username: user.username,
-            reason: riskAssessment.reason,
-            riskScore: riskAssessment.riskScore,
-            location: geoLocation?.locationString,
-            ...clientInfo
-          });
-
-          return res.render('auth/login', {
-            title: 'Login - DaySave',
-            error: 'Login blocked due to security policy. Please contact support if this is an error.',
-            user: null
-          });
-        }
-
-        // Update user's device fingerprint if needed
-        if (fingerprintData.fingerprint) {
-          await User.update(
-            { device_fingerprint: fingerprintData.fingerprint },
-            { where: { id: user.id } }
-          );
-        }
-
-        // Manage trusted devices
-        await handleDeviceManagement(user.id, fingerprintData, clientInfo, riskAssessment, geoLocation);
-
-      } catch (fingerprintError) {
-        console.warn('⚠️ Device fingerprint processing failed:', fingerprintError);
-        // Continue with login even if fingerprinting fails
-      }
-    }
-
-    // Successful login
-    await logLoginAttempt(user.id, true, 'Successful login', clientInfo, fingerprintData, geoLocation);
-    
-    logAuthEvent('LOGIN_SUCCESS', {
-      userId: user.id,
-      username: user.username,
-      riskScore: riskAssessment?.riskScore || 0,
-      deviceTrusted: riskAssessment?.deviceTrusted || false,
-      location: geoLocation?.locationString,
-      ...clientInfo
-    });
-
-    // Update user's last known location if significantly changed
-    if (geoLocation && geoLocation.country) {
-      await updateUserLocation(user.id, geoLocation);
-    }
-
     req.login(user, (err) => {
       if (err) {
         return next(err);
       }
-      
-      // Add security information to session
-      req.session.securityInfo = {
-        loginTime: new Date(),
-        deviceFingerprint: fingerprintData?.fingerprint,
-        riskScore: riskAssessment?.riskScore || 0,
-        deviceTrusted: riskAssessment?.deviceTrusted || false
-      };
-      
       return res.redirect('/dashboard');
     });
-
   } catch (err) {
-    console.error('❌ Login error:', err);
-    await logLoginAttempt(null, false, 'System error', clientInfo, deviceFingerprint, geoLocation);
-    
     return res.render('auth/login', {
       title: 'Login - DaySave',
       error: 'An error occurred. Please try again.',
@@ -1113,412 +1008,5 @@ router.post('/refresh-session', isAuthenticated, async (req, res) => {
     res.status(500).json({ error: 'Refresh failed', message: error.message });
   }
 });
-
-/**
- * Helper Functions for Device Fingerprinting
- */
-
-/**
- * Log login attempt with device fingerprint and geolocation information
- */
-async function logLoginAttempt(userId, success, reason, clientInfo, fingerprintData, geoLocation) {
-  try {
-    const fingerprintHash = fingerprintData?.fingerprint || null;
-    
-    const loginAttemptData = {
-      user_id: userId,
-      ip_address: clientInfo.ip,
-      user_agent: clientInfo.userAgent,
-      device_fingerprint: fingerprintHash,
-      success: success,
-      failure_reason: success ? null : reason,
-      attempted_at: new Date()
-    };
-
-    // Add geolocation data if available
-    if (geoLocation) {
-      loginAttemptData.country = geoLocation.country;
-      loginAttemptData.region = geoLocation.region;
-      loginAttemptData.city = geoLocation.city;
-      loginAttemptData.latitude = geoLocation.latitude;
-      loginAttemptData.longitude = geoLocation.longitude;
-      loginAttemptData.timezone = geoLocation.timezone;
-      loginAttemptData.isp = geoLocation.isp;
-      loginAttemptData.is_vpn = geoLocation.isVPN || false;
-    }
-
-    await LoginAttempt.create(loginAttemptData);
-
-    console.log(`🔐 Login attempt logged: ${success ? 'SUCCESS' : 'FAILED'} - ${reason || 'N/A'} from ${geoLocation?.locationString || clientInfo.ip}`);
-  } catch (error) {
-    console.error('❌ Error logging login attempt:', error);
-  }
-}
-
-/**
- * Assess login risk based on device fingerprint, user history, and location
- */
-async function assessLoginRisk(userId, fingerprintData, clientInfo, geoLocation) {
-  try {
-    const assessment = {
-      riskScore: 0,
-      blocked: false,
-      reason: null,
-      deviceTrusted: false,
-      flags: []
-    };
-
-    if (!fingerprintData) {
-      assessment.riskScore = 0.2; // Slight risk for missing fingerprint
-      assessment.flags.push('NO_FINGERPRINT');
-      return assessment;
-    }
-
-    // Check if device is already trusted
-    const trustedDevice = await deviceFingerprinting.isDeviceTrusted(
-      fingerprintData.fingerprint, 
-      userId
-    );
-    
-    if (trustedDevice) {
-      assessment.deviceTrusted = true;
-      assessment.riskScore = 0.1; // Low risk for trusted devices
-      
-      // Even trusted devices can be flagged for suspicious location changes
-      if (geoLocation) {
-        const locationRisk = await assessLocationRisk(userId, geoLocation);
-        assessment.riskScore += locationRisk.score;
-        assessment.flags.push(...locationRisk.flags);
-      }
-      
-      return assessment;
-    }
-
-    // Use the risk assessment from device fingerprinting middleware
-    if (fingerprintData.components) {
-      // Recreate analysis similar to middleware
-      const mockReq = {
-        headers: { 'user-agent': clientInfo.userAgent },
-        ip: clientInfo.ip
-      };
-      
-      const riskScore = deviceFingerprinting.calculateRiskScore(fingerprintData, mockReq, geoLocation);
-      assessment.riskScore = riskScore;
-
-      // Determine if login should be blocked
-      if (riskScore >= deviceFingerprinting.riskThresholds.critical) {
-        assessment.blocked = true;
-        assessment.reason = 'CRITICAL_RISK_SCORE';
-      }
-
-      // Generate flags
-      if (deviceFingerprinting.detectBot(clientInfo.userAgent)) {
-        assessment.flags.push('BOT_DETECTED');
-        assessment.blocked = true;
-        assessment.reason = 'BOT_DETECTED';
-      }
-    }
-
-    // Location-based risk assessment
-    if (geoLocation) {
-      const locationRisk = await assessLocationRisk(userId, geoLocation);
-      assessment.riskScore += locationRisk.score;
-      assessment.flags.push(...locationRisk.flags);
-      
-      // Block if location is extremely suspicious
-      if (locationRisk.blocked) {
-        assessment.blocked = true;
-        assessment.reason = locationRisk.reason;
-      }
-    }
-
-    // Check for recent suspicious activity
-    const recentFailures = await LoginAttempt.count({
-      where: {
-        ip_address: clientInfo.ip,
-        success: false,
-        attempted_at: {
-          [Sequelize.Op.gte]: new Date(Date.now() - 15 * 60 * 1000) // Last 15 minutes
-        }
-      }
-    });
-
-    if (recentFailures >= 5) {
-      assessment.riskScore += 0.3;
-      assessment.flags.push('MULTIPLE_FAILURES');
-    }
-
-    // Check for impossible travel (user logged in from very different location recently)
-    const impossibleTravel = await checkImpossibleTravel(userId, geoLocation);
-    if (impossibleTravel.detected) {
-      assessment.riskScore += 0.4;
-      assessment.flags.push('IMPOSSIBLE_TRAVEL');
-      assessment.blocked = true;
-      assessment.reason = 'IMPOSSIBLE_TRAVEL_DETECTED';
-    }
-
-    // Final blocking decision
-    if (assessment.riskScore >= 0.8 && !assessment.blocked) {
-      assessment.blocked = true;
-      assessment.reason = 'HIGH_RISK_SCORE';
-    }
-
-    return assessment;
-
-  } catch (error) {
-    console.error('❌ Error assessing login risk:', error);
-    return {
-      riskScore: 0.5,
-      blocked: false,
-      reason: 'ASSESSMENT_ERROR',
-      deviceTrusted: false,
-      flags: ['ASSESSMENT_ERROR']
-    };
-  }
-}
-
-/**
- * Assess location-based risk for login attempt
- */
-async function assessLocationRisk(userId, geoLocation) {
-  try {
-    const locationRisk = {
-      score: 0,
-      blocked: false,
-      reason: null,
-      flags: []
-    };
-
-    if (!geoLocation) {
-      return locationRisk;
-    }
-
-    // VPN/Proxy detection
-    if (geoLocation.isVPN) {
-      locationRisk.score += 0.3;
-      locationRisk.flags.push('VPN_PROXY_DETECTED');
-    }
-
-    // High-risk countries
-    if (geoLocation.riskFactors && geoLocation.riskFactors.includes('HIGH_RISK_COUNTRY')) {
-      locationRisk.score += 0.2;
-      locationRisk.flags.push('HIGH_RISK_COUNTRY');
-    }
-
-    // Hosting providers (suspicious for regular users)
-    if (geoLocation.riskFactors && geoLocation.riskFactors.includes('HOSTING_PROVIDER')) {
-      locationRisk.score += 0.25;
-      locationRisk.flags.push('HOSTING_PROVIDER');
-    }
-
-    // Low confidence location data
-    if (geoLocation.confidence < 0.3) {
-      locationRisk.score += 0.1;
-      locationRisk.flags.push('LOW_LOCATION_CONFIDENCE');
-    }
-
-    // Get user's recent locations to check for anomalies
-    const recentLogins = await LoginAttempt.findAll({
-      where: {
-        user_id: userId,
-        success: true,
-        country: { [Sequelize.Op.not]: null },
-        attempted_at: {
-          [Sequelize.Op.gte]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
-        }
-      },
-      order: [['attempted_at', 'DESC']],
-      limit: 10
-    });
-
-    if (recentLogins.length > 0) {
-      const recentCountries = [...new Set(recentLogins.map(login => login.country))];
-      
-      // First time from this country
-      if (!recentCountries.includes(geoLocation.country)) {
-        locationRisk.score += 0.2;
-        locationRisk.flags.push('NEW_COUNTRY');
-      }
-
-      // Check for multiple countries in short time (possible account compromise)
-      const recentCountriesLast24h = [...new Set(recentLogins
-        .filter(login => login.attempted_at > new Date(Date.now() - 24 * 60 * 60 * 1000))
-        .map(login => login.country))];
-      
-      if (recentCountriesLast24h.length > 2) {
-        locationRisk.score += 0.3;
-        locationRisk.flags.push('MULTIPLE_COUNTRIES_24H');
-      }
-    }
-
-    // Block if risk is extremely high
-    if (locationRisk.score >= 0.7) {
-      locationRisk.blocked = true;
-      locationRisk.reason = 'EXTREMELY_SUSPICIOUS_LOCATION';
-    }
-
-    return locationRisk;
-
-  } catch (error) {
-    console.error('❌ Error assessing location risk:', error);
-    return {
-      score: 0.1,
-      blocked: false,
-      reason: 'LOCATION_ASSESSMENT_ERROR',
-      flags: ['LOCATION_ASSESSMENT_ERROR']
-    };
-  }
-}
-
-/**
- * Check for impossible travel patterns
- */
-async function checkImpossibleTravel(userId, currentLocation) {
-  try {
-    if (!currentLocation || !currentLocation.latitude || !currentLocation.longitude) {
-      return { detected: false };
-    }
-
-    // Get the most recent successful login with location data
-    const lastLogin = await LoginAttempt.findOne({
-      where: {
-        user_id: userId,
-        success: true,
-        latitude: { [Sequelize.Op.not]: null },
-        longitude: { [Sequelize.Op.not]: null },
-        attempted_at: {
-          [Sequelize.Op.gte]: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
-        }
-      },
-      order: [['attempted_at', 'DESC']]
-    });
-
-    if (!lastLogin) {
-      return { detected: false };
-    }
-
-    // Calculate distance between locations
-    const distance = geoLocationService.calculateDistance(
-      parseFloat(lastLogin.latitude),
-      parseFloat(lastLogin.longitude),
-      currentLocation.latitude,
-      currentLocation.longitude
-    );
-
-    // Calculate time difference in hours
-    const timeDiff = (Date.now() - new Date(lastLogin.attempted_at).getTime()) / (1000 * 60 * 60);
-
-    // Calculate maximum possible speed (km/h)
-    const maxPossibleSpeed = distance / timeDiff;
-
-    // Consider impossible if speed > 900 km/h (faster than commercial aircraft)
-    if (maxPossibleSpeed > 900) {
-      return {
-        detected: true,
-        distance: distance,
-        timeDiff: timeDiff,
-        speed: maxPossibleSpeed,
-        lastLocation: `${lastLogin.city || 'Unknown'}, ${lastLogin.country || 'Unknown'}`,
-        currentLocation: currentLocation.locationString
-      };
-    }
-
-    return { detected: false };
-
-  } catch (error) {
-    console.error('❌ Error checking impossible travel:', error);
-    return { detected: false };
-  }
-}
-
-/**
- * Handle device management (trust, tracking, etc.)
- */
-async function handleDeviceManagement(userId, fingerprintData, clientInfo, riskAssessment, geoLocation) {
-  try {
-    if (!fingerprintData?.fingerprint) {
-      return;
-    }
-
-    const deviceData = {
-      user_id: userId,
-      device_fingerprint: fingerprintData.fingerprint,
-      is_trusted: riskAssessment.deviceTrusted || riskAssessment.riskScore < 0.3,
-      last_login_at: new Date()
-    };
-
-    // Add geolocation data if available
-    if (geoLocation) {
-      deviceData.country = geoLocation.country;
-      deviceData.region = geoLocation.region;
-      deviceData.city = geoLocation.city;
-      deviceData.latitude = geoLocation.latitude;
-      deviceData.longitude = geoLocation.longitude;
-      deviceData.timezone = geoLocation.timezone;
-      deviceData.location_confidence = geoLocation.confidence;
-    }
-
-    // Update or create device record
-    await UserDevice.upsert(deviceData);
-
-    // Auto-trust device if risk is very low and no red flags
-    if (riskAssessment.riskScore < 0.2 && riskAssessment.flags.length === 0) {
-      await deviceFingerprinting.trustDevice(fingerprintData.fingerprint, userId);
-      console.log('✅ Device auto-trusted due to low risk');
-    }
-
-    console.log('📱 Device management completed for user:', userId, 'from', geoLocation?.locationString || clientInfo.ip);
-
-  } catch (error) {
-    console.error('❌ Error in device management:', error);
-  }
-}
-
-/**
- * Update user's last known location if significantly changed
- */
-async function updateUserLocation(userId, geoLocation) {
-  try {
-    const user = await User.findByPk(userId);
-    if (!user) return;
-
-    const currentLocation = {
-      country: geoLocation.country,
-      city: geoLocation.city
-    };
-
-    const lastLocation = {
-      country: user.last_login_country,
-      city: user.last_login_city
-    };
-
-    // Check if location has significantly changed
-    const locationComparison = geoLocationService.compareLocations(currentLocation, lastLocation);
-    
-    if (locationComparison.significantChange) {
-      await User.update({
-        last_login_country: geoLocation.country,
-        last_login_city: geoLocation.city,
-        location_changed_at: new Date()
-      }, {
-        where: { id: userId }
-      });
-
-      console.log(`🌍 User ${userId} location updated: ${geoLocation.locationString} (${locationComparison.reason})`);
-      
-      // Log significant location change for security monitoring
-      logAuthEvent('LOCATION_CHANGE', {
-        userId: userId,
-        newLocation: geoLocation.locationString,
-        previousLocation: `${lastLocation.city || 'Unknown'}, ${lastLocation.country || 'Unknown'}`,
-        reason: locationComparison.reason,
-        distance: locationComparison.distance
-      });
-    }
-
-  } catch (error) {
-    console.error('❌ Error updating user location:', error);
-  }
-}
 
 module.exports = router; 
