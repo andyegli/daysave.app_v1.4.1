@@ -39,11 +39,17 @@ async function initializeContactGroups() {
         await loadContactGroups();
         
         console.log('👥 ContactGroups: Loading all contacts...');
+        console.log('🧪 SIMPLE TEST: typeof loadAllContacts =', typeof loadAllContacts);
+        console.log('🧪 SIMPLE TEST: loadAllContacts function exists?', typeof loadAllContacts === 'function');
+        
         try {
+            console.log('🧪 SIMPLE TEST: About to call loadAllContacts...');
             await loadAllContacts();
+            console.log('🧪 SIMPLE TEST: loadAllContacts completed successfully');
             console.log('👥 ContactGroups: All contacts loaded, count:', ContactGroupsManager.allContacts.length);
         } catch (error) {
             console.error('🚨 CRITICAL ERROR in loadAllContacts:', error);
+            console.error('🚨 ERROR STACK:', error.stack);
             console.log('👥 ContactGroups: All contacts loaded, count:', ContactGroupsManager.allContacts.length);
         }
         
