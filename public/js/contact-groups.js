@@ -39,16 +39,16 @@ async function initializeContactGroups() {
         await loadContactGroups();
         
         console.log('👥 ContactGroups: Loading all contacts...');
-        console.log('🧪 SIMPLE TEST: typeof loadAllContacts =', typeof loadAllContacts);
-        console.log('🧪 SIMPLE TEST: loadAllContacts function exists?', typeof loadAllContacts === 'function');
+        console.log('🧪 SIMPLE TEST: typeof loadAllContactsForGroups =', typeof loadAllContactsForGroups);
+        console.log('🧪 SIMPLE TEST: loadAllContactsForGroups function exists?', typeof loadAllContactsForGroups === 'function');
         
         try {
-            console.log('🧪 SIMPLE TEST: About to call loadAllContacts...');
-            await loadAllContacts();
-            console.log('🧪 SIMPLE TEST: loadAllContacts completed successfully');
+            console.log('🧪 SIMPLE TEST: About to call loadAllContactsForGroups...');
+            await loadAllContactsForGroups();
+            console.log('🧪 SIMPLE TEST: loadAllContactsForGroups completed successfully');
             console.log('👥 ContactGroups: All contacts loaded, count:', ContactGroupsManager.allContacts.length);
         } catch (error) {
-            console.error('🚨 CRITICAL ERROR in loadAllContacts:', error);
+            console.error('🚨 CRITICAL ERROR in loadAllContactsForGroups:', error);
             console.error('🚨 ERROR STACK:', error.stack);
             console.log('👥 ContactGroups: All contacts loaded, count:', ContactGroupsManager.allContacts.length);
         }
@@ -101,10 +101,10 @@ async function loadContactGroups() {
 }
 
 // Load all contacts for group assignment
-async function loadAllContacts() {
-    console.log('🚨 FUNCTION TEST: loadAllContacts function called!');
+async function loadAllContactsForGroups() {
+    console.log('🚨 FUNCTION TEST: loadAllContactsForGroups function called!');
     try {
-        console.log('🔍 GROUP DEBUG: Starting loadAllContacts...');
+        console.log('🔍 GROUP DEBUG: Starting loadAllContactsForGroups...');
         const url = window.getCorrectUrl('/contacts/search?q=');
         console.log('🔍 GROUP DEBUG: Fetching from URL:', url);
         
