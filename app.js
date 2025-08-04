@@ -162,9 +162,11 @@ checkDatabaseConnection().then(async (connected) => {
     saveUninitialized: false,
     cookie: {
       secure: false, // Always false for local development; set to true in production with HTTPS
-      httpOnly: true,
+      httpOnly: false, // Temporarily set to false for AJAX debugging
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: 'lax' // Keep lax for compatibility
+      sameSite: 'lax', // Keep lax for compatibility
+      domain: 'localhost', // Explicitly set domain for localhost
+      path: '/' // Explicitly set path
     },
     name: 'daysave.sid' // Change default session name for security
   }));
