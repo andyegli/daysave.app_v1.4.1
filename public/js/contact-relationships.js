@@ -3,6 +3,14 @@
  * Handles creation, editing, deletion and viewing of relationships between contacts
  */
 
+// Helper function to get correct URL for localhost
+function getCorrectUrl(path) {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return `http://${window.location.hostname}:${window.location.port}${path}`;
+    }
+    return path; // Use relative URL for non-localhost
+}
+
 // Scoped variables to avoid conflicts
 const ContactRelationshipsManager = {
   contactRelationships: [],
@@ -45,7 +53,7 @@ async function initializeContactRelationships() {
 // Load all contact relationships
 async function loadContactRelationships() {
     try {
-        const response = await fetch('/contacts/relationships');
+        const response = await fetch(getCorrectUrl('/contacts/relationships'));
         const data = await response.json();
         
         if (data.success) {
@@ -62,7 +70,7 @@ async function loadContactRelationships() {
 // Load all contacts for relationship creation
 async function loadAllContacts() {
     try {
-        const response = await fetch('/contacts/search?q=');
+        const response = await fetch(getCorrectUrl('/contacts/search?q='));
         ContactRelationshipsManager.allContacts = await response.json();
     } catch (error) {
         console.error('Error loading contacts:', error);
@@ -73,7 +81,7 @@ async function loadAllContacts() {
 // Load predefined relationship types
 async function loadRelationshipTypes() {
     try {
-        const response = await fetch('/contacts/relationship-types');
+        const response = await fetch(getCorrectUrl('/contacts/relationship-types'));
         const data = await response.json();
         
         if (data.success) {
@@ -338,7 +346,7 @@ async function createRelationship() {
     }
 
     try {
-        const response = await fetch('/contacts/relationships', {
+        const response = await fetch(getCorrectUrl('/contacts/relationships'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -385,7 +393,7 @@ async function deleteRelationship(relationshipId) {
     }
 
     try {
-        const response = await fetch(`/contacts/relationships/${relationshipId}`, {
+        const response = await fetch(getCorrectUrl(`/contacts/relationships/${relationshipId}`), {
             method: 'DELETE'
         });
 
@@ -409,7 +417,7 @@ async function deleteRelationship(relationshipId) {
 // Show relationships for a specific contact
 async function showContactRelationships(contactId) {
     try {
-        const response = await fetch(`/contacts/${contactId}/relationships`);
+        const response = await fetch(getCorrectUrl(`/contacts/${contactId}/relationships`));
         const data = await response.json();
         
         if (data.success) {
