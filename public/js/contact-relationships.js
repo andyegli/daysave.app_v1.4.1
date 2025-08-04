@@ -56,7 +56,13 @@ async function initializeContactRelationships() {
 // Load all contact relationships
 async function loadContactRelationships() {
     try {
-        const response = await fetch(window.getCorrectUrl('/contacts/relationships'));
+        const response = await fetch(window.getCorrectUrl('/contacts/relationships'), {
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
         const data = await response.json();
         
         if (data.success) {
@@ -73,7 +79,12 @@ async function loadContactRelationships() {
 // Load all contacts for relationship creation
 async function loadAllContacts() {
     try {
-        const response = await fetch(window.getCorrectUrl('/contacts/search?q='));
+        const response = await fetch(window.getCorrectUrl('/contacts/search?q='), {
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
         ContactRelationshipsManager.allContacts = await response.json();
     } catch (error) {
         console.error('Error loading contacts:', error);
@@ -84,7 +95,12 @@ async function loadAllContacts() {
 // Load predefined relationship types
 async function loadRelationshipTypes() {
     try {
-        const response = await fetch(window.getCorrectUrl('/contacts/relationship-types'));
+        const response = await fetch(window.getCorrectUrl('/contacts/relationship-types'), {
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
         const data = await response.json();
         
         if (data.success) {
@@ -420,7 +436,12 @@ async function deleteRelationship(relationshipId) {
 // Show relationships for a specific contact
 async function showContactRelationships(contactId) {
     try {
-        const response = await fetch(window.getCorrectUrl(`/contacts/${contactId}/relationships`));
+        const response = await fetch(window.getCorrectUrl(`/contacts/${contactId}/relationships`), {
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
         const data = await response.json();
         
         if (data.success) {
