@@ -19,12 +19,33 @@ module.exports = (sequelize, DataTypes) => {
     ip: {
       type: DataTypes.STRING
     },
+    ip_address: {
+      type: DataTypes.STRING(45),
+      allowNull: true,
+      comment: 'IP address of the login attempt'
+    },
     attempt_count: {
       type: DataTypes.INTEGER,
       defaultValue: 0
     },
     last_attempt_at: {
       type: DataTypes.DATE
+    },
+    attempted_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Timestamp when the login attempt occurred'
+    },
+    success: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: 'Whether the login attempt was successful'
+    },
+    failure_reason: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Reason for login failure'
     },
     // Geolocation fields
     country: {

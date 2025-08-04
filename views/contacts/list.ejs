@@ -178,19 +178,6 @@
   <!-- Use modern map modal instead of old Google Maps SDK -->
   <script src="/js/contact-map-modal-new.js"></script>
   <script src="/js/contact-search.js"></script>
-  
-  <script>
-    // Debug Groups & Relations button click
-    document.addEventListener('DOMContentLoaded', function() {
-      const groupsBtn = document.getElementById('groupsRelationsBtn');
-      if (groupsBtn) {
-        groupsBtn.addEventListener('click', function(e) {
-          console.log('🔍 Groups & Relations button clicked!');
-          console.log('🔗 Navigating to:', this.href);
-          // Let the default navigation happen
-        });
-      }
-    });
-  </script>
+  <script src="/js/contacts-list-handlers.js?v=<%= Date.now() %>"></script>
 </body>
 </html> 
