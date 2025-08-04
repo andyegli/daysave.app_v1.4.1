@@ -372,8 +372,11 @@ async function createRelationship() {
     try {
         const response = await fetch(window.getCorrectUrl('/contacts/relationships'), {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({
                 contact_id_1: contact1Id,
@@ -418,7 +421,12 @@ async function deleteRelationship(relationshipId) {
 
     try {
         const response = await fetch(window.getCorrectUrl(`/contacts/relationships/${relationshipId}`), {
-            method: 'DELETE'
+            method: 'DELETE',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
 
         const data = await response.json();
