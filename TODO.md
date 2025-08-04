@@ -2,6 +2,22 @@
 
 ## 🚀 **CURRENT HIGH PRIORITY TASKS**
 
+### **Registration & Authentication Bug Fixes**
+- [ ] **Fix Registration Error Message Inconsistency**
+  - [ ] Correct error message when email address is already in use
+  - [ ] Currently shows "Username already in use" instead of proper email error message
+  - [ ] Update validation logic to display appropriate error for email vs username conflicts
+
+- [ ] **Fix Registration Completion Redirect**
+  - [ ] Redirect user to login page after successful registration
+  - [ ] Currently staying on register page after completion
+  - [ ] Implement proper success redirect flow
+
+- [ ] **Improve Login Error Messages**
+  - [ ] Login shows generic "Authentication failed" instead of specific errors
+  - [ ] Should show "User not found" vs "Email not verified" vs "Wrong password"
+  - [ ] Help users understand what went wrong
+
 ### **Content Management & UX Improvements** 
 
 - [ ] **Enhanced Content Organization**
