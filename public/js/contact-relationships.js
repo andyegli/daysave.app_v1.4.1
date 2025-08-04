@@ -56,7 +56,9 @@ async function initializeContactRelationships() {
 // Load all contact relationships
 async function loadContactRelationships() {
     try {
-        const response = await fetch(window.getCorrectUrl('/contacts/relationships'));
+        const url = window.getCorrectUrl('/contacts/relationships');
+        console.log('🔗 ContactRelationships: Making request to:', url);
+        const response = await fetch(url);
         const data = await response.json();
         
         if (data.success) {

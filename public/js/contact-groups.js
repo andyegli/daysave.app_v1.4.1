@@ -53,7 +53,9 @@ async function initializeContactGroups() {
 // Load all contact groups
 async function loadContactGroups() {
     try {
-        const response = await fetch(window.getCorrectUrl('/contacts/groups'));
+        const url = window.getCorrectUrl('/contacts/groups');
+        console.log('🔗 ContactGroups: Making request to:', url);
+        const response = await fetch(url);
         const data = await response.json();
         
         if (data.success) {
