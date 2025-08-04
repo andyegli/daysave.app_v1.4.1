@@ -54,10 +54,11 @@ async function initializeContactGroups() {
 async function loadContactGroups() {
     try {
         const response = await fetch(window.getCorrectUrl('/contacts/groups'), {
-            credentials: 'include',
+            method: 'GET',
+            credentials: 'same-origin',
             headers: {
                 'Accept': 'application/json',
-                'Content-Type': 'application/json'
+                'X-Requested-With': 'XMLHttpRequest'
             }
         });
         const data = await response.json();
@@ -77,9 +78,11 @@ async function loadContactGroups() {
 async function loadAllContacts() {
     try {
         const response = await fetch(window.getCorrectUrl('/contacts/search?q='), {
-            credentials: 'include',
+            method: 'GET',
+            credentials: 'same-origin',
             headers: {
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             }
         });
         ContactGroupsManager.allContacts = await response.json();
