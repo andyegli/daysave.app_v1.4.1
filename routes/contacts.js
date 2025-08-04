@@ -5,18 +5,6 @@ const { isAuthenticated, ensureRoleLoaded, checkUsageLimit, updateUsage } = requ
 const { getGoogleMapsScriptUrl } = require('../config/maps');
 const { logAuthEvent, logAuthError } = require('../config/logger');
 
-// Debug middleware to log all requests
-router.use((req, res, next) => {
-  console.log(`🔍 CONTACTS ROUTE DEBUG: ${req.method} ${req.url}`);
-  console.log(`🔍 Session ID: ${req.sessionID}`);
-  console.log(`🔍 Session exists: ${!!req.session}`);
-  console.log(`🔍 Authenticated: ${req.isAuthenticated ? req.isAuthenticated() : 'No passport'}`);
-  console.log(`🔍 User: ${req.user ? req.user.username : 'None'}`);
-  console.log(`🔍 Cookies: ${JSON.stringify(req.cookies)}`);
-  console.log(`🔍 Headers: ${JSON.stringify(req.headers.cookie)}`);
-  next();
-});
-
 // Apply role loading middleware to all routes
 router.use(isAuthenticated, ensureRoleLoaded);
 
