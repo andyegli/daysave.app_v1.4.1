@@ -3,16 +3,18 @@
  * Handles HTTPS to HTTP redirects and URL corrections for localhost development
  */
 
-// Fix protocol issues for localhost
+// Fix protocol issues for localhost - only redirect if not already on the correct protocol
 if (window.location.hostname === 'localhost' && window.location.protocol === 'https:') {
-  console.log('🔄 Redirecting from HTTPS to HTTP for localhost...');
-  window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+  console.log('🔄 HTTPS detected on localhost - using relative URLs to avoid protocol conflicts');
+  // Don't auto-redirect - let relative URLs handle protocol consistency
 }
 
 // Helper function to fix localhost SSL protocol issues
 function getCorrectUrl(path) {
+  // Always use relative URLs for localhost to avoid protocol issues
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return `http://${window.location.hostname}:${window.location.port || 3000}${path}`;
+    console.log('🔧 Using relative URL for localhost:', path);
+    return path; // Use relative path - browser will use same protocol as current page
   }
   return path;
 }
