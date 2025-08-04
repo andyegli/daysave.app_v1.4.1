@@ -53,7 +53,11 @@ async function initializeContactGroups() {
 // Load all contact groups
 async function loadContactGroups() {
     try {
-        const response = await fetch(window.getCorrectUrl('/contacts/groups'), {
+        const url = window.getCorrectUrl('/contacts/groups');
+        console.log('🔍 AJAX DEBUG: Loading groups from:', url);
+        console.log('🔍 AJAX DEBUG: Document cookies:', document.cookie);
+        
+        const response = await fetch(url, {
             method: 'GET',
             credentials: 'include',
             headers: {
@@ -61,7 +65,15 @@ async function loadContactGroups() {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         });
-        const data = await response.json();
+        
+        console.log('🔍 AJAX DEBUG: Response status:', response.status);
+        console.log('🔍 AJAX DEBUG: Response headers:', [...response.headers.entries()]);
+        console.log('🔍 AJAX DEBUG: Response URL:', response.url);
+        
+        const responseText = await response.text();
+        console.log('🔍 AJAX DEBUG: Raw response:', responseText.substring(0, 200));
+        
+        const data = JSON.parse(responseText);
         
         if (data.success) {
             ContactGroupsManager.contactGroups = data.groups || [];
@@ -213,7 +225,12 @@ async function createGroup() {
     }
 
     try {
-        const response = await fetch(window.getCorrectUrl('/contacts/groups'), {
+        const url = window.getCorrectUrl('/contacts/groups');
+        console.log('🔍 AJAX DEBUG: Creating group at:', url);
+        console.log('🔍 AJAX DEBUG: Group data:', { name: groupName });
+        console.log('🔍 AJAX DEBUG: Document cookies:', document.cookie);
+        
+        const response = await fetch(url, {
             method: 'POST',
             credentials: 'include',
             headers: {
@@ -224,7 +241,13 @@ async function createGroup() {
             body: JSON.stringify({ name: groupName })
         });
 
-        const data = await response.json();
+        console.log('🔍 AJAX DEBUG: POST Response status:', response.status);
+        console.log('🔍 AJAX DEBUG: POST Response URL:', response.url);
+        
+        const responseText = await response.text();
+        console.log('🔍 AJAX DEBUG: POST Raw response:', responseText.substring(0, 200));
+        
+        const data = JSON.parse(responseText);
 
         if (data.success) {
             // Close modal
