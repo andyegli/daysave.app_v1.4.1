@@ -17,7 +17,8 @@ const {
   corsMiddleware,
   ensureRoleLoaded,
   isAuthenticated,
-  deviceFingerprintMiddleware
+  deviceFingerprintMiddleware,
+  devHttpAccessMiddleware
 } = require('./middleware');
 
 const app = express();
@@ -30,6 +31,9 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(securityHeaders());
 // app.use(require('./middleware').logAllHeaders); // Disabled - too verbose for normal operation
 app.use(corsMiddleware);
+
+// Development HTTP access middleware (when enabled by admin)
+app.use(devHttpAccessMiddleware);
 
 // Device fingerprinting middleware (for fraud detection)
 app.use(deviceFingerprintMiddleware({

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Settings - DaySave</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <%- include('../partials/header', { user, title: 'Admin Settings' }) %>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="fw-bold">
+                        <i class="fas fa-cogs me-2"></i>Admin Settings
+                    </h2>
+                    <a href="/admin" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Admin
+                    </a>
+                </div>
+
+                <!-- Success/Error Messages -->
+                <% if (typeof success !== 'undefined' && success) { %>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i><%= success %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <% } %>
+                
+                <% if (typeof error !== 'undefined' && error) { %>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i><%= error %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <% } %>
+
+                <!-- Settings Form -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-shield-alt me-2"></i>Security & Development Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="/admin/settings">
+                            
+                            <!-- Development HTTP Access Setting -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        Development Settings (Security Risk)
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input 
+                                            class="form-check-input" 
+                                            type="checkbox" 
+                                            id="allowDevHttpAnyIp" 
+                                            name="allow_dev_http_any_ip" 
+                                            value="true"
+                                            <%= (settings && settings.allow_dev_http_any_ip) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="allowDevHttpAnyIp">
+                                            <strong>Allow HTTP access from any IP in development</strong>
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        <strong>WARNING:</strong> This setting allows HTTP (non-SSL) access from any IP address 
+                                        during development. This is a security risk and should ONLY be used for 
+                                        development environments where you need remote access without SSL certificates.
+                                        <br><br>
+                                        <strong>When enabled:</strong>
+                                        <ul>
+                                            <li>Remote users can access the app via HTTP on any IP</li>
+                                            <li>No SSL certificate required for development</li>
+                                            <li>Logs all remote access attempts</li>
+                                            <li>Only works in NODE_ENV=development</li>
+                                        </ul>
+                                        <strong>Automatically disabled in production.</strong>
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- File Upload Settings -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-upload me-2"></i>File Upload Settings
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label for="maxFileSize" class="form-label">Maximum File Size (MB)</label>
+                                            <input 
+                                                type="number" 
+                                                class="form-control" 
+                                                id="maxFileSize" 
+                                                name="max_file_size" 
+                                                value="<%= (settings && settings.max_file_size) || 25 %>" 
+                                                min="1" 
+                                                max="100">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="loginAttempts" class="form-label">Max Login Attempts</label>
+                                            <input 
+                                                type="number" 
+                                                class="form-control" 
+                                                id="loginAttempts" 
+                                                name="login_attempts" 
+                                                value="<%= (settings && settings.login_attempts) || 5 %>" 
+                                                min="1" 
+                                                max="20">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Save Button -->
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Save Settings
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Current Environment Info -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Environment Information
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>Environment:</strong> 
+                                <span class="badge bg-<%= process.env.NODE_ENV === 'production' ? 'danger' : 'warning' %>">
+                                    <%= process.env.NODE_ENV || 'development' %>
+                                </span>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Dev HTTP Access:</strong> 
+                                <span class="badge bg-<%= (settings && settings.allow_dev_http_any_ip && process.env.NODE_ENV === 'development') ? 'danger' : 'success' %>">
+                                    <%= (settings && settings.allow_dev_http_any_ip && process.env.NODE_ENV === 'development') ? 'ENABLED' : 'DISABLED' %>
+                                </span>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>SSL Mode:</strong> 
+                                <span class="badge bg-<%= process.env.NODE_ENV === 'production' ? 'success' : 'warning' %>">
+                                    <%= process.env.NODE_ENV === 'production' ? 'ENFORCED' : 'DEVELOPMENT' %>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('../partials/footer') %>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

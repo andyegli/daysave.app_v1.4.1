@@ -76,6 +76,26 @@ const logAllHeaders = (req, res, next) => {
 // CORS middleware function
 const corsMiddleware = cors(corsOptions);
 
+// Check if development HTTP access from any IP is allowed
+const checkDevHttpAccess = async () => {
+  // Only check in development mode
+  if (process.env.NODE_ENV !== 'development') {
+    return false;
+  }
+
+  try {
+    const { AdminSetting } = require('../models');
+    const setting = await AdminSetting.findOne({
+      order: [['createdAt', 'DESC']]
+    });
+    
+    return setting?.allow_dev_http_any_ip || false;
+  } catch (error) {
+    console.warn('Could not check dev HTTP access setting:', error.message);
+    return false;
+  }
+};
+
 // Security headers middleware
 const securityHeaders = () => {
   const cspDirectives = {
