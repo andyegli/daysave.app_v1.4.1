@@ -212,45 +212,102 @@ class DeviceFingerprintingAdmin {
 
     devices.forEach(device => {
       const deviceCard = document.createElement('div');
-      deviceCard.className = 'col-md-4 mb-3';
+      deviceCard.className = 'col-lg-4 col-md-6 mb-4';
+      
+      // Get device icon based on type
+      const deviceIcon = this.getDeviceIcon(device.device_type);
+      const deviceTypeDisplay = device.device_type ? device.device_type.charAt(0).toUpperCase() + device.device_type.slice(1) : 'Unknown';
+      
+      // Format hardware info
+      const hardwareInfo = device.device_details?.hardware ? `
+        <div class="mb-2">
+          <small class="text-muted">Hardware:</small><br>
+          <small>
+            <i class="fas fa-microchip me-1"></i>${device.device_details.hardware.cpuCores} cores, 
+            ${Math.round(device.device_details.hardware.memory / 1024)}GB RAM<br>
+            <i class="fas fa-desktop me-1"></i>${device.device_details.hardware.gpu || 'Unknown GPU'}
+          </small>
+        </div>
+      ` : '';
+      
+      // Format display info
+      const displayInfo = device.screen_resolution || device.device_details?.display?.availableScreenSize ? `
+        <div class="mb-2">
+          <small class="text-muted">Display:</small><br>
+          <small>
+            <i class="fas fa-tv me-1"></i>${device.screen_resolution || device.device_details.display.availableScreenSize}
+            ${device.device_details?.display?.pixelRatio ? ` @${device.device_details.display.pixelRatio}x` : ''}
+          </small>
+        </div>
+      ` : '';
+      
+      // Format browser fingerprint info
+      const fingerprintInfo = device.device_details?.canvas || device.device_details?.audio ? `
+        <div class="mb-2">
+          <small class="text-muted">Fingerprint Hashes:</small><br>
+          <small class="font-monospace">
+            ${device.device_details.canvas ? `<i class="fas fa-paint-brush me-1"></i>Canvas: ...${device.device_details.canvas.hash.slice(-8)}<br>` : ''}
+            ${device.device_details.audio ? `<i class="fas fa-volume-up me-1"></i>Audio: ...${device.device_details.audio.hash.slice(-8)}` : ''}
+          </small>
+        </div>
+      ` : '';
+      
       deviceCard.innerHTML = `
-        <div class="card device-card h-100">
+        <div class="card device-card h-100 shadow-sm">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+            <h6 class="mb-0">
+              <i class="${deviceIcon} me-2 text-primary"></i>
+              ${deviceTypeDisplay} Device
+            </h6>
+            ${device.is_trusted ? 
+              '<span class="badge bg-success">Trusted</span>' : 
+              '<span class="badge bg-warning">Untrusted</span>'}
+          </div>
           <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <h6 class="card-title mb-0">
-                <i class="fas fa-mobile-alt me-2"></i>
-                Device ${device.device_fingerprint.substring(0, 8)}...
-              </h6>
-              ${device.is_trusted ? 
-                '<span class="badge bg-success">Trusted</span>' : 
-                '<span class="badge bg-warning">Untrusted</span>'}
-            </div>
-            
             <div class="mb-2">
               <small class="text-muted">User:</small><br>
               <strong>${device.user ? device.user.username : 'Unknown'}</strong>
             </div>
             
-            <div class="mb-2">
-              <small class="text-muted">Last Login:</small><br>
-              ${this.formatDateTime(device.last_login_at)}
-            </div>
+            ${device.browser_name || device.os_name ? `
+              <div class="mb-2">
+                <small class="text-muted">Platform:</small><br>
+                <small>
+                  ${device.browser_name ? `<i class="fab fa-${this.getBrowserIcon(device.browser_name)} me-1"></i>${device.browser_name} ${device.browser_version || ''}` : 'Unknown Browser'}<br>
+                  ${device.os_name ? `<i class="fas fa-${this.getOSIcon(device.os_name)} me-1"></i>${device.os_name} ${device.os_version || ''}` : 'Unknown OS'}
+                </small>
+              </div>
+            ` : ''}
+            
+            ${displayInfo}
+            ${hardwareInfo}
             
             <div class="mb-2">
               <small class="text-muted">Location:</small><br>
-              <i class="fas fa-map-marker-alt me-1"></i>${device.locationDisplay || 'Unknown'}
-              ${device.location_confidence ? 
-                `<br><small class="text-muted">Confidence: ${Math.round(device.location_confidence * 100)}%</small>` : 
-                ''}
+              <small>
+                <i class="fas fa-map-marker-alt me-1"></i>${device.locationDisplay || 'Unknown'}
+                ${device.timezone ? `<br><i class="fas fa-clock me-1"></i>${device.timezone}` : ''}
+                ${device.location_confidence ? 
+                  `<br><span class="text-muted">Confidence: ${Math.round(device.location_confidence * 100)}%</span>` : 
+                  ''}
+              </small>
             </div>
+            
+            <div class="mb-2">
+              <small class="text-muted">Last Login:</small><br>
+              <small>${this.formatDateTime(device.last_login_at)}</small>
+            </div>
+            
+            ${fingerprintInfo}
             
             <div class="mb-3">
-              <small class="text-muted">Fingerprint:</small><br>
-              <code class="fingerprint-hash">${device.device_fingerprint}</code>
+              <small class="text-muted">Device ID:</small><br>
+              <code class="fingerprint-hash small">${device.device_fingerprint}</code>
             </div>
-            
+          </div>
+          <div class="card-footer bg-white">
             <div class="btn-group btn-group-sm w-100">
-              <button class="btn btn-outline-primary view-device-btn" data-fingerprint="${device.device_fingerprint}">
+              <button class="btn btn-outline-primary view-device-btn" data-fingerprint="${device.device_fingerprint}" data-device='${JSON.stringify(device).replace(/'/g, "&#39;")}'>
                 <i class="fas fa-eye"></i> Details
               </button>
               <button class="btn btn-outline-${device.is_trusted ? 'warning' : 'success'} toggle-trust-btn" 
@@ -303,6 +360,68 @@ class DeviceFingerprintingAdmin {
   }
 
   /**
+   * Get device icon based on type
+   */
+  getDeviceIcon(deviceType) {
+    switch (deviceType?.toLowerCase()) {
+      case 'mobile':
+        return 'fas fa-mobile-alt';
+      case 'tablet':
+        return 'fas fa-tablet-alt';
+      case 'laptop':
+        return 'fas fa-laptop';
+      case 'desktop':
+        return 'fas fa-desktop';
+      default:
+        return 'fas fa-question-circle';
+    }
+  }
+
+  /**
+   * Get browser icon
+   */
+  getBrowserIcon(browserName) {
+    switch (browserName?.toLowerCase()) {
+      case 'chrome':
+        return 'chrome';
+      case 'firefox':
+        return 'firefox-browser';
+      case 'safari':
+        return 'safari';
+      case 'edge':
+        return 'edge';
+      case 'opera':
+        return 'opera';
+      case 'internet explorer':
+      case 'ie':
+        return 'internet-explorer';
+      default:
+        return 'globe';
+    }
+  }
+
+  /**
+   * Get OS icon
+   */
+  getOSIcon(osName) {
+    switch (osName?.toLowerCase()) {
+      case 'windows':
+        return 'windows';
+      case 'macos':
+      case 'mac os':
+        return 'apple';
+      case 'ios':
+        return 'apple';
+      case 'android':
+        return 'android';
+      case 'linux':
+        return 'linux';
+      default:
+        return 'question-circle';
+    }
+  }
+
+  /**
    * Setup event listeners
    */
   setupEventListeners() {
@@ -349,6 +468,12 @@ class DeviceFingerprintingAdmin {
         const fingerprint = btn.dataset.fingerprint;
         const isTrusted = btn.dataset.trusted === 'true';
         this.toggleDeviceTrust(fingerprint, isTrusted);
+      }
+      
+      // Copy fingerprint to clipboard
+      if (e.target.closest('.copy-fingerprint-btn')) {
+        const fingerprint = e.target.closest('.copy-fingerprint-btn').dataset.fingerprint;
+        this.copyToClipboard(fingerprint);
       }
     });
   }
@@ -420,6 +545,34 @@ class DeviceFingerprintingAdmin {
   }
 
   /**
+   * Copy text to clipboard
+   */
+  async copyToClipboard(text) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        this.showSuccess('Fingerprint copied to clipboard');
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+        this.showSuccess('Fingerprint copied to clipboard');
+      }
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      this.showError('Failed to copy fingerprint');
+    }
+  }
+
+  /**
    * View attempt details
    */
   viewAttemptDetails(attemptId) {
@@ -454,9 +607,193 @@ class DeviceFingerprintingAdmin {
   /**
    * View device details
    */
-  viewDeviceDetails(fingerprint) {
-    // Implement modal or page to show device details
-    alert(`View details for device: ${fingerprint}`);
+  viewDeviceDetails(fingerprint, deviceData = null) {
+    // If device data is passed, use it; otherwise fetch from the current devices list
+    let device = deviceData;
+    if (!device) {
+      // Find device in current devices list
+      const deviceElements = document.querySelectorAll('.view-device-btn');
+      for (const element of deviceElements) {
+        if (element.dataset.fingerprint === fingerprint) {
+          try {
+            device = JSON.parse(element.dataset.device);
+            break;
+          } catch (e) {
+            console.warn('Could not parse device data:', e);
+          }
+        }
+      }
+    }
+
+    if (!device) {
+      this.showError('Device details not found');
+      return;
+    }
+
+    // Create and show device details modal
+    this.showDeviceDetailsModal(device);
+  }
+
+  /**
+   * Show device details modal
+   */
+  showDeviceDetailsModal(device) {
+    // Create modal HTML
+    const modalHtml = `
+      <div class="modal fade" id="deviceDetailsModal" tabindex="-1" aria-labelledby="deviceDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="deviceDetailsModalLabel">
+                <i class="${this.getDeviceIcon(device.device_type)} me-2"></i>
+                Device Fingerprint Details
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              ${this.generateDeviceDetailsHTML(device)}
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary copy-fingerprint-btn" data-bs-dismiss="modal" data-fingerprint="${device.device_fingerprint}">
+                <i class="fas fa-copy me-1"></i>Copy Fingerprint
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Remove existing modal if any
+    const existingModal = document.getElementById('deviceDetailsModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('deviceDetailsModal'));
+    modal.show();
+  }
+
+  /**
+   * Generate comprehensive device details HTML
+   */
+  generateDeviceDetailsHTML(device) {
+    const details = device.device_details || {};
+    
+    return `
+      <div class="row">
+        <!-- Basic Information -->
+        <div class="col-md-6">
+          <h6 class="text-primary"><i class="fas fa-info-circle me-2"></i>Basic Information</h6>
+          <table class="table table-sm">
+            <tr><td><strong>Device Type:</strong></td><td>${device.device_type || 'Unknown'}</td></tr>
+            <tr><td><strong>User:</strong></td><td>${device.user?.username || 'Unknown'}</td></tr>
+            <tr><td><strong>Trusted:</strong></td><td>${device.is_trusted ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-warning">No</span>'}</td></tr>
+            <tr><td><strong>Last Login:</strong></td><td>${this.formatDateTime(device.last_login_at)}</td></tr>
+            <tr><td><strong>Created:</strong></td><td>${this.formatDateTime(device.createdAt)}</td></tr>
+          </table>
+        </div>
+
+        <!-- Location Information -->
+        <div class="col-md-6">
+          <h6 class="text-primary"><i class="fas fa-map-marker-alt me-2"></i>Location Information</h6>
+          <table class="table table-sm">
+            <tr><td><strong>Location:</strong></td><td>${device.city || 'Unknown'}, ${device.country || 'Unknown'}</td></tr>
+            <tr><td><strong>Timezone:</strong></td><td>${device.timezone || 'Unknown'}</td></tr>
+            <tr><td><strong>Coordinates:</strong></td><td>${device.latitude && device.longitude ? `${device.latitude}, ${device.longitude}` : 'Unknown'}</td></tr>
+            <tr><td><strong>Confidence:</strong></td><td>${device.location_confidence ? Math.round(device.location_confidence * 100) + '%' : 'Unknown'}</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="row mt-3">
+        <!-- Platform Information -->
+        <div class="col-md-6">
+          <h6 class="text-primary"><i class="fab fa-${this.getBrowserIcon(device.browser_name)} me-2"></i>Platform Information</h6>
+          <table class="table table-sm">
+            <tr><td><strong>Browser:</strong></td><td>${device.browser_name || 'Unknown'} ${device.browser_version || ''}</td></tr>
+            <tr><td><strong>Operating System:</strong></td><td>${device.os_name || 'Unknown'} ${device.os_version || ''}</td></tr>
+            <tr><td><strong>Architecture:</strong></td><td>${details.hardware?.architecture || 'Unknown'}</td></tr>
+            <tr><td><strong>Language:</strong></td><td>${details.browser?.language || 'Unknown'}</td></tr>
+          </table>
+        </div>
+
+        <!-- Hardware Information -->
+        <div class="col-md-6">
+          <h6 class="text-primary"><i class="fas fa-microchip me-2"></i>Hardware Information</h6>
+          <table class="table table-sm">
+            <tr><td><strong>CPU Cores:</strong></td><td>${details.hardware?.cpuCores || 'Unknown'}</td></tr>
+            <tr><td><strong>Memory:</strong></td><td>${details.hardware?.memory ? Math.round(details.hardware.memory / 1024) + ' GB' : 'Unknown'}</td></tr>
+            <tr><td><strong>GPU:</strong></td><td class="small">${details.hardware?.gpu || 'Unknown'}</td></tr>
+            <tr><td><strong>Screen:</strong></td><td>${device.screen_resolution || 'Unknown'}</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="row mt-3">
+        <!-- Browser Fingerprinting -->
+        <div class="col-12">
+          <h6 class="text-primary"><i class="fas fa-fingerprint me-2"></i>Browser Fingerprinting</h6>
+          <div class="row">
+            <div class="col-md-6">
+              <table class="table table-sm">
+                <tr><td><strong>Canvas Hash:</strong></td><td class="font-monospace small">${details.canvas?.hash?.substring(0, 20) + '...' || 'Unknown'}</td></tr>
+                <tr><td><strong>Audio Hash:</strong></td><td class="font-monospace small">${details.audio?.hash?.substring(0, 20) + '...' || 'Unknown'}</td></tr>
+                <tr><td><strong>WebGL Vendor:</strong></td><td class="small">${details.webgl?.vendor || 'Unknown'}</td></tr>
+                <tr><td><strong>WebGL Renderer:</strong></td><td class="small">${details.webgl?.renderer?.substring(0, 30) + '...' || 'Unknown'}</td></tr>
+              </table>
+            </div>
+            <div class="col-md-6">
+              <table class="table table-sm">
+                <tr><td><strong>Pixel Ratio:</strong></td><td>${details.display?.pixelRatio || 'Unknown'}</td></tr>
+                <tr><td><strong>Color Depth:</strong></td><td>${details.display?.colorDepth || 'Unknown'} bit</td></tr>
+                <tr><td><strong>Touch Support:</strong></td><td>${details.browser?.touchSupport ? 'Yes' : 'No'}</td></tr>
+                <tr><td><strong>Do Not Track:</strong></td><td>${details.browser?.doNotTrack ? 'Enabled' : 'Disabled'}</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row mt-3">
+        <!-- Fonts and Audio -->
+        <div class="col-md-6">
+          <h6 class="text-primary"><i class="fas fa-font me-2"></i>Detected Fonts</h6>
+          <div class="small">
+            ${details.canvas?.fonts ? details.canvas.fonts.map(font => `<span class="badge bg-light text-dark me-1">${font}</span>`).join('') : 'Unknown'}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <h6 class="text-primary"><i class="fas fa-volume-up me-2"></i>Audio Capabilities</h6>
+          <table class="table table-sm">
+            <tr><td><strong>Sample Rate:</strong></td><td>${details.audio?.sampleRate || 'Unknown'} Hz</td></tr>
+            <tr><td><strong>Channels:</strong></td><td>${details.audio?.channels || 'Unknown'}</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="row mt-3">
+        <div class="col-12">
+          <h6 class="text-primary"><i class="fas fa-code me-2"></i>User Agent</h6>
+          <div class="bg-light p-2 rounded">
+            <code class="small">${device.user_agent || 'Unknown'}</code>
+          </div>
+        </div>
+      </div>
+
+      <div class="row mt-3">
+        <div class="col-12">
+          <h6 class="text-primary"><i class="fas fa-key me-2"></i>Device Fingerprint</h6>
+          <div class="bg-light p-2 rounded">
+            <code>${device.device_fingerprint}</code>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   /**

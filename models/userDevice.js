@@ -62,6 +62,47 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(3, 2),
       allowNull: true,
       comment: 'Confidence score for location accuracy (0-1)'
+    },
+    // Device fingerprint details
+    device_details: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Detailed device fingerprint information as JSON'
+    },
+    browser_name: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Browser name (Chrome, Firefox, Safari, etc.)'
+    },
+    browser_version: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: 'Browser version'
+    },
+    os_name: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Operating system name'
+    },
+    os_version: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: 'Operating system version'
+    },
+    device_type: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: 'Device type (desktop, mobile, tablet)'
+    },
+    screen_resolution: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: 'Screen resolution (e.g., 1920x1080)'
+    },
+    user_agent: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Full user agent string'
     }
   }, {
     tableName: 'user_devices',
