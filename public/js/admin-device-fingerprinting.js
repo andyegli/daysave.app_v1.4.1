@@ -511,4 +511,35 @@ window.saveSecuritySettings = async function() {
 let adminDashboard;
 document.addEventListener('DOMContentLoaded', () => {
   adminDashboard = new DeviceFingerprintingAdmin();
+  
+  // Attach event listeners to buttons to replace inline onclick handlers
+  const refreshLoginAttemptsBtn = document.getElementById('refreshLoginAttemptsBtn');
+  if (refreshLoginAttemptsBtn) {
+    refreshLoginAttemptsBtn.addEventListener('click', window.refreshLoginAttempts);
+  }
+  
+  const exportLoginDataBtn = document.getElementById('exportLoginDataBtn');
+  if (exportLoginDataBtn) {
+    exportLoginDataBtn.addEventListener('click', window.exportLoginData);
+  }
+  
+  const refreshDevicesBtn = document.getElementById('refreshDevicesBtn');
+  if (refreshDevicesBtn) {
+    refreshDevicesBtn.addEventListener('click', window.refreshDevices);
+  }
+  
+  const bulkTrustDevicesBtn = document.getElementById('bulkTrustDevicesBtn');
+  if (bulkTrustDevicesBtn) {
+    bulkTrustDevicesBtn.addEventListener('click', window.bulkTrustDevices);
+  }
+  
+  const bulkBlockDevicesBtn = document.getElementById('bulkBlockDevicesBtn');
+  if (bulkBlockDevicesBtn) {
+    bulkBlockDevicesBtn.addEventListener('click', window.bulkBlockDevices);
+  }
+  
+  const saveSecuritySettingsBtn = document.getElementById('saveSecuritySettingsBtn');
+  if (saveSecuritySettingsBtn) {
+    saveSecuritySettingsBtn.addEventListener('click', window.saveSecuritySettings);
+  }
 });
