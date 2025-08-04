@@ -620,6 +620,7 @@ router.get('/groups', isAuthenticated, async (req, res) => {
 
 // Create a new contact group
 router.post('/groups', [
+  isAuthenticated,
   checkUsageLimit('contact_groups'),
   updateUsage('contact_groups')
 ], async (req, res) => {
