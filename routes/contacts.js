@@ -500,6 +500,11 @@ router.get('/autocomplete', isAuthenticated, async (req, res) => {
 // Groups and Relationships Management Page
 router.get('/groups-relationships', isAuthenticated, async (req, res) => {
   try {
+    console.log('🔍 Groups-relationships route accessed');
+    console.log('🔍 User authenticated:', req.isAuthenticated());
+    console.log('🔍 User object:', req.user ? { id: req.user.id, username: req.user.username } : 'No user');
+    console.log('🔍 Session ID:', req.sessionID);
+    
     res.render('contacts/groups-relationships', { 
       user: req.user,
       error: null,
