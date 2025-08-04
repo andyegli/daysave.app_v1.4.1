@@ -2,11 +2,29 @@ const express = require('express');
 const router = express.Router();
 const fetch = require('node-fetch');
 const { isAuthenticated } = require('../middleware/auth');
+const { getGoogleMapsScriptUrl } = require('../config/maps');
 
 // Get API key from environment
 const getApiKey = () => {
   return process.env.GOOGLE_MAPS_KEY || process.env.GOOGLE_API_KEY;
 };
+
+// Serve Google Maps API script URL with callback
+router.get('/script-url', (req, res) => {
+  try {
+    const { callback } = req.query;
+    let scriptUrl = getGoogleMapsScriptUrl();
+    
+    if (callback) {
+      scriptUrl += `&callback=${encodeURIComponent(callback)}`;
+    }
+    
+    res.redirect(scriptUrl);
+  } catch (error) {
+    console.error('Error serving Google Maps script URL:', error);
+    res.status(500).json({ error: 'Failed to generate script URL' });
+  }
+});
 
 // Test the new Places API autocomplete functionality
 router.post('/test-autocomplete', isAuthenticated, async (req, res) => {
