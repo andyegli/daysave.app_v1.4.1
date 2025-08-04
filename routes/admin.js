@@ -2845,7 +2845,7 @@ router.get('/api/fingerprinting/analytics', isAuthenticated, isAdmin, async (req
       return [];
     });
 
-    // 7. Risk analysis by location
+    // 7. Risk analysis by location - with error handling
     const riskByLocation = await LoginAttempt.findAll({
       attributes: [
         'country',
@@ -2861,9 +2861,12 @@ router.get('/api/fingerprinting/analytics', isAuthenticated, isAdmin, async (req
       group: ['country'],
       having: literal('COUNT(id) > 3'), // Only countries with significant activity
       order: [[literal('AVG(CASE WHEN success = true THEN 1.0 ELSE 0.0 END)'), 'ASC']] // Riskiest first
+    }).catch(err => {
+      console.warn('riskByLocation query failed:', err.message);
+      return [];
     });
 
-    // 8. Device fingerprint collision analysis
+    // 8. Device fingerprint collision analysis - with error handling
     const fingerprintCollisions = await UserDevice.findAll({
       attributes: [
         'device_fingerprint',
@@ -2872,48 +2875,121 @@ router.get('/api/fingerprinting/analytics', isAuthenticated, isAdmin, async (req
       group: ['device_fingerprint'],
       having: literal('COUNT(DISTINCT user_id) > 1'), // Same fingerprint, different users
       order: [[fn('COUNT', fn('DISTINCT', col('user_id'))), 'DESC']]
+    }).catch(err => {
+      console.warn('fingerprintCollisions query failed:', err.message);
+      return [];
     });
 
-    // Format data with enhanced location information
-    const enhancedDevicesPerCountry = devicesPerCountry.map(item => {
-      const data = item.toJSON();
-      data.countryName = geoLocationService.getCountryName(data.country);
-      return data;
-    });
+    // Helper function for safe country name lookup
+    const getCountryNameSafe = (countryCode) => {
+      try {
+        return (typeof geoLocationService !== 'undefined' && geoLocationService.getCountryName) 
+          ? geoLocationService.getCountryName(countryCode) 
+          : countryCode || 'Unknown';
+      } catch (err) {
+        return countryCode || 'Unknown';
+      }
+    };
 
-    const enhancedGeographicDistribution = geographicDistribution.map(item => {
-      const data = item.toJSON();
-      data.countryName = geoLocationService.getCountryName(data.country);
-      data.vpnPercentage = data.loginCount > 0 ? (data.vpnCount / data.loginCount * 100).toFixed(1) : 0;
-      return data;
-    });
+    // Helper function for safe location formatting
+    const formatLocationSafe = (locationData) => {
+      try {
+        return (typeof geoLocationService !== 'undefined' && geoLocationService.formatLocationForDisplay)
+          ? geoLocationService.formatLocationForDisplay(locationData)
+          : `${locationData.city || 'Unknown'}, ${locationData.country || 'Unknown'}${locationData.isVPN ? ' (VPN)' : ''}`;
+      } catch (err) {
+        return `${locationData.city || 'Unknown'}, ${locationData.country || 'Unknown'}`;
+      }
+    };
+
+    // Safely format data with enhanced location information
+    const enhancedDevicesPerCountry = Array.isArray(devicesPerCountry) ? devicesPerCountry.map(item => {
+      try {
+        const data = item.toJSON();
+        data.countryName = getCountryNameSafe(data.country);
+        return data;
+      } catch (err) {
+        console.warn('Error processing devicesPerCountry item:', err.message);
+        return { country: 'Unknown', deviceCount: 0, uniqueUsers: 0, countryName: 'Unknown' };
+      }
+    }) : [];
+
+    const enhancedGeographicDistribution = Array.isArray(geographicDistribution) ? geographicDistribution.map(item => {
+      try {
+        const data = item.toJSON();
+        data.countryName = getCountryNameSafe(data.country);
+        data.vpnPercentage = data.loginCount > 0 ? (data.vpnCount / data.loginCount * 100).toFixed(1) : 0;
+        return data;
+      } catch (err) {
+        console.warn('Error processing geographicDistribution item:', err.message);
+        return { country: 'Unknown', city: 'Unknown', loginCount: 0, uniqueUsers: 0, vpnCount: 0, countryName: 'Unknown', vpnPercentage: 0 };
+      }
+    }) : [];
 
     res.json({
       success: true,
       data: {
-        devicesPerUser: devicesPerUser.map(item => item.toJSON()),
+        devicesPerUser: Array.isArray(devicesPerUser) ? devicesPerUser.map(item => {
+          try {
+            return item.toJSON();
+          } catch (err) {
+            console.warn('Error processing devicesPerUser item:', err.message);
+            return { user_id: null, deviceCount: 0, User: { username: 'Unknown', email: 'Unknown' } };
+          }
+        }) : [],
         devicesPerCountry: enhancedDevicesPerCountry,
-        loginsPerIP: loginsPerIP.map(item => {
-          const data = item.toJSON();
-          data.failureRate = data.attemptCount > 0 ? (data.failedCount / data.attemptCount * 100).toFixed(1) : 0;
-          data.locationDisplay = geoLocationService.formatLocationForDisplay({
-            city: data.city,
-            country: data.country,
-            isVPN: data.is_vpn
-          });
-          return data;
-        }),
+        loginsPerIP: Array.isArray(loginsPerIP) ? loginsPerIP.map(item => {
+          try {
+            const data = item.toJSON();
+            data.failureRate = data.attemptCount > 0 ? (data.failedCount / data.attemptCount * 100).toFixed(1) : 0;
+            data.locationDisplay = formatLocationSafe({
+              city: data.city,
+              country: data.country,
+              isVPN: data.is_vpn
+            });
+            return data;
+          } catch (err) {
+            console.warn('Error processing loginsPerIP item:', err.message);
+            return { ip_address: 'Unknown', country: 'Unknown', city: 'Unknown', is_vpn: false, attemptCount: 0, failedCount: 0, uniqueUsers: 0, failureRate: 0, locationDisplay: 'Unknown' };
+          }
+        }) : [],
         geographicDistribution: enhancedGeographicDistribution,
-        vpnStats: vpnStats.map(item => item.toJSON()),
-        dailyTrends: dailyTrends.map(item => item.toJSON()),
-        riskByLocation: riskByLocation.map(item => {
-          const data = item.toJSON();
-          data.countryName = geoLocationService.getCountryName(data.country);
-          data.failureRate = (100 - (data.successRate * 100)).toFixed(1);
-          data.vpnPercentage = data.totalAttempts > 0 ? (data.vpnAttempts / data.totalAttempts * 100).toFixed(1) : 0;
-          return data;
-        }),
-        fingerprintCollisions: fingerprintCollisions.map(item => item.toJSON())
+        vpnStats: Array.isArray(vpnStats) ? vpnStats.map(item => {
+          try {
+            return item.toJSON();
+          } catch (err) {
+            console.warn('Error processing vpnStats item:', err.message);
+            return { is_vpn: false, count: 0, uniqueUsers: 0, successRate: 0 };
+          }
+        }) : [],
+        dailyTrends: Array.isArray(dailyTrends) ? dailyTrends.map(item => {
+          try {
+            return item.toJSON();
+          } catch (err) {
+            console.warn('Error processing dailyTrends item:', err.message);
+            return { date: new Date().toISOString().split('T')[0], totalAttempts: 0, successfulLogins: 0, uniqueDevices: 0, uniqueCountries: 0 };
+          }
+        }) : [],
+        riskByLocation: Array.isArray(riskByLocation) ? riskByLocation.map(item => {
+          try {
+            const data = item.toJSON();
+            data.countryName = getCountryNameSafe(data.country);
+            data.failureRate = (100 - (data.successRate * 100)).toFixed(1);
+            data.vpnPercentage = data.totalAttempts > 0 ? (data.vpnAttempts / data.totalAttempts * 100).toFixed(1) : 0;
+            return data;
+          } catch (err) {
+            console.warn('Error processing riskByLocation item:', err.message);
+            return { country: 'Unknown', totalAttempts: 0, failedAttempts: 0, successRate: 0, vpnAttempts: 0, countryName: 'Unknown', failureRate: 0, vpnPercentage: 0 };
+          }
+        }) : [],
+        fingerprintCollisions: Array.isArray(fingerprintCollisions) ? fingerprintCollisions.map(item => {
+          try {
+            return item.toJSON();
+          } catch (err) {
+            console.warn('Error processing fingerprintCollisions item:', err.message);
+            return { device_fingerprint: 'Unknown', userCount: 0 };
+          }
+        }) : []
       },
       generatedAt: new Date()
     });
