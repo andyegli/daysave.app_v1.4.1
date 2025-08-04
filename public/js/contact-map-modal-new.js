@@ -173,68 +173,44 @@ class ModernContactMapModal {
   async renderStaticMap(location, address) {
     const mapContainer = document.getElementById('map');
     
-    // Create a modern location display without static map dependency
+    // Create a container with embedded Google Map
     const mapHtml = `
       <div class="modern-map-container h-100 d-flex flex-column">
         <!-- Address Header -->
         <div class="map-header p-3 bg-primary text-white">
-          <h6 class="mb-1 fw-bold">📍 Location Found</h6>
-          <p class="mb-0 small opacity-75">${address}</p>
+          <h6 class="mb-1 fw-bold">📍 ${address}</h6>
+          <p class="mb-0 small opacity-75">GPS: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}</p>
         </div>
         
-        <!-- Location Info -->
-        <div class="map-content flex-grow-1 d-flex flex-column justify-content-center align-items-center p-4 bg-light">
-          <div class="text-center mb-4">
-            <i class="fas fa-map-marker-alt text-primary fa-4x mb-3"></i>
-            <h5 class="mb-2">Location Verified</h5>
-            <p class="text-muted mb-3">This address has been found and verified by Google Maps.</p>
-            
-            <!-- Coordinates -->
-            <div class="bg-white p-3 rounded border mb-4">
-              <small class="text-muted d-block">GPS Coordinates:</small>
-              <strong>${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}</strong>
-            </div>
-          </div>
-          
-          <!-- Action Buttons -->
-          <div class="d-flex gap-2 flex-wrap justify-content-center">
+        <!-- Interactive Google Map -->
+        <div class="map-content flex-grow-1" style="min-height: 300px; position: relative;">
+          <div id="google-map" style="width: 100%; height: 100%; min-height: 300px;"></div>
+        </div>
+        
+        <!-- Action Buttons Footer -->
+        <div class="map-footer p-3 border-top bg-white">
+          <div class="d-flex gap-2 flex-wrap justify-content-center mb-2">
             <a href="${this.getGoogleMapsUrl(location, address)}" 
                target="_blank" 
-               class="btn btn-primary">
-              <i class="fas fa-external-link-alt me-2"></i>
+               class="btn btn-sm btn-outline-primary">
+              <i class="fas fa-external-link-alt me-1"></i>
               Open in Google Maps
             </a>
             <a href="${this.getAppleMapsUrl(location, address)}" 
                target="_blank" 
-               class="btn btn-outline-secondary">
-              <i class="fas fa-map me-2"></i>
+               class="btn btn-sm btn-outline-secondary">
+              <i class="fas fa-map me-1"></i>
               Apple Maps
             </a>
-            <button class="btn btn-outline-info copy-address-btn" data-address="${address.replace(/"/g, '&quot;')}">
-              <i class="fas fa-copy me-2"></i>
+            <button class="btn btn-sm btn-outline-info copy-address-btn" data-address="${address.replace(/"/g, '&quot;')}">
+              <i class="fas fa-copy me-1"></i>
               Copy Address
             </button>
-          </div>
-        </div>
-        
-        <!-- Directions Options -->
-        <div class="map-footer p-3 border-top bg-white">
-          <small class="text-muted d-block mb-2">
-            <i class="fas fa-route me-1"></i>
-            Get directions from:
-          </small>
-          <div class="d-flex gap-2 flex-wrap">
             <a href="https://www.google.com/maps/dir//${encodeURIComponent(address)}" 
                target="_blank" 
-               class="btn btn-sm btn-outline-primary">
+               class="btn btn-sm btn-outline-success">
               <i class="fas fa-directions me-1"></i>
-              Google Directions
-            </a>
-            <a href="https://maps.apple.com/?daddr=${encodeURIComponent(address)}" 
-               target="_blank" 
-               class="btn btn-sm btn-outline-secondary">
-              <i class="fas fa-route me-1"></i>
-              Apple Directions
+              Get Directions
             </a>
           </div>
         </div>
@@ -242,6 +218,9 @@ class ModernContactMapModal {
     `;
     
     mapContainer.innerHTML = mapHtml;
+    
+    // Initialize Google Map
+    await this.initializeGoogleMap(location, address);
     
     // Add copy functionality
     const copyBtn = mapContainer.querySelector('.copy-address-btn');
@@ -321,6 +300,120 @@ class ModernContactMapModal {
         </button>
       </div>
     `;
+  }
+
+  async initializeGoogleMap(location, address) {
+    const mapElement = document.getElementById('google-map');
+    if (!mapElement) {
+      console.error('ModernContactMapModal: Google map container not found');
+      return;
+    }
+
+    try {
+      // Check if Google Maps API is loaded
+      if (typeof google === 'undefined' || !google.maps) {
+        console.log('ModernContactMapModal: Loading Google Maps API...');
+        await this.loadGoogleMapsAPI();
+      }
+
+      // Create the map
+      const map = new google.maps.Map(mapElement, {
+        center: location,
+        zoom: 15,
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        disableDefaultUI: false,
+        scrollwheel: true,
+        draggable: true,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: true,
+        zoomControl: true
+      });
+
+      // Add a marker
+      const marker = new google.maps.Marker({
+        position: location,
+        map: map,
+        title: address,
+        animation: google.maps.Animation.DROP
+      });
+
+      // Add an info window
+      const infoWindow = new google.maps.InfoWindow({
+        content: `
+          <div style="min-width: 200px;">
+            <h6 style="margin: 0 0 8px 0; color: #1976d2;">📍 Location</h6>
+            <p style="margin: 0 0 4px 0; font-size: 14px;">${address}</p>
+            <small style="color: #666;">
+              Lat: ${location.lat.toFixed(6)}, Lng: ${location.lng.toFixed(6)}
+            </small>
+          </div>
+        `
+      });
+
+      // Open info window initially
+      infoWindow.open(map, marker);
+
+      // Add click listener to marker
+      marker.addListener('click', () => {
+        infoWindow.open(map, marker);
+      });
+
+      console.log('ModernContactMapModal: Google Map initialized successfully');
+    } catch (error) {
+      console.error('ModernContactMapModal: Error initializing Google Map:', error);
+      // Fallback to show an error message in the map container
+      mapElement.innerHTML = `
+        <div class="d-flex flex-column justify-content-center align-items-center h-100 text-center p-4">
+          <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+          <h6>Map Unavailable</h6>
+          <p class="text-muted mb-0">Unable to load interactive map. Please use the external links below.</p>
+        </div>
+      `;
+    }
+  }
+
+  async loadGoogleMapsAPI() {
+    return new Promise((resolve, reject) => {
+      // Check if already loading
+      if (window.googleMapsApiLoading) {
+        // Wait for existing load
+        const checkLoaded = () => {
+          if (typeof google !== 'undefined' && google.maps) {
+            resolve();
+          } else {
+            setTimeout(checkLoaded, 100);
+          }
+        };
+        checkLoaded();
+        return;
+      }
+
+      window.googleMapsApiLoading = true;
+
+      // Create callback function name
+      const callbackName = 'initGoogleMapsForModal' + Date.now();
+      
+      // Set up global callback
+      window[callbackName] = () => {
+        window.googleMapsApiLoading = false;
+        delete window[callbackName];
+        resolve();
+      };
+
+      // Create script element
+      const script = document.createElement('script');
+      script.src = `/api/places/script-url?callback=${callbackName}`;
+      script.async = true;
+      script.defer = true;
+      script.onerror = () => {
+        window.googleMapsApiLoading = false;
+        delete window[callbackName];
+        reject(new Error('Failed to load Google Maps API'));
+      };
+
+      document.head.appendChild(script);
+    });
   }
 
   showMapError(message) {
