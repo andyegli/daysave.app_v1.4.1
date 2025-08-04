@@ -39,8 +39,13 @@ async function initializeContactGroups() {
         await loadContactGroups();
         
         console.log('👥 ContactGroups: Loading all contacts...');
-        await loadAllContacts();
-        console.log('👥 ContactGroups: All contacts loaded, count:', ContactGroupsManager.allContacts.length);
+        try {
+            await loadAllContacts();
+            console.log('👥 ContactGroups: All contacts loaded, count:', ContactGroupsManager.allContacts.length);
+        } catch (error) {
+            console.error('🚨 CRITICAL ERROR in loadAllContacts:', error);
+            console.log('👥 ContactGroups: All contacts loaded, count:', ContactGroupsManager.allContacts.length);
+        }
         
         console.log('🎨 ContactGroups: Rendering UI...');
         renderContactGroupsUI();
@@ -91,6 +96,7 @@ async function loadContactGroups() {
 
 // Load all contacts for group assignment
 async function loadAllContacts() {
+    console.log('🚨 FUNCTION TEST: loadAllContacts function called!');
     try {
         console.log('🔍 GROUP DEBUG: Starting loadAllContacts...');
         const url = window.getCorrectUrl('/contacts/search?q=');
