@@ -164,10 +164,10 @@
                             Recent Login Attempts
                         </h5>
                         <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshLoginAttempts()">
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="refreshLoginAttemptsBtn">
                                 <i class="fas fa-sync-alt"></i> Refresh
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportLoginData()">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="exportLoginDataBtn">
                                 <i class="fas fa-download"></i> Export
                             </button>
                         </div>
@@ -206,13 +206,13 @@
                             Device Management
                         </h5>
                         <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshDevices()">
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="refreshDevicesBtn">
                                 <i class="fas fa-sync-alt"></i> Refresh
                             </button>
-                            <button type="button" class="btn btn-outline-warning btn-sm" onclick="bulkTrustDevices()">
+                            <button type="button" class="btn btn-outline-warning btn-sm" id="bulkTrustDevicesBtn">
                                 <i class="fas fa-check-circle"></i> Bulk Trust
                             </button>
-                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="bulkBlockDevices()">
+                            <button type="button" class="btn btn-outline-danger btn-sm" id="bulkBlockDevicesBtn">
                                 <i class="fas fa-ban"></i> Bulk Block
                             </button>
                         </div>
@@ -298,7 +298,7 @@
                                 Log All Login Attempts
                             </label>
                         </div>
-                        <button type="button" class="btn btn-success" onclick="saveSecuritySettings()">
+                        <button type="button" class="btn btn-success" id="saveSecuritySettingsBtn">
                             <i class="fas fa-save me-2"></i>Save Settings
                         </button>
                     </div>
