@@ -83,68 +83,7 @@ function processContactFormData(formData) {
   return contactData;
 }
 
-// List contacts
-router.get('/', isAuthenticated, async (req, res) => {
-  try {
-    let contacts, owners = [];
-    let ownerFilter = req.query.owner_id || '';
-    
-    if (req.user.Role && req.user.Role.name === 'admin') {
-      // Log admin accessing contacts with elevated privileges
-      logAuthEvent('ADMIN_CONTACTS_ACCESS', {
-        adminId: req.user.id,
-        adminUsername: req.user.username,
-        ownerFilter: ownerFilter || 'all',
-        ip: req.ip,
-        userAgent: req.headers['user-agent'],
-        timestamp: new Date().toISOString()
-      });
-      
-      // Get all owners (users who have contacts)
-      owners = await User.findAll({
-        include: [{ model: Contact, attributes: [] }],
-        attributes: ['id', 'username', 'email', 'first_name', 'last_name'],
-        group: ['User.id']
-      });
-      
-      // Filter contacts by owner if filter is set
-      const where = ownerFilter ? { user_id: ownerFilter } : {};
-      contacts = await Contact.findAll({
-        where,
-        include: [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }],
-        order: [['name', 'ASC']]
-      });
-      
-      // Log admin contact filtering action
-      if (ownerFilter) {
-        logAuthEvent('ADMIN_CONTACTS_FILTER', {
-          adminId: req.user.id,
-          adminUsername: req.user.username,
-          filterType: 'owner',
-          filterValue: ownerFilter,
-          resultCount: contacts.length,
-          ip: req.ip,
-          timestamp: new Date().toISOString()
-        });
-      }
-    } else {
-      // Regular user accessing their own contacts
-      contacts = await Contact.findAll({
-        where: { user_id: req.user.id },
-        include: [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }],
-        order: [['name', 'ASC']]
-      });
-    }
-    
-    res.render('contacts/list', { user: req.user, contacts, owners, ownerFilter, error: null, success: req.query.success || null });
-  } catch (error) {
-    logAuthEvent('CONTACTS_LIST_ERROR', {
-      userId: req.user.id,
-      isAdmin: req.user.Role?.name === 'admin'
-    });
-    res.render('contacts/list', { user: req.user, contacts: [], owners: [], ownerFilter: '', error: 'Failed to load contacts.', success: null });
-  }
-});
+// Moved catch-all route to end of file for proper routing priority
 
 // Test maps functionality
 router.get('/test-maps', isAuthenticated, (req, res) => {
@@ -968,6 +907,73 @@ router.get('/relationship-types', (req, res) => {
   };
   
   res.json({ success: true, relationshipTypes });
+});
+
+// ================================
+// CATCH-ALL ROUTE (MUST BE LAST!)
+// ================================
+
+// List contacts - moved to end for proper routing priority
+router.get('/', isAuthenticated, async (req, res) => {
+  try {
+    let contacts, owners = [];
+    let ownerFilter = req.query.owner_id || '';
+    
+    if (req.user.Role && req.user.Role.name === 'admin') {
+      // Log admin accessing contacts with elevated privileges
+      logAuthEvent('ADMIN_CONTACTS_ACCESS', {
+        adminId: req.user.id,
+        adminUsername: req.user.username,
+        ownerFilter: ownerFilter || 'all',
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        timestamp: new Date().toISOString()
+      });
+      
+      // Get all owners (users who have contacts)
+      owners = await User.findAll({
+        include: [{ model: Contact, attributes: [] }],
+        attributes: ['id', 'username', 'email', 'first_name', 'last_name'],
+        group: ['User.id']
+      });
+      
+      // Filter contacts by owner if filter is set
+      const where = ownerFilter ? { user_id: ownerFilter } : {};
+      contacts = await Contact.findAll({
+        where,
+        include: [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }],
+        order: [['name', 'ASC']]
+      });
+      
+      // Log admin contact filtering action
+      if (ownerFilter) {
+        logAuthEvent('ADMIN_CONTACTS_FILTER', {
+          adminId: req.user.id,
+          adminUsername: req.user.username,
+          filterType: 'owner',
+          filterValue: ownerFilter,
+          resultCount: contacts.length,
+          ip: req.ip,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } else {
+      // Regular user accessing their own contacts
+      contacts = await Contact.findAll({
+        where: { user_id: req.user.id },
+        include: [{ model: User, attributes: ['id', 'username', 'email', 'first_name', 'last_name'] }],
+        order: [['name', 'ASC']]
+      });
+    }
+    
+    res.render('contacts/list', { user: req.user, contacts, owners, ownerFilter, error: null, success: req.query.success || null });
+  } catch (error) {
+    logAuthEvent('CONTACTS_LIST_ERROR', {
+      userId: req.user.id,
+      isAdmin: req.user.Role?.name === 'admin'
+    });
+    res.render('contacts/list', { user: req.user, contacts: [], owners: [], ownerFilter: '', error: 'Failed to load contacts.', success: null });
+  }
 });
 
 module.exports = router; 
