@@ -12,21 +12,32 @@ const ContactRelationshipsManager = {
 
 // Initialize contact relationships functionality only if container exists
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 ContactRelationships: DOM loaded, checking for container...');
     const container = document.getElementById('contactRelationshipsContainer');
     if (container) {
+        console.log('✅ ContactRelationships: Container found, initializing...');
         initializeContactRelationships();
+    } else {
+        console.log('❌ ContactRelationships: Container not found (contactRelationshipsContainer)');
     }
 });
 
 async function initializeContactRelationships() {
+    console.log('🚀 ContactRelationships: Starting initialization...');
     try {
+        console.log('📝 ContactRelationships: Loading relationships...');
         await loadContactRelationships();
+        console.log('👥 ContactRelationships: Loading all contacts...');
         await loadAllContacts();
+        console.log('🏷️ ContactRelationships: Loading relationship types...');
         await loadRelationshipTypes();
+        console.log('🎨 ContactRelationships: Rendering UI...');
         renderContactRelationshipsUI();
+        console.log('🔗 ContactRelationships: Attaching event listeners...');
         attachEventListeners();
+        console.log('✅ ContactRelationships: Initialization complete!');
     } catch (error) {
-        console.error('Error initializing contact relationships:', error);
+        console.error('❌ ContactRelationships: Error during initialization:', error);
         showError('Failed to initialize contact relationships');
     }
 }
