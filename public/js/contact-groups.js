@@ -3,13 +3,19 @@
  * Handles creation, editing, deletion and membership of contact groups
  */
 
-// Helper function to get correct URL for localhost
-function getCorrectUrl(path) {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return `http://${window.location.hostname}:${window.location.port}${path}`;
-    }
-    return path; // Use relative URL for non-localhost
+// Use the global getCorrectUrl function from localhost-protocol-fix.js
+// or define it here if not available
+if (typeof window.getCorrectUrl === 'undefined') {
+    window.getCorrectUrl = function(path) {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return `http://${window.location.hostname}:${window.location.port}${path}`;
+        }
+        return path; // Use relative URL for non-localhost
+    };
 }
+
+// Local alias for convenience
+const getCorrectUrl = window.getCorrectUrl;
 
 // Scoped variables to avoid conflicts
 const ContactGroupsManager = {
