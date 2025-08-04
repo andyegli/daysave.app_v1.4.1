@@ -89,6 +89,7 @@ async function loadContactGroups() {
 // Load all contacts for group assignment
 async function loadAllContacts() {
     try {
+        console.log('🔍 GROUP DEBUG: Loading all contacts...');
         const response = await fetch(window.getCorrectUrl('/contacts/search?q='), {
             method: 'GET',
             credentials: 'include',
@@ -98,6 +99,7 @@ async function loadAllContacts() {
             }
         });
         ContactGroupsManager.allContacts = await response.json();
+        console.log('🔍 GROUP DEBUG: Loaded contacts:', ContactGroupsManager.allContacts.length, ContactGroupsManager.allContacts);
     } catch (error) {
         console.error('Error loading contacts:', error);
         ContactGroupsManager.allContacts = [];
@@ -437,6 +439,10 @@ function manageGroupMembers(groupId) {
     `;
     
     const availableContacts = ContactGroupsManager.allContacts.filter(contact => !memberIds.includes(contact.id));
+    
+    console.log('🔍 GROUP DEBUG: Total contacts:', ContactGroupsManager.allContacts.length);
+    console.log('🔍 GROUP DEBUG: Member IDs:', memberIds);
+    console.log('🔍 GROUP DEBUG: Available contacts:', availableContacts.length, availableContacts);
     
     if (availableContacts.length === 0) {
         modalHtml += '<p class="text-muted">All contacts are already in this group</p>';
