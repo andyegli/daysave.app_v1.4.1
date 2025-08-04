@@ -625,6 +625,85 @@ class MultimediaAnalyzer {
               });
             }
           }
+        } else if (url.includes('pinterest.com') && this.isImageUrl(url)) {
+          // For Pinterest URLs, attempt to download and analyze image content using yt-dlp
+          try {
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.progress(user_id, content_id, 'pinterest_download_start', 30, {
+                provider: 'yt-dlp'
+              });
+            }
+            
+            // Try to download Pinterest content via yt-dlp
+            const pinterestResult = await this.getPinterestContent(url);
+            
+            if (pinterestResult && pinterestResult.success) {
+              // Process downloaded image content
+              if (pinterestResult.type === 'image' && pinterestResult.filePath) {
+                // Analyze the downloaded Pinterest image
+                const imageAnalysisResult = await this.analyzeImageFromUrl(pinterestResult.filePath, {
+                  enableObjectDetection: true,
+                  enableImageDescription: true,
+                  enableOCRExtraction: true
+                });
+                
+                if (imageAnalysisResult && imageAnalysisResult.description) {
+                  results.transcription = imageAnalysisResult.description;
+                  results.auto_tags.push('image', 'pinterest', 'visual_content');
+                  
+                  // Add object-based tags if detected
+                  if (imageAnalysisResult.objects && imageAnalysisResult.objects.length > 0) {
+                    const objectNames = imageAnalysisResult.objects.map(obj => obj.name.toLowerCase());
+                    results.auto_tags.push(...objectNames.slice(0, 5)); // Limit to 5 object tags
+                  }
+                  
+                  if (user_id && content_id) {
+                    const logger = require('../../config/logger');
+                    logger.multimedia.progress(user_id, content_id, 'pinterest_analysis_complete', 70, {
+                      descriptionLength: imageAnalysisResult.description.length,
+                      objectsDetected: imageAnalysisResult.objects ? imageAnalysisResult.objects.length : 0
+                    });
+                  }
+                }
+                
+                // Clean up downloaded file
+                if (pinterestResult.filePath && require('fs').existsSync(pinterestResult.filePath)) {
+                  require('fs').unlinkSync(pinterestResult.filePath);
+                }
+                
+                if (this.enableLogging) {
+                  console.log('✅ Pinterest image analysis completed:', {
+                    type: pinterestResult.type,
+                    descriptionLength: results.transcription ? results.transcription.length : 0
+                  });
+                }
+              }
+            } else {
+              // Fallback if download failed
+              results.transcription = 'Pinterest content could not be accessed. Content may be private or protected.';
+              results.auto_tags.push('private', 'access_restricted', 'pinterest');
+              
+              if (user_id && content_id) {
+                const logger = require('../../config/logger');
+                logger.multimedia.progress(user_id, content_id, 'pinterest_access_failed', 40, {
+                  reason: 'download_failed_or_private'
+                });
+              }
+            }
+          } catch (pinterestError) {
+            console.error('❌ Pinterest content analysis failed:', pinterestError);
+            results.transcription = 'Pinterest content analysis failed. This may be due to privacy settings or access restrictions.';
+            results.auto_tags.push('analysis_failed', 'access_error', 'pinterest');
+            
+            if (user_id && content_id) {
+              const logger = require('../../config/logger');
+              logger.multimedia.error(user_id, content_id, pinterestError, {
+                step: 'pinterest_analysis',
+                url
+              });
+            }
+          }
         } else if (url.includes('facebook.com') && analysisOptions.transcription) {
           // For Facebook URLs, attempt to download and analyze content using yt-dlp
           try {
@@ -3696,6 +3775,117 @@ Respond with only the title, no quotes or additional text.`;
     } catch (setupError) {
       if (this.enableLogging) {
         console.error('❌ Facebook download setup failed:', setupError);
+      }
+      return { success: false, error: setupError.message };
+    }
+  }
+
+  /**
+   * Download and analyze Pinterest content using yt-dlp to bypass restrictions
+   * 
+   * @param {string} url - Pinterest URL (pin or board)
+   * @returns {Promise<Object>} Download and analysis result
+   */
+  async getPinterestContent(url) {
+    try {
+      if (this.enableLogging) {
+        console.log('📌 Attempting to download Pinterest content:', url);
+      }
+      
+      const { exec } = require('child_process');
+      const fs = require('fs');
+      const path = require('path');
+      
+      const timestamp = Date.now();
+      const outputDir = path.join(__dirname, '../../uploads/temp');
+      
+      // Ensure temp directory exists
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+      
+      const outputTemplate = path.join(outputDir, `pinterest_${timestamp}.%(ext)s`);
+      
+      // Use yt-dlp to download Pinterest content with image-focused options
+      // --no-check-certificates: Bypass SSL issues
+      // --ignore-errors: Continue on errors  
+      // --user-agent: Use a regular browser user agent
+      // --format "best": Get highest quality image
+      const command = `yt-dlp --no-check-certificates --ignore-errors --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --format "best" -o "${outputTemplate}" "${url}"`;
+      
+      if (this.enableLogging) {
+        console.log('🔧 Running Pinterest download command:', command);
+      }
+      
+      return new Promise((resolve) => {
+        exec(command, { maxBuffer: 100 * 1024 * 1024, timeout: 60000 }, (error, stdout, stderr) => {
+          try {
+            if (error) {
+              if (this.enableLogging) {
+                console.log('⚠️ Pinterest download failed (this is common due to privacy restrictions):', error.message);
+              }
+              resolve({ success: false, error: error.message });
+              return;
+            }
+            
+            // Find downloaded files
+            const files = fs.readdirSync(outputDir).filter(file => 
+              file.startsWith(`pinterest_${timestamp}`) && 
+              !file.endsWith('.part') && // Exclude partial downloads
+              (file.includes('.jpg') || file.includes('.jpeg') || file.includes('.png') || file.includes('.webp') || file.includes('.gif'))
+            );
+            
+            if (files.length === 0) {
+              if (this.enableLogging) {
+                console.log('⚠️ No Pinterest files downloaded - content may be private or restricted');
+              }
+              resolve({ success: false, error: 'No files downloaded' });
+              return;
+            }
+            
+            // Process the first downloaded file
+            const downloadedFile = files[0];
+            const filePath = path.join(outputDir, downloadedFile);
+            const fileStats = fs.statSync(filePath);
+            
+            // Pinterest content is typically images
+            const isImage = downloadedFile.includes('.jpg') || downloadedFile.includes('.jpeg') || 
+                           downloadedFile.includes('.png') || downloadedFile.includes('.webp') || 
+                           downloadedFile.includes('.gif');
+            
+            if (this.enableLogging) {
+              console.log(`✅ Pinterest content downloaded:`, {
+                file: downloadedFile,
+                size: fileStats.size,
+                type: 'image'
+              });
+            }
+            
+            resolve({
+              success: true,
+              filePath: filePath,
+              type: 'image',
+              filename: downloadedFile,
+              size: fileStats.size,
+              downloadInfo: {
+                url: url,
+                timestamp: timestamp,
+                method: 'yt-dlp'
+              }
+            });
+            
+          } catch (parseError) {
+            if (this.enableLogging) {
+              console.error('❌ Error processing Pinterest download:', parseError);
+            }
+            resolve({ success: false, error: parseError.message });
+          }
+        });
+      });
+      
+    } catch (setupError) {
+      if (this.enableLogging) {
+        console.error('❌ Pinterest download setup failed:', setupError);
       }
       return { success: false, error: setupError.message };
     }
