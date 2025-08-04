@@ -37,9 +37,11 @@ async function initializeContactGroups() {
     try {
         console.log('📝 ContactGroups: Loading contact groups...');
         await loadContactGroups();
-            console.log('👥 ContactGroups: Loading all contacts...');
-    await loadAllContacts();
-    console.log('👥 ContactGroups: All contacts loaded, count:', ContactGroupsManager.allContacts.length);
+        
+        console.log('👥 ContactGroups: Loading all contacts...');
+        await loadAllContacts();
+        console.log('👥 ContactGroups: All contacts loaded, count:', ContactGroupsManager.allContacts.length);
+        
         console.log('🎨 ContactGroups: Rendering UI...');
         renderContactGroupsUI();
         console.log('🔗 ContactGroups: Attaching event listeners...');
