@@ -11,20 +11,30 @@ const ContactGroupsManager = {
 
 // Initialize contact groups functionality only if container exists
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 ContactGroups: DOM loaded, checking for container...');
     const container = document.getElementById('contactGroupsContainer');
     if (container) {
+        console.log('✅ ContactGroups: Container found, initializing...');
         initializeContactGroups();
+    } else {
+        console.log('❌ ContactGroups: Container not found (contactGroupsContainer)');
     }
 });
 
 async function initializeContactGroups() {
+    console.log('🚀 ContactGroups: Starting initialization...');
     try {
+        console.log('📝 ContactGroups: Loading contact groups...');
         await loadContactGroups();
+        console.log('👥 ContactGroups: Loading all contacts...');
         await loadAllContacts();
+        console.log('🎨 ContactGroups: Rendering UI...');
         renderContactGroupsUI();
+        console.log('🔗 ContactGroups: Attaching event listeners...');
         attachEventListeners();
+        console.log('✅ ContactGroups: Initialization complete!');
     } catch (error) {
-        console.error('Error initializing contact groups:', error);
+        console.error('❌ ContactGroups: Error during initialization:', error);
         showError('Failed to initialize contact groups');
     }
 }
