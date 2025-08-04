@@ -53,7 +53,13 @@ async function initializeContactGroups() {
 // Load all contact groups
 async function loadContactGroups() {
     try {
-        const response = await fetch(window.getCorrectUrl('/contacts/groups'));
+        const response = await fetch(window.getCorrectUrl('/contacts/groups'), {
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
         const data = await response.json();
         
         if (data.success) {
@@ -70,7 +76,12 @@ async function loadContactGroups() {
 // Load all contacts for group assignment
 async function loadAllContacts() {
     try {
-        const response = await fetch(window.getCorrectUrl('/contacts/search?q='));
+        const response = await fetch(window.getCorrectUrl('/contacts/search?q='), {
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
         ContactGroupsManager.allContacts = await response.json();
     } catch (error) {
         console.error('Error loading contacts:', error);
