@@ -61,6 +61,15 @@ router.post('/change-password', isAuthenticated, async (req, res) => {
     // Verify current password (only for non-OAuth users)
     if (user.password_hash !== 'oauth_user') {
       const isCurrentPasswordValid = await bcrypt.compare(current_password, user.password_hash);
+      
+      // Log password verification attempt
+      logAuthEvent(isCurrentPasswordValid ? 'PASSWORD_VERIFY_SUCCESS' : 'PASSWORD_VERIFY_FAILED', {
+        ...clientDetails,
+        userId,
+        userEmail: user.email,
+        attemptedAt: new Date().toISOString()
+      });
+      
       if (!isCurrentPasswordValid) {
         logAuthEvent('PASSWORD_CHANGE_FAILED', { ...clientDetails, userId, reason: 'invalid_current_password' });
         return res.status(400).json({ 
@@ -68,6 +77,14 @@ router.post('/change-password', isAuthenticated, async (req, res) => {
           message: 'Current password is incorrect' 
         });
       }
+    } else {
+      // Log OAuth user attempting password change
+      logAuthEvent('PASSWORD_CHANGE_OAUTH_USER', {
+        ...clientDetails,
+        userId,
+        userEmail: user.email,
+        attemptedAt: new Date().toISOString()
+      });
     }
     
     // Hash new password
@@ -142,7 +159,7 @@ router.post('/mfa/setup', isAuthenticated, async (req, res) => {
     });
     
   } catch (error) {
-    logAuthError('MFA_SETUP_ERROR', error, { ...clientDetails, userId });
+    logAuthError('MFA_SETUP_ERROR', error, { ...clientDetails, userId, userEmail });
     res.status(500).json({ 
       success: false, 
       message: 'An error occurred while setting up two-factor authentication' 
@@ -185,6 +202,15 @@ router.post('/mfa/verify', isAuthenticated, async (req, res) => {
       window: 2 // Allow for time drift
     });
     
+    // Log all verification attempts for security monitoring
+    logAuthEvent(isValid ? 'MFA_TOTP_VERIFY_SUCCESS' : 'MFA_TOTP_VERIFY_FAILED', { 
+      ...clientDetails, 
+      userId,
+      userEmail: user.email,
+      codeLength: code ? code.length : 0,
+      attemptedAt: new Date().toISOString()
+    });
+    
     if (!isValid) {
       logAuthEvent('MFA_VERIFY_FAILED', { ...clientDetails, userId, reason: 'invalid_code' });
       return res.status(400).json({ 
@@ -199,6 +225,15 @@ router.post('/mfa/verify', isAuthenticated, async (req, res) => {
       const code = Math.random().toString(36).substring(2, 10).toUpperCase();
       backupCodes.push(code);
     }
+    
+    // Log backup code generation
+    logAuthEvent('MFA_BACKUP_CODES_GENERATED', { 
+      ...clientDetails, 
+      userId, 
+      userEmail: user.email,
+      codeCount: backupCodes.length,
+      generatedAt: new Date().toISOString()
+    });
     
     // Enable MFA
     await user.update({
@@ -275,6 +310,15 @@ router.post('/mfa/disable', isAuthenticated, async (req, res) => {
       encoding: 'base32',
       token: code,
       window: 2 // Allow for time drift
+    });
+    
+    // Log TOTP verification attempt for disable
+    logAuthEvent(isValid ? 'MFA_DISABLE_TOTP_VERIFY_SUCCESS' : 'MFA_DISABLE_TOTP_VERIFY_FAILED', {
+      ...clientDetails,
+      userId,
+      userEmail: user.email,
+      codeLength: code ? code.length : 0,
+      attemptedAt: new Date().toISOString()
     });
     
     if (!isValid) {

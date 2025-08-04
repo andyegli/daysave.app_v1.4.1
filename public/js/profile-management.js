@@ -51,7 +51,7 @@ function openChangePasswordModal() {
   modal.show();
 }
 
-async function submitChangePassword() {
+async function submitChangePasswordHandler() {
   const currentPassword = document.getElementById('currentPassword').value;
   const newPassword = document.getElementById('newPassword').value;
   const confirmPassword = document.getElementById('confirmPassword').value;
@@ -220,7 +220,7 @@ async function verifyAndEnableMfa() {
             </div>
           </div>
           <p class="text-center">
-            <button type="button" class="btn btn-primary" onclick="completeMfaSetup()">
+            <button type="button" class="btn btn-primary" data-action="completeMfaSetup">
               I've saved my backup codes
             </button>
           </p>
@@ -294,16 +294,65 @@ async function submitDisableMfa() {
 document.addEventListener('DOMContentLoaded', function() {
   checkMfaStatus();
   
-  // Add event listeners for Enter key
-  document.getElementById('mfaVerificationCode')?.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      verifyAndEnableMfa();
+  // Add event listeners for buttons
+  const changePasswordBtn = document.getElementById('changePasswordBtn');
+  if (changePasswordBtn) {
+    // No need to add listener - using Bootstrap data-bs-toggle
+  }
+  
+  const mfaToggleBtn = document.getElementById('mfaToggleBtn');
+  if (mfaToggleBtn) {
+    mfaToggleBtn.addEventListener('click', toggleMfa);
+  }
+  
+  const submitChangePassword = document.getElementById('submitChangePassword');
+  if (submitChangePassword) {
+    submitChangePassword.addEventListener('click', submitChangePasswordHandler);
+  }
+  
+  const submitEnableMfa = document.getElementById('submitEnableMfa');
+  if (submitEnableMfa) {
+    submitEnableMfa.addEventListener('click', verifyAndEnableMfa);
+  }
+  
+  const submitDisableMfaBtn = document.getElementById('submitDisableMfa');
+  if (submitDisableMfaBtn) {
+    submitDisableMfaBtn.addEventListener('click', submitDisableMfa);
+  }
+  
+  // Add event delegation for dynamically created buttons
+  document.addEventListener('click', function(e) {
+    const target = e.target;
+    const action = target.getAttribute('data-action');
+    
+    if (action === 'completeMfaSetup') {
+      completeMfaSetup();
+      e.preventDefault();
     }
   });
   
-  document.getElementById('disableMfaCode')?.addEventListener('keypress', function(e) {
+  // Add event listeners for Enter key in input fields
+  document.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
-      submitDisableMfa();
+      const target = e.target;
+      
+      // Handle Enter key in MFA verification code field
+      if (target.id === 'mfaVerificationCode') {
+        verifyAndEnableMfa();
+        e.preventDefault();
+      }
+      
+      // Handle Enter key in disable MFA code field
+      if (target.id === 'disableMfaCode') {
+        submitDisableMfa();
+        e.preventDefault();
+      }
+      
+      // Handle Enter key in password change form
+      if (target.closest('#changePasswordForm')) {
+        submitChangePasswordHandler();
+        e.preventDefault();
+      }
     }
   });
 });

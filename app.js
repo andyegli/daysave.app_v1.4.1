@@ -17,6 +17,7 @@ const {
   corsMiddleware,
   ensureRoleLoaded,
   isAuthenticated,
+  enforceMfa,
   deviceFingerprintMiddleware,
   devHttpAccessMiddleware
 } = require('./middleware');
@@ -445,7 +446,7 @@ checkDatabaseConnection().then(async (connected) => {
   });
 
   // Dashboard route
-  app.get('/dashboard', isAuthenticated, async (req, res) => {
+  app.get('/dashboard', isAuthenticated, enforceMfa, async (req, res) => {
     const clientDetails = {
       ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
       userAgent: req.headers['user-agent'] || 'unknown'
@@ -474,7 +475,7 @@ checkDatabaseConnection().then(async (connected) => {
   });
 
   // API Key Management route
-  app.get('/api-keys', isAuthenticated, (req, res) => {
+  app.get('/api-keys', isAuthenticated, enforceMfa, (req, res) => {
     const clientDetails = {
       ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
       userAgent: req.headers['user-agent'] || 'unknown'
@@ -514,15 +515,22 @@ checkDatabaseConnection().then(async (connected) => {
       console.error('Error loading subscription info for profile:', error);
     }
     
+    // Get MFA enforcement message and clear it
+    const mfaEnforcementMessage = req.session.mfaEnforcementMessage;
+    if (mfaEnforcementMessage) {
+      delete req.session.mfaEnforcementMessage;
+    }
+    
     res.render('profile', { 
       title: 'Profile - DaySave',
       user: req.user,
-      subscription: subscriptionInfo
+      subscription: subscriptionInfo,
+      mfaEnforcementMessage
     });
   });
 
   // Admin dashboard route
-  app.get('/admin/dashboard', isAuthenticated, async (req, res) => {
+  app.get('/admin/dashboard', isAuthenticated, enforceMfa, async (req, res) => {
     // Force role loading for admin access
     if (!req.user.Role) {
       const { Role } = require('./models');

@@ -97,6 +97,63 @@ const isNotAuthenticated = (req, res, next) => {
   res.redirect('/dashboard');
 };
 
+// Middleware to enforce MFA requirements
+const enforceMfa = (req, res, next) => {
+  const clientDetails = getClientDetails(req);
+  
+  // Skip MFA enforcement for certain routes
+  const skipMfaRoutes = [
+    '/profile',
+    '/profile/mfa',
+    '/auth/logout',
+    '/api'
+  ];
+  
+  const shouldSkipMfa = skipMfaRoutes.some(route => 
+    req.originalUrl.startsWith(route)
+  );
+  
+  if (shouldSkipMfa) {
+    return next();
+  }
+  
+  if (req.isAuthenticated() && req.user) {
+    // Check if MFA is required and not enabled
+    if (req.user.mfa_required && !req.user.totp_enabled) {
+      logAuthEvent('MFA_ENFORCEMENT_REDIRECT', {
+        ...clientDetails,
+        userId: req.user.id,
+        username: req.user.username,
+        requestedUrl: req.originalUrl
+      });
+      
+      // Better AJAX/API detection
+      const isAjaxRequest = 
+        req.headers['x-requested-with'] === 'XMLHttpRequest' ||
+        req.headers.accept?.includes('application/json') ||
+        req.headers['content-type']?.includes('application/json') ||
+        req.originalUrl.startsWith('/api/') ||
+        req.originalUrl.includes('/analysis') ||
+        req.originalUrl.includes('/ajax') ||
+        req.query.ajax !== undefined;
+      
+      if (isAjaxRequest) {
+        return res.status(403).json({ 
+          error: 'Multi-factor authentication is required',
+          redirectTo: '/profile',
+          mfaRequired: true
+        });
+      } else {
+        // Set a flash message for the profile page
+        req.session.mfaEnforcementMessage = 'You must enable two-factor authentication before continuing.';
+        return res.redirect('/profile');
+      }
+    }
+  }
+  
+  next();
+};
+
 // Middleware to require specific roles
 const requireRole = (roles) => {
   return (req, res, next) => {
@@ -279,5 +336,6 @@ module.exports = {
   getClientDetails,
   ensureRoleLoaded,
   requireTesterPermission,
-  isAdmin
+  isAdmin,
+  enforceMfa
 }; 
