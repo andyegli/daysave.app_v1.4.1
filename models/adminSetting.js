@@ -37,6 +37,12 @@ module.exports = (sequelize, DataTypes) => {
     },
     ip_blacklist: {
       type: DataTypes.JSON
+    },
+    allow_dev_http_any_ip: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+      comment: 'Allow HTTP access from any IP during development (security risk - dev only)'
     }
   }, {
     tableName: 'admin_settings',

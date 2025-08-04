@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { User, Role, UserPasskey, UserDevice, LoginAttempt } = require('../models');
+const { User, Role, UserPasskey, UserDevice, LoginAttempt, AdminSetting } = require('../models');
 const { logAuthEvent, logAuthError } = require('../config/logger');
 const { isAuthenticated, isAdmin, requireTesterPermission } = require('../middleware');
 const { body, validationResult, param } = require('express-validator');
 const { deviceFingerprinting } = require('../middleware/deviceFingerprinting');
+const { clearDevHttpAccessCache } = require('../middleware/devHttpAccess');
 const geoLocationService = require('../services/geoLocationService');
 
 // Enhanced admin error handler
@@ -3050,6 +3051,105 @@ router.get('/api/fingerprinting/export-login-data', isAuthenticated, isAdmin, as
   } catch (error) {
     console.error('❌ Error exporting login data:', error);
     res.status(500).json({ error: 'Failed to export login data' });
+  }
+});
+
+/**
+ * Admin Settings Routes
+ */
+
+// GET: Display admin settings form
+router.get('/settings', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    // Get the latest admin settings
+    const settings = await AdminSetting.findOne({
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.render('admin/settings', { 
+      user: req.user,
+      settings: settings,
+      success: req.query.success,
+      error: req.query.error
+    });
+  } catch (error) {
+    console.error('Error loading admin settings:', error);
+    res.status(500).render('error', {
+      user: req.user,
+      error: 'Failed to load admin settings'
+    });
+  }
+});
+
+// POST: Save admin settings
+router.post('/settings', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const {
+      allow_dev_http_any_ip,
+      max_file_size,
+      login_attempts
+    } = req.body;
+
+    // Validate inputs
+    const maxFileSize = parseInt(max_file_size) || 25;
+    const loginAttempts = parseInt(login_attempts) || 5;
+    const allowDevHttpAnyIp = allow_dev_http_any_ip === 'true';
+
+    // Security check: only allow dev HTTP access in development
+    if (allowDevHttpAnyIp && process.env.NODE_ENV === 'production') {
+      return res.redirect('/admin/settings?error=' + encodeURIComponent(
+        'Development HTTP access cannot be enabled in production for security reasons'
+      ));
+    }
+
+    // Get existing settings or create new
+    let settings = await AdminSetting.findOne({
+      order: [['createdAt', 'DESC']]
+    });
+
+    if (settings) {
+      // Update existing settings
+      await settings.update({
+        allow_dev_http_any_ip: allowDevHttpAnyIp,
+        max_file_size: maxFileSize,
+        login_attempts: loginAttempts
+      });
+    } else {
+      // Create new settings
+      settings = await AdminSetting.create({
+        user_id: req.user.id,
+        allow_dev_http_any_ip: allowDevHttpAnyIp,
+        max_file_size: maxFileSize,
+        login_attempts: loginAttempts
+      });
+    }
+
+    // Clear the dev HTTP access cache so the change takes effect immediately
+    clearDevHttpAccessCache();
+
+    // Log the settings change
+    logAuthEvent('ADMIN_SETTINGS_UPDATED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      settings: {
+        allow_dev_http_any_ip: allowDevHttpAnyIp,
+        max_file_size: maxFileSize,
+        login_attempts: loginAttempts
+      },
+      environment: process.env.NODE_ENV,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    res.redirect('/admin/settings?success=' + encodeURIComponent(
+      'Settings updated successfully. Changes take effect immediately.'
+    ));
+
+  } catch (error) {
+    console.error('Error saving admin settings:', error);
+    res.redirect('/admin/settings?error=' + encodeURIComponent(
+      'Failed to save settings. Please try again.'
+    ));
   }
 });
 

@@ -8,10 +8,15 @@
 
   console.log('🌐 Remote Access SSL Fix: Initializing...');
 
-  // Check if accessing via IP address (not localhost)
+  // Check if accessing via IP address (not localhost) or development HTTP access is enabled
   function isRemoteAccess() {
     const hostname = window.location.hostname;
-    return hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname.match(/^\d+\.\d+\.\d+\.\d+$/);
+    const isIP = hostname.match(/^\d+\.\d+\.\d+\.\d+$/);
+    const isDevMode = document.querySelector('meta[name="x-dev-mode"]') || 
+                     (typeof window.location !== 'undefined' && 
+                      (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'));
+    
+    return isIP || (isDevMode && hostname !== 'localhost' && hostname !== '127.0.0.1');
   }
 
   // Force HTTP protocol for remote IP access in development
