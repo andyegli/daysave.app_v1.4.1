@@ -116,39 +116,38 @@ document.addEventListener('DOMContentLoaded', function() {
       }, true); // Use capture phase
     });
     
-    // Test click programmatically
-    setTimeout(() => {
-      console.log('🧪 Testing programmatic click...');
-      try {
-        groupsBtn.click();
-        console.log('✅ Programmatic click executed');
-      } catch (error) {
-        console.error('❌ Programmatic click failed:', error);
-      }
-    }, 2000);
+    // Test click programmatically - DISABLED to prevent loops
+    // setTimeout(() => {
+    //   console.log('🧪 Testing programmatic click...');
+    //   try {
+    //     groupsBtn.click();
+    //     console.log('✅ Programmatic click executed');
+    //   } catch (error) {
+    //     console.error('❌ Programmatic click failed:', error);
+    //   }
+    // }, 2000);
     
-    // Alternative direct navigation method as a workaround
-    setTimeout(() => {
-      console.log('🚨 EMERGENCY WORKAROUND: Adding direct navigation fallback');
+    // Simplified emergency navigation workaround
+    console.log('✅ SIMPLE FIX: Installing direct navigation handler');
+    
+    // Store original href
+    const originalHref = groupsBtn.href;
+    
+    // Simple click handler that forces navigation
+    groupsBtn.addEventListener('click', function(e) {
+      console.log('🎯 CLICK DETECTED: Groups & Relations button clicked!');
+      e.preventDefault();
+      e.stopPropagation();
       
-      // Remove existing href to prevent any conflicts
-      const originalHref = groupsBtn.href;
-      groupsBtn.removeAttribute('href');
-      
-      // Add a new click handler that bypasses everything
-      groupsBtn.addEventListener('click', function(e) {
-        console.log('🚨 EMERGENCY HANDLER: Direct navigation triggered!');
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        
-        console.log('🚀 EMERGENCY: Forcing navigation to groups-relationships page...');
+      console.log('🚀 NAVIGATING: Going to groups-relationships page...');
+      setTimeout(() => {
         window.location.href = originalHref;
-        return false;
-      }, { once: true, capture: true });
+      }, 100); // Small delay to prevent loops
       
-      console.log('🚨 EMERGENCY: Direct handler installed, original href:', originalHref);
-    }, 1000);
+      return false;
+    }, { capture: true });
+    
+    console.log('✅ SIMPLE FIX: Navigation handler installed for:', originalHref);
     
     // Check for overlapping elements
     setTimeout(() => {
