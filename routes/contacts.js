@@ -241,65 +241,12 @@ router.get('/groups-relationships', isAuthenticated, async (req, res) => {
   console.log('🏁 ========== GROUPS-RELATIONSHIPS ROUTE END ==========');
 });
 
-// Contact detail view (Read functionality)
-router.get('/:id', isAuthenticated, async (req, res) => {
-  try {
-    const contact = await Contact.findByPk(req.params.id, {
-      include: [{
-        model: User,
-        attributes: ['id', 'username', 'email', 'first_name', 'last_name']
-      }]
-    });
-    
-    if (!contact) {
-      return res.redirect('/contacts?error=Contact not found');
-    }
-    
-    // Check if user can view this contact
-    if (contact.user_id !== req.user.id && !(req.user.Role && req.user.Role.name === 'admin')) {
-      return res.redirect('/contacts?error=Permission denied');
-    }
-    
-    res.render('contacts/detail', { 
-      user: req.user, 
-      contact,
-      error: null, 
-      success: req.query.success || null
-    });
-  } catch (err) {
-    res.redirect('/contacts?error=Failed to load contact');
-  }
-});
+// MOVED TO END: Contact detail view - moved to avoid intercepting /groups
 
-// Edit contact (form)
-router.get('/:id/edit', isAuthenticated, async (req, res) => {
-  try {
-    const contact = await Contact.findByPk(req.params.id);
-    if (!contact) return res.redirect('/contacts?error=Contact not found');
-    
-    // Check if user can edit this contact
-    if (contact.user_id !== req.user.id && !(req.user.Role && req.user.Role.name === 'admin')) {
-      return res.redirect('/contacts?error=Permission denied');
-    }
-    
-    const googleMapsScriptUrl = getGoogleMapsScriptUrl();
-    res.render('contacts/form', { 
-      user: req.user,
-      title: 'Edit Contact - DaySave',
-      contact,
-      isEdit: true,
-      formAction: `/contacts/${req.params.id}`,
-      error: null,
-      success: null,
-      googleMapsScriptUrl
-    });
-  } catch (err) {
-    res.redirect('/contacts?error=Failed to load contact for editing');
-  }
-});
+// MOVED TO END: Edit contact - moved to avoid intercepting /groups
 
-// Update contact (POST)
-router.post('/:id', async (req, res) => {
+// MOVED TO END: Update contact POST - moved to avoid intercepting /groups
+// router.post('/:id', async (req, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id);
     if (!contact) return res.redirect('/contacts?error=Contact not found');
