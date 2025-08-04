@@ -127,6 +127,29 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }, 2000);
     
+    // Alternative direct navigation method as a workaround
+    setTimeout(() => {
+      console.log('🚨 EMERGENCY WORKAROUND: Adding direct navigation fallback');
+      
+      // Remove existing href to prevent any conflicts
+      const originalHref = groupsBtn.href;
+      groupsBtn.removeAttribute('href');
+      
+      // Add a new click handler that bypasses everything
+      groupsBtn.addEventListener('click', function(e) {
+        console.log('🚨 EMERGENCY HANDLER: Direct navigation triggered!');
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
+        console.log('🚀 EMERGENCY: Forcing navigation to groups-relationships page...');
+        window.location.href = originalHref;
+        return false;
+      }, { once: true, capture: true });
+      
+      console.log('🚨 EMERGENCY: Direct handler installed, original href:', originalHref);
+    }, 1000);
+    
     // Check for overlapping elements
     setTimeout(() => {
       const rect = groupsBtn.getBoundingClientRect();
