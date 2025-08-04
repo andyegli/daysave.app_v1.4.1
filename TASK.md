@@ -9,6 +9,9 @@
   - [x] Created test-device-fingerprinting-api.js script to verify API endpoints work correctly
   - [x] Verified all device fingerprinting admin API endpoints are functioning
   - [x] Device fingerprinting dashboard now displays data at /admin/device-fingerprinting
+  - [x] Fixed CSP violations by removing inline onclick handlers and implementing event delegation
+  - [x] Replaced global functions with DeviceFingerprintingAdmin instance methods
+  - [x] Server restarted to pick up new database schema changes  
   - [x] Committed changes to git
 - [x] Optimize content card layout for better title visibility
   - [x] Reduced right info column width from 140px to 110-120px maximum
