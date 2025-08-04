@@ -1977,6 +1977,348 @@ router.delete('/users/:userId/passkeys/:passkeyId', isAuthenticated, isAdmin, as
   }
 });
 
+// MFA Management Routes
+
+// Get user MFA status
+router.get('/users/:id/mfa', isAuthenticated, isAdmin, validateUserId, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    const user = await User.findByPk(userId, {
+      include: [{
+        model: User,
+        as: 'MfaEnforcedByAdmin',
+        attributes: ['id', 'username', 'email']
+      }]
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    logAuthEvent('ADMIN_MFA_STATUS_VIEW', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: userId,
+      targetUsername: user.username,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    res.json({
+      success: true,
+      mfa: {
+        enabled: user.totp_enabled,
+        required: user.mfa_required,
+        hasSecret: !!user.totp_secret,
+        enforcedBy: user.MfaEnforcedByAdmin,
+        enforcedAt: user.mfa_enforced_at
+      }
+    });
+
+  } catch (error) {
+    handleAdminError(req, res, error, {
+      action: 'view_user_mfa_status',
+      targetUserId: req.params.id
+    });
+  }
+});
+
+// Force MFA requirement for user
+router.post('/users/:id/mfa/require', isAuthenticated, isAdmin, validateUserId, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.mfa_required) {
+      return res.status(400).json({ error: 'MFA is already required for this user' });
+    }
+
+    await user.update({
+      mfa_required: true,
+      mfa_enforced_by: req.user.id,
+      mfa_enforced_at: new Date()
+    });
+
+    logAuthEvent('ADMIN_MFA_REQUIRED_ENFORCED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: userId,
+      targetUsername: user.username,
+      targetEmail: user.email,
+      previousState: { mfa_required: false },
+      newState: { mfa_required: true },
+      enforcedAt: new Date().toISOString(),
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    res.json({
+      success: true,
+      message: `MFA requirement enforced for user ${user.username}`
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_MFA_REQUIRE_ERROR', error, {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: req.params.id,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    handleAdminError(req, res, error, {
+      action: 'enforce_mfa_requirement',
+      targetUserId: req.params.id
+    });
+  }
+});
+
+// Remove MFA requirement for user
+router.post('/users/:id/mfa/unrequire', isAuthenticated, isAdmin, validateUserId, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.mfa_required) {
+      return res.status(400).json({ error: 'MFA is not required for this user' });
+    }
+
+    await user.update({
+      mfa_required: false,
+      mfa_enforced_by: null,
+      mfa_enforced_at: null
+    });
+
+    logAuthEvent('ADMIN_MFA_REQUIREMENT_REMOVED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: userId,
+      targetUsername: user.username,
+      targetEmail: user.email,
+      previousState: { mfa_required: true },
+      newState: { mfa_required: false },
+      removedAt: new Date().toISOString(),
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    res.json({
+      success: true,
+      message: `MFA requirement removed for user ${user.username}`
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_MFA_UNREQUIRE_ERROR', error, {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: req.params.id,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    handleAdminError(req, res, error, {
+      action: 'remove_mfa_requirement',
+      targetUserId: req.params.id
+    });
+  }
+});
+
+// Reset user's MFA (clear secret and disable)
+router.post('/users/:id/mfa/reset', isAuthenticated, isAdmin, validateUserId, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    await user.update({
+      totp_secret: null,
+      totp_enabled: false,
+      totp_backup_codes: null
+    });
+
+    logAuthEvent('ADMIN_MFA_RESET', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: userId,
+      targetUsername: user.username,
+      targetEmail: user.email,
+      previousState: { 
+        totp_enabled: user.totp_enabled,
+        hasSecret: !!user.totp_secret,
+        hasBackupCodes: !!user.totp_backup_codes
+      },
+      newState: {
+        totp_enabled: false,
+        hasSecret: false,
+        hasBackupCodes: false
+      },
+      resetAt: new Date().toISOString(),
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    res.json({
+      success: true,
+      message: `MFA reset for user ${user.username}. They will need to set up MFA again.`
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_MFA_RESET_ERROR', error, {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: req.params.id,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    handleAdminError(req, res, error, {
+      action: 'reset_user_mfa',
+      targetUserId: req.params.id
+    });
+  }
+});
+
+// Force enable MFA for user (admin setup)
+router.post('/users/:id/mfa/force-enable', isAuthenticated, isAdmin, validateUserId, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.totp_enabled) {
+      return res.status(400).json({ error: 'MFA is already enabled for this user' });
+    }
+
+    if (!user.totp_secret) {
+      return res.status(400).json({ 
+        error: 'User has no MFA secret configured. They must set up MFA first.' 
+      });
+    }
+
+    await user.update({
+      totp_enabled: true,
+      mfa_required: true,
+      mfa_enforced_by: req.user.id,
+      mfa_enforced_at: new Date()
+    });
+
+    logAuthEvent('ADMIN_MFA_FORCE_ENABLED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: userId,
+      targetUsername: user.username,
+      targetEmail: user.email,
+      previousState: { 
+        totp_enabled: false,
+        mfa_required: user.mfa_required
+      },
+      newState: {
+        totp_enabled: true,
+        mfa_required: true
+      },
+      forceEnabledAt: new Date().toISOString(),
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    res.json({
+      success: true,
+      message: `MFA force-enabled for user ${user.username}`
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_MFA_FORCE_ENABLE_ERROR', error, {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: req.params.id,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    handleAdminError(req, res, error, {
+      action: 'force_enable_mfa',
+      targetUserId: req.params.id
+    });
+  }
+});
+
+// Force disable MFA for user
+router.post('/users/:id/mfa/force-disable', isAuthenticated, isAdmin, validateUserId, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.totp_enabled) {
+      return res.status(400).json({ error: 'MFA is not enabled for this user' });
+    }
+
+    await user.update({
+      totp_enabled: false,
+      totp_secret: null,
+      totp_backup_codes: null,
+      mfa_required: false,
+      mfa_enforced_by: null,
+      mfa_enforced_at: null
+    });
+
+    logAuthEvent('ADMIN_MFA_FORCE_DISABLED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: userId,
+      targetUsername: user.username,
+      targetEmail: user.email,
+      previousState: {
+        totp_enabled: true,
+        mfa_required: user.mfa_required,
+        hasSecret: !!user.totp_secret,
+        hasBackupCodes: !!user.totp_backup_codes
+      },
+      newState: {
+        totp_enabled: false,
+        mfa_required: false,
+        hasSecret: false,
+        hasBackupCodes: false
+      },
+      forceDisabledAt: new Date().toISOString(),
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    res.json({
+      success: true,
+      message: `MFA force-disabled for user ${user.username}`
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_MFA_FORCE_DISABLE_ERROR', error, {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      targetUserId: req.params.id,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    handleAdminError(req, res, error, {
+      action: 'force_disable_mfa',
+      targetUserId: req.params.id
+    });
+  }
+});
+
 // Analytics Dashboard Route
 router.get('/analytics', isAuthenticated, isAdmin, async (req, res) => {
   try {

@@ -95,6 +95,26 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true,
       comment: 'Timestamp of last password change'
+    },
+    mfa_required: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+      comment: 'Whether MFA is required by admin for this user'
+    },
+    mfa_enforced_by: {
+      type: DataTypes.CHAR(36),
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id'
+      },
+      comment: 'Admin user who enforced MFA requirement'
+    },
+    mfa_enforced_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'When MFA requirement was enforced'
     }
   }, {
     tableName: 'users',
@@ -118,6 +138,9 @@ module.exports = (sequelize, DataTypes) => {
     User.hasMany(models.LoginAttempt, { foreignKey: 'user_id' });
     User.hasMany(models.ContactSubmission, { foreignKey: 'user_id', allowNull: true });
     User.hasMany(models.AdminSetting, { foreignKey: 'user_id' });
+    
+    // MFA enforcement association
+    User.belongsTo(models.User, { foreignKey: 'mfa_enforced_by', as: 'MfaEnforcedByAdmin' });
     
     // Subscription associations
     User.hasMany(models.UserSubscription, { foreignKey: 'user_id', as: 'UserSubscriptions' });

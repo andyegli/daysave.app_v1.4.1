@@ -46,6 +46,17 @@
                             </dd>
                             <dt class="col-sm-4">Language</dt>
                             <dd class="col-sm-8"><%= user.language %></dd>
+                            <% if (user.mfa_required) { %>
+                            <dt class="col-sm-4">MFA Status</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Required by Admin
+                                </span>
+                                <% if (!user.totp_enabled) { %>
+                                <br><small class="text-danger">⚠️ You must enable MFA to continue using your account</small>
+                                <% } %>
+                            </dd>
+                            <% } %>
                         </dl>
 
                         <!-- Security Settings Section -->
@@ -57,13 +68,13 @@
                                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#passkeyManagementModal">
                                     <i class="fas fa-fingerprint me-2"></i>Manage Passkeys
                                 </button>
-                                <button type="button" class="btn btn-outline-primary" onclick="openChangePasswordModal()">
+                                <button type="button" id="changePasswordBtn" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
                                     <i class="fas fa-key me-2"></i>Change Password
                                 </button>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="text-muted">Two-Factor Authentication <span id="mfaStatus"></span></span>
                                 </div>
-                                <button type="button" id="mfaToggleBtn" class="btn btn-outline-success" onclick="toggleMfa()">
+                                <button type="button" id="mfaToggleBtn" class="btn btn-outline-success">
                                     <i class="fas fa-mobile-alt me-2"></i>Enable Two-Factor Authentication
                                 </button>
                             </div>
@@ -76,6 +87,21 @@
 
     <!-- Alert Container for Messages -->
     <div class="alert-container"></div>
+    
+    <!-- MFA Enforcement Alert -->
+    <% if (typeof mfaEnforcementMessage !== 'undefined' && mfaEnforcementMessage) { %>
+    <div class="container mt-3">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>MFA Required:</strong> <%= mfaEnforcementMessage %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <% } %>
 
     <%- include('partials/passkey-management-modal') %>
 
@@ -108,7 +134,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="submitChangePassword" onclick="submitChangePassword()">
+                    <button type="button" class="btn btn-primary" id="submitChangePassword">
                         Change Password
                     </button>
                 </div>
@@ -133,7 +159,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="submitEnableMfa" onclick="verifyAndEnableMfa()">
+                    <button type="button" class="btn btn-primary" id="submitEnableMfa">
                         Verify & Enable
                     </button>
                 </div>
@@ -171,7 +197,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-warning" id="submitDisableMfa" onclick="submitDisableMfa()">
+                    <button type="button" class="btn btn-warning" id="submitDisableMfa">
                         Disable MFA
                     </button>
                 </div>
