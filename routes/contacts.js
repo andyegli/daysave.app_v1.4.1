@@ -587,7 +587,19 @@ router.get('/autocomplete', isAuthenticated, async (req, res) => {
 
 // List all contact groups for the current user
 router.get('/groups', isAuthenticated, async (req, res) => {
+  console.log('🔍 /contacts/groups route accessed');
+  console.log('🔍 User ID:', req.user?.id);
+  console.log('🔍 Request headers:', req.headers.accept);
+  
   try {
+    // Check if models exist
+    console.log('🔍 Checking ContactGroup model...');
+    if (!ContactGroup) {
+      console.error('❌ ContactGroup model not found');
+      return res.status(500).json({ error: 'ContactGroup model not available' });
+    }
+    
+    console.log('🔍 Fetching contact groups...');
     const groups = await ContactGroup.findAll({
       where: { user_id: req.user.id },
       include: [{
@@ -597,9 +609,11 @@ router.get('/groups', isAuthenticated, async (req, res) => {
       order: [['name', 'ASC']]
     });
     
+    console.log('🔍 Found groups:', groups.length);
     res.json({ success: true, groups });
   } catch (error) {
-    console.error('Error fetching contact groups:', error);
+    console.error('❌ Error fetching contact groups:', error);
+    console.error('❌ Error details:', error.message);
     res.status(500).json({ error: 'Failed to fetch contact groups.' });
   }
 });

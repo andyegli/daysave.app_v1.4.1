@@ -3,6 +3,14 @@
  * Handles creation, editing, deletion and membership of contact groups
  */
 
+// Helper function to get correct URL for localhost
+function getCorrectUrl(path) {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return `http://${window.location.hostname}:${window.location.port}${path}`;
+    }
+    return path; // Use relative URL for non-localhost
+}
+
 // Scoped variables to avoid conflicts
 const ContactGroupsManager = {
   contactGroups: [],
@@ -42,7 +50,7 @@ async function initializeContactGroups() {
 // Load all contact groups
 async function loadContactGroups() {
     try {
-        const response = await fetch('/contacts/groups');
+        const response = await fetch(getCorrectUrl('/contacts/groups'));
         const data = await response.json();
         
         if (data.success) {
@@ -59,7 +67,7 @@ async function loadContactGroups() {
 // Load all contacts for group assignment
 async function loadAllContacts() {
     try {
-        const response = await fetch('/contacts/search?q=');
+        const response = await fetch(getCorrectUrl('/contacts/search?q='));
         ContactGroupsManager.allContacts = await response.json();
     } catch (error) {
         console.error('Error loading contacts:', error);
@@ -188,7 +196,7 @@ async function createGroup() {
     }
 
     try {
-        const response = await fetch('/contacts/groups', {
+        const response = await fetch(getCorrectUrl('/contacts/groups'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -269,7 +277,7 @@ async function updateGroup(groupId) {
     }
 
     try {
-        const response = await fetch(`/contacts/groups/${groupId}`, {
+        const response = await fetch(getCorrectUrl(`/contacts/groups/${groupId}`), {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -308,7 +316,7 @@ async function deleteGroup(groupId) {
     }
 
     try {
-        const response = await fetch(`/contacts/groups/${groupId}`, {
+        const response = await fetch(getCorrectUrl(`/contacts/groups/${groupId}`), {
             method: 'DELETE'
         });
 
@@ -422,7 +430,7 @@ function manageGroupMembers(groupId) {
 // Add contact to group
 async function addToGroup(groupId, contactId) {
     try {
-        const response = await fetch(`/contacts/groups/${groupId}/members`, {
+        const response = await fetch(getCorrectUrl(`/contacts/groups/${groupId}/members`), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -458,7 +466,7 @@ async function addToGroup(groupId, contactId) {
 // Remove contact from group
 async function removeFromGroup(groupId, contactId) {
     try {
-        const response = await fetch(`/contacts/groups/${groupId}/members/${contactId}`, {
+        const response = await fetch(getCorrectUrl(`/contacts/groups/${groupId}/members/${contactId}`), {
             method: 'DELETE'
         });
 
