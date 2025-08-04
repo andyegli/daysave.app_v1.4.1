@@ -215,8 +215,11 @@ async function createGroup() {
     try {
         const response = await fetch(window.getCorrectUrl('/contacts/groups'), {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({ name: groupName })
         });
@@ -296,8 +299,11 @@ async function updateGroup(groupId) {
     try {
         const response = await fetch(window.getCorrectUrl(`/contacts/groups/${groupId}`), {
             method: 'PUT',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({ name: groupName })
         });
@@ -334,7 +340,12 @@ async function deleteGroup(groupId) {
 
     try {
         const response = await fetch(window.getCorrectUrl(`/contacts/groups/${groupId}`), {
-            method: 'DELETE'
+            method: 'DELETE',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
 
         const data = await response.json();
@@ -449,8 +460,11 @@ async function addToGroup(groupId, contactId) {
     try {
         const response = await fetch(window.getCorrectUrl(`/contacts/groups/${groupId}/members`), {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({ contact_id: contactId })
         });
@@ -484,7 +498,12 @@ async function addToGroup(groupId, contactId) {
 async function removeFromGroup(groupId, contactId) {
     try {
         const response = await fetch(window.getCorrectUrl(`/contacts/groups/${groupId}/members/${contactId}`), {
-            method: 'DELETE'
+            method: 'DELETE',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
 
         const data = await response.json();
