@@ -58,7 +58,7 @@ async function loadContactRelationships() {
     try {
         const response = await fetch(window.getCorrectUrl('/contacts/relationships'), {
             method: 'GET',
-            credentials: 'same-origin',
+            credentials: 'include',
             headers: {
                 'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
@@ -82,7 +82,7 @@ async function loadAllContacts() {
     try {
         const response = await fetch(window.getCorrectUrl('/contacts/search?q='), {
             method: 'GET',
-            credentials: 'same-origin',
+            credentials: 'include',
             headers: {
                 'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
@@ -100,7 +100,7 @@ async function loadRelationshipTypes() {
     try {
         const response = await fetch(window.getCorrectUrl('/contacts/relationship-types'), {
             method: 'GET',
-            credentials: 'same-origin',
+            credentials: 'include',
             headers: {
                 'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
@@ -443,7 +443,7 @@ async function showContactRelationships(contactId) {
     try {
         const response = await fetch(window.getCorrectUrl(`/contacts/${contactId}/relationships`), {
             method: 'GET',
-            credentials: 'same-origin',
+            credentials: 'include',
             headers: {
                 'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
