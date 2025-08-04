@@ -3075,7 +3075,7 @@ router.get('/api/fingerprinting/analytics', isAuthenticated, isAdmin, async (req
     const devicesPerUser = await UserDevice.findAll({
       attributes: [
         'user_id',
-        [fn('COUNT', fn('DISTINCT', col('device_fingerprint'))), 'deviceCount']
+        [fn('COUNT', fn('DISTINCT', col('UserDevice.device_fingerprint'))), 'deviceCount']
       ],
       include: [{
         model: User,
@@ -3083,7 +3083,7 @@ router.get('/api/fingerprinting/analytics', isAuthenticated, isAdmin, async (req
         required: true
       }],
       group: ['user_id', 'User.id', 'User.username', 'User.email'],
-      order: [[fn('COUNT', fn('DISTINCT', col('device_fingerprint'))), 'DESC']],
+      order: [[fn('COUNT', fn('DISTINCT', col('UserDevice.device_fingerprint'))), 'DESC']],
       limit: 20
     }).catch(err => {
       console.warn('devicesPerUser query failed:', err.message);
@@ -3094,14 +3094,14 @@ router.get('/api/fingerprinting/analytics', isAuthenticated, isAdmin, async (req
     const devicesPerCountry = await UserDevice.findAll({
       attributes: [
         'country',
-        [fn('COUNT', fn('DISTINCT', col('device_fingerprint'))), 'deviceCount'],
-        [fn('COUNT', fn('DISTINCT', col('user_id'))), 'uniqueUsers']
+        [fn('COUNT', fn('DISTINCT', col('UserDevice.device_fingerprint'))), 'deviceCount'],
+        [fn('COUNT', fn('DISTINCT', col('UserDevice.user_id'))), 'uniqueUsers']
       ],
       where: {
         country: { [Op.not]: null }
       },
       group: ['country'],
-      order: [[fn('COUNT', fn('DISTINCT', col('device_fingerprint'))), 'DESC']],
+      order: [[fn('COUNT', fn('DISTINCT', col('UserDevice.device_fingerprint'))), 'DESC']],
       limit: 15
     }).catch(err => {
       console.warn('devicesPerCountry query failed:', err.message);
@@ -3175,7 +3175,7 @@ router.get('/api/fingerprinting/analytics', isAuthenticated, isAdmin, async (req
         [fn('DATE', col('attempted_at')), 'date'],
         [fn('COUNT', col('id')), 'totalAttempts'],
         [fn('SUM', literal('CASE WHEN success = true THEN 1 ELSE 0 END')), 'successfulLogins'],
-        [fn('COUNT', fn('DISTINCT', col('device_fingerprint'))), 'uniqueDevices'],
+        [fn('COUNT', fn('DISTINCT', col('LoginAttempt.device_fingerprint'))), 'uniqueDevices'],
         [fn('COUNT', fn('DISTINCT', col('country'))), 'uniqueCountries']
       ],
       where: {
@@ -3493,6 +3493,19 @@ router.post('/settings', isAuthenticated, isAdmin, async (req, res) => {
       'Failed to save settings. Please try again.'
     ));
   }
+});
+
+// Root admin route - redirect to dashboard
+router.get('/', isAuthenticated, isAdmin, (req, res) => {
+  // Log admin access
+  logAuthEvent('ADMIN_ROOT_ACCESS', {
+    adminId: req.user.id,
+    adminUsername: req.user.username,
+    ip: req.ip,
+    userAgent: req.headers['user-agent']
+  });
+  
+  res.redirect('/admin/dashboard');
 });
 
 module.exports = router; 
