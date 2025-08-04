@@ -36,7 +36,7 @@
     <div class="d-flex justify-content-between align-items-center mt-4">
       <h2 class="fw-bold">My Contacts</h2>
       <div>
-        <a href="/contacts/groups-relationships" class="btn btn-outline-primary me-2">
+        <a href="/contacts/groups-relationships" class="btn btn-outline-primary me-2" id="groupsRelationsBtn">
           <i class="fas fa-users me-1"></i> Groups & Relations
         </a>
         <a href="/contacts/new" class="btn btn-success"><i class="fa fa-plus"></i> Add Contact</a>
@@ -178,5 +178,19 @@
   <!-- Use modern map modal instead of old Google Maps SDK -->
   <script src="/js/contact-map-modal-new.js"></script>
   <script src="/js/contact-search.js"></script>
+  
+  <script>
+    // Debug Groups & Relations button click
+    document.addEventListener('DOMContentLoaded', function() {
+      const groupsBtn = document.getElementById('groupsRelationsBtn');
+      if (groupsBtn) {
+        groupsBtn.addEventListener('click', function(e) {
+          console.log('🔍 Groups & Relations button clicked!');
+          console.log('🔗 Navigating to:', this.href);
+          // Let the default navigation happen
+        });
+      }
+    });
+  </script>
 </body>
 </html> 
