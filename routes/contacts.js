@@ -241,11 +241,7 @@ router.get('/groups-relationships', isAuthenticated, async (req, res) => {
   console.log('🏁 ========== GROUPS-RELATIONSHIPS ROUTE END ==========');
 });
 
-// MOVED TO END: Contact detail view - moved to avoid intercepting /groups
-
-// MOVED TO END: Edit contact - moved to avoid intercepting /groups
-
-// MOVED TO END: Dynamic routes moved to avoid intercepting /groups
+// Dynamic routes moved to end of file to avoid intercepting specific routes like /groups
 
 // Server-side search endpoint
 router.get('/search', isAuthenticated, async (req, res) => {
@@ -855,6 +851,145 @@ router.get('/', isAuthenticated, async (req, res) => {
       isAdmin: req.user.Role?.name === 'admin'
     });
     res.render('contacts/list', { user: req.user, contacts: [], owners: [], ownerFilter: '', error: 'Failed to load contacts.', success: null });
+  }
+});
+
+// ================================
+// DYNAMIC ROUTES (MUST BE LAST!)
+// ================================
+// These routes handle individual contacts by ID and must be after all specific routes
+
+// Contact detail view (Read functionality)
+router.get('/:id', isAuthenticated, async (req, res) => {
+  try {
+    const contact = await Contact.findByPk(req.params.id, {
+      include: [{
+        model: User,
+        attributes: ['id', 'username', 'email', 'first_name', 'last_name']
+      }]
+    });
+    
+    if (!contact) {
+      return res.redirect('/contacts?error=Contact not found');
+    }
+    
+    // Check if user can view this contact
+    if (contact.user_id !== req.user.id && !(req.user.Role && req.user.Role.name === 'admin')) {
+      return res.redirect('/contacts?error=Permission denied');
+    }
+    
+    res.render('contacts/detail', { 
+      user: req.user, 
+      contact,
+      error: null, 
+      success: req.query.success || null
+    });
+  } catch (err) {
+    res.redirect('/contacts?error=Failed to load contact');
+  }
+});
+
+// Edit contact (form)
+router.get('/:id/edit', isAuthenticated, async (req, res) => {
+  try {
+    const contact = await Contact.findByPk(req.params.id);
+    if (!contact) return res.redirect('/contacts?error=Contact not found');
+    
+    // Check if user can edit this contact
+    if (contact.user_id !== req.user.id && !(req.user.Role && req.user.Role.name === 'admin')) {
+      return res.redirect('/contacts?error=Permission denied');
+    }
+    
+    const googleMapsScriptUrl = getGoogleMapsScriptUrl();
+    res.render('contacts/form', { 
+      user: req.user,
+      title: 'Edit Contact - DaySave',
+      contact,
+      isEdit: true,
+      formAction: `/contacts/${req.params.id}`,
+      error: null,
+      success: null,
+      googleMapsScriptUrl
+    });
+  } catch (err) {
+    res.redirect('/contacts?error=Failed to load contact for editing');
+  }
+});
+
+// Update contact (POST)
+router.post('/:id', isAuthenticated, async (req, res) => {
+  try {
+    const contact = await Contact.findByPk(req.params.id);
+    if (!contact) return res.redirect('/contacts?error=Contact not found');
+    
+    // Check if user can edit this contact
+    if (contact.user_id !== req.user.id && !(req.user.Role && req.user.Role.name === 'admin')) {
+      return res.redirect('/contacts?error=Permission denied');
+    }
+    
+    // Process and clean the form data
+    const contactData = processContactFormData(req.body);
+    
+    // Validate required fields
+    if (!contactData.name || contactData.name.trim().length === 0) {
+      const googleMapsScriptUrl = getGoogleMapsScriptUrl();
+      return res.render('contacts/form', { 
+        user: req.user, 
+        contact: { ...contact.toJSON(), ...req.body }, 
+        formAction: `/contacts/${req.params.id}`, 
+        isEdit: true,
+        error: 'Name is required', 
+        success: null,
+        googleMapsScriptUrl
+      });
+    }
+    
+    // Update the contact
+    await contact.update(contactData);
+    
+    logAuthEvent('CONTACT_UPDATED', {
+      userId: req.user.id,
+      contactId: req.params.id,
+      contactName: contactData.name
+    });
+    
+    res.redirect(`/contacts/${req.params.id}?success=Contact updated successfully`);
+  } catch (err) {
+    const googleMapsScriptUrl = getGoogleMapsScriptUrl();
+    res.render('contacts/form', { 
+      user: req.user, 
+      contact: req.body, 
+      formAction: `/contacts/${req.params.id}`, 
+      isEdit: true,
+      error: 'Failed to update contact', 
+      success: null,
+      googleMapsScriptUrl
+    });
+  }
+});
+
+// Delete contact
+router.delete('/:id', isAuthenticated, async (req, res) => {
+  try {
+    const contact = await Contact.findByPk(req.params.id);
+    if (!contact) return res.status(404).json({ success: false, error: 'Contact not found' });
+    
+    // Check if user can delete this contact
+    if (contact.user_id !== req.user.id && !(req.user.Role && req.user.Role.name === 'admin')) {
+      return res.status(403).json({ success: false, error: 'Permission denied' });
+    }
+    
+    await contact.destroy();
+    
+    logAuthEvent('CONTACT_DELETED', {
+      userId: req.user.id,
+      contactId: req.params.id,
+      contactName: contact.name
+    });
+    
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to delete contact' });
   }
 });
 
