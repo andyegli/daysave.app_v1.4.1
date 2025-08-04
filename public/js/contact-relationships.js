@@ -57,10 +57,11 @@ async function initializeContactRelationships() {
 async function loadContactRelationships() {
     try {
         const response = await fetch(window.getCorrectUrl('/contacts/relationships'), {
-            credentials: 'include',
+            method: 'GET',
+            credentials: 'same-origin',
             headers: {
                 'Accept': 'application/json',
-                'Content-Type': 'application/json'
+                'X-Requested-With': 'XMLHttpRequest'
             }
         });
         const data = await response.json();
@@ -80,9 +81,11 @@ async function loadContactRelationships() {
 async function loadAllContacts() {
     try {
         const response = await fetch(window.getCorrectUrl('/contacts/search?q='), {
-            credentials: 'include',
+            method: 'GET',
+            credentials: 'same-origin',
             headers: {
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             }
         });
         ContactRelationshipsManager.allContacts = await response.json();
@@ -96,9 +99,11 @@ async function loadAllContacts() {
 async function loadRelationshipTypes() {
     try {
         const response = await fetch(window.getCorrectUrl('/contacts/relationship-types'), {
-            credentials: 'include',
+            method: 'GET',
+            credentials: 'same-origin',
             headers: {
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             }
         });
         const data = await response.json();
@@ -437,9 +442,11 @@ async function deleteRelationship(relationshipId) {
 async function showContactRelationships(contactId) {
     try {
         const response = await fetch(window.getCorrectUrl(`/contacts/${contactId}/relationships`), {
-            credentials: 'include',
+            method: 'GET',
+            credentials: 'same-origin',
             headers: {
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             }
         });
         const data = await response.json();
