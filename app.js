@@ -162,7 +162,7 @@ checkDatabaseConnection().then(async (connected) => {
     saveUninitialized: false,
     cookie: {
       secure: false, // Always false for local development; set to true in production with HTTPS
-      httpOnly: true,
+      httpOnly: false, // Set to false for localhost development to allow AJAX cookie debugging
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       sameSite: 'lax' // Keep lax for compatibility
     },
