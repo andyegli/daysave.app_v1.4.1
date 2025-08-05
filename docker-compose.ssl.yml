@@ -1,0 +1,10 @@
+# SSL override for local development
+version: '3.8'
+
+services:
+  nginx:
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/sites-available/daysave-local-ssl.conf:/etc/nginx/conf.d/default.conf:ro

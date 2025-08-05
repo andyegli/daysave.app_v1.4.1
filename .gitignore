@@ -90,3 +90,5 @@ google-credentials.json
 
 commands.md
 db_backup/
+.env.http.backup
+.env.bak

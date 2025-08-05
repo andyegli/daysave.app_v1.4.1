@@ -12,11 +12,11 @@
   function isRemoteAccess() {
     const hostname = window.location.hostname;
     const isIP = hostname.match(/^\d+\.\d+\.\d+\.\d+$/);
+    const isLocalDomain = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === 'daysave.local' || hostname.endsWith('.local');
     const isDevMode = document.querySelector('meta[name="x-dev-mode"]') || 
-                     (typeof window.location !== 'undefined' && 
-                      (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'));
+                     (typeof window.location !== 'undefined' && !isLocalDomain);
     
-    return isIP || (isDevMode && hostname !== 'localhost' && hostname !== '127.0.0.1');
+    return isIP || (isDevMode && !isLocalDomain);
   }
 
   // Force HTTP protocol for remote IP access in development
