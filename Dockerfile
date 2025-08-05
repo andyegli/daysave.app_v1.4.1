@@ -39,10 +39,10 @@ ENV PATH $PATH:/root/google-cloud-sdk/bin
 COPY package*.json ./
 
 # Install all dependencies (including dev dependencies for complete functionality)
-RUN npm install
-
-# Install document processing dependencies explicitly
-RUN npm install pdf-parse mammoth textract
+# Install document processing dependencies in same layer for efficiency
+RUN npm install && \
+    npm install pdf-parse mammoth textract && \
+    npm cache clean --force
 
 # Add migrations and seeders
 COPY migrations ./migrations
