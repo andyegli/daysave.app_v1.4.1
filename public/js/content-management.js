@@ -89,8 +89,8 @@ if (window.location.hostname === 'localhost') {
   };
 }
 
-// AGGRESSIVE PROTOCOL ENFORCEMENT FOR LOCALHOST
-if (window.location.hostname === 'localhost') {
+// SELECTIVE PROTOCOL ENFORCEMENT FOR LOCALHOST ONLY
+if (window.location.hostname === 'localhost' && window.location.hostname !== 'daysave.local') {
   if (window.location.protocol === 'https:') {
     console.log('🔄 IMMEDIATE HTTPS→HTTP REDIRECT for localhost...');
     const httpUrl = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
@@ -123,8 +123,8 @@ if (window.location.hostname === 'localhost') {
 
 // COMPREHENSIVE PAGE LOAD PROTOCOL CHECK
 document.addEventListener('DOMContentLoaded', function() {
-  // Double-check protocol after DOM load
-  if (window.location.hostname === 'localhost' && window.location.protocol === 'https:') {
+  // Double-check protocol after DOM load - only for actual localhost, not daysave.local
+  if (window.location.hostname === 'localhost' && window.location.hostname !== 'daysave.local' && window.location.protocol === 'https:') {
     console.log('🔄 DOM LOADED - HTTPS→HTTP REDIRECT for localhost...');
     window.location.replace(`http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`);
     return;
