@@ -381,37 +381,217 @@ class FileUploadService {
   }
 
   /**
-   * Get file URL for serving
+   * Get file URL for serving - Enhanced with fallback logic
    */
   async getFileUrl(filePath, options = {}) {
     try {
-      if (filePath.startsWith('gs://')) {
-        // Generate signed URL for Google Cloud Storage
-        const fileName = filePath.replace(`gs://${this.defaultSettings.bucketName}/`, '');
-        const settings = await this.getUploadSettings();
-        const bucket = this.storage.bucket(settings.bucketName);
-        const file = bucket.file(fileName);
+      // Handle GCS URLs (both gs:// and https:// storage.googleapis.com)
+      if (filePath.startsWith('gs://') || filePath.includes('storage.googleapis.com')) {
+        if (this.storage) {
+          try {
+            let fileName;
+            if (filePath.startsWith('gs://')) {
+              fileName = filePath.replace(`gs://${this.defaultSettings.bucketName}/`, '');
+            } else {
+              // Extract file path from storage.googleapis.com URL
+              const urlParts = filePath.split('/');
+              const bucketIndex = urlParts.findIndex(part => part === this.defaultSettings.bucketName);
+              if (bucketIndex !== -1) {
+                fileName = urlParts.slice(bucketIndex + 1).join('/');
+              } else {
+                throw new Error('Cannot extract file path from GCS URL');
+              }
+            }
 
-        const [url] = await file.getSignedUrl({
-          action: 'read',
-          expires: Date.now() + (options.expiresIn || 60 * 60 * 1000) // 1 hour default
-        });
+            const settings = await this.getUploadSettings();
+            const bucket = this.storage.bucket(settings.bucketName);
+            const file = bucket.file(fileName);
 
-        return url;
-      } else {
-        // Return proper web URL for secure file serving route
-        // Extract userId and filename from the file path
-        const pathParts = filePath.split('/');
+            // Check if file exists in GCS
+            const [exists] = await file.exists();
+            if (exists) {
+              const [url] = await file.getSignedUrl({
+                action: 'read',
+                expires: Date.now() + (options.expiresIn || 60 * 60 * 1000) // 1 hour default
+              });
+              return url;
+            } else {
+              console.warn(`⚠️ File not found in GCS: ${fileName}, attempting local fallback`);
+              // Try to find local fallback
+              const localFallback = await this.findLocalFallback(fileName);
+              if (localFallback) {
+                return localFallback;
+              }
+            }
+          } catch (gcsError) {
+            console.warn(`⚠️ GCS error for ${filePath}: ${gcsError.message}, attempting local fallback`);
+            // Try to find local fallback
+            const fileName = filePath.split('/').pop();
+            const localFallback = await this.findLocalFallback(fileName);
+            if (localFallback) {
+              return localFallback;
+            }
+          }
+        } else {
+          console.warn('⚠️ GCS not available, attempting local fallback for:', filePath);
+          // Extract filename and try local fallback
+          const fileName = filePath.split('/').pop();
+          const localFallback = await this.findLocalFallback(fileName);
+          if (localFallback) {
+            return localFallback;
+          }
+        }
+      }
+
+      // Handle GCS file paths (without gs:// or full URL)
+      if (!filePath.startsWith('uploads/') && filePath.includes('/')) {
+        if (this.storage) {
+          try {
+            const settings = await this.getUploadSettings();
+            const bucket = this.storage.bucket(settings.bucketName);
+            const file = bucket.file(filePath);
+
+            // Check if file exists in GCS
+            const [exists] = await file.exists();
+            if (exists) {
+              const [url] = await file.getSignedUrl({
+                action: 'read',
+                expires: Date.now() + (options.expiresIn || 60 * 60 * 1000)
+              });
+              return url;
+            } else {
+              console.warn(`⚠️ GCS file not found: ${filePath}, attempting local fallback`);
+              const localFallback = await this.findLocalFallback(path.basename(filePath));
+              if (localFallback) {
+                return localFallback;
+              }
+            }
+          } catch (gcsError) {
+            console.warn(`⚠️ GCS error for ${filePath}: ${gcsError.message}, attempting local fallback`);
+            const localFallback = await this.findLocalFallback(path.basename(filePath));
+            if (localFallback) {
+              return localFallback;
+            }
+          }
+        }
+      }
+
+      // Handle local file paths
+      const pathParts = filePath.split('/');
+      if (pathParts.length >= 2) {
         const userId = pathParts[pathParts.length - 2]; // Second to last part
         const filename = pathParts[pathParts.length - 1]; // Last part
         
         // Return secure file serving URL
         return `/files/serve/${userId}/${filename}`;
+      } else {
+        // Single filename, try to find user context or use direct path
+        return `/files/serve/unknown/${filePath}`;
       }
+      
     } catch (error) {
       console.error('Error getting file URL:', error);
-      throw error;
+      // Final fallback
+      const filename = filePath.split('/').pop();
+      return `/files/serve/unknown/${filename}`;
     }
+  }
+
+  /**
+   * Find local fallback file for GCS files
+   */
+  async findLocalFallback(filename) {
+    const fs = require('fs');
+    const path = require('path');
+    
+    try {
+      // Common local fallback locations
+      const possiblePaths = [
+        `uploads/${filename}`,
+        `uploads/thumbnails/${filename}`,
+        `uploads/temp/${filename}`
+      ];
+      
+      for (const possiblePath of possiblePaths) {
+        const fullPath = path.resolve(possiblePath);
+        if (fs.existsSync(fullPath)) {
+          console.log(`📁 Found local fallback: ${possiblePath} for file: ${filename}`);
+          
+          // Extract potential user ID from file structure
+          const pathParts = possiblePath.split('/');
+          if (pathParts.length >= 2) {
+            const dir = pathParts[pathParts.length - 2];
+            if (dir === 'thumbnails' || dir === 'temp') {
+              return `/files/serve/system/${filename}`;
+            } else {
+              return `/files/serve/${dir}/${filename}`;
+            }
+          }
+          return `/files/serve/system/${filename}`;
+        }
+      }
+      
+      // Try to find by searching upload directories
+      const uploadBase = path.resolve('uploads');
+      if (fs.existsSync(uploadBase)) {
+        const found = await this.searchForFile(uploadBase, filename);
+        if (found) {
+          // Extract user ID from path if possible
+          const relativePath = path.relative(uploadBase, found);
+          const pathParts = relativePath.split(path.sep);
+          if (pathParts.length >= 2) {
+            const userId = pathParts[0];
+            return `/files/serve/${userId}/${filename}`;
+          }
+          return `/files/serve/system/${filename}`;
+        }
+      }
+      
+    } catch (error) {
+      console.error(`Error finding local fallback for ${filename}:`, error);
+    }
+    
+    return null;
+  }
+
+  /**
+   * Recursively search for a file in directory
+   */
+  async searchForFile(directory, filename) {
+    const fs = require('fs');
+    const path = require('path');
+    
+    try {
+      if (!fs.existsSync(directory)) {
+        return null;
+      }
+      
+      const items = fs.readdirSync(directory);
+      
+      for (const item of items) {
+        const itemPath = path.join(directory, item);
+        
+        try {
+          const stats = fs.statSync(itemPath);
+          
+          if (stats.isFile() && item === filename) {
+            return itemPath;
+          } else if (stats.isDirectory() && !item.startsWith('.')) {
+            const found = await this.searchForFile(itemPath, filename);
+            if (found) {
+              return found;
+            }
+          }
+        } catch (statError) {
+          // Skip files we can't stat (permissions, etc.)
+          continue;
+        }
+      }
+    } catch (error) {
+      // Ignore errors during search
+    }
+    
+    return null;
   }
 
   /**
