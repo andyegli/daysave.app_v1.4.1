@@ -1,3 +1,56 @@
+/**
+ * Logging Configuration for DaySave
+ * 
+ * PURPOSE:
+ * Provides comprehensive logging system using Winston with structured logging,
+ * multiple transports, and specialized logging functions for different
+ * application domains (auth, security, performance, errors).
+ * 
+ * FEATURES:
+ * - Structured JSON logging for production
+ * - Colorized console output for development
+ * - Multiple log levels (error, warn, info, debug)
+ * - Separate log files for different concerns
+ * - Specialized logging functions by domain
+ * - Performance metrics logging
+ * - Security event tracking
+ * 
+ * LOG FILES:
+ * - combined.log: All application logs
+ * - error.log: Error level logs only
+ * - auth.log: Authentication and authorization events
+ * - security.log: Security-related events
+ * - performance.log: Performance metrics and monitoring
+ * 
+ * SPECIALIZED LOGGERS:
+ * - logAuthEvent: Authentication success/failure events
+ * - logAuthError: Authentication system errors
+ * - logSecurityEvent: Security incidents and violations
+ * - logPerformanceMetric: Performance measurements
+ * - logError: General application errors
+ * - logInfo: Informational messages
+ * 
+ * LOG FORMATS:
+ * - Production: Structured JSON with metadata
+ * - Development: Human-readable with colors
+ * - Timestamps and error stack traces included
+ * - Client IP and user agent tracking
+ * 
+ * CONFIGURATION:
+ * - Environment-based log levels
+ * - Configurable file rotation
+ * - Console output control
+ * - Log directory auto-creation
+ * 
+ * DEPENDENCIES:
+ * - winston for logging framework
+ * - File system operations for log management
+ * - Path utilities for log file location
+ * 
+ * AUTHOR: DaySave Development Team
+ * CREATED: 2025-08-01 (Core Logging System)
+ */
+
 const winston = require('winston');
 const path = require('path');
 const fs = require('fs');

@@ -1,3 +1,50 @@
+/**
+ * Security Middleware for DaySave
+ * 
+ * PURPOSE:
+ * Provides comprehensive security middleware for protecting the application
+ * from common web vulnerabilities and attacks including rate limiting,
+ * CORS management, and security headers configuration.
+ * 
+ * FEATURES:
+ * - Rate limiting for API endpoints and authentication
+ * - CORS (Cross-Origin Resource Sharing) configuration
+ * - Security headers via Helmet.js
+ * - CSP (Content Security Policy) enforcement
+ * - Client detail tracking for security events
+ * - Configurable security policies per environment
+ * 
+ * SECURITY MEASURES:
+ * - Request rate limiting (configurable per route type)
+ * - Authentication attempt limiting
+ * - CORS origin validation
+ * - Security header injection
+ * - XSS protection
+ * - CSRF protection integration
+ * - Content type validation
+ * 
+ * RATE LIMITING:
+ * - Auth routes: 5 attempts per 15 minutes
+ * - API routes: 100 requests per 15 minutes
+ * - General routes: 100 requests per 15 minutes
+ * - Bypass available for development/debugging
+ * 
+ * CORS CONFIGURATION:
+ * - Configurable allowed origins
+ * - Credential support for authenticated requests
+ * - Method and header restrictions
+ * - Environment-specific settings
+ * 
+ * DEPENDENCIES:
+ * - express-rate-limit for request throttling
+ * - helmet for security headers
+ * - cors for cross-origin handling
+ * - winston logging system
+ * 
+ * AUTHOR: DaySave Development Team
+ * CREATED: 2025-08-01 (Core Security System)
+ */
+
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const cors = require('cors');

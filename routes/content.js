@@ -84,6 +84,30 @@ function isMultimediaURL(url) {
  * @param {Object} content - Content record
  * @param {Object} user - User object
  */
+/**
+ * Triggers comprehensive multimedia analysis for content
+ * 
+ * This function initiates the complete AI analysis pipeline for uploaded content
+ * including transcription, sentiment analysis, tag generation, and more.
+ * 
+ * @param {Object} content - Content record with id, url, and metadata
+ * @param {Object} user - User record with id and authentication details
+ * @returns {Promise<Object>} Analysis results including transcription, tags, summary
+ * 
+ * FEATURES:
+ * - Uses BackwardCompatibilityService for URL-based content
+ * - Comprehensive logging throughout the process
+ * - Database updates with analysis results
+ * - Error handling with detailed logging
+ * - Integration with multimedia orchestrator
+ * 
+ * ANALYSIS PIPELINE:
+ * 1. Content metadata preparation
+ * 2. AI analysis via compatibility service
+ * 3. Database updates with results
+ * 4. Performance logging and monitoring
+ * 5. Error handling and recovery
+ */
 async function triggerMultimediaAnalysis(content, user) {
   try {
     console.log(`🎬 TRIGGER: Starting multimedia analysis for content ${content.id}`, {

@@ -1,3 +1,63 @@
+/**
+ * DaySave Main Application Server
+ * 
+ * PURPOSE:
+ * Main Express.js application server for DaySave - a comprehensive multimedia
+ * content management and analysis platform with AI-powered features.
+ * 
+ * FEATURES:
+ * - User authentication and authorization
+ * - Multimedia content upload and analysis
+ * - AI-powered transcription, tagging, and summarization
+ * - Social media integration and automation
+ * - Subscription management and billing
+ * - API key management for external access
+ * - Device fingerprinting and fraud detection
+ * - Real-time notifications and updates
+ * 
+ * MIDDLEWARE STACK:
+ * - Security headers (Helmet.js)
+ * - CORS management
+ * - Request logging and monitoring
+ * - Body parsing (JSON, form data, file uploads)
+ * - Session management with database storage
+ * - Authentication via Passport.js
+ * - Role-based access control
+ * - Device fingerprinting
+ * - Rate limiting and security controls
+ * 
+ * ROUTES:
+ * - / : Home and dashboard
+ * - /auth : Authentication (login, register, MFA)
+ * - /content : Content management and analysis
+ * - /multimedia : Multimedia processing API
+ * - /subscription : Subscription plans and billing
+ * - /admin : Administrative interface
+ * - /api : RESTful API endpoints
+ * 
+ * STATIC ASSETS:
+ * - /uploads : User uploaded files and media
+ * - /js : Client-side JavaScript
+ * - /css : Stylesheets and themes
+ * - /images : Static images and icons
+ * 
+ * TEMPLATING:
+ * - EJS templating engine
+ * - Bootstrap-based responsive UI
+ * - Progressive Web App (PWA) features
+ * 
+ * DEPENDENCIES:
+ * - Express.js web framework
+ * - Sequelize ORM with MySQL
+ * - Passport.js authentication
+ * - Winston logging
+ * - Multer file uploads
+ * - Socket.io real-time features
+ * 
+ * AUTHOR: DaySave Development Team
+ * CREATED: 2025-08-01 (Core Application Server)
+ */
+
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
