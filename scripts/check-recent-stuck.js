@@ -1,4 +1,48 @@
 #!/usr/bin/env node
+/**
+ * Recent Content Processing Monitor for DaySave
+ * 
+ * PURPOSE:
+ * Monitors content submitted in the last 24 hours to identify items with
+ * incomplete or stuck AI processing (missing transcription, summary, title, tags).
+ * 
+ * USAGE:
+ * node scripts/check-recent-stuck.js
+ * 
+ * FEATURES:
+ * - Scans content from last 24 hours
+ * - Checks processing completeness for each item
+ * - Calculates completion percentage based on expected features
+ * - Lists associated processing jobs and their status
+ * - Identifies content that may need reprocessing
+ * 
+ * ANALYSIS CRITERIA:
+ * - Transcription presence and quality (>50 chars)
+ * - Summary generation (>10 chars)
+ * - AI-generated title availability
+ * - Auto-tag generation status
+ * 
+ * OUTPUT:
+ * - Content overview with completion percentage
+ * - URL and creation timestamp
+ * - Feature-by-feature status (✅/❌)
+ * - Processing job count and latest status
+ * - Stuck job identification
+ * 
+ * USE CASES:
+ * - Daily monitoring of processing pipeline health
+ * - Identifying content that needs manual intervention
+ * - Debugging automatic AI analysis issues
+ * - Quality assurance for content processing
+ * 
+ * DEPENDENCIES:
+ * - Database models (Content, ProcessingJob)
+ * - Sequelize operators for date filtering
+ * - Environment configuration
+ * 
+ * AUTHOR: DaySave Development Team
+ * CREATED: 2025-08-05 (Content Processing Monitoring)
+ */
 
 require('dotenv').config();
 const { Content, ProcessingJob } = require('../models');

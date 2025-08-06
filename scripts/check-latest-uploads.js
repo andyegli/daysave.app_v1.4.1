@@ -1,9 +1,53 @@
 #!/usr/bin/env node
-
 /**
- * Check Latest Uploads
+ * Latest Upload Status Checker for DaySave
  * 
- * Check the most recent files uploaded to see their processing status
+ * PURPOSE:
+ * Monitors and reports on the most recent file uploads and URL content submissions
+ * to verify AI processing status and identify any issues with automatic analysis.
+ * 
+ * USAGE:
+ * node scripts/check-latest-uploads.js
+ * 
+ * FEATURES:
+ * - Lists latest 5 file uploads with processing status
+ * - Lists latest 5 URL content submissions
+ * - Shows processing job status and completion
+ * - Reports AI analysis results (summary, title, tags, transcription)
+ * - Identifies documents needing processing
+ * 
+ * TRACKED INFORMATION:
+ * - File details (name, type, size, user)
+ * - Content metadata (URL, type, creation time)
+ * - Processing status (summary, title, tags)
+ * - Processing jobs and their completion
+ * - Character counts for generated content
+ * 
+ * OUTPUT FORMAT:
+ * - Chronological listing (newest first)
+ * - Processing status indicators (true/false)
+ * - Content length metrics
+ * - Special markers for document types
+ * - Processing job summaries
+ * 
+ * DETECTION FEATURES:
+ * - Identifies DOCX files needing AI analysis
+ * - Flags content missing titles or tags
+ * - Shows processing job history
+ * - Highlights incomplete analysis
+ * 
+ * USE CASES:
+ * - Daily monitoring of upload processing
+ * - Quality assurance for AI analysis
+ * - Debugging processing pipeline issues
+ * - User support and troubleshooting
+ * 
+ * DEPENDENCIES:
+ * - Database models (File, Content, User, ProcessingJob)
+ * - Environment configuration
+ * 
+ * AUTHOR: DaySave Development Team
+ * CREATED: 2025-08-01 (Upload Monitoring Tools)
  */
 
 const { File, Content, User, ProcessingJob } = require('../models');

@@ -20,6 +20,113 @@ This directory contains comprehensive scripts for testing and setting up DaySave
 
 ## 📋 Script Overview
 
+## 🔧 URL Processing & Debug Scripts
+
+### 🔍 `check-latest-url.js`
+**Latest URL Submission Checker**
+- Checks most recent URL submission processing status
+- Identifies missing titles/tags from AI analysis  
+- Shows processing job history and status
+- Provides troubleshooting recommendations
+
+```bash
+node scripts/check-latest-url.js
+```
+
+### 🔄 `reprocess-failed-url.js`
+**Failed URL Content Reprocessor**
+- Reprocesses URLs that failed AI analysis
+- Generates missing titles, tags, and summaries
+- Configurable target content ID
+- Complete AI pipeline execution
+
+```bash
+# Edit contentId variable first, then:
+node scripts/reprocess-failed-url.js
+```
+
+### 🧪 `test-new-url-fix.js`
+**URL Submission Fix Validator**
+- Tests automatic AI analysis trigger fixes
+- Validates data capture mechanisms
+- Simulates frontend submission process
+- Verifies async scope issue resolution
+
+```bash
+node scripts/test-new-url-fix.js
+```
+
+### 🔬 `test-url-submission.js`
+**URL Analysis Workflow Tester**
+- Tests complete URL submission and AI analysis
+- Direct BackwardCompatibilityService testing
+- Validates analysis options and configuration
+- Comprehensive workflow debugging
+
+```bash
+node scripts/test-url-submission.js
+```
+
+## 📊 Content Monitoring & Maintenance Scripts
+
+### 📋 `check-latest-uploads.js`
+**Upload Status Monitor**
+- Lists recent file uploads and URL submissions
+- Shows AI processing status (summary, title, tags)
+- Identifies incomplete analysis
+- Processing job status tracking
+
+```bash
+node scripts/check-latest-uploads.js
+```
+
+### ⏰ `check-recent-stuck.js`
+**Recent Content Processing Monitor**
+- Scans last 24 hours for stuck processing
+- Calculates completion percentages
+- Identifies content needing intervention
+- Processing pipeline health monitoring
+
+```bash
+node scripts/check-recent-stuck.js
+```
+
+### ✉️ `verify-email.js`
+**Manual Email Verification Tool**
+- Manually verifies user email addresses
+- Bypasses normal verification process
+- Administrative user management
+- Troubleshooting login issues
+
+```bash
+node scripts/verify-email.js <username_or_email>
+```
+
+### 🔧 `fix-summaries.js`
+**Content Summary Fixer**
+- Fixes corrupted summary data
+- Clears summaries for regeneration
+- Targets specific content by ID
+- Quick maintenance utility
+
+```bash
+# Edit contentId array first, then:
+node scripts/fix-summaries.js
+```
+
+### 🗂️ `check-columns.js`
+**Database Schema Validator**
+- Verifies analysis table columns
+- Checks for processing_job_id columns
+- Post-migration validation
+- Schema debugging tool
+
+```bash
+node scripts/check-columns.js
+```
+
+## 🏥 System Health & Infrastructure Scripts
+
 ### 🔍 `health-check.sh`
 **Comprehensive system health check**
 - Tests all containers and services
