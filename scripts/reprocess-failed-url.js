@@ -1,10 +1,45 @@
 #!/usr/bin/env node
-
 /**
- * Reprocess Failed URL Content Script
+ * Failed URL Content Reprocessor for DaySave
  * 
- * This script reprocesses content that failed to generate titles and tags.
- * It specifically targets the failed content item and re-runs the AI analysis.
+ * PURPOSE:
+ * Reprocesses URL content that failed to generate AI-powered titles and tags
+ * by running the complete AI analysis pipeline on specific content items.
+ * 
+ * USAGE:
+ * 1. Edit the contentId variable (line ~19) to target specific content
+ * 2. Run: node scripts/reprocess-failed-url.js
+ * 
+ * FEATURES:
+ * - Targets specific content by ID for reprocessing
+ * - Runs complete AI analysis (summary, title, tags, sentiment)
+ * - Uses BackwardCompatibilityService for URL content analysis
+ * - Updates database with generated results
+ * - Provides detailed progress logging and verification
+ * 
+ * CONFIGURATION:
+ * - Update contentId variable to target specific failed content
+ * - Supports any URL content type (web articles, multimedia, etc.)
+ * 
+ * OUTPUT:
+ * - Analysis progress and results
+ * - Generated title and tags
+ * - Updated content verification
+ * - Processing time and metadata
+ * 
+ * USE CASES:
+ * - Fix content missing titles/tags after initial submission
+ * - Reprocess content after system fixes
+ * - Debug and test AI analysis pipeline
+ * - Recover from failed automatic processing
+ * 
+ * DEPENDENCIES:
+ * - Database models (Content, User, ProcessingJob)
+ * - BackwardCompatibilityService for AI analysis
+ * - Environment configuration
+ * 
+ * AUTHOR: DaySave Development Team
+ * CREATED: 2025-08-06 (URL Processing Debug Updates)
  */
 
 require('dotenv').config();
@@ -16,7 +51,7 @@ async function reprocessFailedContent() {
     console.log('🔄 Starting reprocessing of failed URL content...');
     
     // Target the specific failed content
-    const contentId = 'afefadd9-de89-4893-ad1a-fb19ef70cbbe';
+    const contentId = 'b5e405a9-a445-4275-a824-20fa9b13430b';
     
     // Find the content
     const content = await Content.findByPk(contentId, {

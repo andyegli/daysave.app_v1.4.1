@@ -1,4 +1,34 @@
 #!/usr/bin/env node
+/**
+ * Content Summary Fixer for DaySave
+ * 
+ * PURPOSE:
+ * Quick utility to fix specific content items that have missing or 
+ * corrupted summaries by clearing them for regeneration.
+ * 
+ * USAGE:
+ * 1. Edit the 'ids' array to include target content IDs
+ * 2. Run: node scripts/fix-summaries.js
+ * 
+ * FEATURES:
+ * - Targets specific content by ID
+ * - Clears summary field to null for regeneration
+ * - Provides success confirmation
+ * 
+ * CONFIGURATION:
+ * Edit the ids array (around line 15) with target content IDs
+ * 
+ * USE CASES:
+ * - Fix corrupted summary data
+ * - Force summary regeneration for specific content
+ * - Clean up after processing errors
+ * 
+ * DEPENDENCIES:
+ * - Database models (Content)
+ * 
+ * AUTHOR: DaySave Development Team
+ * CREATED: 2025-08-01 (Content Maintenance Tools)
+ */
 
 const models = require('../models');
 const { Content } = models;
