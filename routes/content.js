@@ -1060,13 +1060,29 @@ async function handleBulkUrlSubmission(req, res) {
         // Trigger comprehensive AI analysis for all content
         console.log(`🧠 [${i+1}/${urls.length}] Triggering AI analysis for content: ${content.id}`);
         
+        // Capture content and user data to avoid scope issues
+        const contentData = {
+          id: content.id,
+          url: content.url,
+          user_comments: content.user_comments,
+          user_tags: content.user_tags,
+          content_type: content.content_type,
+          createdAt: content.createdAt
+        };
+        
+        const userData = {
+          id: req.user.id,
+          username: req.user.username,
+          email: req.user.email
+        };
+        
         // Trigger analysis in background
         setImmediate(async () => {
           try {
-            await triggerMultimediaAnalysis(content, req.user);
-            console.log(`✅ Background analysis started for ${content.id}`);
+            await triggerMultimediaAnalysis(contentData, userData);
+            console.log(`✅ Background analysis started for ${contentData.id}`);
           } catch (analysisError) {
-            console.error(`❌ Analysis failed for ${content.id}:`, analysisError.message);
+            console.error(`❌ Analysis failed for ${contentData.id}:`, analysisError.message);
           }
         });
         
@@ -1175,54 +1191,70 @@ router.post('/', [
     // Trigger comprehensive AI analysis for all content types
     console.log(`🧠 CONTENT ANALYSIS: Triggering AI analysis for content: ${content.id}`);
     
+    // Capture content and user data at this point to avoid scope issues
+    const contentData = {
+      id: content.id,
+      url: content.url,
+      user_comments: content.user_comments,
+      user_tags: content.user_tags,
+      content_type: content.content_type,
+      createdAt: content.createdAt
+    };
+    
+    const userData = {
+      id: req.user.id,
+      username: req.user.username,
+      email: req.user.email
+    };
+    
     // Trigger comprehensive analysis in background (don't wait for it)
     setImmediate(async () => {
       const startTime = Date.now();
-      const automationId = `AUTO-${content.id.substring(0, 8)}`;
+      const automationId = `AUTO-${contentData.id.substring(0, 8)}`;
       
       try {
-        console.log(`🚀 [${automationId}] AUTOMATION TRIGGER: Starting comprehensive AI analysis for content: ${content.id}`);
+        console.log(`🚀 [${automationId}] AUTOMATION TRIGGER: Starting comprehensive AI analysis for content: ${contentData.id}`);
         console.log(`📊 [${automationId}] System status: Memory usage being monitored...`);
         
         // Check if we have the required services before starting
-        if (!req.user) {
-          throw new Error('User object is missing');
+        if (!userData.id) {
+          throw new Error('User data is missing');
         }
         
-        console.log(`🎯 [${automationId}] User: ${req.user.id}, Content: ${content.id}, URL: ${content.url}`);
+        console.log(`🎯 [${automationId}] User: ${userData.id}, Content: ${contentData.id}, URL: ${contentData.url}`);
         
         // Add process monitoring
         const beforeMemory = process.memoryUsage();
         console.log(`📈 [${automationId}] Memory before: ${Math.round(beforeMemory.heapUsed / 1024 / 1024)}MB`);
         
-        await triggerMultimediaAnalysis(content, req.user);
+        await triggerMultimediaAnalysis(contentData, userData);
         
         const afterMemory = process.memoryUsage();
         const duration = Date.now() - startTime;
         
-        console.log(`✅ [${automationId}] AUTOMATION TRIGGER: Analysis started successfully for content: ${content.id}`);
+        console.log(`✅ [${automationId}] AUTOMATION TRIGGER: Analysis started successfully for content: ${contentData.id}`);
         console.log(`📊 [${automationId}] Duration: ${duration}ms, Memory after: ${Math.round(afterMemory.heapUsed / 1024 / 1024)}MB`);
         
       } catch (error) {
         const duration = Date.now() - startTime;
-          console.error(`❌ [${automationId}] AUTOMATION TRIGGER: Failed to start analysis for content: ${content.id}`);
+          console.error(`❌ [${automationId}] AUTOMATION TRIGGER: Failed to start analysis for content: ${contentData.id}`);
           console.error(`❌ [${automationId}] Error details:`, {
             error: error.message,
             stack: error.stack,
             duration: `${duration}ms`,
-            contentId: content.id,
-            userId: req.user?.id,
-            url: content.url
+            contentId: contentData.id,
+            userId: userData.id,
+            url: contentData.url
           });
           
           // Log to error file as well
           const logger = require('../config/logger');
-          logger.logError(`Automation trigger failed for content ${content.id}`, {
+          logger.logError(`Automation trigger failed for content ${contentData.id}`, {
             error: error.message,
             stack: error.stack,
-            contentId: content.id,
-            userId: req.user?.id,
-            url: content.url,
+            contentId: contentData.id,
+            userId: userData.id,
+            url: contentData.url,
             duration
           });
         }
