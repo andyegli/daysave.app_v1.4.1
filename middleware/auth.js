@@ -1,3 +1,45 @@
+/**
+ * Authentication Middleware for DaySave
+ * 
+ * PURPOSE:
+ * Provides comprehensive authentication and authorization middleware functions
+ * for securing routes and managing user access control throughout the application.
+ * 
+ * FEATURES:
+ * - User authentication verification
+ * - Role-based access control (RBAC)
+ * - Admin and subscription level authorization
+ * - Session management and security
+ * - Multi-factor authentication (MFA) enforcement
+ * - Client detail tracking and logging
+ * - Feature-based access control
+ * 
+ * MIDDLEWARE FUNCTIONS:
+ * - isAuthenticated: Verifies user login status
+ * - isAdmin: Restricts access to admin users
+ * - requireRole: Role-based access control
+ * - requireSubscription: Subscription level checks
+ * - enforceMfa: Multi-factor authentication enforcement
+ * - ensureRoleLoaded: Ensures user role data is available
+ * - requireFeature: Feature-based access control
+ * 
+ * SECURITY FEATURES:
+ * - IP address tracking
+ * - User agent logging
+ * - Authentication event logging
+ * - Session validation
+ * - Role verification
+ * 
+ * DEPENDENCIES:
+ * - Express.js session management
+ * - Passport.js authentication
+ * - Database models (User, Role)
+ * - Logging system
+ * 
+ * AUTHOR: DaySave Development Team
+ * CREATED: 2025-08-01 (Core Authentication System)
+ */
+
 const { logAuthEvent, logAuthError } = require('../config/logger');
 const { Role } = require('../models');
 
