@@ -31,6 +31,9 @@ const ThumbnailGenerator = require('./ThumbnailGenerator');
 // Base processor
 const BaseMediaProcessor = require('./BaseMediaProcessor');
 
+// AI Usage Tracker
+const AiUsageTracker = require('../aiUsageTracker');
+
 /**
  * ImageProcessor Class
  * 
@@ -51,6 +54,9 @@ class ImageProcessor extends BaseMediaProcessor {
       thumbnailDir: 'uploads/thumbnails',
       enableLogging: this.enableLogging
     });
+
+    // Initialize AI usage tracker
+    this.aiUsageTracker = new AiUsageTracker();
     
     // Image-specific configuration
     this.config = {
@@ -693,6 +699,8 @@ Only return the JSON array, no other text.`
       const base64Image = imageBuffer.toString('base64');
       const mimeType = this.getMimeTypeFromPath(imagePath);
       
+      const startTime = Date.now();
+      
       const response = await this.openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
@@ -722,7 +730,35 @@ Return only the extracted text, preserving original formatting and line breaks w
         temperature: 0.1
       });
 
+      const requestDuration = Date.now() - startTime;
       const extractedText = response.choices[0].message.content || '';
+
+      // Track AI usage if we have the necessary metadata
+      if (options.userId) {
+        try {
+          await this.aiUsageTracker.trackOpenAIUsage({
+            userId: options.userId,
+            response: response,
+            model: "gpt-4o-mini",
+            operationType: 'ocr',
+            contentId: options.contentId || null,
+            fileId: options.fileId || null,
+            processingJobId: options.processingJobId || null,
+            sessionId: options.sessionId || null,
+            requestDurationMs: requestDuration,
+            metadata: {
+              imageType: 'ocr_extraction',
+              imagePath: path.basename(imagePath),
+              mimeType: mimeType,
+              imageSize: imageBuffer.length,
+              extractedTextLength: extractedText.length
+            }
+          });
+        } catch (trackingError) {
+          console.warn('Failed to track OpenAI Vision usage:', trackingError.message);
+          // Don't fail the main operation due to tracking issues
+        }
+      }
       
       if (this.enableLogging) {
         this.log(`OpenAI Vision OCR extracted ${extractedText.length} characters`);

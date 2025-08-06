@@ -302,6 +302,28 @@ checkDatabaseConnection().then(async (connected) => {
   app.use('/api/subscription', require('./routes/subscription'));
   app.use('/profile', require('./routes/profile'));
 
+  // Legal and informational routes
+  app.get('/privacy-policy', (req, res) => {
+    res.render('legal/privacy-policy', {
+      title: 'Privacy Policy - DaySave',
+      user: req.user
+    });
+  });
+
+  app.get('/terms-of-service', (req, res) => {
+    res.render('legal/terms-of-service', {
+      title: 'Terms of Service - DaySave',
+      user: req.user
+    });
+  });
+
+  app.get('/about', (req, res) => {
+    res.render('pages/about', {
+      title: 'About DaySave - AI-Powered Content Management',
+      user: req.user
+    });
+  });
+
   // Test endpoints for AI pipeline testing (publicly accessible)
   app.get('/test-google-api', async (req, res) => {
     try {
