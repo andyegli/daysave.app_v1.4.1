@@ -247,15 +247,21 @@
     <!-- FingerprintJS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
     
-    <!-- Device Fingerprinting -->
-    <script src="/js/device-fingerprint.js?v=<%= Date.now() %>"></script>
+    <!-- ALL JAVASCRIPT TEMPORARILY DISABLED FOR DEBUGGING REDIRECT LOOP -->
+    <div class="alert alert-warning mt-3">
+        <strong>🔧 DEBUG MODE:</strong> JavaScript disabled to fix redirect loop.
+        <br><strong>Hostname:</strong> <span id="hostname-debug">Loading...</span>
+        <br><strong>Protocol:</strong> <span id="protocol-debug">Loading...</span>
+    </div>
     
-    <!-- Passkey Client Library -->
-    <script src="/js/passkey-client.js"></script>
-    
-    <!-- Login Authentication with Fingerprinting -->
-    <script src="/js/login-fingerprint.js?v=<%= Date.now() %>"></script>
-  <!-- Remote access SSL fix for users accessing via IP address -->
-  <script src="/js/remote-access-fix.js?v=<%= Date.now() %>"></script>
+    <!-- Minimal debugging script only -->
+    <script>
+        console.log('🔍 DEBUG: Login page loaded');
+        document.getElementById('hostname-debug').textContent = window.location.hostname;
+        document.getElementById('protocol-debug').textContent = window.location.protocol;
+        console.log('🔍 DEBUG Hostname:', window.location.hostname);
+        console.log('🔍 DEBUG Protocol:', window.location.protocol);
+        console.log('🔍 DEBUG Full URL:', window.location.href);
+    </script>
 </body>
 </html> 

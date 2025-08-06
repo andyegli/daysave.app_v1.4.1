@@ -74,15 +74,12 @@ if (window.location.hostname === 'localhost') {
   };
 }
 
-// SELECTIVE PROTOCOL ENFORCEMENT FOR LOCALHOST ONLY
-if (window.location.hostname === 'localhost' && window.location.hostname !== 'daysave.local') {
-  if (window.location.protocol === 'https:') {
-    console.log('🔄 IMMEDIATE HTTPS→HTTP REDIRECT for localhost...');
-    const httpUrl = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
-    window.stop(); // Stop any ongoing requests
-    window.location.replace(httpUrl);
-    throw new Error('Redirecting to HTTP'); // Stop all further execution
-  }
+// PROTOCOL ENFORCEMENT - COMPLETELY DISABLED FOR DEBUGGING  
+console.log('🔍 DEBUG upload-toggle: hostname =', window.location.hostname, 'protocol =', window.location.protocol);
+if (false && window.location.hostname === 'localhost') {
+  console.log('🔄 IMMEDIATE HTTPS→HTTP REDIRECT for localhost...');
+  // DISABLED FOR DEBUGGING
+}
   
   // Intercept any navigation attempts to HTTPS
   const originalAssign = window.location.assign;
@@ -106,10 +103,10 @@ if (window.location.hostname === 'localhost' && window.location.hostname !== 'da
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Double-check protocol after DOM load - only for actual localhost, not daysave.local
-  if (window.location.hostname === 'localhost' && window.location.hostname !== 'daysave.local' && window.location.protocol === 'https:') {
+  // DISABLED FOR DEBUGGING - Double-check protocol after DOM load
+  if (false && window.location.hostname === 'localhost') {
     console.log('🔄 DOM LOADED - HTTPS→HTTP REDIRECT for localhost...');
-    window.location.replace(`http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`);
+    // DISABLED FOR DEBUGGING
     return;
   }
   
