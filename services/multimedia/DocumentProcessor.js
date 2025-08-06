@@ -2,6 +2,7 @@ const BaseMediaProcessor = require('./BaseMediaProcessor');
 const fs = require('fs').promises;
 const path = require('path');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const AiUsageTracker = require('../aiUsageTracker');
 
 /**
  * DocumentProcessor Service
@@ -23,6 +24,9 @@ class DocumentProcessor extends BaseMediaProcessor {
         } else {
             console.warn('DocumentProcessor: Google AI API key not found. Document analysis will be limited.');
         }
+
+        // Initialize AI usage tracker
+        this.aiUsageTracker = new AiUsageTracker();
     }
 
     /**
@@ -236,10 +240,38 @@ class DocumentProcessor extends BaseMediaProcessor {
         // Try Google AI (Gemini) first
         if (this.model) {
             try {
+                const startTime = Date.now();
                 const prompt = this.createAnalysisPrompt(cleanedText, metadata);
                 const result = await this.model.generateContent(prompt);
                 const response = result.response;
+                const requestDuration = Date.now() - startTime;
                 const analysisText = response.text();
+
+                // Track Google AI usage if we have the necessary metadata
+                if (metadata.userId) {
+                    try {
+                        await this.aiUsageTracker.trackGoogleAIUsage({
+                            userId: metadata.userId,
+                            response: result,
+                            model: "gemini-1.5-flash",
+                            operationType: 'text_analysis',
+                            contentId: metadata.contentId || null,
+                            fileId: metadata.fileId || null,
+                            processingJobId: metadata.processingJobId || null,
+                            sessionId: metadata.sessionId || null,
+                            requestDurationMs: requestDuration,
+                            metadata: {
+                                documentType: 'text_document',
+                                textLength: text.length,
+                                cleanedTextLength: cleanedText.length,
+                                prompt: prompt.substring(0, 200) + '...' // Store truncated prompt for debugging
+                            }
+                        });
+                    } catch (trackingError) {
+                        console.warn('Failed to track Google AI usage:', trackingError.message);
+                        // Don't fail the main operation due to tracking issues
+                    }
+                }
 
                 return this.parseAIResponse(analysisText, cleanedText);
 
@@ -299,12 +331,42 @@ Requirements:
 - DO NOT describe file formats, ZIP archives, or XML structure
 - Return only valid JSON, no additional text`;
 
+        const startTime = Date.now();
+        
         const response = await this.openai.chat.completions.create({
             model: "gpt-3.5-turbo",
             messages: [{ role: "user", content: prompt }],
             max_tokens: 500,
             temperature: 0.3
         });
+
+        const requestDuration = Date.now() - startTime;
+
+        // Track AI usage if we have the necessary metadata
+        if (metadata.userId) {
+            try {
+                await this.aiUsageTracker.trackOpenAIUsage({
+                    userId: metadata.userId,
+                    response: response,
+                    model: "gpt-3.5-turbo",
+                    operationType: 'text_analysis',
+                    contentId: metadata.contentId || null,
+                    fileId: metadata.fileId || null,
+                    processingJobId: metadata.processingJobId || null,
+                    sessionId: metadata.sessionId || null,
+                    requestDurationMs: requestDuration,
+                    metadata: {
+                        documentType: 'text_document',
+                        textLength: text.length,
+                        previewLength: preview.length,
+                        prompt: prompt.substring(0, 200) + '...' // Store truncated prompt for debugging
+                    }
+                });
+            } catch (trackingError) {
+                console.warn('Failed to track OpenAI usage:', trackingError.message);
+                // Don't fail the main operation due to tracking issues
+            }
+        }
 
         const analysisText = response.choices[0].message.content;
         return this.parseAIResponse(analysisText, text);

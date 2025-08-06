@@ -1152,10 +1152,10 @@ class MultimediaAnalyzer {
             
             // Create results object for AI processing
             const mockResults = {
-              transcription: contentForAnalysis,
+              transcription: contentForAnalysis || '',
               objects: [],
               labels: [],
-              detectedText: `${webContent.title || ''} ${webContent.description || ''}`.trim(),
+              detectedText: `${webContent?.title || ''} ${webContent?.description || ''}`.trim(),
               textAnnotations: []
             };
             

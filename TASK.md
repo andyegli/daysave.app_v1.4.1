@@ -1,3 +1,64 @@
+## ✅ **External AI Usage Tracking & Cost Management System** (2025-01-30)
+- [x] **AI Usage Tracking Infrastructure Implementation**
+  - [x] **Database Schema & Model Creation**
+    - [x] Created ExternalAiUsage model in models/externalAiUsage.js
+    - [x] Comprehensive tracking fields: provider, model, tokens, costs, success metrics
+    - [x] Support for OpenAI, Google AI, Google Cloud, and other providers
+    - [x] User/content/file/processing job associations for billing attribution
+    - [x] Billing period tracking for per-use billing implementation
+    - [x] Created migration 20250130200000-create-external-ai-usage.js
+    - [x] Optimized indexes for billing and analytics queries
+    
+  - [x] **AI Usage Tracker Service**
+    - [x] Created services/aiUsageTracker.js with comprehensive tracking capabilities
+    - [x] Real-time cost calculation for all major AI models
+    - [x] Current pricing models for OpenAI (GPT-4, GPT-3.5, Whisper, DALL-E)
+    - [x] Current pricing models for Google AI (Gemini 2.0, 2.5, 1.5 series)
+    - [x] Token extraction from OpenAI and Google AI API responses
+    - [x] Automatic billing period assignment and cost tracking
+    - [x] Built-in analytics methods for user/system usage queries
+    
+  - [x] **Cost Calculator Utility**
+    - [x] Created scripts/ai-cost-calculator.js command-line utility
+    - [x] Calculate costs for specific provider/model combinations
+    - [x] Compare costs across all providers for given token usage
+    - [x] List all available models and pricing
+    - [x] Batch cost calculations from JSON files
+    - [x] Export results to CSV/JSON formats
+    
+  - [x] **API Integration & Usage Tracking**
+    - [x] Updated DocumentProcessor with OpenAI and Google AI usage tracking
+    - [x] Updated ImageProcessor with OpenAI Vision usage tracking
+    - [x] Request duration tracking and error handling
+    - [x] Metadata collection for debugging and analysis
+    - [x] Non-blocking tracking (failures don't affect main operations)
+    
+  - [x] **Testing & Validation**
+    - [x] Created scripts/test-ai-usage-tracking.js test suite
+    - [x] Cost calculation validation
+    - [x] Token extraction testing
+    - [x] Database operation verification
+    - [x] Pricing model validation
+    - [x] Usage tracking simulation
+
+**Features Implemented:**
+- Comprehensive external AI usage tracking for billing purposes
+- Real-time cost calculation with current pricing models
+- Database schema optimized for billing and analytics queries
+- Command-line cost calculator for planning and analysis
+- Non-intrusive tracking integration in existing AI services
+- Support for multiple AI providers and operation types
+- Future-ready for per-use billing implementation
+
+**Next Steps:**
+1. Run database migration: `npx sequelize-cli db:migrate`
+2. Test with real API calls in development
+3. Implement admin dashboard for usage analytics
+4. Set up automated billing reports
+5. Consider rate limiting based on usage costs
+
+---
+
 ## ✅ **Multi-Factor Authentication (MFA) & Password Management Implementation** (2025-08-04)
 - [x] **Complete Password Change & MFA System Implementation**
   - [x] **Database Schema Enhancement**
