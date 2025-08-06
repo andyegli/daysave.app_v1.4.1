@@ -1,6 +1,7 @@
 /**
  * Remote Access SSL Fix
  * Prevents SSL errors when accessing DaySave from remote machines via IP address
+ * FIXED: Properly exclude daysave.local and .local domains
  */
 
 (function() {
@@ -12,11 +13,16 @@
   function isRemoteAccess() {
     const hostname = window.location.hostname;
     const isIP = hostname.match(/^\d+\.\d+\.\d+\.\d+$/);
-    const isLocalDomain = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === 'daysave.local' || hostname.endsWith('.local');
-    const isDevMode = document.querySelector('meta[name="x-dev-mode"]') || 
-                     (typeof window.location !== 'undefined' && !isLocalDomain);
     
-    return isIP || (isDevMode && !isLocalDomain);
+    // FIXED: Properly exclude all local domains
+    const isLocalDomain = hostname === 'localhost' || 
+                          hostname === '127.0.0.1' || 
+                          hostname === 'daysave.local' || 
+                          hostname.endsWith('.local') ||
+                          hostname.endsWith('.localhost');
+    
+    // Only consider it remote access if it's an IP and NOT a local domain
+    return isIP && !isLocalDomain;
   }
 
   // Force HTTP protocol for remote IP access in development
@@ -35,8 +41,7 @@
     if (!isRemoteAccess()) return;
 
     const hostname = window.location.hostname;
-    const port = window.location.port || '3000';
-
+    
     // Fix all HTTPS links and forms for current IP
     document.querySelectorAll(`a[href^="https://${hostname}"], form[action^="https://${hostname}"]`).forEach(element => {
       const isLink = element.tagName === 'A';
@@ -63,8 +68,10 @@
 
   // Initialize on DOM load
   document.addEventListener('DOMContentLoaded', function() {
+    const hostname = window.location.hostname;
+    
     if (isRemoteAccess()) {
-      console.log(`🌐 Remote Access detected: ${window.location.hostname}`);
+      console.log(`🌐 Remote Access detected: ${hostname}`);
       
       // First, redirect if we're on HTTPS
       if (!forceHttpForRemoteAccess()) {
@@ -72,7 +79,7 @@
         fixHttpsUrlsInDom();
       }
     } else {
-      console.log('🏠 Local access detected, SSL fixes not needed');
+      console.log(`🏠 Local access detected (${hostname}), SSL fixes not needed`);
     }
   });
 
@@ -81,8 +88,11 @@
     // DOM not ready, event listener will handle it
   } else {
     // DOM is ready
+    const hostname = window.location.hostname;
     if (isRemoteAccess() && !forceHttpForRemoteAccess()) {
       fixHttpsUrlsInDom();
+    } else {
+      console.log(`🏠 Local access detected (${hostname}), SSL fixes not needed`);
     }
   }
 

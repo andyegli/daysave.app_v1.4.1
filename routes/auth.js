@@ -17,6 +17,13 @@ const {
 // Apply rate limiting to auth routes
 router.use(authRateLimiter);
 
+// Test login page (no JavaScript)
+router.get('/test-login', (req, res) => {
+  res.render('test-login', {
+    title: 'Test Login - DaySave'
+  });
+});
+
 // Login page
 router.get('/login', isNotAuthenticated, (req, res) => {
   const clientDetails = {

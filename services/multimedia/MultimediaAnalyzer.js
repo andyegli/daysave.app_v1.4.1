@@ -1150,20 +1150,21 @@ class MultimediaAnalyzer {
               });
             }
             
+            // Create results object for AI processing
+            const mockResults = {
+              transcription: contentForAnalysis,
+              objects: [],
+              labels: [],
+              detectedText: `${webContent.title || ''} ${webContent.description || ''}`.trim(),
+              textAnnotations: []
+            };
+            
             // Generate comprehensive summary
             if (analysisOptions.enableSummarization) {
               if (user_id && content_id) {
                 const logger = require('../../config/logger');
                 logger.multimedia.progress(user_id, content_id, 'summary_generation', 60);
               }
-              
-              const mockResults = {
-                transcription: contentForAnalysis,
-                objects: [],
-                labels: [],
-                detectedText: `${webContent.title || ''} ${webContent.description || ''}`.trim(),
-                textAnnotations: []
-              };
               
               results.summary = await this.generateComprehensiveSummary(mockResults);
             }
@@ -1190,7 +1191,7 @@ class MultimediaAnalyzer {
             });
             
             // Generate AI title
-            results.generated_title = await this.generateTitle({
+            results.generatedTitle = await this.generateTitle({
               transcription: contentForAnalysis,
               summary: results.summary
             });
