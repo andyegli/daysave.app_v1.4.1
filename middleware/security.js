@@ -93,7 +93,11 @@ const corsOptions = {
           `http://localhost:${port}`,
           `https://localhost:${port}`, // Allow HTTPS for localhost in development
           'http://localhost:5000',
-          'https://localhost:5000'
+          'https://localhost:5000',
+          'http://daysave.local',
+          'https://daysave.local',
+          'http://daysave.app',
+          'https://daysave.app'
         ];
     
     // Allow requests with no origin (like mobile apps or curl requests) or with origin 'null'
