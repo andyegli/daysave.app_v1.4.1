@@ -188,7 +188,13 @@ const securityHeaders = () => {
       maxAge: 31536000, // 1 year
       includeSubDomains: true,
       preload: true
-    } : false // Disable HSTS for development to prevent localhost SSL errors
+    } : false, // Disable HSTS for development to prevent localhost SSL errors
+    
+    // Ensure consistent security headers (avoid Nginx conflicts)
+    frameguard: { action: 'sameorigin' }, // X-Frame-Options: SAMEORIGIN
+    noSniff: true, // X-Content-Type-Options: nosniff  
+    xssFilter: { setOnOldIE: true }, // X-XSS-Protection: 1; mode=block
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' } // Referrer-Policy: strict-origin-when-cross-origin
   };
 
   // upgradeInsecureRequests is handled in cspDirectives above

@@ -1,66 +1,86 @@
 /**
- * Localhost Protocol Fix
- * Smart protocol handling for proxy and direct connections
- * ENHANCED VERSION - Prevents redirect loops and ensures proper protocol handling
+ * Multi-Domain Protocol Fix
+ * Smart protocol handling for localhost:3000, daysave.local, and daysave.app
+ * Prevents redirect loops while ensuring proper protocol usage
  */
 
-console.log('🔄 Localhost Protocol Fix: ENHANCED VERSION with redirect loop prevention');
+console.log('🔄 Multi-Domain Protocol Fix: Supporting localhost:3000, daysave.local, daysave.app');
 
 // Flag to prevent redirect loops
 let protocolFixApplied = false;
 
 function getCorrectUrl(path) {
-  // Only apply fixes for localhost
-  if (window.location.hostname !== 'localhost') {
-    console.log('🔧 Non-localhost connection - using path as-is:', path);
-    return path;
-  }
-
-  // Check if we're behind a proxy (port 80/443) or direct connection (port 3000)
-  const isDirectConnection = window.location.port === '3000';
-  const isProxyConnection = window.location.port === '' || window.location.port === '80' || window.location.port === '443';
-
-  if (isDirectConnection) {
-    // Direct connection to port 3000 - use as-is but ensure http
-    const correctedPath = path.replace('https://localhost', 'http://localhost');
-    if (correctedPath !== path) {
-      console.log('🔧 Direct connection - corrected HTTPS to HTTP:', correctedPath);
+  const hostname = window.location.hostname;
+  
+  // Handle different domains appropriately
+  if (hostname === 'localhost') {
+    // For localhost, only fix if it's trying to use wrong protocol
+    const isDirectConnection = window.location.port === '3000';
+    if (isDirectConnection) {
+      // Direct connection to port 3000 - ensure HTTP
+      const correctedPath = path.replace('https://localhost', 'http://localhost');
+      if (correctedPath !== path) {
+        console.log('🔧 Direct localhost:3000 - corrected HTTPS to HTTP:', correctedPath);
+      }
+      return correctedPath;
     }
-    return correctedPath;
-  } else if (isProxyConnection) {
-    // Proxy connection - keep HTTPS for proxy
-    console.log('🔧 Proxy connection detected - using path as-is:', path);
+    // Proxy connection - leave as-is
+    return path;
+  } else if (hostname === 'daysave.local' || hostname === 'daysave.app') {
+    // For production domains, ensure HTTPS
+    if (path.includes(`http://${hostname}`)) {
+      const correctedPath = path.replace(`http://${hostname}`, `https://${hostname}`);
+      console.log(`🔧 ${hostname} - corrected HTTP to HTTPS:`, correctedPath);
+      return correctedPath;
+    }
     return path;
   } else {
-    // Unknown port - be safe and use as-is
-    console.log('🔧 Unknown port detected - using path as-is:', path);
+    // Unknown domain - use as-is
+    console.log('🔧 Unknown domain - using path as-is:', path);
     return path;
   }
 }
 
-// Enhanced protocol enforcement for localhost
+// Smart protocol enforcement based on domain
 function enforceCorrectProtocol() {
-  if (protocolFixApplied || window.location.hostname !== 'localhost') {
+  if (protocolFixApplied) {
     return;
   }
 
+  const hostname = window.location.hostname;
   const currentProtocol = window.location.protocol;
   const currentPort = window.location.port;
   
-  // Direct connection to port 3000 should use HTTP
-  if (currentPort === '3000' && currentProtocol === 'https:') {
+  // Handle localhost - only redirect if on wrong protocol for the connection type
+  if (hostname === 'localhost') {
+    // Direct connection to port 3000 should use HTTP
+    if (currentPort === '3000' && currentProtocol === 'https:') {
+      protocolFixApplied = true;
+      console.log('🔄 Redirecting HTTPS→HTTP for direct localhost:3000 connection');
+      const newUrl = `http://localhost:3000${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.location.replace(newUrl);
+      return;
+    }
+    // For localhost proxy connections (no port or port 80/443), allow both HTTP and HTTPS
+    // Don't auto-redirect to prevent loops
+    console.log('✅ Localhost proxy connection - allowing current protocol');
+    return;
+  }
+  
+  // Handle daysave.local - redirect HTTP to HTTPS
+  if (hostname === 'daysave.local' && currentProtocol === 'http:') {
     protocolFixApplied = true;
-    console.log('🔄 Redirecting from HTTPS to HTTP for direct localhost:3000 connection');
-    const newUrl = `http://localhost:3000${window.location.pathname}${window.location.search}${window.location.hash}`;
+    console.log('🔄 Redirecting HTTP→HTTPS for daysave.local');
+    const newUrl = `https://daysave.local${window.location.pathname}${window.location.search}${window.location.hash}`;
     window.location.replace(newUrl);
     return;
   }
   
-  // Proxy connection (port 80/443 or no port) should use HTTPS
-  if ((currentPort === '' || currentPort === '80' || currentPort === '443') && currentProtocol === 'http:') {
+  // Handle daysave.app - redirect HTTP to HTTPS
+  if (hostname === 'daysave.app' && currentProtocol === 'http:') {
     protocolFixApplied = true;
-    console.log('🔄 Redirecting from HTTP to HTTPS for proxy localhost connection');
-    const newUrl = `https://localhost${window.location.pathname}${window.location.search}${window.location.hash}`;
+    console.log('🔄 Redirecting HTTP→HTTPS for daysave.app');
+    const newUrl = `https://daysave.app${window.location.pathname}${window.location.search}${window.location.hash}`;
     window.location.replace(newUrl);
     return;
   }
@@ -79,52 +99,59 @@ document.addEventListener('DOMContentLoaded', function() {
     fullUrl: window.location.href
   });
 
+  // Apply protocol enforcement for all domains
+  enforceCorrectProtocol();
+  
   if (hostname === 'localhost') {
-    // Apply protocol enforcement before anything else
-    enforceCorrectProtocol();
-    
     if (port === '3000') {
       console.log('✅ Direct localhost:3000 connection detected');
-    } else if (!port || port === '80') {
-      console.log('✅ Proxy localhost connection detected (port 80/default)');
+    } else if (!port || port === '80' || port === '443') {
+      console.log('✅ Proxy localhost connection detected');
     } else {
       console.log('⚠️  Unknown localhost port:', port);
     }
-    
-    // Fix any forms that might have wrong protocol
-    fixFormsAndLinks();
+  } else if (hostname === 'daysave.local') {
+    console.log('✅ daysave.local domain detected');
+  } else if (hostname === 'daysave.app') {
+    console.log('✅ daysave.app production domain detected');
   } else {
-    console.log('✅ Production/non-localhost connection');
+    console.log('⚠️  Unknown hostname:', hostname);
   }
+  
+  // Fix any forms and links that might have wrong protocol
+  fixFormsAndLinks();
 });
 
 // Apply protocol fix immediately if document is already loaded
 if (document.readyState !== 'loading') {
-  const hostname = window.location.hostname;
-  if (hostname === 'localhost') {
-    enforceCorrectProtocol();
-  }
+  enforceCorrectProtocol();
 }
 
-// Fix forms and links to use correct protocol
+// Fix forms and links to use correct protocol based on domain
 function fixFormsAndLinks() {
   const hostname = window.location.hostname;
   const port = window.location.port;
+  const protocol = window.location.protocol;
   
-  if (hostname !== 'localhost') return;
+  console.log(`🔧 Fixing forms and links for ${hostname}`);
   
-  // Determine correct protocol based on port
-  const shouldUseHttps = port === '' || port === '80' || port === '443';
-  const correctProtocol = shouldUseHttps ? 'https:' : 'http:';
-  const incorrectProtocol = shouldUseHttps ? 'http:' : 'https:';
-  
-  console.log(`🔧 Fixing forms and links - using ${correctProtocol}`);
-  
+  // Determine what needs fixing based on domain
+  if (hostname === 'localhost' && port === '3000') {
+    // Direct localhost:3000 - fix any HTTPS references to HTTP
+    fixProtocolInElements('https://localhost', 'http://localhost');
+  } else if (hostname === 'daysave.local' || hostname === 'daysave.app') {
+    // Production domains - fix any HTTP references to HTTPS
+    fixProtocolInElements(`http://${hostname}`, `https://${hostname}`);
+  }
+  // For localhost proxy, don't fix anything to prevent loops
+}
+
+function fixProtocolInElements(fromProtocol, toProtocol) {
   // Fix forms
   document.querySelectorAll('form').forEach(form => {
     const action = form.getAttribute('action');
-    if (action && action.includes(`${incorrectProtocol}//localhost`)) {
-      const newAction = action.replace(`${incorrectProtocol}//localhost`, `${correctProtocol}//localhost`);
+    if (action && action.includes(fromProtocol)) {
+      const newAction = action.replace(fromProtocol, toProtocol);
       form.setAttribute('action', newAction);
       console.log(`🔧 Fixed form action: ${action} → ${newAction}`);
     }
@@ -133,12 +160,12 @@ function fixFormsAndLinks() {
   // Fix links
   document.querySelectorAll('a').forEach(link => {
     const href = link.getAttribute('href');
-    if (href && href.includes(`${incorrectProtocol}//localhost`)) {
-      const newHref = href.replace(`${incorrectProtocol}//localhost`, `${correctProtocol}//localhost`);
+    if (href && href.includes(fromProtocol)) {
+      const newHref = href.replace(fromProtocol, toProtocol);
       link.setAttribute('href', newHref);
       console.log(`🔧 Fixed link href: ${href} → ${newHref}`);
     }
   });
 }
 
-console.log('✅ Localhost Protocol Fix: ENHANCED VERSION ENABLED');
+console.log('✅ Multi-Domain Protocol Fix: ENABLED for localhost:3000, daysave.local, daysave.app');

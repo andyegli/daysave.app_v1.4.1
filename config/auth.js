@@ -6,18 +6,25 @@ const WebAuthnStrategy = require('passport-fido2-webauthn');
 const { User, SocialAccount, Role, UserPasskey } = require('../models');
 const { logOAuthFlow, logOAuthError, logAuthEvent, logAuthError } = require('./logger');
 
-// Dynamic callback URL generation for localhost development
+// Dynamic callback URL generation - supports all domains
 const getCallbackURL = (provider) => {
   const envVar = `${provider.toUpperCase()}_CALLBACK_URL`;
   if (process.env[envVar]) {
     return process.env[envVar];
   }
   
-  // For localhost development, use HTTP for direct connections and HTTPS for proxy
-  const port = process.env.APP_PORT || 3000;
+  // For production, use production domain
+  if (process.env.NODE_ENV === 'production') {
+    return `https://daysave.app/auth/${provider}/callback`;
+  }
   
-  // Default to HTTPS localhost for OAuth callbacks (works with nginx proxy)
-  return `https://localhost/auth/${provider}/callback`;
+  // For development, allow multiple callback URLs in OAuth provider settings:
+  // - http://localhost:3000/auth/google/callback (direct connection)
+  // - https://daysave.local/auth/google/callback (local SSL)
+  // - https://localhost/auth/google/callback (nginx proxy)
+  
+  // Default to the most commonly used development URL
+  return `https://daysave.local/auth/${provider}/callback`;
 };
 
 // OAuth Configuration
@@ -41,27 +48,35 @@ const oauthConfig = {
   }
 };
 
-// WebAuthn Configuration - Dynamic origin handling for localhost
+// WebAuthn Configuration - Multi-domain support
 const getWebAuthnOrigin = () => {
   if (process.env.WEBAUTHN_ORIGIN) {
     return process.env.WEBAUTHN_ORIGIN;
   }
   
-  // For localhost, support both HTTP and HTTPS
+  // Support all development and production domains
   const appPort = process.env.APP_PORT || 3000;
   
-  // Return array of allowed origins for localhost development
   return [
-    `http://localhost:${appPort}`,
-    `https://localhost`,
-    `https://localhost:443`,
-    `http://localhost:3000`,
-    `https://daysave.local`
+    `http://localhost:${appPort}`,      // Direct development connection
+    `https://daysave.local`,            // Local SSL development
+    `https://localhost`,                // Nginx proxy
+    `https://daysave.app`               // Production
   ];
 };
 
+const getWebAuthnRpId = () => {
+  if (process.env.WEBAUTHN_RP_ID) {
+    return process.env.WEBAUTHN_RP_ID;
+  }
+  
+  // Use the most permissive RP ID for development
+  // In production, this should be set to 'daysave.app'
+  return process.env.NODE_ENV === 'production' ? 'daysave.app' : 'localhost';
+};
+
 const webauthnConfig = {
-  rpID: process.env.WEBAUTHN_RP_ID || 'localhost',
+  rpID: getWebAuthnRpId(),
   rpName: process.env.WEBAUTHN_RP_NAME || 'DaySave',
   origin: getWebAuthnOrigin(),
   timeout: 60000,

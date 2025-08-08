@@ -1,3 +1,27 @@
+## ✅ **Security Headers Duplicate/Conflict Fix** (2025-01-30)
+**Issue**: Duplicate and conflicting security headers were being set by both Express middleware and Nginx proxy
+**Root Cause**: Both Express (Helmet.js) and Nginx were setting the same security headers, causing:
+- x-content-type-options appearing multiple times
+- x-xss-protection conflicting values 
+- referrer-policy conflicting values
+**Solution Implemented**:
+- ✅ Clear separation of concerns: Express handles application security headers, Nginx handles transport headers
+- ✅ Removed duplicate headers from all Nginx configurations
+- ✅ Standardized security header values in Express middleware
+- ✅ Created comprehensive test script for header validation
+- ✅ Added security headers strategy documentation
+
+**Files Modified**:
+- `middleware/security.js` - Standardized Helmet configuration with explicit header policies
+- `nginx/nginx.conf` - Removed duplicate security headers from main config
+- `nginx/sites-available/daysave.conf` - Removed conflicting headers, kept only HSTS
+- `nginx/sites-available/daysave-local-proxy.conf` - Removed duplicate headers
+- `nginx/sites-available/daysave-local-ssl.conf` - Removed conflicting headers
+- `scripts/test-security-headers.js` - New comprehensive header testing script
+- `docs/SECURITY_HEADERS_STRATEGY.md` - Strategy documentation
+
+**Results**: ✅ All tests passed! No duplicate or conflicting headers detected.
+
 ## ✅ **Login Redirect Loop Fix** (2025-08-08)
 **Issue**: Login page was creating redirect loops when accessed through nginx proxy vs direct port 3000 connection
 **Root Cause**: Missing `app.set('trust proxy', true)` configuration in Express app causing session cookies to not work properly behind proxy

@@ -264,12 +264,12 @@
     <script src="/js/passkey-client.js?v=<%= Date.now() %>"></script>
 
     <!-- Connection Status Information -->
-    <div class="alert alert-success mt-3" style="font-size: 0.8rem;">
-        <strong>✅ Connection Status:</strong>
-        <br><strong>Hostname:</strong> <span id="hostname-debug">Loading...</span>
+    <div class="alert alert-info mt-3" style="font-size: 0.8rem;">
+        <strong>🌐 Connection Info:</strong>
+        <br><strong>Domain:</strong> <span id="hostname-debug">Loading...</span>
         <br><strong>Protocol:</strong> <span id="protocol-debug">Loading...</span>
-        <br><strong>Type:</strong> <span id="connection-type">Loading...</span>
-        <br><strong>Status:</strong> <span id="protocol-status" class="text-success">✅ Ready</span>
+        <br><strong>Mode:</strong> <span id="connection-type">Loading...</span>
+        <br><strong>Login Status:</strong> <span id="protocol-status" class="text-success">✅ All login methods active</span>
     </div>
     
     <!-- Enhanced connection status script -->
@@ -283,42 +283,42 @@
             document.getElementById('hostname-debug').textContent = hostname;
             document.getElementById('protocol-debug').textContent = protocol;
             
-            let connectionType = 'Unknown';
-            let protocolStatus = '✅ Ready';
+            let connectionMode = 'Unknown';
+            let loginStatus = '✅ All login methods active';
             
             if (hostname === 'localhost') {
                 if (port === '3000') {
-                    connectionType = 'Direct (localhost:3000)';
-                    if (protocol !== 'http:') {
-                        protocolStatus = '🔄 Protocol correction applied';
-                    }
-                } else if (!port || port === '80') {
-                    connectionType = 'Proxy (localhost via nginx)';
-                    if (protocol !== 'https:') {
-                        protocolStatus = '🔄 Protocol correction applied';
-                    }
+                    connectionMode = 'Development (Direct)';
+                } else if (!port || port === '80' || port === '443') {
+                    connectionMode = 'Development (Proxy)';
                 } else {
-                    connectionType = `Custom port (${port})`;
+                    connectionMode = `Development (Port ${port})`;
                 }
+            } else if (hostname === 'daysave.local') {
+                connectionMode = 'Local SSL Testing';
+            } else if (hostname === 'daysave.app') {
+                connectionMode = 'Production';
             } else {
-                connectionType = 'Production/Remote';
+                connectionMode = 'Unknown Domain';
+                loginStatus = '⚠️ Domain not configured';
             }
             
-            document.getElementById('connection-type').textContent = connectionType;
-            document.getElementById('protocol-status').textContent = protocolStatus;
+            document.getElementById('connection-type').textContent = connectionMode;
+            document.getElementById('protocol-status').textContent = loginStatus;
             
             console.log('✅ Connection Status:', {
                 hostname,
                 protocol,
                 port,
-                connectionType,
-                protocolStatus,
-                fullUrl: window.location.href
+                connectionMode,
+                loginStatus,
+                fullUrl: window.location.href,
+                javaScriptEnabled: true
             });
             
             // Update alert class based on status
             const alertDiv = document.querySelector('.alert');
-            if (protocolStatus.includes('correction')) {
+            if (loginStatus.includes('⚠️')) {
                 alertDiv.className = 'alert alert-warning mt-3';
             } else {
                 alertDiv.className = 'alert alert-success mt-3';
