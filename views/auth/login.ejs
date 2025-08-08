@@ -257,11 +257,18 @@
     <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
     
     <!-- Device Fingerprinting & Protocol Fix -->
-    <script src="/js/device-fingerprint.js?v=<%= Date.now() %>"></script>
-    <script src="/js/localhost-protocol-fix.js?v=<%= Date.now() %>"></script>
+    <script src="/js/device-fingerprint.js?v=FORCE_REFRESH_<%= Date.now() %>"></script>
+    <script src="/js/localhost-protocol-fix.js?v=FORCE_REFRESH_<%= Date.now() %>"></script>
     
     <!-- Passkey Authentication -->
-    <script src="/js/passkey-client.js?v=<%= Date.now() %>"></script>
+    <script src="/js/passkey-client.js?v=FORCE_REFRESH_<%= Date.now() %>"></script>
+    
+    <!-- Script Loading Debug -->
+    <script>
+        console.log('🔄 Scripts loading check - timestamp:', Date.now());
+        console.log('🔄 Device fingerprint script loaded:', typeof window.deviceFingerprint);
+        console.log('🔄 Passkey client script loaded:', typeof window.passkeyClient);
+    </script>
 
     <!-- Connection Status Information -->
     <div class="alert alert-info mt-3" style="font-size: 0.8rem;">
@@ -272,10 +279,82 @@
         <br><strong>Login Status:</strong> <span id="protocol-status" class="text-success">✅ All login methods active</span>
     </div>
     
-    <!-- Enhanced connection status script -->
+    <!-- PASSKEY BUTTON INITIALIZATION - RESTORED -->
+    <script>
+        console.log('🔑 PASSKEY BUTTON INITIALIZATION - TIMESTAMP:', Date.now());
+        
+        // Initialize passkey button functionality
+        function initializePasskeyButton() {
+            console.log('🔍 Initializing passkey button...');
+            
+            const passkeyBtn = document.querySelector('.passkey-login-btn');
+            console.log('🔑 Button found:', !!passkeyBtn);
+            
+            if (passkeyBtn && window.passkeyClient) {
+                console.log('🔑 Button and passkeyClient available');
+                
+                // Remove any existing event listeners by cloning
+                const newBtn = passkeyBtn.cloneNode(true);
+                passkeyBtn.parentNode.replaceChild(newBtn, passkeyBtn);
+                
+                // Add real passkey functionality
+                newBtn.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🔑 *** PASSKEY LOGIN TRIGGERED! ***');
+                    
+                    try {
+                        // Show loading state
+                        newBtn.disabled = true;
+                        newBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Authenticating...';
+                        
+                        // Trigger passkey authentication
+                        const result = await window.passkeyClient.authenticate();
+                        console.log('🔑 Passkey authentication result:', result);
+                        
+                        if (result && result.success) {
+                            console.log('✅ Passkey authentication successful!');
+                            // Redirect will be handled by the server response
+                        } else {
+                            console.error('❌ Passkey authentication failed:', result);
+                            alert('Passkey authentication failed. Please try again.');
+                        }
+                    } catch (error) {
+                        console.error('❌ Passkey authentication error:', error);
+                        alert('Passkey authentication error: ' + error.message);
+                    } finally {
+                        // Restore button state
+                        newBtn.disabled = false;
+                        newBtn.innerHTML = '<i class="fas fa-fingerprint me-2"></i>Continue with Passkey';
+                    }
+                    
+                    return false;
+                });
+                
+                console.log('🔑 Real passkey click handler added');
+                
+            } else {
+                console.error('❌ PASSKEY BUTTON OR CLIENT NOT FOUND!');
+                if (!passkeyBtn) console.error('❌ Button not found');
+                if (!window.passkeyClient) console.error('❌ passkeyClient not available');
+            }
+        }
+        
+        // Initialize when DOM loads
+        document.addEventListener('DOMContentLoaded', initializePasskeyButton);
+        
+        // Also initialize immediately if DOM already loaded
+        if (document.readyState !== 'loading') {
+            initializePasskeyButton();
+        }
+        
+        // Initialize again after scripts load
+        setTimeout(initializePasskeyButton, 1000);
+    </script>
+    
+    <!-- Connection info script -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🔍 Login page loaded - checking connection status');
             const hostname = window.location.hostname;
             const protocol = window.location.protocol;
             const port = window.location.port;

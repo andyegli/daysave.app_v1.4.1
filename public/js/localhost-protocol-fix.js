@@ -51,15 +51,13 @@ function enforceCorrectProtocol() {
   const currentProtocol = window.location.protocol;
   const currentPort = window.location.port;
   
-  // Handle localhost - only redirect if on wrong protocol for the connection type
+  // Handle localhost - allow both HTTP and HTTPS for testing
   if (hostname === 'localhost') {
-    // Direct connection to port 3000 should use HTTP
-    if (currentPort === '3000' && currentProtocol === 'https:') {
-      protocolFixApplied = true;
-      console.log('🔄 Redirecting HTTPS→HTTP for direct localhost:3000 connection');
-      const newUrl = `http://localhost:3000${window.location.pathname}${window.location.search}${window.location.hash}`;
-      window.location.replace(newUrl);
-      return;
+    // Allow both HTTP and HTTPS on localhost:3000 for development flexibility
+    // This supports both direct development (HTTP) and SSL testing (HTTPS)
+    if (currentPort === '3000') {
+      console.log(`✅ Localhost:3000 ${currentProtocol} connection - allowing current protocol for development`);
+      return; // Don't redirect - allow both HTTP and HTTPS
     }
     // For localhost proxy connections (no port or port 80/443), allow both HTTP and HTTPS
     // Don't auto-redirect to prevent loops

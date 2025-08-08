@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passkey Button Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-btn { 
+            background: linear-gradient(45deg, #667eea, #764ba2); 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 8px; 
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .debug { margin: 20px 0; padding: 10px; background: #f5f5f5; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🔑 Passkey Button Test Page</h1>
+    
+    <div class="debug">
+        <h3>Debug Info:</h3>
+        <div id="debug-output"></div>
+    </div>
+    
+    <button class="test-btn passkey-login-btn" onclick="testClick()">
+        🔑 Test Passkey Button
+    </button>
+    
+    <script>
+        console.log('🚀 Test page loaded - timestamp:', Date.now());
+        
+        function testClick() {
+            console.log('🔑 onclick handler triggered!');
+            alert('Button clicked via onclick!');
+        }
+        
+        function updateDebug(msg) {
+            const output = document.getElementById('debug-output');
+            output.innerHTML += msg + '<br>';
+            console.log(msg);
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDebug('✅ DOM loaded');
+            
+            const btn = document.querySelector('.passkey-login-btn');
+            updateDebug('🔑 Button found: ' + !!btn);
+            
+            if (btn) {
+                updateDebug('🔑 Button innerHTML: ' + btn.innerHTML);
+                
+                // Add event listener
+                btn.addEventListener('click', function(e) {
+                    console.log('🔑 addEventListener triggered!', e);
+                    updateDebug('🔑 addEventListener triggered!');
+                });
+                updateDebug('🔑 Event listener added');
+                
+                // Test manual click
+                setTimeout(() => {
+                    updateDebug('🔑 Testing manual click...');
+                    btn.click();
+                }, 2000);
+            }
+            
+            updateDebug('🔑 WebAuthn supported: ' + !!window.PublicKeyCredential);
+            updateDebug('🔑 Location: ' + window.location.href);
+        });
+    </script>
+</body>
+</html>

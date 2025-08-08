@@ -26,7 +26,7 @@ const getCallbackURL = (provider) => {
     return `https://daysave.app/auth/${provider}/callback`;
   }
   
-  return `https://daysave.local/auth/${provider}/callback`;
+  return `http://localhost:3000/auth/${provider}/callback`;
 };
 
 console.log(`🔗 Current Google Callback URL: ${getCallbackURL('google')}\n`);
@@ -38,19 +38,21 @@ console.log('   Add these Authorized Redirect URIs:\n');
 
 const requiredCallbacks = [
   'http://localhost:3000/auth/google/callback',
-  'https://daysave.local/auth/google/callback', 
-  'https://localhost/auth/google/callback',
+  'http://localhost/auth/google/callback',
   'https://daysave.app/auth/google/callback'
 ];
+
+console.log('⚠️  IMPORTANT: Google OAuth does NOT allow .local domains!');
+console.log('   daysave.local URLs will be rejected by Google for security reasons.\n');
 
 requiredCallbacks.forEach((url, index) => {
   console.log(`   ${index + 1}. ${url}`);
 });
 
 console.log('\n🎯 TESTING: Test these URLs after updating Google Console:');
-console.log('   • http://localhost:3000/auth/login (Direct development)');
-console.log('   • https://daysave.local/auth/login (Local SSL)');
-console.log('   • https://daysave.app/auth/login (Production)\n');
+console.log('   • http://localhost:3000/auth/login (Direct development - WORKS with Google OAuth)');
+console.log('   • https://daysave.app/auth/login (Production - WORKS with Google OAuth)');
+console.log('   • https://daysave.local/auth/login (⚠️  Will NOT work - Google rejects .local domains)\n');
 
 console.log('⚠️  IMPORTANT: Changes to Google Console may take 5-10 minutes to propagate\n');
 

@@ -24,6 +24,108 @@ router.get('/test-login', (req, res) => {
   });
 });
 
+// Passkey button test page
+router.get('/test-passkey', (req, res) => {
+  const testHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passkey Button Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-btn { 
+            background: linear-gradient(45deg, #667eea, #764ba2); 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 8px; 
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .debug { margin: 20px 0; padding: 10px; background: #f5f5f5; border-radius: 4px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>🔑 Passkey Button Test Page</h1>
+    
+    <div class="debug">
+        <h3>Debug Info:</h3>
+        <div id="debug-output"></div>
+    </div>
+    
+    <button class="test-btn" onclick="testOnClick()">
+        🔑 Test onClick Handler
+    </button>
+    <br>
+    
+    <button class="test-btn passkey-login-btn" id="event-listener-btn">
+        🔑 Test Event Listener
+    </button>
+    <br>
+    
+    <button class="test-btn" onclick="manualPasskeyTest()">
+        🔑 Manual Passkey Test
+    </button>
+    
+    <script>
+        console.log('🚀 Test page loaded - timestamp:', Date.now());
+        
+        function testOnClick() {
+            updateDebug('✅ onClick handler works!', 'success');
+            console.log('🔑 onClick handler triggered!');
+        }
+        
+        function manualPasskeyTest() {
+            const realBtn = document.querySelector('.passkey-login-btn');
+            if (realBtn) {
+                updateDebug('🔑 Manually triggering passkey button...', 'success');
+                realBtn.click();
+            } else {
+                updateDebug('❌ Passkey button not found!', 'error');
+            }
+        }
+        
+        function updateDebug(msg, type = '') {
+            const output = document.getElementById('debug-output');
+            const span = document.createElement('div');
+            span.className = type;
+            span.innerHTML = msg;
+            output.appendChild(span);
+            console.log(msg);
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDebug('✅ DOM loaded');
+            
+            const btn = document.querySelector('.passkey-login-btn');
+            updateDebug('🔑 Passkey button found: ' + !!btn);
+            
+            if (btn) {
+                // Add event listener
+                btn.addEventListener('click', function(e) {
+                    updateDebug('✅ Event listener triggered!', 'success');
+                    console.log('🔑 addEventListener triggered!', e);
+                });
+                updateDebug('🔑 Event listener added');
+            }
+            
+            updateDebug('🔑 WebAuthn supported: ' + !!window.PublicKeyCredential);
+            updateDebug('🔑 Location: ' + window.location.href);
+            updateDebug('🔑 Protocol: ' + window.location.protocol);
+            updateDebug('🔑 Hostname: ' + window.location.hostname);
+        });
+    </script>
+</body>
+</html>`;
+  
+  res.send(testHTML);
+});
+
 // Login page
 router.get('/login', isNotAuthenticated, (req, res) => {
   const clientDetails = {

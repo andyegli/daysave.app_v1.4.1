@@ -6,7 +6,7 @@ const WebAuthnStrategy = require('passport-fido2-webauthn');
 const { User, SocialAccount, Role, UserPasskey } = require('../models');
 const { logOAuthFlow, logOAuthError, logAuthEvent, logAuthError } = require('./logger');
 
-// Dynamic callback URL generation - supports all domains
+// Dynamic callback URL generation - Google OAuth compatible
 const getCallbackURL = (provider) => {
   const envVar = `${provider.toUpperCase()}_CALLBACK_URL`;
   if (process.env[envVar]) {
@@ -18,13 +18,14 @@ const getCallbackURL = (provider) => {
     return `https://daysave.app/auth/${provider}/callback`;
   }
   
-  // For development, allow multiple callback URLs in OAuth provider settings:
+  // For development - IMPORTANT: Google OAuth does NOT allow .local domains!
+  // Only use localhost URLs that Google accepts:
   // - http://localhost:3000/auth/google/callback (direct connection)
-  // - https://daysave.local/auth/google/callback (local SSL)
-  // - https://localhost/auth/google/callback (nginx proxy)
+  // - http://localhost/auth/google/callback (nginx proxy on port 80)
+  // - https://daysave.app/auth/google/callback (production)
   
-  // Default to the most commonly used development URL
-  return `https://daysave.local/auth/${provider}/callback`;
+  // Default to localhost:3000 for development (Google OAuth compatible)
+  return `http://localhost:3000/auth/${provider}/callback`;
 };
 
 // OAuth Configuration
@@ -48,21 +49,24 @@ const oauthConfig = {
   }
 };
 
-// WebAuthn Configuration - Multi-domain support
+// WebAuthn Configuration - Google OAuth compatible domains only
 const getWebAuthnOrigin = () => {
   if (process.env.WEBAUTHN_ORIGIN) {
     return process.env.WEBAUTHN_ORIGIN;
   }
   
-  // Support all development and production domains
+  // Support only domains that work with OAuth providers
   const appPort = process.env.APP_PORT || 3000;
   
   return [
     `http://localhost:${appPort}`,      // Direct development connection
-    `https://daysave.local`,            // Local SSL development
-    `https://localhost`,                // Nginx proxy
+    `https://localhost:${appPort}`,     // HTTPS development connection for testing
+    `http://localhost`,                 // Nginx proxy on port 80
+    `https://localhost`,                // Nginx proxy on port 443
+    `https://daysave.local`,            // Local SSL development (WebAuthn works with .local)
     `https://daysave.app`               // Production
   ];
+  // Note: WebAuthn supports .local domains, only Google OAuth doesn't
 };
 
 const getWebAuthnRpId = () => {
