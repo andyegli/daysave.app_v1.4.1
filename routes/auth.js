@@ -39,6 +39,7 @@ router.get('/login', isNotAuthenticated, (req, res) => {
   res.render('auth/login', {
     title: 'Login - DaySave',
     error: req.query.error,
+    success: req.query.success,
     user: req.user || null
   });
 });
@@ -1013,6 +1014,251 @@ router.post('/refresh-session', isAuthenticated, async (req, res) => {
     
   } catch (error) {
     res.status(500).json({ error: 'Refresh failed', message: error.message });
+  }
+});
+
+// Forgot Password - Show form
+router.get('/forgot-password', isNotAuthenticated, (req, res) => {
+  res.render('auth/forgot-password', {
+    title: 'Forgot Password - DaySave',
+    user: null,
+    error: req.query.error,
+    success: req.query.success
+  });
+});
+
+// Forgot Password - Send reset email
+router.post('/forgot-password', isNotAuthenticated, async (req, res) => {
+  const { email } = req.body;
+  
+  const clientDetails = {
+    ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+    userAgent: req.headers['user-agent'] || 'unknown'
+  };
+  
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    logAuthEvent('PASSWORD_RESET_INVALID_EMAIL', { ...clientDetails, email });
+    return res.render('auth/forgot-password', {
+      title: 'Forgot Password - DaySave',
+      user: null,
+      error: 'Please enter a valid email address.',
+      success: null
+    });
+  }
+  
+  try {
+    const user = await User.findOne({ where: { email } });
+    
+    // Always show success message for security (don't reveal if email exists)
+    const successMessage = 'If an account with this email exists, you will receive password reset instructions.';
+    
+    if (!user) {
+      logAuthEvent('PASSWORD_RESET_EMAIL_NOT_FOUND', { ...clientDetails, email });
+      return res.render('auth/forgot-password', {
+        title: 'Forgot Password - DaySave',
+        user: null,
+        error: null,
+        success: successMessage
+      });
+    }
+    
+    // Generate reset token
+    const crypto = require('crypto');
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const tokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+    
+    // Store reset token in user record (reusing email_verification_token field)
+    user.email_verification_token = resetToken;
+    user.updated_at = new Date();
+    await user.save();
+    
+    // Send reset email
+    const sendMail = require('../utils/send-mail');
+    const resetUrl = `${process.env.BASE_URL || `http://localhost:${process.env.APP_PORT || 3000}`}/auth/reset-password?token=${resetToken}`;
+    
+    await sendMail({
+      to: email,
+      subject: 'Password Reset - DaySave',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #667eea;">Password Reset Request</h2>
+          <p>Hello ${user.username},</p>
+          <p>You requested to reset your password for your DaySave account.</p>
+          <p>Click the button below to reset your password:</p>
+          <p style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #667eea; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+          </p>
+          <p><strong>Important:</strong></p>
+          <ul>
+            <li>This link will expire in 1 hour for security</li>
+            <li>If you didn't request this reset, please ignore this email</li>
+            <li>Never share this link with anyone</li>
+          </ul>
+          <p>If the button doesn't work, copy and paste this link into your browser:</p>
+          <p style="word-break: break-all; color: #666;">${resetUrl}</p>
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+          <p style="font-size: 12px; color: #888;">DaySave - Secure Content Management</p>
+        </div>
+      `
+    });
+    
+    logAuthEvent('PASSWORD_RESET_EMAIL_SENT', {
+      ...clientDetails,
+      userId: user.id,
+      email: user.email
+    });
+    
+    res.render('auth/forgot-password', {
+      title: 'Forgot Password - DaySave',
+      user: null,
+      error: null,
+      success: successMessage
+    });
+    
+  } catch (error) {
+    logAuthError('PASSWORD_RESET_ERROR', error, {
+      ...clientDetails,
+      email: email
+    });
+    
+    res.render('auth/forgot-password', {
+      title: 'Forgot Password - DaySave',
+      user: null,
+      error: 'An error occurred. Please try again.',
+      success: null
+    });
+  }
+});
+
+// Reset Password - Show form (verify token)
+router.get('/reset-password', isNotAuthenticated, async (req, res) => {
+  const { token } = req.query;
+  
+  if (!token) {
+    return res.redirect('/auth/forgot-password?error=Invalid reset link');
+  }
+  
+  try {
+    const user = await User.findOne({ 
+      where: { email_verification_token: token }
+    });
+    
+    if (!user) {
+      return res.redirect('/auth/forgot-password?error=Invalid or expired reset link');
+    }
+    
+    // Check if token is expired (1 hour)
+    const tokenAge = Date.now() - new Date(user.updated_at).getTime();
+    if (tokenAge > 3600000) {
+      return res.redirect('/auth/forgot-password?error=Reset link has expired. Please request a new one.');
+    }
+    
+    res.render('auth/reset-password', {
+      title: 'Reset Password - DaySave',
+      user: null,
+      token: token,
+      error: null,
+      success: null
+    });
+    
+  } catch (error) {
+    logAuthError('PASSWORD_RESET_VERIFY_ERROR', error, {
+      ip: req.ip || 'unknown',
+      token: token
+    });
+    
+    res.redirect('/auth/forgot-password?error=An error occurred. Please try again.');
+  }
+});
+
+// Reset Password - Process new password
+router.post('/reset-password', isNotAuthenticated, async (req, res) => {
+  const { token, new_password, confirm_password } = req.body;
+  
+  const clientDetails = {
+    ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+    userAgent: req.headers['user-agent'] || 'unknown'
+  };
+  
+  if (!token || !new_password || !confirm_password) {
+    return res.render('auth/reset-password', {
+      title: 'Reset Password - DaySave',
+      user: null,
+      token: token,
+      error: 'All fields are required.',
+      success: null
+    });
+  }
+  
+  if (new_password !== confirm_password) {
+    return res.render('auth/reset-password', {
+      title: 'Reset Password - DaySave',
+      user: null,
+      token: token,
+      error: 'Passwords do not match.',
+      success: null
+    });
+  }
+  
+  if (new_password.length < 8) {
+    return res.render('auth/reset-password', {
+      title: 'Reset Password - DaySave',
+      user: null,
+      token: token,
+      error: 'Password must be at least 8 characters long.',
+      success: null
+    });
+  }
+  
+  try {
+    const user = await User.findOne({ 
+      where: { email_verification_token: token }
+    });
+    
+    if (!user) {
+      return res.redirect('/auth/forgot-password?error=Invalid or expired reset link');
+    }
+    
+    // Check if token is expired (1 hour)
+    const tokenAge = Date.now() - new Date(user.updated_at).getTime();
+    if (tokenAge > 3600000) {
+      return res.redirect('/auth/forgot-password?error=Reset link has expired. Please request a new one.');
+    }
+    
+    // Hash new password
+    const bcrypt = require('bcryptjs');
+    const saltRounds = 12;
+    const password_hash = await bcrypt.hash(new_password, saltRounds);
+    
+    // Update user password and clear token
+    await user.update({
+      password_hash: password_hash,
+      email_verification_token: null,
+      last_password_change: new Date(),
+      updated_at: new Date()
+    });
+    
+    logAuthEvent('PASSWORD_RESET_SUCCESS', {
+      ...clientDetails,
+      userId: user.id,
+      email: user.email
+    });
+    
+    res.redirect('/auth/login?success=Password reset successful. You can now log in with your new password.');
+    
+  } catch (error) {
+    logAuthError('PASSWORD_RESET_COMPLETE_ERROR', error, {
+      ...clientDetails,
+      token: token
+    });
+    
+    res.render('auth/reset-password', {
+      title: 'Reset Password - DaySave',
+      user: null,
+      token: token,
+      error: 'An error occurred. Please try again.',
+      success: null
+    });
   }
 });
 

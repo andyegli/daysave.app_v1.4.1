@@ -4,6 +4,7 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const { AdminSetting } = require('../models');
+const StorageUsageTracker = require('./storageUsageTracker');
 
 /**
  * FileUploadService
@@ -14,6 +15,7 @@ const { AdminSetting } = require('../models');
 class FileUploadService {
   constructor() {
     this.initializeStorage();
+    this.storageTracker = new StorageUsageTracker();
     this.defaultSettings = {
       maxFileSize: 25 * 1024 * 1024, // 25MB default
       allowedFileTypes: [
@@ -294,7 +296,7 @@ class FileUploadService {
             ? `https://storage.googleapis.com/${settings.bucketName}/${fileName}`
             : null;
 
-          resolve({
+          const uploadResult = {
             fileName,
             filePath: `gs://${settings.bucketName}/${fileName}`,
             publicUrl,
@@ -302,7 +304,38 @@ class FileUploadService {
             mimetype: file.mimetype,
             originalName: file.originalname,
             storage: 'gcs'
-          });
+          };
+
+          // Track storage usage if user info is provided
+          if (options.userId) {
+            try {
+              await this.storageTracker.trackFileUpload({
+                userId: options.userId,
+                filePath: uploadResult.filePath,
+                fileSize: file.size,
+                mimeType: file.mimetype,
+                contentId: options.contentId || null,
+                fileId: options.fileId || null,
+                processingJobId: options.processingJobId || null,
+                storageProvider: 'google_cloud_storage',
+                bucketName: settings.bucketName,
+                storageClass: 'standard', // Default to standard class
+                sessionId: options.sessionId || null,
+                uploadDurationMs: options.uploadStartTime ? Date.now() - options.uploadStartTime : null,
+                metadata: {
+                  originalFileName: file.originalname,
+                  uploadMethod: 'web_interface',
+                  fileCategory: this.storageTracker.getFileTypeFromMimeType(file.mimetype),
+                  makePublic: options.makePublic || false
+                }
+              });
+            } catch (trackingError) {
+              console.warn('Failed to track storage usage for upload:', trackingError.message);
+              // Don't fail the upload due to tracking issues
+            }
+          }
+
+          resolve(uploadResult);
         } catch (error) {
           reject(error);
         }
@@ -328,7 +361,7 @@ class FileUploadService {
     // Write file to disk
     fs.writeFileSync(filePath, file.buffer);
 
-    return {
+    const uploadResult = {
       fileName,
       filePath: `/uploads/${fileName}`,
       publicUrl: `/uploads/${fileName}`,
@@ -337,6 +370,37 @@ class FileUploadService {
       originalName: file.originalname,
       storage: 'local'
     };
+
+    // Track storage usage for local storage if user info is provided
+    if (options.userId) {
+      try {
+        await this.storageTracker.trackFileUpload({
+          userId: options.userId,
+          filePath: uploadResult.filePath,
+          fileSize: file.size,
+          mimeType: file.mimetype,
+          contentId: options.contentId || null,
+          fileId: options.fileId || null,
+          processingJobId: options.processingJobId || null,
+          storageProvider: 'local',
+          bucketName: null,
+          storageClass: 'standard',
+          sessionId: options.sessionId || null,
+          uploadDurationMs: options.uploadStartTime ? Date.now() - options.uploadStartTime : null,
+          metadata: {
+            originalFileName: file.originalname,
+            uploadMethod: 'web_interface',
+            fileCategory: this.storageTracker.getFileTypeFromMimeType(file.mimetype),
+            localPath: filePath
+          }
+        });
+      } catch (trackingError) {
+        console.warn('Failed to track storage usage for local upload:', trackingError.message);
+        // Don't fail the upload due to tracking issues
+      }
+    }
+
+    return uploadResult;
   }
 
   /**

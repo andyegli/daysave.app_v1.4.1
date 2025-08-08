@@ -1,3 +1,61 @@
+/**
+ * Content Model for DaySave
+ * 
+ * PURPOSE:
+ * Defines the Content model representing user-generated content items including
+ * URLs, multimedia files, and their associated metadata, analysis results,
+ * and processing status.
+ * 
+ * FEATURES:
+ * - UUID primary keys for security and scalability
+ * - User ownership and social account linking
+ * - Flexible metadata storage (JSON)
+ * - AI-generated analysis results (summary, title, tags)
+ * - Content type classification
+ * - Processing status tracking
+ * - Sentiment analysis and categorization
+ * - Full-text search capabilities
+ * 
+ * FIELDS:
+ * - id: UUID primary key
+ * - user_id: Owner reference
+ * - social_account_id: Optional social media account link
+ * - url: Source URL for content
+ * - metadata: Flexible JSON storage for content metadata
+ * - summary: AI-generated content summary
+ * - generated_title: AI-generated title
+ * - auto_tags: AI-generated tags (JSON array)
+ * - user_comments: User-added comments
+ * - user_tags: User-added tags (JSON array)
+ * - content_type: Content classification
+ * - sentiment_score: AI sentiment analysis
+ * - category: Content categorization
+ * - status: Processing status tracking
+ * 
+ * ASSOCIATIONS:
+ * - belongsTo User (content owner)
+ * - belongsTo SocialAccount (optional social media link)
+ * - hasMany Files (attached media files)
+ * - hasMany ProcessingJobs (background processing tasks)
+ * - hasMany Thumbnails (generated thumbnails)
+ * - hasOne VideoAnalysis, AudioAnalysis, ImageAnalysis
+ * 
+ * INDEXES:
+ * - user_id for ownership queries
+ * - content_type for filtering
+ * - createdAt for chronological sorting
+ * - Full-text indexes on searchable fields
+ * 
+ * VALIDATION:
+ * - UUID format validation
+ * - Required fields enforcement
+ * - JSON structure validation for arrays
+ * - URL format validation
+ * 
+ * AUTHOR: DaySave Development Team
+ * CREATED: 2025-08-01 (Core Content Management)
+ */
+
 const { v4: uuidv4 } = require('uuid');
 
 module.exports = (sequelize, DataTypes) => {
