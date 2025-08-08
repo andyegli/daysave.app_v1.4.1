@@ -84,6 +84,9 @@ const {
 
 const app = express();
 
+// Trust proxy for proper session handling behind nginx
+app.set('trust proxy', true);
+
 // Set EJS as templating engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -224,7 +227,9 @@ checkDatabaseConnection().then(async (connected) => {
       secure: false, // Always false for local development; set to true in production with HTTPS
       httpOnly: false, // Set to false for localhost development to allow AJAX cookie debugging
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: 'lax' // Keep lax for compatibility
+      sameSite: 'lax', // Keep lax for compatibility
+      // Ensure cookies work with both proxy and direct access
+      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined
     },
     name: 'daysave.sid' // Change default session name for security
   }));

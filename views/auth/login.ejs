@@ -256,21 +256,55 @@
     <!-- FingerprintJS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
     
-    <!-- ALL JAVASCRIPT TEMPORARILY DISABLED FOR DEBUGGING REDIRECT LOOP -->
-    <div class="alert alert-warning mt-3">
-        <strong>🔧 DEBUG MODE:</strong> JavaScript disabled to fix redirect loop.
+    <!-- Device Fingerprinting & Protocol Fix -->
+    <script src="/js/device-fingerprint.js?v=<%= Date.now() %>"></script>
+    <script src="/js/localhost-protocol-fix.js?v=<%= Date.now() %>"></script>
+    
+    <!-- Passkey Authentication -->
+    <script src="/js/passkey-client.js?v=<%= Date.now() %>"></script>
+
+    <!-- Debug Information (can be removed in production) -->
+    <div class="alert alert-info mt-3" style="font-size: 0.8rem;">
+        <strong>🔍 Debug Info:</strong>
         <br><strong>Hostname:</strong> <span id="hostname-debug">Loading...</span>
         <br><strong>Protocol:</strong> <span id="protocol-debug">Loading...</span>
+        <br><strong>Connection:</strong> <span id="connection-type">Loading...</span>
     </div>
     
-    <!-- Minimal debugging script only -->
+    <!-- Enhanced debugging script -->
     <script>
-        console.log('🔍 DEBUG: Login page loaded');
-        document.getElementById('hostname-debug').textContent = window.location.hostname;
-        document.getElementById('protocol-debug').textContent = window.location.protocol;
-        console.log('🔍 DEBUG Hostname:', window.location.hostname);
-        console.log('🔍 DEBUG Protocol:', window.location.protocol);
-        console.log('🔍 DEBUG Full URL:', window.location.href);
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 Login page loaded');
+            const hostname = window.location.hostname;
+            const protocol = window.location.protocol;
+            const port = window.location.port;
+            
+            document.getElementById('hostname-debug').textContent = hostname;
+            document.getElementById('protocol-debug').textContent = protocol;
+            
+            let connectionType = 'Unknown';
+            if (hostname === 'localhost') {
+                if (port === '3000') {
+                    connectionType = 'Direct (localhost:3000)';
+                } else if (!port || port === '80') {
+                    connectionType = 'Proxy (localhost via nginx)';
+                } else {
+                    connectionType = `Custom port (${port})`;
+                }
+            } else {
+                connectionType = 'Production/Remote';
+            }
+            
+            document.getElementById('connection-type').textContent = connectionType;
+            
+            console.log('🔍 Connection Details:', {
+                hostname,
+                protocol,
+                port,
+                connectionType,
+                fullUrl: window.location.href
+            });
+        });
     </script>
 </body>
 </html> 

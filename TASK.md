@@ -1,3 +1,21 @@
+## ✅ **Login Redirect Loop Fix** (2025-08-08)
+**Issue**: Login page was creating redirect loops when accessed through nginx proxy vs direct port 3000 connection
+**Root Cause**: Missing `app.set('trust proxy', true)` configuration in Express app causing session cookies to not work properly behind proxy
+**Solution Implemented**:
+- ✅ Added proxy trust configuration to Express app 
+- ✅ Fixed session cookie handling for both proxy and direct connections
+- ✅ Re-enabled JavaScript authentication handlers (passkeys, OAuth, device fingerprinting)  
+- ✅ Updated localhost protocol fix to handle both connection types
+- ✅ Created comprehensive test script for both scenarios
+- ✅ Database backup completed before changes
+
+**Files Modified**:
+- `app.js` - Added `app.set('trust proxy', true)` and improved cookie configuration
+- `public/js/localhost-protocol-fix.js` - Smart proxy detection and protocol handling
+- `public/js/device-fingerprint.js` - Re-enabled fingerprinting functionality
+- `views/auth/login.ejs` - Re-enabled JavaScript and added connection debugging
+- `scripts/test-login-scenarios.js` - Comprehensive testing for both scenarios
+
 ## ✅ **External AI Usage Tracking & Cost Management System** (2025-01-30)
 - [x] **AI Usage Tracking Infrastructure Implementation**
   - [x] **Database Schema & Model Creation**
