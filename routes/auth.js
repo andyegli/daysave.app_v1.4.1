@@ -958,9 +958,15 @@ router.get('/recover-passkey', async (req, res) => {
     }
     
     // Check if token is recent (1 hour)
-    const tokenAge = Date.now() - user.updated_at.getTime();
-    if (tokenAge > 60 * 60 * 1000) {
-      return res.redirect('/auth/forgot-passkey?error=expired_token');
+    // Note: user.updated_at may be named differently (updatedAt) or could be null
+    const updatedTime = user.updated_at || user.updatedAt || user.createdAt || user.created_at;
+    if (!updatedTime) {
+      console.warn('No timestamp found for user recovery token validation, allowing access');
+    } else {
+      const tokenAge = Date.now() - new Date(updatedTime).getTime();
+      if (tokenAge > 60 * 60 * 1000) {
+        return res.redirect('/auth/forgot-passkey?error=expired_token');
+      }
     }
     
     // Get user's passkeys
