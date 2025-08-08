@@ -279,77 +279,22 @@
         <br><strong>Login Status:</strong> <span id="protocol-status" class="text-success">✅ All login methods active</span>
     </div>
     
-    <!-- PASSKEY BUTTON INITIALIZATION - RESTORED -->
+    <!-- PASSKEY BUTTON - LET ORIGINAL HANDLER WORK -->
     <script>
-        console.log('🔑 PASSKEY BUTTON INITIALIZATION - TIMESTAMP:', Date.now());
+        console.log('🔑 PASSKEY BUTTON DEBUG - TIMESTAMP:', Date.now());
         
-        // Initialize passkey button functionality
-        function initializePasskeyButton() {
-            console.log('🔍 Initializing passkey button...');
-            
+        // Just log that passkey is available, let the original handler work
+        document.addEventListener('DOMContentLoaded', function() {
             const passkeyBtn = document.querySelector('.passkey-login-btn');
-            console.log('🔑 Button found:', !!passkeyBtn);
-            
             if (passkeyBtn && window.passkeyClient) {
-                console.log('🔑 Button and passkeyClient available');
-                
-                // Remove any existing event listeners by cloning
-                const newBtn = passkeyBtn.cloneNode(true);
-                passkeyBtn.parentNode.replaceChild(newBtn, passkeyBtn);
-                
-                // Add real passkey functionality
-                newBtn.addEventListener('click', async function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('🔑 *** PASSKEY LOGIN TRIGGERED! ***');
-                    
-                    try {
-                        // Show loading state
-                        newBtn.disabled = true;
-                        newBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Authenticating...';
-                        
-                        // Trigger passkey authentication
-                        const result = await window.passkeyClient.authenticate();
-                        console.log('🔑 Passkey authentication result:', result);
-                        
-                        if (result && result.success) {
-                            console.log('✅ Passkey authentication successful!');
-                            // Redirect will be handled by the server response
-                        } else {
-                            console.error('❌ Passkey authentication failed:', result);
-                            alert('Passkey authentication failed. Please try again.');
-                        }
-                    } catch (error) {
-                        console.error('❌ Passkey authentication error:', error);
-                        alert('Passkey authentication error: ' + error.message);
-                    } finally {
-                        // Restore button state
-                        newBtn.disabled = false;
-                        newBtn.innerHTML = '<i class="fas fa-fingerprint me-2"></i>Continue with Passkey';
-                    }
-                    
-                    return false;
-                });
-                
-                console.log('🔑 Real passkey click handler added');
-                
+                console.log('✅ Passkey button and client available - original handler will manage authentication');
+                console.log('✅ Original handler includes proper success handling and dashboard redirect');
             } else {
                 console.error('❌ PASSKEY BUTTON OR CLIENT NOT FOUND!');
                 if (!passkeyBtn) console.error('❌ Button not found');
                 if (!window.passkeyClient) console.error('❌ passkeyClient not available');
             }
-        }
-        
-        // Initialize when DOM loads
-        document.addEventListener('DOMContentLoaded', initializePasskeyButton);
-        
-        // Also initialize immediately if DOM already loaded
-        if (document.readyState !== 'loading') {
-            initializePasskeyButton();
-        }
-        
-        // Initialize again after scripts load
-        setTimeout(initializePasskeyButton, 1000);
+        });
     </script>
     
     <!-- Connection info script -->

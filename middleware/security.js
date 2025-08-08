@@ -89,9 +89,11 @@ const corsOptions = {
     const port = process.env.APP_PORT || process.env.PORT || 3000;
     const allowedOrigins = process.env.ALLOWED_ORIGINS
       ? process.env.ALLOWED_ORIGINS.split(',')
-      : [
+              : [
           `http://localhost:${port}`,
           `https://localhost:${port}`, // Allow HTTPS for localhost in development
+          'http://localhost', // Allow localhost without port (proxy)
+          'https://localhost', // Allow HTTPS localhost without port (proxy)
           'http://localhost:5000',
           'https://localhost:5000',
           'http://daysave.local',
