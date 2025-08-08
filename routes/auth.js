@@ -2,7 +2,7 @@ const express = require('express');
 const passport = require('passport');
 const router = express.Router();
 const { logAuthEvent, logAuthError, logOAuthFlow, logOAuthError } = require('../config/logger');
-const { User, Role, Sequelize, SocialAccount, SubscriptionPlan } = require('../models');
+const { User, Role, Sequelize, SocialAccount, SubscriptionPlan, UserPasskey } = require('../models');
 const subscriptionService = require('../services/subscriptionService');
 
 // Import middleware
