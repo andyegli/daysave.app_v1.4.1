@@ -234,14 +234,22 @@
             const addPasskeyBtn = document.getElementById('addPasskeyBtn');
             const newPasskeyNameInput = document.getElementById('newPasskeyName');
 
-            // Add new passkey
+            // Add new passkey - Recovery specific version
             if (addPasskeyBtn) {
                 addPasskeyBtn.addEventListener('click', async function() {
                     try {
                         PasskeyUtils.setButtonLoading(this, true);
                         
                         const deviceName = newPasskeyNameInput.value.trim() || null;
-                        const result = await window.passkeyClient.registerPasskey(deviceName);
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const token = urlParams.get('token');
+                        
+                        if (!token) {
+                            throw new Error('Recovery token not found');
+                        }
+                        
+                        // Use recovery-specific registration endpoint
+                        const result = await registerPasskeyRecovery(deviceName, token);
                         
                         if (result.success) {
                             PasskeyUtils.showSuccess('Passkey added successfully!');
@@ -260,6 +268,97 @@
                         PasskeyUtils.setButtonLoading(this, false);
                     }
                 });
+            }
+            
+            // Recovery-specific passkey registration function
+            async function registerPasskeyRecovery(deviceName, token) {
+                console.log('🔐 Starting recovery passkey registration...', { deviceName, token: token?.substr(0, 8) + '...' });
+                
+                if (!window.passkeyClient.isSupported) {
+                    throw new Error('Passkeys are not supported on this device or browser.');
+                }
+
+                try {
+                    console.log('📡 Fetching recovery registration challenge...');
+                    // Get registration challenge from recovery endpoint
+                    const challengeResponse = await fetch(`/auth/recover-passkey/register/begin?token=${encodeURIComponent(token)}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin'
+                    });
+
+                    if (!challengeResponse.ok) {
+                        const errorData = await challengeResponse.json();
+                        throw new Error(errorData.error || 'Failed to start registration');
+                    }
+
+                    const challengeData = await challengeResponse.json();
+                    const options = challengeData.options;
+
+                    // Convert challenge and user ID from base64url to ArrayBuffer
+                    options.challenge = window.passkeyClient.base64urlToArrayBuffer(options.challenge);
+                    options.user.id = window.passkeyClient.base64urlToArrayBuffer(options.user.id);
+
+                    // Convert excluded credentials
+                    if (options.excludeCredentials) {
+                        options.excludeCredentials = options.excludeCredentials.map(cred => ({
+                            ...cred,
+                            id: window.passkeyClient.base64urlToArrayBuffer(cred.id)
+                        }));
+                    }
+
+                    console.log('🔐 Creating WebAuthn credential...');
+                    // Create the credential
+                    const credential = await navigator.credentials.create({
+                        publicKey: options
+                    });
+
+                    if (!credential) {
+                        throw new Error('Passkey registration was cancelled');
+                    }
+
+                    // Prepare the credential for server verification
+                    const credentialData = {
+                        id: credential.id,
+                        rawId: window.passkeyClient.arrayBufferToBase64url(credential.rawId),
+                        type: credential.type,
+                        response: {
+                            attestationObject: window.passkeyClient.arrayBufferToBase64url(credential.response.attestationObject),
+                            clientDataJSON: window.passkeyClient.arrayBufferToBase64url(credential.response.clientDataJSON)
+                        }
+                    };
+
+                    // Send to server for verification
+                    const verificationResponse = await fetch('/auth/recover-passkey/register/finish', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({
+                            credential: credentialData,
+                            deviceName: deviceName,
+                            token: token
+                        })
+                    });
+
+                    if (!verificationResponse.ok) {
+                        const errorData = await verificationResponse.json();
+                        throw new Error(errorData.error || 'Failed to verify registration');
+                    }
+
+                    const result = await verificationResponse.json();
+                    console.log('✅ Recovery passkey registration successful!', result);
+                    return result;
+
+                } catch (error) {
+                    console.error('❌ Recovery passkey registration error:', error);
+                    throw error;
+                }
             }
 
             // Disable passkey buttons

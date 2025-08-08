@@ -939,6 +939,239 @@ router.post('/forgot-passkey', async (req, res) => {
   }
 });
 
+// Passkey Recovery Registration Challenge - For recovery process only
+router.get('/recover-passkey/register/begin', async (req, res) => {
+  const { token } = req.query;
+  
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      error: 'Recovery token required'
+    });
+  }
+  
+  try {
+    // Verify recovery token
+    const user = await User.findOne({ 
+      where: { email_verification_token: token },
+      include: [{ model: Role, as: 'Role' }]
+    });
+    
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid recovery token'
+      });
+    }
+    
+    // Check if token is recent (1 hour) - same logic as recovery page
+    const updatedTime = user.updated_at || user.updatedAt || user.createdAt || user.created_at;
+    if (updatedTime) {
+      const tokenAge = Date.now() - new Date(updatedTime).getTime();
+      if (tokenAge > 60 * 60 * 1000) {
+        return res.status(400).json({
+          success: false,
+          error: 'Recovery token has expired'
+        });
+      }
+    }
+    
+    // Generate challenge for passkey registration (same as regular registration)
+    const crypto = require('crypto');
+    const challenge = Buffer.from(crypto.randomBytes(32)).toString('base64url');
+    
+    // Store challenge in session
+    req.session.challenge = challenge;
+    req.session.challengeType = 'recovery_registration';
+    req.session.challengeExpiry = Date.now() + 60000; // 1 minute
+    req.session.recoveryUserId = user.id; // Store user ID for recovery
+    
+    // Create WebAuthn credential creation options
+    const credentialCreationOptions = {
+      challenge: challenge,
+      rp: {
+        name: process.env.WEBAUTHN_RP_NAME || 'DaySave',
+        id: process.env.WEBAUTHN_RP_ID || 'localhost'
+      },
+      user: {
+        id: Buffer.from(user.id).toString('base64url'),
+        name: user.email,
+        displayName: user.username
+      },
+      pubKeyCredParams: [
+        {
+          alg: -7, // ES256
+          type: 'public-key'
+        },
+        {
+          alg: -257, // RS256
+          type: 'public-key'
+        }
+      ],
+      authenticatorSelection: {
+        authenticatorAttachment: 'platform',
+        userVerification: 'preferred',
+        residentKey: 'preferred'
+      },
+      timeout: 60000,
+      attestation: 'none'
+    };
+
+    // Get existing passkeys to exclude them
+    const existingPasskeys = await UserPasskey.getUserPasskeys(user.id, true);
+    if (existingPasskeys.length > 0) {
+      credentialCreationOptions.excludeCredentials = existingPasskeys.map(passkey => ({
+        id: passkey.credential_id,
+        type: 'public-key'
+      }));
+    }
+
+    logAuthEvent('PASSKEY_RECOVERY_REGISTRATION_CHALLENGE_START', {
+      userId: user.id,
+      email: user.email,
+      ip: req.ip || 'unknown'
+    });
+
+    res.json({
+      success: true,
+      options: credentialCreationOptions
+    });
+
+  } catch (error) {
+    logAuthError('PASSKEY_RECOVERY_REGISTRATION_CHALLENGE_ERROR', error, {
+      token: token ? token.substr(0, 8) + '...' : 'none',
+      ip: req.ip || 'unknown'
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate registration challenge'
+    });
+  }
+});
+
+// Passkey Recovery Registration Finish - Complete registration during recovery
+router.post('/recover-passkey/register/finish', async (req, res) => {
+  const { credential, deviceName, token } = req.body;
+  
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      error: 'Recovery token required'
+    });
+  }
+  
+  try {
+    // Verify recovery token (same as challenge endpoint)
+    const user = await User.findOne({ 
+      where: { email_verification_token: token }
+    });
+    
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid recovery token'
+      });
+    }
+    
+    // Verify session challenge
+    if (!req.session.challenge || req.session.challengeType !== 'recovery_registration') {
+      return res.status(400).json({
+        success: false,
+        error: 'No valid challenge found. Please start registration again.'
+      });
+    }
+
+    if (Date.now() > req.session.challengeExpiry) {
+      return res.status(400).json({
+        success: false,
+        error: 'Challenge expired. Please start registration again.'
+      });
+    }
+
+    if (req.session.recoveryUserId !== user.id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Session mismatch. Please start registration again.'
+      });
+    }
+
+    // Use the existing passkey registration logic by setting up passport context
+    const originalBody = req.body;
+    req.body = credential; // Set the credential as the body directly
+    req.user = user; // Set the user for passport strategy
+    
+    // Use passport authenticate for verification and storage
+    passport.authenticate('webauthn-register', (err, passkey, info) => {
+      // Restore original request body
+      req.body = originalBody;
+      
+      if (err) {
+        logAuthError('PASSKEY_RECOVERY_REGISTRATION_ERROR', err, {
+          userId: user.id,
+          email: user.email,
+          ip: req.ip || 'unknown'
+        });
+        return res.status(500).json({
+          success: false,
+          error: 'Registration verification failed'
+        });
+      }
+
+      if (!passkey) {
+        logAuthError('PASSKEY_RECOVERY_REGISTRATION_FAILED', new Error(info?.message || 'Registration failed'), {
+          userId: user.id,
+          email: user.email,
+          ip: req.ip || 'unknown'
+        });
+        return res.status(400).json({
+          success: false,
+          error: info?.message || 'Registration verification failed'
+        });
+      }
+
+      // Update device name if provided
+      if (deviceName && deviceName.trim()) {
+        UserPasskey.update(
+          { device_name: deviceName.trim() },
+          { where: { id: passkey.id } }
+        ).catch(err => console.warn('Failed to update device name:', err));
+      }
+
+      // Clear challenge from session
+      delete req.session.challenge;
+      delete req.session.challengeType;
+      delete req.session.challengeExpiry;
+      delete req.session.recoveryUserId;
+
+      logAuthEvent('PASSKEY_RECOVERY_REGISTRATION_SUCCESS', {
+        userId: user.id,
+        email: user.email,
+        passkeyId: passkey.id,
+        deviceName: deviceName || 'Unnamed Device',
+        ip: req.ip || 'unknown'
+      });
+
+      res.json({
+        success: true,
+        message: 'Passkey registered successfully during recovery',
+        passkeyId: passkey.id
+      });
+    })(req, res);
+
+  } catch (error) {
+    logAuthError('PASSKEY_RECOVERY_REGISTRATION_FINISH_ERROR', error, {
+      token: token ? token.substr(0, 8) + '...' : 'none',
+      ip: req.ip || 'unknown'
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: 'Registration failed'
+    });
+  }
+});
+
 // Passkey Recovery - Verify token and show recovery page
 router.get('/recover-passkey', async (req, res) => {
   const { token } = req.query;
