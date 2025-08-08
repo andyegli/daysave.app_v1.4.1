@@ -263,18 +263,19 @@
     <!-- Passkey Authentication -->
     <script src="/js/passkey-client.js?v=<%= Date.now() %>"></script>
 
-    <!-- Debug Information (can be removed in production) -->
-    <div class="alert alert-info mt-3" style="font-size: 0.8rem;">
-        <strong>🔍 Debug Info:</strong>
+    <!-- Connection Status Information -->
+    <div class="alert alert-success mt-3" style="font-size: 0.8rem;">
+        <strong>✅ Connection Status:</strong>
         <br><strong>Hostname:</strong> <span id="hostname-debug">Loading...</span>
         <br><strong>Protocol:</strong> <span id="protocol-debug">Loading...</span>
-        <br><strong>Connection:</strong> <span id="connection-type">Loading...</span>
+        <br><strong>Type:</strong> <span id="connection-type">Loading...</span>
+        <br><strong>Status:</strong> <span id="protocol-status" class="text-success">✅ Ready</span>
     </div>
     
-    <!-- Enhanced debugging script -->
+    <!-- Enhanced connection status script -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🔍 Login page loaded');
+            console.log('🔍 Login page loaded - checking connection status');
             const hostname = window.location.hostname;
             const protocol = window.location.protocol;
             const port = window.location.port;
@@ -283,11 +284,19 @@
             document.getElementById('protocol-debug').textContent = protocol;
             
             let connectionType = 'Unknown';
+            let protocolStatus = '✅ Ready';
+            
             if (hostname === 'localhost') {
                 if (port === '3000') {
                     connectionType = 'Direct (localhost:3000)';
+                    if (protocol !== 'http:') {
+                        protocolStatus = '🔄 Protocol correction applied';
+                    }
                 } else if (!port || port === '80') {
                     connectionType = 'Proxy (localhost via nginx)';
+                    if (protocol !== 'https:') {
+                        protocolStatus = '🔄 Protocol correction applied';
+                    }
                 } else {
                     connectionType = `Custom port (${port})`;
                 }
@@ -296,14 +305,24 @@
             }
             
             document.getElementById('connection-type').textContent = connectionType;
+            document.getElementById('protocol-status').textContent = protocolStatus;
             
-            console.log('🔍 Connection Details:', {
+            console.log('✅ Connection Status:', {
                 hostname,
                 protocol,
                 port,
                 connectionType,
+                protocolStatus,
                 fullUrl: window.location.href
             });
+            
+            // Update alert class based on status
+            const alertDiv = document.querySelector('.alert');
+            if (protocolStatus.includes('correction')) {
+                alertDiv.className = 'alert alert-warning mt-3';
+            } else {
+                alertDiv.className = 'alert alert-success mt-3';
+            }
         });
     </script>
 </body>

@@ -6,32 +6,64 @@ const WebAuthnStrategy = require('passport-fido2-webauthn');
 const { User, SocialAccount, Role, UserPasskey } = require('../models');
 const { logOAuthFlow, logOAuthError, logAuthEvent, logAuthError } = require('./logger');
 
+// Dynamic callback URL generation for localhost development
+const getCallbackURL = (provider) => {
+  const envVar = `${provider.toUpperCase()}_CALLBACK_URL`;
+  if (process.env[envVar]) {
+    return process.env[envVar];
+  }
+  
+  // For localhost development, use HTTP for direct connections and HTTPS for proxy
+  const port = process.env.APP_PORT || 3000;
+  
+  // Default to HTTPS localhost for OAuth callbacks (works with nginx proxy)
+  return `https://localhost/auth/${provider}/callback`;
+};
+
 // OAuth Configuration
 const oauthConfig = {
   google: {
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback'
+    callbackURL: getCallbackURL('google')
   },
   microsoft: {
     clientID: process.env.MICROSOFT_CLIENT_ID,
     clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
-    callbackURL: process.env.MICROSOFT_CALLBACK_URL || '/auth/microsoft/callback'
+    callbackURL: getCallbackURL('microsoft')
   },
   apple: {
     clientID: process.env.APPLE_CLIENT_ID,
     teamID: process.env.APPLE_TEAM_ID,
     keyID: process.env.APPLE_KEY_ID,
     privateKeyLocation: process.env.APPLE_PRIVATE_KEY_PATH,
-    callbackURL: process.env.APPLE_CALLBACK_URL || '/auth/apple/callback'
+    callbackURL: getCallbackURL('apple')
   }
 };
 
-// WebAuthn Configuration
+// WebAuthn Configuration - Dynamic origin handling for localhost
+const getWebAuthnOrigin = () => {
+  if (process.env.WEBAUTHN_ORIGIN) {
+    return process.env.WEBAUTHN_ORIGIN;
+  }
+  
+  // For localhost, support both HTTP and HTTPS
+  const appPort = process.env.APP_PORT || 3000;
+  
+  // Return array of allowed origins for localhost development
+  return [
+    `http://localhost:${appPort}`,
+    `https://localhost`,
+    `https://localhost:443`,
+    `http://localhost:3000`,
+    `https://daysave.local`
+  ];
+};
+
 const webauthnConfig = {
   rpID: process.env.WEBAUTHN_RP_ID || 'localhost',
   rpName: process.env.WEBAUTHN_RP_NAME || 'DaySave',
-  origin: process.env.WEBAUTHN_ORIGIN || `http://localhost:${process.env.APP_PORT || 3000}`,
+  origin: getWebAuthnOrigin(),
   timeout: 60000,
   challengeTimeout: 60000
 };
