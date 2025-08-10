@@ -221,21 +221,22 @@ checkDatabaseConnection().then(async (connected) => {
   // Store validation results globally for health checks
   app.locals.startupValidation = validationResults;
 
-  // Session configuration
+  // Session configuration with proper HTTPS handling
   app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: 'auto', // Automatically detect HTTPS
+      secure: false, // Set to false for localhost development (even with HTTPS proxy)
       httpOnly: false, // Set to false for localhost development to allow AJAX cookie debugging
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       sameSite: 'lax', // Keep lax for compatibility
       // Ensure cookies work with both proxy and direct access
       domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined
     },
-    name: 'daysave.sid' // Change default session name for security
+    name: 'daysave.sid', // Change default session name for security
+    proxy: true // Trust the proxy for secure cookie handling
   }));
 
   // Test authentication bypass (only active in test mode)
