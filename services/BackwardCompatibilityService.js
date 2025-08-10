@@ -68,15 +68,41 @@ class BackwardCompatibilityService {
         analysisId: analysisId
       };
 
-      // For URL content, use MultimediaAnalyzer directly instead of orchestrator
-      console.log('🔄 Processing URL content with MultimediaAnalyzer...');
-      const { MultimediaAnalyzer } = require('./multimedia');
-      const analyzer = new MultimediaAnalyzer({ enableLogging: true });
+      // Use new AutomationOrchestrator for URL processing with fallback to MultimediaAnalyzer
+      console.log('🔄 Processing URL content with enhanced orchestrator...');
       
-      const processingResult = await analyzer.analyzeContent(url, {
-        ...options,
-        analysisId: analysisId
-      });
+      let processingResult;
+      try {
+        // Try new orchestrator first
+        const urlResult = await this.orchestrator.processUrl(url, options);
+        
+        if (urlResult.requiresCompatibilityMode) {
+          // Fall back to MultimediaAnalyzer for actual content processing
+          console.log('🔄 Falling back to MultimediaAnalyzer for content processing...');
+          const { MultimediaAnalyzer } = require('./multimedia');
+          const analyzer = new MultimediaAnalyzer({ enableLogging: true });
+          
+          processingResult = await analyzer.analyzeContent(url, {
+            ...options,
+            analysisId: analysisId
+          });
+          
+          // Enhance result with orchestrator metadata
+          processingResult.metadata = { ...processingResult.metadata, ...urlResult.metadata };
+          processingResult.platform = urlResult.platform;
+        } else {
+          processingResult = urlResult;
+        }
+      } catch (orchestratorError) {
+        console.log('⚠️ Orchestrator failed, falling back to MultimediaAnalyzer:', orchestratorError.message);
+        const { MultimediaAnalyzer } = require('./multimedia');
+        const analyzer = new MultimediaAnalyzer({ enableLogging: true });
+        
+        processingResult = await analyzer.analyzeContent(url, {
+          ...options,
+          analysisId: analysisId
+        });
+      }
 
       // Convert new results to legacy format
       const legacyResults = await this.convertToLegacyFormat(

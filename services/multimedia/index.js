@@ -16,6 +16,7 @@ const VideoProcessor = require('./VideoProcessor');
 const AudioProcessor = require('./AudioProcessor');
 const ImageProcessor = require('./ImageProcessor');
 const DocumentProcessor = require('./DocumentProcessor');
+const UrlProcessor = require('./UrlProcessor');
 const AutomationOrchestrator = require('./AutomationOrchestrator');
 
 module.exports = {
@@ -26,5 +27,6 @@ module.exports = {
   AudioProcessor,
   ImageProcessor,
   DocumentProcessor,
+  UrlProcessor,
   AutomationOrchestrator
 }; 

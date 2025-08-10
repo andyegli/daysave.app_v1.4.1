@@ -12,6 +12,7 @@ const VideoProcessor = require('./VideoProcessor');
 const AudioProcessor = require('./AudioProcessor');
 const ImageProcessor = require('./ImageProcessor');
 const DocumentProcessor = require('./DocumentProcessor');
+const UrlProcessor = require('./UrlProcessor');
 const PluginRegistry = require('./PluginRegistry');
 const ConfigurationManager = require('./ConfigurationManager');
 const PerformanceOptimizer = require('./PerformanceOptimizer');
@@ -29,6 +30,7 @@ class AutomationOrchestrator {
         }
         
         this.processors = new Map();
+        this.urlProcessor = new UrlProcessor();
         this.pluginRegistry = new PluginRegistry();
         this.configManager = new ConfigurationManager();
         this.performanceOptimizer = new PerformanceOptimizer();
@@ -377,6 +379,87 @@ class AutomationOrchestrator {
         } catch (error) {
             console.error('❌ Failed to initialize AutomationOrchestrator:', error);
             throw new Error(`Orchestrator initialization failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Process URL-based content (YouTube, social media, etc.)
+     * @param {string} url - URL to process
+     * @param {Object} options - Processing options
+     * @returns {Promise<Object>} Processing result
+     */
+    async processUrl(url, options = {}) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
+        const jobId = this.generateJobId();
+        const startTime = Date.now();
+        
+        try {
+            console.log(`\n🔗 Starting URL processing job: ${jobId}`);
+            console.log(`   📍 URL: ${url}`);
+            
+            // Validate URL
+            if (!this.urlProcessor.isMultimediaUrl(url)) {
+                throw new Error('URL does not contain multimedia content');
+            }
+
+            // Create job record
+            const job = {
+                id: jobId,
+                startTime,
+                status: 'processing',
+                url,
+                metadata: { source: 'url', url },
+                results: {},
+                errors: [],
+                warnings: [],
+                options
+            };
+            
+            this.activeJobs.set(jobId, job);
+            
+            // Extract metadata and platform info
+            console.log(`🔍 [JOB-${jobId}] Extracting URL metadata...`);
+            const urlMetadata = await this.urlProcessor.extractUrlMetadata(url);
+            job.metadata = { ...job.metadata, ...urlMetadata };
+            job.platform = urlMetadata.platform;
+            
+            console.log(`   📝 Platform: ${urlMetadata.platform.toUpperCase()}`);
+            
+            // For now, return result indicating URL processing complete
+            // The actual multimedia processing will be handled by compatibility service
+            const result = {
+                success: true,
+                jobId,
+                url,
+                metadata: urlMetadata,
+                platform: urlMetadata.platform,
+                processingTime: Date.now() - startTime,
+                requiresCompatibilityMode: true // Flag that this needs old system processing
+            };
+
+            // Store result
+            job.results = result;
+            job.status = 'completed';
+            this.activeJobs.delete(jobId);
+
+            console.log(`✅ [JOB-${jobId}] URL metadata extraction completed`);
+            
+            return result;
+
+        } catch (error) {
+            console.error(`❌ [JOB-${jobId}] URL processing failed:`, error);
+            
+            const job = this.activeJobs.get(jobId);
+            if (job) {
+                job.status = 'failed';
+                job.errors.push(error.message);
+                this.activeJobs.delete(jobId);
+            }
+            
+            throw error;
         }
     }
 
