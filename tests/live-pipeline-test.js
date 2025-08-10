@@ -3,43 +3,158 @@
 /**
  * Live Pipeline Test
  * 
- * Tests a few working URLs from major platforms through the complete
+ * Tests URLs from major platforms through the complete
  * DaySave processing pipeline to verify end-to-end functionality.
+ * 
+ * URLs are loaded from tests/live-pipeline-test.urls CSV file.
  */
 
+require('dotenv').config();
 const readline = require('readline');
+const fs = require('fs');
+const path = require('path');
 
 class LivePipelineTest {
   constructor() {
     this.baseUrl = 'http://localhost:3000';
-    this.testUrls = [
-      {
-        url: 'https://www.youtube.com/watch?v=9bZkp7q19f0',
-        platform: 'YouTube',
-        type: 'video',
-        expectedFeatures: ['transcription', 'thumbnails', 'ai_tags', 'title']
-      },
-      {
-        url: 'https://www.instagram.com/reel/C5dPZWVI_r9/',
-        platform: 'Instagram',
-        type: 'video/image',
-        expectedFeatures: ['ai_description', 'thumbnails', 'ai_tags', 'title']
-      },
-      {
-        url: 'https://vimeo.com/169599296',
-        platform: 'Vimeo',
-        type: 'video',
-        expectedFeatures: ['transcription', 'thumbnails', 'ai_tags', 'title']
-      },
-      {
-        url: 'https://soundcloud.com/marshmellomusic/alone',
-        platform: 'SoundCloud',
-        type: 'audio',
-        expectedFeatures: ['transcription', 'ai_tags', 'title']
-      }
-    ];
+    this.testUrls = [];
     this.results = [];
     this.cookies = null;
+    
+    // Check if test authentication is enabled
+    const isTestAuthEnabled = process.env.ENABLE_TEST_AUTH === 'true';
+    
+    if (!isTestAuthEnabled) {
+      console.log('⚠️  ENABLE_TEST_AUTH not set to true in .env file');
+      console.log('   Set ENABLE_TEST_AUTH=true in .env to enable test authentication bypass');
+    }
+    
+    // Use environment test user or fallback
+    const testUser = process.env.TEST_USER || 'test-user';
+    
+    // Enable test mode with authentication bypass
+    this.testHeaders = {
+      'x-test-mode': 'true',
+      'x-test-auth-token': testUser,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'User-Agent': 'DaySave-Live-Pipeline-Test'
+    };
+  }
+
+  /**
+   * Load test URLs from CSV file
+   */
+  loadTestUrls() {
+    const csvFile = path.join(__dirname, 'live-pipeline-test.urls');
+    
+    if (!fs.existsSync(csvFile)) {
+      console.log('❌ CSV file not found:', csvFile);
+      console.log('   Creating default CSV file with sample URLs...');
+      this.createDefaultCsvFile(csvFile);
+    }
+    
+    try {
+      const csvContent = fs.readFileSync(csvFile, 'utf8');
+      const lines = csvContent.trim().split('\n');
+      
+      // Skip header line
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const [enabled, url, description] = line.split(',').map(col => col.trim());
+        
+        // Only include enabled URLs (1 = enabled, 0 = disabled)
+        if (enabled === '1') {
+          const platform = this.detectPlatform(url);
+          const type = this.detectType(url);
+          const expectedFeatures = this.getExpectedFeatures(platform, type);
+          
+          this.testUrls.push({
+            url,
+            platform,
+            type,
+            description,
+            expectedFeatures
+          });
+        }
+      }
+      
+      console.log(`📋 Loaded ${this.testUrls.length} enabled URLs from CSV file`);
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Error loading CSV file:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Create default CSV file with sample URLs
+   */
+  createDefaultCsvFile(csvFile) {
+    const defaultContent = `enabled,url,description
+1,https://www.youtube.com/watch?v=9bZkp7q19f0,YouTube video
+1,https://www.instagram.com/reel/C5dPZWVI_r9/,Instagram reel
+1,https://vimeo.com/169599296,Vimeo video
+1,https://soundcloud.com/marshmellomusic/alone,SoundCloud audio
+1,https://www.facebook.com/share/r/16u6uFokih/?mibextid=wwXIfr,Facebook video
+0,https://www.tiktok.com/@example/video/123456789,TikTok video (disabled example)`;
+    
+    try {
+      fs.writeFileSync(csvFile, defaultContent);
+      console.log('✅ Created default CSV file:', csvFile);
+    } catch (error) {
+      console.error('❌ Error creating CSV file:', error.message);
+    }
+  }
+
+  /**
+   * Detect platform from URL
+   */
+  detectPlatform(url) {
+    if (url.includes('youtube.com') || url.includes('youtu.be')) return 'YouTube';
+    if (url.includes('instagram.com')) return 'Instagram';
+    if (url.includes('facebook.com')) return 'Facebook';
+    if (url.includes('vimeo.com')) return 'Vimeo';
+    if (url.includes('soundcloud.com')) return 'SoundCloud';
+    if (url.includes('tiktok.com')) return 'TikTok';
+    if (url.includes('twitter.com') || url.includes('x.com')) return 'Twitter/X';
+    return 'Unknown';
+  }
+
+  /**
+   * Detect content type from URL
+   */
+  detectType(url) {
+    if (url.includes('soundcloud.com')) return 'audio';
+    if (url.includes('youtube.com') || url.includes('youtu.be') || 
+        url.includes('vimeo.com') || url.includes('instagram.com') || 
+        url.includes('facebook.com') || url.includes('tiktok.com')) return 'video';
+    return 'mixed';
+  }
+
+  /**
+   * Get expected features based on platform and type
+   */
+  getExpectedFeatures(platform, type) {
+    const features = ['ai_tags', 'title'];
+    
+    if (type === 'video' || type === 'mixed') {
+      features.push('thumbnails');
+      if (platform !== 'Instagram') {
+        features.push('transcription');
+      } else {
+        features.push('ai_description');
+      }
+    }
+    
+    if (type === 'audio') {
+      features.push('transcription');
+    }
+    
+    return features;
   }
 
   async run() {
@@ -47,11 +162,22 @@ class LivePipelineTest {
     console.log('This test will process real URLs through the complete DaySave pipeline.\n');
     
     try {
+      // Load test URLs from CSV
+      if (!this.loadTestUrls()) {
+        console.log('❌ Failed to load test URLs. Exiting.');
+        process.exit(1);
+      }
+      
+      if (this.testUrls.length === 0) {
+        console.log('⚠️  No enabled URLs found in CSV file. Exiting.');
+        process.exit(0);
+      }
+      
       // Check server status
       await this.checkServer();
       
-      // Get authentication
-      await this.handleAuthentication();
+      // Skip authentication - using test headers instead
+      console.log('🧪 Using test authentication bypass...\n');
       
       // Process test URLs
       await this.processTestUrls();
@@ -195,28 +321,20 @@ class LivePipelineTest {
   }
 
   async processTestUrls() {
-    if (!this.cookies) {
-      throw new Error('Authentication required but no session cookie available');
-    }
-    
     console.log('📤 Processing URLs through DaySave pipeline...\n');
     
     const fetch = require('node-fetch');
     
     for (const testUrl of this.testUrls) {
-      console.log(`🎯 Processing ${testUrl.platform}: ${testUrl.url.substring(0, 50)}...`);
+      console.log(`🎯 Processing ${testUrl.description} (${testUrl.platform}): ${testUrl.url.substring(0, 50)}...`);
       
       try {
         const response = await fetch(`${this.baseUrl}/content`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cookie': this.cookies,
-            'Accept': 'application/json'
-          },
+          headers: this.testHeaders,
           body: JSON.stringify({
             url: testUrl.url,
-            comments: `Live pipeline test: ${testUrl.platform}`,
+            comments: `Live pipeline test: ${testUrl.description}`,
             tags: ['live-test', testUrl.platform.toLowerCase()]
           })
         });

@@ -3,10 +3,13 @@
 /**
  * Integration Test: Bulk URL Processing
  * 
- * This test actually processes URLs from testfiles/test_urls_and_files.txt
+ * This test processes URLs from tests/integration-bulk-url-test.urls
  * through the real bulk import system to verify end-to-end functionality.
+ * 
+ * URLs are loaded from CSV file with enable/disable functionality.
  */
 
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch');
@@ -23,6 +26,26 @@ class BulkUrlIntegrationTest {
       processed: 0,
       failed: 0,
       analysisComplete: 0
+    };
+    
+    // Check if test authentication is enabled
+    const isTestAuthEnabled = process.env.ENABLE_TEST_AUTH === 'true';
+    
+    if (!isTestAuthEnabled) {
+      console.log('⚠️  ENABLE_TEST_AUTH not set to true in .env file');
+      console.log('   Set ENABLE_TEST_AUTH=true in .env to enable test authentication bypass');
+    }
+    
+    // Use environment test user or fallback (this test uses regular user account)
+    const testUser = process.env.TEST_USER || 'test-user';
+    
+    // Enable test mode with authentication bypass
+    this.testHeaders = {
+      'x-test-mode': 'true',
+      'x-test-auth-token': testUser,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'User-Agent': 'DaySave-Bulk-Integration-Test'
     };
   }
 
@@ -73,47 +96,106 @@ class BulkUrlIntegrationTest {
   }
 
   async loadTestUrls() {
-    const testFilePath = path.join(__dirname, '..', 'testfiles', 'test_urls_and_files.txt');
+    const csvFile = path.join(__dirname, 'integration-bulk-url-test.urls');
     
-    if (!fs.existsSync(testFilePath)) {
-      throw new Error(`Test file not found: ${testFilePath}`);
+    if (!fs.existsSync(csvFile)) {
+      console.log('❌ CSV file not found:', csvFile);
+      console.log('   Creating default CSV file with sample URLs...');
+      this.createDefaultCsvFile(csvFile);
     }
-
-    const content = fs.readFileSync(testFilePath, 'utf8');
-    const lines = content.split('\n').filter(line => line.trim());
     
-    const urls = [];
-    let currentCategory = null;
-    
-    for (const line of lines) {
-      const trimmed = line.trim();
+    try {
+      const csvContent = fs.readFileSync(csvFile, 'utf8');
+      const lines = csvContent.trim().split('\n');
       
-      // Skip category headers
-      if (['Images', 'Videos', 'Audio', 'Documents', 'Video Platforms', 'Audio Platforms', 'Image Platforms', 'Social Media Contact Platforms'].includes(trimmed)) {
-        currentCategory = trimmed;
-        continue;
-      }
+      const urls = [];
       
-      // Extract URLs
-      if (trimmed.includes(': http')) {
-        const [label, url] = trimmed.split(': ', 2);
-        if (url && url.startsWith('http')) {
+      // Skip header line
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const [enabled, url, description] = line.split(',').map(col => col.trim());
+        
+        // Only include enabled URLs (1 = enabled, 0 = disabled)
+        if (enabled === '1') {
+          const category = this.detectCategory(url);
           urls.push({
-            label: label.trim(),
-            url: url.trim(),
-            category: currentCategory
+            label: description,
+            url: url,
+            category: category,
+            description: description
           });
         }
       }
+      
+      this.summary.total = urls.length;
+      console.log(`📊 Loaded ${urls.length} enabled URLs from CSV file\n`);
+      
+      return urls;
+      
+    } catch (error) {
+      console.error('❌ Error loading CSV file:', error.message);
+      throw error;
     }
+  }
 
-    this.summary.total = urls.length;
-    console.log(`📊 Loaded ${urls.length} test URLs from ${Object.keys(urls.reduce((acc, url) => {
-      acc[url.category] = true;
-      return acc;
-    }, {})).length} categories\n`);
+  /**
+   * Create default CSV file with sample URLs
+   */
+  createDefaultCsvFile(csvFile) {
+    const defaultContent = `enabled,url,description
+1,https://file-examples.com/wp-content/uploads/2017/10/file_example_JPG_1MB.jpg,JPEG image sample
+1,https://file-examples.com/wp-content/uploads/2017/08/file_example_PNG_1MB.png,PNG image sample
+1,https://file-examples.com/wp-content/uploads/2017/04/file_example_MP4_1280_10MG.mp4,MP4 video sample
+1,https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_1MG.mp3,MP3 audio sample
+1,https://file-examples.com/wp-content/uploads/2017/02/file-sample_150kB.pdf,PDF document sample
+1,https://www.youtube.com/watch?v=9bZkp7q19f0,YouTube video
+1,https://www.instagram.com/reel/C5dPZWVI_r9/,Instagram reel
+1,https://vimeo.com/169599296,Vimeo video
+1,https://soundcloud.com/marshmellomusic/alone,SoundCloud audio
+1,https://www.facebook.com/share/r/16u6uFokih/?mibextid=wwXIfr,Facebook video
+0,https://file-examples.com/wp-content/uploads/2017/10/file_example_GIF_1MB.gif,GIF image sample (disabled)
+0,https://file-examples.com/wp-content/uploads/2018/04/file_example_AVI_1280_1_5MG.avi,AVI video sample (disabled)
+0,https://www.youtube.com/shorts/Y1VVha1WlqY,YouTube shorts (disabled)`;
+    
+    try {
+      fs.writeFileSync(csvFile, defaultContent);
+      console.log('✅ Created default CSV file:', csvFile);
+    } catch (error) {
+      console.error('❌ Error creating CSV file:', error.message);
+    }
+  }
 
-    return urls;
+  /**
+   * Detect category from URL
+   */
+  detectCategory(url) {
+    if (url.includes('file-examples.com')) {
+      if (url.includes('.jpg') || url.includes('.png') || url.includes('.gif') || url.includes('.webp')) {
+        return 'Images';
+      }
+      if (url.includes('.mp4') || url.includes('.avi') || url.includes('.mov') || url.includes('.webm')) {
+        return 'Videos';
+      }
+      if (url.includes('.mp3') || url.includes('.wav') || url.includes('.flac') || url.includes('.aac')) {
+        return 'Audio';
+      }
+      if (url.includes('.pdf') || url.includes('.doc') || url.includes('.txt')) {
+        return 'Documents';
+      }
+    }
+    if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com') || 
+        url.includes('instagram.com') || url.includes('facebook.com') || url.includes('tiktok.com')) {
+      return 'Video Platforms';
+    }
+    if (url.includes('soundcloud.com') || url.includes('spotify.com') || url.includes('anchor.fm')) {
+      return 'Audio Platforms';
+    }
+    if (url.includes('imgur.com') || url.includes('flickr.com') || url.includes('pinterest.com') || url.includes('unsplash.com')) {
+      return 'Image Platforms';
+    }
+    return 'Mixed';
   }
 
   async processBulkUrls(urls) {
@@ -144,10 +226,7 @@ class BulkUrlIntegrationTest {
             try {
               const response = await fetch(`${this.baseUrl}/content`, {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json'
-                },
+                headers: this.testHeaders,
                 body: JSON.stringify({
                   url: urlItem.url,
                   comments: `Integration test: ${category}`,

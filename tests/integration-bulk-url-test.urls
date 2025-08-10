@@ -1,0 +1,15 @@
+enabled,url,description
+1,https://file-examples.com/wp-content/uploads/2017/10/file_example_JPG_1MB.jpg,JPEG image sample
+1,https://file-examples.com/wp-content/uploads/2017/08/file_example_PNG_1MB.png,PNG image sample
+1,https://file-examples.com/wp-content/uploads/2017/04/file_example_MP4_1280_10MG.mp4,MP4 video sample
+1,https://file-examples.com/wp-content/uploads/2017/11/file_example_MP3_1MG.mp3,MP3 audio sample
+1,https://file-examples.com/wp-content/uploads/2017/02/file-sample_150kB.pdf,PDF document sample
+1,https://www.youtube.com/watch?v=9bZkp7q19f0,YouTube video
+1,https://www.instagram.com/reel/C5dPZWVI_r9/,Instagram reel
+1,https://vimeo.com/169599296,Vimeo video
+1,https://soundcloud.com/marshmellomusic/alone,SoundCloud audio
+1,https://www.facebook.com/share/r/16u6uFokih/?mibextid=wwXIfr,Facebook video
+0,https://file-examples.com/wp-content/uploads/2017/10/file_example_GIF_1MB.gif,GIF image sample (disabled)
+0,https://file-examples.com/wp-content/uploads/2018/04/file_example_AVI_1280_1_5MG.avi,AVI video sample (disabled)
+0,https://www.youtube.com/shorts/Y1VVha1WlqY,YouTube shorts (disabled)
+

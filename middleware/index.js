@@ -6,6 +6,7 @@ const apiKey = require('./apiKey');
 const subscription = require('./subscription');
 const { deviceFingerprinting, middleware: deviceFingerprintMiddleware } = require('./deviceFingerprinting');
 const { devHttpAccessMiddleware } = require('./devHttpAccess');
+const testAuth = require('./testAuth');
 
 module.exports = {
   ...auth,
@@ -14,6 +15,7 @@ module.exports = {
   ...validation,
   ...apiKey,
   ...subscription,
+  ...testAuth,
   deviceFingerprinting,
   deviceFingerprintMiddleware,
   devHttpAccessMiddleware

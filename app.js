@@ -79,7 +79,11 @@ const {
   isAuthenticated,
   enforceMfa,
   deviceFingerprintMiddleware,
-  devHttpAccessMiddleware
+  devHttpAccessMiddleware,
+  testAuthBypass,
+  createTestSession,
+  testCsrfBypass,
+  testSubscriptionBypass
 } = require('./middleware');
 
 const app = express();
@@ -224,7 +228,7 @@ checkDatabaseConnection().then(async (connected) => {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false, // Always false for local development; set to true in production with HTTPS
+      secure: 'auto', // Automatically detect HTTPS
       httpOnly: false, // Set to false for localhost development to allow AJAX cookie debugging
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       sameSite: 'lax', // Keep lax for compatibility
@@ -234,9 +238,19 @@ checkDatabaseConnection().then(async (connected) => {
     name: 'daysave.sid' // Change default session name for security
   }));
 
+  // Test authentication bypass (only active in test mode)
+  app.use(testAuthBypass);
+  app.use(testCsrfBypass);
+  
   // Initialize Passport
   app.use(passport.initialize());
   app.use(passport.session());
+  
+  // Create test session after Passport initialization
+  app.use(createTestSession);
+  
+  // Test subscription bypass (after authentication)
+  app.use(testSubscriptionBypass);
   
   // Ensure role is loaded for all authenticated requests
   app.use(ensureRoleLoaded);

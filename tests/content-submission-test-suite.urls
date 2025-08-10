@@ -1,0 +1,11 @@
+enabled,url,description,category,features,timeout
+1,https://www.youtube.com/shorts/P8LeyCTibms,YouTube Short Video,socialMediaVideos,"transcription,summary,title,thumbnails,tags,category",60000
+1,https://www.facebook.com/share/v/1CVGdGppmi/,Facebook Video,socialMediaVideos,"transcription,summary,title,thumbnails,tags",60000
+1,https://www.instagram.com/reel/DMPtr24vjNr/?igsh=MXI1OTZxMmlzcnpzbA==,Instagram Reel,socialMediaVideos,"transcription,summary,title,thumbnails",45000
+1,https://www.youtube.com/watch?v=dQw4w9WgXcQ,YouTube Standard Video,videoContent,"transcription,summary,title,thumbnails,tags",90000
+1,https://soundcloud.com/marshmellomusic/alone,SoundCloud Audio,audioContent,"transcription,summary,title,tags",45000
+1,https://file-examples.com/wp-content/uploads/2017/10/file_example_JPG_1MB.jpg,JPEG Image Sample,imageContent,"description,title,tags",30000
+1,https://file-examples.com/wp-content/uploads/2017/02/file-sample_150kB.pdf,PDF Document Sample,documentContent,"text_extraction,summary,title",30000
+0,https://www.tiktok.com/@example/video/disabled,TikTok Video (disabled),socialMediaVideos,"transcription,summary,title",45000
+0,https://twitter.com/disabled/status/123456789,Twitter Video (disabled),socialMediaVideos,"transcription,summary,title",45000
+

@@ -13,6 +13,8 @@
  */
 
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const { Content, User, ProcessingJob, Thumbnail } = require('../models');
 const BackwardCompatibilityService = require('../services/BackwardCompatibilityService');
 
@@ -24,7 +26,81 @@ class ContentSubmissionTestSuite {
   }
 
   /**
-   * Test configuration
+   * Load test cases from CSV file
+   */
+  loadTestCasesFromCsv() {
+    const csvFile = path.join(__dirname, 'content-submission-test-suite.urls');
+    
+    if (!fs.existsSync(csvFile)) {
+      console.log('❌ CSV file not found:', csvFile);
+      console.log('   Using fallback hardcoded test cases...');
+      return this.getTestCases();
+    }
+    
+    try {
+      const csvContent = fs.readFileSync(csvFile, 'utf8');
+      const lines = csvContent.trim().split('\n');
+      
+      const testCases = {
+        socialMediaVideos: [],
+        videoContent: [],
+        audioContent: [],
+        imageContent: [],
+        documentContent: []
+      };
+      
+      // Skip header line
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const [enabled, url, description, category, features, timeout] = line.split(',').map(col => col.trim());
+        
+        // Only include enabled test cases (1 = enabled, 0 = disabled)
+        if (enabled === '1') {
+          const expectedFeatures = features.replace(/"/g, '').split(',').map(f => f.trim());
+          const testCase = {
+            name: description,
+            url: url,
+            expectedFeatures: expectedFeatures,
+            platform: this.detectPlatform(url),
+            timeout: parseInt(timeout) || 60000
+          };
+          
+          // Add to appropriate category
+          if (testCases[category]) {
+            testCases[category].push(testCase);
+          } else {
+            // Default to socialMediaVideos if category not recognized
+            testCases.socialMediaVideos.push(testCase);
+          }
+        }
+      }
+      
+      console.log(`📋 Loaded test cases from CSV: ${Object.values(testCases).flat().length} enabled tests`);
+      return testCases;
+      
+    } catch (error) {
+      console.error('❌ Error loading CSV file:', error.message);
+      console.log('   Falling back to hardcoded test cases...');
+      return this.getTestCases();
+    }
+  }
+
+  /**
+   * Detect platform from URL
+   */
+  detectPlatform(url) {
+    if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+    if (url.includes('instagram.com')) return 'instagram';
+    if (url.includes('facebook.com')) return 'facebook';
+    if (url.includes('soundcloud.com')) return 'soundcloud';
+    if (url.includes('file-examples.com')) return 'file-example';
+    return 'unknown';
+  }
+
+  /**
+   * Fallback test configuration (hardcoded)
    */
   getTestCases() {
     return {
@@ -135,7 +211,7 @@ class ContentSubmissionTestSuite {
       // Setup test environment
       await this.setupTestEnvironment();
       
-      const testCases = this.getTestCases();
+      const testCases = this.loadTestCasesFromCsv();
       
       // Run social media video tests
       console.log('📱 Testing Social Media Videos...');
@@ -169,14 +245,28 @@ class ContentSubmissionTestSuite {
   async setupTestEnvironment() {
     console.log('🔧 Setting up test environment...');
     
+    // Get test user from environment variables
+    const envTestUser = process.env.TEST_USER || 'dstestuser';
+    const testUserEmail = `${envTestUser}@daysave.app`;
+    
+    // Check if test authentication is enabled
+    const isTestAuthEnabled = process.env.ENABLE_TEST_AUTH === 'true';
+    if (!isTestAuthEnabled) {
+      console.log('⚠️  ENABLE_TEST_AUTH not set to true in .env file');
+      console.log('   Tests may fail without proper authentication setup');
+    }
+    
     // Find or create test user
-    this.testUser = await User.findOne({ where: { email: 'test@daysave.app' } });
+    this.testUser = await User.findOne({ where: { email: testUserEmail } });
     if (!this.testUser) {
       this.testUser = await User.create({
-        username: 'test-user',
-        email: 'test@daysave.app',
+        username: envTestUser,
+        email: testUserEmail,
         password: 'test-password-hash'
       });
+      console.log(`🧪 Created test user ${envTestUser} for content submission testing`);
+    } else {
+      console.log(`🧪 Using existing test user ${envTestUser} for content submission testing`);
     }
     
     console.log(`✅ Test user ready: ${this.testUser.id}`);

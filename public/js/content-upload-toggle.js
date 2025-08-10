@@ -79,7 +79,6 @@ console.log('🔍 DEBUG upload-toggle: hostname =', window.location.hostname, 'p
 if (false && window.location.hostname === 'localhost') {
   console.log('🔄 IMMEDIATE HTTPS→HTTP REDIRECT for localhost...');
   // DISABLED FOR DEBUGGING
-}
   
   // Intercept any navigation attempts to HTTPS
   const originalAssign = window.location.assign;

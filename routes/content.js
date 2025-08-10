@@ -110,14 +110,37 @@ function isMultimediaURL(url) {
  */
 async function triggerMultimediaAnalysis(content, user) {
   try {
-    console.log(`🎬 TRIGGER: Starting multimedia analysis for content ${content.id}`, {
-      user_id: user.id,
-      content_id: content.id,
-      url: content.url
+    // Ensure we have proper model instances
+    let contentInstance = content;
+    let userInstance = user;
+    
+    // If content is a plain object, fetch the model instance
+    if (!content.update && content.id) {
+      console.log(`🔄 TRIGGER: Converting content object to model instance for ${content.id}`);
+      contentInstance = await Content.findByPk(content.id);
+      if (!contentInstance) {
+        throw new Error(`Content with ID ${content.id} not found`);
+      }
+    }
+    
+    // If user is a plain object, fetch the model instance
+    if (!user.save && user.id) {
+      console.log(`🔄 TRIGGER: Converting user object to model instance for ${user.id}`);
+      const { User } = require('../models');
+      userInstance = await User.findByPk(user.id);
+      if (!userInstance) {
+        throw new Error(`User with ID ${user.id} not found`);
+      }
+    }
+    
+    console.log(`🎬 TRIGGER: Starting multimedia analysis for content ${contentInstance.id}`, {
+      user_id: userInstance.id,
+      content_id: contentInstance.id,
+      url: contentInstance.url
     });
 
     // Enhanced logging for analysis start
-    logger.multimedia.start(user.id, content.id, content.url, {
+    logger.multimedia.start(userInstance.id, contentInstance.id, contentInstance.url, {
       transcription: true,
       sentiment: true,
       summarization: true,
@@ -128,11 +151,11 @@ async function triggerMultimediaAnalysis(content, user) {
     // Create a buffer/stream from URL for processing
     // For URL-based content, we'll pass metadata and let the orchestrator handle it
     const contentMetadata = {
-      filename: content.url,
-      contentId: content.id,
-      userId: user.id,
+      filename: contentInstance.url,
+      contentId: contentInstance.id,
+      userId: userInstance.id,
       source: 'url',
-      url: content.url
+      url: contentInstance.url
     };
 
     // For URL-based content, we need to use the backward compatibility service
@@ -141,7 +164,7 @@ async function triggerMultimediaAnalysis(content, user) {
     
     const compatibilityService = new BackwardCompatibilityService();
     
-    const processingResult = await compatibilityService.analyzeContent(content.url, {
+    const processingResult = await compatibilityService.analyzeContent(contentInstance.url, {
       transcription: true,
       sentiment: true,
       summarization: true,
@@ -149,8 +172,8 @@ async function triggerMultimediaAnalysis(content, user) {
       speaker_identification: true,
       enableSummarization: true,
       enableSentimentAnalysis: true,
-      user_id: user.id,
-      content_id: content.id
+      user_id: userInstance.id,
+      content_id: contentInstance.id
     });
 
     // Extract results from backward compatibility service
@@ -162,7 +185,7 @@ async function triggerMultimediaAnalysis(content, user) {
     // Store basic metadata from backward compatibility service
     if (formattedResults.metadata) {
       updateData.metadata = {
-        ...(content.metadata || {}),
+        ...(contentInstance.metadata || {}),
         ...formattedResults.metadata,
         analysisId: formattedResults.analysisId,
         lastAnalyzed: new Date().toISOString()
@@ -216,28 +239,31 @@ async function triggerMultimediaAnalysis(content, user) {
     // Update content record if we have data to update
     if (Object.keys(updateData).length > 0) {
       await Content.update(updateData, {
-        where: { id: content.id, user_id: user.id }
+        where: { id: contentInstance.id, user_id: userInstance.id }
       });
       
-      console.log(`✅ Content ${content.id} updated with orchestrated analysis results`, {
-        user_id: user.id,
-        content_id: content.id,
+      console.log(`✅ Content ${contentInstance.id} updated with orchestrated analysis results`, {
+        user_id: userInstance.id,
+        content_id: contentInstance.id,
         job_id: processingResult.jobId,
         updates: Object.keys(updateData)
       });
     }
     
   } catch (error) {
-    console.error(`❌ TRIGGER ERROR: Analysis failed for content ${content.id}:`, {
-      user_id: user.id,
-      content_id: content.id,
+    const errorContentId = content?.id || 'unknown';
+    const errorUserId = user?.id || 'unknown';
+    
+    console.error(`❌ TRIGGER ERROR: Analysis failed for content ${errorContentId}:`, {
+      user_id: errorUserId,
+      content_id: errorContentId,
       error: error.message,
       stack: error.stack
     });
     
-    logger.logError(`Multimedia analysis failed for content ${content.id}`, {
-      user_id: user.id,
-      content_id: content.id,
+    logger.logError(`Multimedia analysis failed for content ${errorContentId}`, {
+      user_id: errorUserId,
+      content_id: errorContentId,
       error: error.message,
       stack: error.stack,
       orchestrator: true
@@ -1158,6 +1184,19 @@ router.post('/', [
   isAuthenticated
 ], async (req, res) => {
   try {
+    // Debug logging to understand the request
+    console.log('🔍 DEBUG: Content creation request received');
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('Body type:', typeof req.body);
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+    console.log('Body keys:', req.body ? Object.keys(req.body) : 'BODY IS NULL/UNDEFINED');
+    
+    // Ensure req.body exists
+    if (!req.body) {
+      console.error('❌ ERROR: req.body is null or undefined');
+      return res.status(400).json({ error: 'Request body is missing or invalid.' });
+    }
+    
     // Check if this is a bulk URL submission
     if (req.body.content_type === 'bulk_urls') {
       return await handleBulkUrlSubmission(req, res);
