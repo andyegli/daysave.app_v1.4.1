@@ -32,11 +32,11 @@ function getCorrectUrl(path) {
   return path;
 }
 
-console.log('🔴 AI ANALYSIS SCRIPT LOADED - Enhanced Comprehensive Version');
+console.log('AI Analysis loaded');
 
 // AI Analysis functionality
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('🟢 DOM Content Loaded - AI Analysis script initializing...');
+  // AI Analysis initializing
   
   // Initialize AI analysis indicators for all content items
   initializeAIIndicators();

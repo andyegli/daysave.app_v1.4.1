@@ -1,6 +1,4 @@
-console.log('DEBUG: content-filters.js loaded successfully');
-console.log('DEBUG: Script execution started');
-console.log('DEBUG: Document ready state:', document.readyState);
+// Content filters initialized
 
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DEBUG: DOM Content Loaded event fired');

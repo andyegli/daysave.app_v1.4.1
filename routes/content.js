@@ -1188,14 +1188,18 @@ router.post('/', [
     console.log('🔍 DEBUG: Content creation request received');
     console.log('Content-Type:', req.headers['content-type']);
     console.log('Body type:', typeof req.body);
-    console.log('Body:', JSON.stringify(req.body, null, 2));
-    console.log('Body keys:', req.body ? Object.keys(req.body) : 'BODY IS NULL/UNDEFINED');
+    console.log('Body exists:', !!req.body);
     
-    // Ensure req.body exists
-    if (!req.body) {
-      console.error('❌ ERROR: req.body is null or undefined');
+    // Ensure req.body exists FIRST
+    if (!req.body || typeof req.body !== 'object') {
+      console.error('❌ ERROR: req.body is null, undefined, or not an object');
+      console.error('❌ Body value:', req.body);
+      console.error('❌ Body type:', typeof req.body);
       return res.status(400).json({ error: 'Request body is missing or invalid.' });
     }
+    
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+    console.log('Body keys:', Object.keys(req.body));
     
     // Check if this is a bulk URL submission
     if (req.body.content_type === 'bulk_urls') {
