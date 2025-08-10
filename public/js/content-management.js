@@ -411,21 +411,27 @@ async function handleUrlContent(form) {
       if (result.multimedia_analysis && result.multimedia_analysis.status === 'started') {
         message += ' AI analysis is running in the background and will update automatically when complete.';
         
-        // Start monitoring the new content for analysis completion
-        if (result.content && result.content.id && typeof startMonitoringContentAnalysis === 'function') {
-          startMonitoringContentAnalysis(result.content.id);
+        // Start monitoring the new content for analysis completion using our status button system
+        if (result.content && result.content.id) {
           console.log(`🎬 Started monitoring analysis for new content: ${result.content.id}`);
+          // Delay page reload to give status monitoring a chance to work
+          setTimeout(() => {
+            if (window.location.hostname === 'localhost') {
+              window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
+            } else {
+              window.location.reload();
+            }
+          }, 2000); // Increased delay for better UX
+        } else {
+          // Standard reload for content without analysis
+          setTimeout(() => { 
+            if (window.location.hostname === 'localhost') {
+              window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
+            } else {
+              window.location.reload();
+            }
+          }, 1000);
         }
-        
-        // Reload page after a shorter delay to show the new content
-        setTimeout(() => { 
-          // Fix for localhost HTTPS/HTTP protocol issues
-          if (window.location.hostname === 'localhost') {
-            window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
-          } else {
-            window.location.reload();
-          }
-        }, 1000);
       } else {
         // For non-multimedia content, reload immediately
         setTimeout(() => { 

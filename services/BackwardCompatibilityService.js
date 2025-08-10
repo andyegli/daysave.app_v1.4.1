@@ -390,6 +390,9 @@ class BackwardCompatibilityService {
    */
   async storeLegacyAnalysisRecord(legacyResults, options) {
     try {
+      // Create ProcessingJob record for new monitoring system
+      await this.createProcessingJobRecord(legacyResults, options);
+      
       // Store in VideoAnalysis table using legacy structure
       const analysisRecord = {
         id: legacyResults.analysis_id,
@@ -800,6 +803,60 @@ class BackwardCompatibilityService {
     } catch (error) {
       console.error('❌ Backward compatibility test failed:', error);
       return false;
+    }
+  }
+
+  /**
+   * Create ProcessingJob record for new monitoring system compatibility
+   */
+  async createProcessingJobRecord(legacyResults, options) {
+    try {
+      const jobRecord = {
+        id: uuidv4(),
+        user_id: options.user_id,
+        content_id: options.content_id || null,
+        file_id: options.file_id || null,
+        job_type: 'video_analysis',
+        media_type: 'video',
+        status: 'completed', // Analysis is already done
+        progress: 100,
+        current_stage: 'completed',
+        started_at: new Date(),
+        completed_at: new Date(),
+        estimated_completion: new Date(),
+        duration_ms: legacyResults.processing_time || 0,
+        metadata: {
+          compatibility_mode: true,
+          orchestrator_used: false,
+          backward_compatibility: true,
+          analysis_id: legacyResults.analysis_id,
+          url: legacyResults.url,
+          content_type: 'video' // Default for multimedia
+        },
+        configuration: {
+          transcription: true,
+          sentiment: true,
+          summarization: true,
+          thumbnails: true,
+          speaker_identification: true
+        },
+        results: {
+          transcription: !!legacyResults.transcription,
+          summary: !!legacyResults.summary,
+          sentiment: !!legacyResults.sentiment,
+          auto_tags: !!legacyResults.auto_tags,
+          thumbnail_count: legacyResults.thumbnail_count || 0,
+          speaker_count: legacyResults.speaker_count || 0
+        }
+      };
+
+      await ProcessingJob.create(jobRecord);
+      
+      console.log(`✅ Created ProcessingJob record for backward compatibility: ${jobRecord.id}`);
+      
+    } catch (error) {
+      console.error('❌ Failed to create ProcessingJob record:', error);
+      // Don't throw - this is for compatibility only
     }
   }
 }

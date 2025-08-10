@@ -20,12 +20,12 @@ function getCorrectUrl(path) {
 }
 
 $(document).ready(function() {
-  console.log('🔄 Status Button System: Initializing...');
+  // Status Button System: Initializing...
   initializeStatusButtons();
 });
 
 function initializeStatusButtons() {
-  console.log('🔄 Initializing enhanced status buttons...');
+  // Initializing enhanced status buttons...
   
   // Initialize all status buttons
   $('.analysis-status-btn').each(function() {
@@ -83,6 +83,11 @@ function updateStatusButton(contentId, itemType) {
         // Only log significant status changes
         if (prevStatus !== status || (status === 'processing' && Math.abs((prevProgress || 0) - progress) >= 10)) {
           console.log(`✅ Status updated for ${contentId.substring(0,8)}: ${status} (${progress}%)`);
+        }
+        
+        // Check if we should refresh the content card
+        if (shouldRefreshContentCard(prevStatus, status, prevProgress, progress)) {
+          refreshContentCard(contentId, itemType);
         }
         
         // If still processing or waiting, check again (with enhanced limits)
@@ -177,6 +182,107 @@ function setStatusButtonState(contentId, status, progress = 0) {
   }
   
   console.log(`📊 Set status for ${contentId.substring(0,8)}: ${status} (${progress}%)`);
+}
+
+// Determine if content card should be refreshed based on status changes
+function shouldRefreshContentCard(prevStatus, currentStatus, prevProgress, currentProgress) {
+  // Refresh when analysis completes
+  if (prevStatus !== 'analysed' && currentStatus === 'analysed') {
+    return true;
+  }
+  
+  // Refresh on significant processing progress (every 25%)
+  if (currentStatus === 'processing' && Math.abs((prevProgress || 0) - currentProgress) >= 25) {
+    return true;
+  }
+  
+  // Refresh when moving from waiting to processing
+  if (prevStatus === 'waiting' && currentStatus === 'processing') {
+    return true;
+  }
+  
+  return false;
+}
+
+// Refresh content card with latest data from analysis endpoint
+function refreshContentCard(contentId, itemType) {
+  console.log(`🔄 Refreshing content card for ${contentId.substring(0,8)}...`);
+  
+  const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
+  
+  $.ajax({
+    url: endpoint,
+    type: 'GET',
+    timeout: 10000,
+    success: function(response) {
+      if (response.success && response.analysis) {
+        updateContentCardDisplay(contentId, response, itemType);
+      }
+    },
+    error: function(xhr, status, error) {
+      console.warn(`⚠️ Failed to refresh content card for ${contentId.substring(0,8)}:`, error);
+    }
+  });
+}
+
+// Update the content card display with fresh data
+function updateContentCardDisplay(contentId, analysisData, itemType) {
+  const $card = $(`.content-card[data-id="${contentId}"]`);
+  if ($card.length === 0) {
+    console.warn(`⚠️ Content card not found for ${contentId.substring(0,8)}`);
+    return;
+  }
+  
+  console.log(`✨ Updating content card display for ${contentId.substring(0,8)}`);
+  
+  // Update title if available
+  if (analysisData.analysis?.title) {
+    const $title = $card.find('.card-title, .content-title, h5');
+    if ($title.length > 0) {
+      $title.text(analysisData.analysis.title);
+      console.log(`📝 Updated title: "${analysisData.analysis.title}"`);
+    }
+  }
+  
+  // Update thumbnail if available  
+  if (analysisData.thumbnails && analysisData.thumbnails.length > 0) {
+    const $thumbnail = $card.find('.thumbnail-container img');
+    if ($thumbnail.length > 0) {
+      const newThumbnailUrl = analysisData.thumbnails[0].url || analysisData.thumbnails[0].file_path;
+      if (newThumbnailUrl) {
+        $thumbnail.attr('src', newThumbnailUrl.startsWith('/') ? newThumbnailUrl : '/' + newThumbnailUrl);
+        console.log(`🖼️ Updated thumbnail: ${newThumbnailUrl}`);
+      }
+    }
+  }
+  
+  // Update summary/description if available
+  if (analysisData.summary) {
+    const $description = $card.find('.content-description, .card-text');
+    if ($description.length > 0) {
+      const truncatedSummary = analysisData.summary.length > 100 
+        ? analysisData.summary.substring(0, 100) + '...'
+        : analysisData.summary;
+      $description.text(truncatedSummary);
+      console.log(`📄 Updated description: "${truncatedSummary}"`);
+    }
+  }
+  
+  // Update auto tags if available
+  if (analysisData.auto_tags && analysisData.auto_tags.length > 0) {
+    const $tagsContainer = $card.find('.auto-tags, .tags-container');
+    if ($tagsContainer.length > 0) {
+      const tagHtml = analysisData.auto_tags.slice(0, 5).map(tag => 
+        `<span class="badge bg-secondary me-1">${tag}</span>`
+      ).join('');
+      $tagsContainer.html(tagHtml);
+      console.log(`🏷️ Updated tags: ${analysisData.auto_tags.slice(0, 5).join(', ')}`);
+    }
+  }
+  
+  // Add a subtle animation to indicate the update
+  $card.addClass('updated-card');
+  setTimeout(() => $card.removeClass('updated-card'), 2000);
 }
 
 function showAnalysisProgress(contentId, itemType) {
