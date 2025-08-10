@@ -23,55 +23,7 @@ function getCorrectUrl(path) {
 if (window.location.hostname === 'localhost') {
   console.log('🛡️ Localhost detected - applying safe protocol enforcement');
   
-  // Store original methods safely
-  const _originalXHROpen = XMLHttpRequest.prototype.open;
-  const _originalFetch = window.fetch;
-  
-  // AGGRESSIVE XHR override with detailed logging
-  XMLHttpRequest.prototype.open = function(method, url, async = true, user, password) {
-    // Log ALL requests for debugging
-    console.log('🔍 XHR REQUEST:', method, url, 'from:', new Error().stack.split('\n')[2]);
-    
-    // Convert HTTPS to HTTP for localhost  
-    if (typeof url === 'string' && url.includes('https://localhost')) {
-      const newUrl = url.replace('https://localhost', 'http://localhost');
-      console.log('🔧 XHR Protocol Fix:', url, '→', newUrl);
-      url = newUrl;
-    }
-    
-    // Keep relative URLs relative to maintain same-origin and cookies
-    if (typeof url === 'string' && url.startsWith('/') && window.location.hostname === 'localhost') {
-      // Don't convert relative URLs - let browser handle with same protocol/port
-      console.log('🔧 XHR Keeping relative URL for same-origin cookies:', url);
-    }
-    
-    // Handle timeout conflict for sync requests
-    if (async === false && this.timeout) {
-      this.timeout = 0; // Clear timeout for sync requests
-    }
-    
-    return _originalXHROpen.call(this, method, url, async, user, password);
-  };
-  
-  // AGGRESSIVE fetch override with detailed logging
-  window.fetch = function(url, options = {}) {
-    // Log ALL fetch requests for debugging
-    console.log('🔍 FETCH REQUEST:', url, 'from:', new Error().stack.split('\n')[2]);
-    
-    if (typeof url === 'string' && url.includes('https://localhost')) {
-      const newUrl = url.replace('https://localhost', 'http://localhost');
-      console.log('🔧 Fetch Protocol Fix:', url, '→', newUrl);
-      url = newUrl;
-    }
-    
-    // Keep relative URLs relative to maintain same-origin and cookies
-    if (typeof url === 'string' && url.startsWith('/') && window.location.hostname === 'localhost') {
-      // Don't convert relative URLs - let browser handle with same protocol/port
-      console.log('🔧 Fetch Keeping relative URL for same-origin cookies:', url);
-    }
-    
-    return _originalFetch.call(this, url, options);
-  };
+  // Removed XHR/fetch overrides to prevent conflicts - using relative URLs directly in API calls
 }
 
 // PROTOCOL ENFORCEMENT - COMPLETELY DISABLED FOR DEBUGGING  
