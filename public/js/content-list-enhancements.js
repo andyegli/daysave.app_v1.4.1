@@ -26,13 +26,14 @@ function handleTextTruncation() {
 function fixThumbnailUrls() {
   console.log('🔧 Fixing thumbnail URLs for localhost...');
   
-  // Fix SSL protocol issues for localhost thumbnails
+  // Keep thumbnail URLs as relative for same-origin requests
   if (window.location.hostname === 'localhost') {
     $('img[src^="https://localhost"]').each(function() {
       const currentSrc = $(this).attr('src');
-      const fixedSrc = currentSrc.replace('https://localhost', `http://localhost:${window.location.port || 3000}`);
+      // Convert absolute URLs to relative for same-origin cookie sharing
+      const fixedSrc = currentSrc.replace('https://localhost', '');
       $(this).attr('src', fixedSrc);
-      console.log(`🔧 Fixed thumbnail URL: ${currentSrc} → ${fixedSrc}`);
+      console.log(`🔧 Made thumbnail URL relative: ${currentSrc} → ${fixedSrc}`);
     });
   }
 }

@@ -19,14 +19,14 @@
 // Helper function to fix localhost SSL protocol issues
 function getCorrectUrl(path) {
   if (window.location.hostname === 'localhost') {
-    // If path is already a full URL, don't modify it
+    // If path is already a full URL, convert HTTPS to HTTP
     if (path.startsWith('http://') || path.startsWith('https://')) {
       // Convert HTTPS to HTTP for localhost
       return path.replace('https://localhost', 'http://localhost');
     }
-    // If it's a relative path, make it absolute HTTP
+    // Keep relative paths relative to maintain same-origin cookies
     if (path.startsWith('/')) {
-      return `http://localhost:${window.location.port || 3000}${path}`;
+      return path; // Let browser handle with same protocol/port for cookie sharing
     }
   }
   return path;
