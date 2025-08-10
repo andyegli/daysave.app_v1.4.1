@@ -54,10 +54,10 @@ if (window.location.hostname === 'localhost') {
       url = newUrl;
     }
     
-    // Fix relative URLs to absolute HTTP URLs for localhost
+    // Keep relative URLs relative to maintain same-origin and cookies
     if (typeof url === 'string' && url.startsWith('/') && window.location.hostname === 'localhost') {
-      url = `http://localhost:${window.location.port || 3000}${url}`;
-      console.log('🔧 XHR Relative URL Fixed:', url);
+      // Don't convert relative URLs - let browser handle with same protocol/port
+      console.log('🔧 XHR Keeping relative URL for same-origin cookies:', url);
     }
     
     // Handle timeout conflict for sync requests
@@ -79,10 +79,10 @@ if (window.location.hostname === 'localhost') {
       url = newUrl;
     }
     
-    // Fix relative URLs to absolute HTTP URLs for localhost
+    // Keep relative URLs relative to maintain same-origin and cookies
     if (typeof url === 'string' && url.startsWith('/') && window.location.hostname === 'localhost') {
-      url = `http://localhost:${window.location.port || 3000}${url}`;
-      console.log('🔧 Fetch Relative URL Fixed:', url);
+      // Don't convert relative URLs - let browser handle with same protocol/port
+      console.log('🔧 Fetch Keeping relative URL for same-origin cookies:', url);
     }
     
     return _originalFetch.call(this, url, options);
