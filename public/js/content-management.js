@@ -9,9 +9,9 @@ function getCorrectUrl(path) {
       // Convert HTTPS to HTTP for localhost
       return path.replace('https://localhost', 'http://localhost');
     }
-    // If it's a relative path, make it absolute HTTP
+    // Keep relative paths relative to maintain same-origin cookies
     if (path.startsWith('/')) {
-      return `http://localhost:${window.location.port || 3000}${path}`;
+      return path; // Let browser handle with same protocol/port for cookie sharing
     }
   }
   return path;
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Double-check protocol after DOM load - DISABLED for daysave.local
   if (false && window.location.hostname === 'localhost' && !window.location.hostname.includes('daysave.local') && window.location.protocol === 'https:') {
     console.log('🔄 DOM LOADED - HTTPS→HTTP REDIRECT for localhost...');
-    window.location.replace(`http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`);
+    window.location.replace(`http://localhost${window.location.pathname}${window.location.search}`);
     return;
   }
   
@@ -364,9 +364,7 @@ async function handleFileUpload(form) {
       };
       
       // FORCE HTTP URL - bypass all browser caching/HSTS
-      const uploadUrl = window.location.hostname === 'localhost' ? 
-        `http://localhost:${window.location.port || 3000}/files/upload` : 
-        '/files/upload';
+      const uploadUrl = '/files/upload'; // Use relative URL for same-origin requests
       
       console.log('🚀 FINAL UPLOAD URL:', uploadUrl);
       
@@ -384,7 +382,7 @@ async function handleFileUpload(form) {
       setTimeout(() => {
         // SAFE NAVIGATION - No HTTPS triggers
         if (window.location.hostname === 'localhost') {
-          const safeUrl = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+          const safeUrl = `http://localhost${window.location.pathname}${window.location.search}`;
           console.log('🔄 Safe navigation to:', safeUrl);
           window.location.replace(safeUrl);
         } else {
@@ -406,7 +404,7 @@ async function handleFileUpload(form) {
     
     let errorMessage = error.message;
     if (error.message.includes('Failed to load')) {
-      errorMessage = 'Server connection failed. Please ensure the server is running on http://localhost:3000';
+      errorMessage = 'Server connection failed. Please check your connection.';
     } else if (error.message.includes('ERR_SSL_PROTOCOL_ERROR')) {
       errorMessage = 'SSL Protocol error. Attempting to fix...';
       // Force redirect to HTTP
@@ -471,7 +469,7 @@ async function handleUrlContent(form) {
         setTimeout(() => { 
           // Fix for localhost HTTPS/HTTP protocol issues
           if (window.location.hostname === 'localhost') {
-            window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+            window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
           } else {
             window.location.reload();
           }
@@ -481,7 +479,7 @@ async function handleUrlContent(form) {
         setTimeout(() => { 
           // Fix for localhost HTTPS/HTTP protocol issues
           if (window.location.hostname === 'localhost') {
-            window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+            window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
           } else {
             window.location.reload();
           }
@@ -582,7 +580,7 @@ function showAlert(message, type = 'info') {
           setTimeout(() => {
             // Fix for localhost HTTPS/HTTP protocol issues
             if (window.location.hostname === 'localhost') {
-              window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+              window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
             } else {
               window.location.reload();
             }
@@ -621,7 +619,7 @@ function showAlert(message, type = 'info') {
         if (res.ok) {
           // Fix for localhost HTTPS/HTTP protocol issues
           if (window.location.hostname === 'localhost') {
-            window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+            window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
           } else {
             window.location.reload();
           }
@@ -711,7 +709,7 @@ function showAlert(message, type = 'info') {
         setTimeout(() => { 
           // Fix for localhost HTTPS/HTTP protocol issues
           if (window.location.hostname === 'localhost') {
-            window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+            window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
           } else {
             window.location.reload();
           }

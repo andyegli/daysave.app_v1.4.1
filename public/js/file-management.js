@@ -168,7 +168,7 @@ function initializeUploadModal() {
               setTimeout(() => {
                 // Fix for localhost HTTPS/HTTP protocol issues
                 if (window.location.hostname === 'localhost') {
-                  window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+                  window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
                 } else {
                   window.location.reload();
                 }
@@ -261,9 +261,7 @@ function initializeUploadModal() {
    */
   function shareFile(fileId) {
     // Create share URL with correct protocol
-    const baseUrl = window.location.hostname === 'localhost' ? 
-      `http://localhost:${window.location.port || 3000}` : 
-      window.location.origin;
+    const baseUrl = window.location.origin; // Use same origin for consistency
     const shareUrl = `${baseUrl}/files/${fileId}`;
     
     // Copy to clipboard
@@ -349,9 +347,7 @@ function initializeUploadModal() {
       type: 'GET',
       success: function(response) {
         // Since this is likely to return HTML, we'll show a simple message for now
-        const viewUrl = window.location.hostname === 'localhost' ? 
-          `http://localhost:${window.location.port || 3000}/files/${fileId}` : 
-          `/files/${fileId}`;
+        const viewUrl = `/files/${fileId}`; // Use relative URL for same-origin
         modalBody.html(`
           <p>File details loaded successfully.</p>
           <p><a href="${viewUrl}" target="_blank" class="btn btn-primary">

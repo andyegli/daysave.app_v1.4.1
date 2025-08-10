@@ -472,9 +472,7 @@ async function handleFileUploadSubmission() {
       xhr.timeout = 300000; // 5 minute timeout
       
       // FORCE HTTP URL - bypass all browser caching/HSTS
-      const uploadUrl = window.location.hostname === 'localhost' ? 
-        `http://localhost:${window.location.port || 3000}/files/upload` : 
-        '/files/upload';
+      const uploadUrl = '/files/upload'; // Use relative URL for same-origin requests
       
       console.log('🚀 FINAL UPLOAD URL:', uploadUrl);
       
@@ -492,7 +490,7 @@ async function handleFileUploadSubmission() {
       setTimeout(() => {
         // SAFE NAVIGATION - No HTTPS triggers
         if (window.location.hostname === 'localhost') {
-          const safeUrl = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+          const safeUrl = `http://localhost${window.location.pathname}${window.location.search}`;
           console.log('🔄 Safe navigation to:', safeUrl);
           window.location.replace(safeUrl);
         } else {
@@ -836,7 +834,7 @@ async function handleBulkUrlSubmission() {
       setTimeout(() => {
         // Fix for localhost HTTPS/HTTP protocol issues
         if (window.location.hostname === 'localhost') {
-          window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+          window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
         } else {
           window.location.href = window.location.href;
         }
@@ -965,7 +963,7 @@ async function handleFilePathSubmission() {
         setTimeout(() => {
           // Fix for localhost HTTPS/HTTP protocol issues
           if (window.location.hostname === 'localhost') {
-            window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+            window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
           } else {
             window.location.href = window.location.href;
           }
