@@ -199,7 +199,7 @@ function initializeContentUploadToggle() {
       }
       
       // Update form for file upload with correct protocol
-      addContentForm.action = getCorrectUrl('/files/upload');
+      addContentForm.action = '/files/upload';
       addContentForm.method = 'POST';
     }
   }
@@ -790,7 +790,7 @@ async function handleBulkUrlSubmission() {
                reject(new Error('Network error'));
              };
              
-             xhr.open('POST', getCorrectUrl('/content'));
+             xhr.open('POST', '/content');
              xhr.setRequestHeader('Content-Type', 'application/json');
              xhr.send(JSON.stringify({
                url: url,
@@ -938,7 +938,7 @@ async function handleFilePathSubmission() {
       };
       
       xhr.timeout = 120000; // 2 minute timeout
-      xhr.open('POST', getCorrectUrl('/files/import-paths'));
+      xhr.open('POST', '/files/import-paths');
       xhr.send(formData);
     });
     
@@ -1304,6 +1304,6 @@ function testUploadEndpoint() {
   };
   
   xhr.timeout = 5000; // 5 second timeout for test
-  xhr.open('GET', getCorrectUrl('/files/api/settings'), true); // Explicitly async (true)
+  xhr.open('GET', '/files/api/settings', true); // Explicitly async (true)
   xhr.send();
 } 

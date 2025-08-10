@@ -53,8 +53,8 @@ function initializeStatusButtons() {
 function updateStatusButton(contentId, itemType) {
   const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/api/${contentId}/status`;
   
-  // Use helper function to get correct URL with proper protocol
-  const url = getCorrectUrl(endpoint);
+  // Use relative URL for same-origin requests
+  const url = endpoint;
   
   $.ajax({
     url: url,
@@ -202,8 +202,8 @@ function showAnalysisProgress(contentId, itemType) {
   // Otherwise fetch fresh data
   const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/api/${contentId}/status`;
   
-  // Use helper function to get correct URL with proper protocol
-  const url = getCorrectUrl(endpoint);
+  // Use relative URL for same-origin requests
+  const url = endpoint;
   
   $.ajax({
     url: url,

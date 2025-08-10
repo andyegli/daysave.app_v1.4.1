@@ -77,7 +77,7 @@ function initializeAIIndicators() {
  */
 async function loadAIIndicators(contentId, itemType = 'content') {
   try {
-    const endpoint = itemType === 'file' ? getCorrectUrl(`/files/${contentId}/analysis`) : getCorrectUrl(`/content/${contentId}/analysis`);
+    const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
     
     // Use XMLHttpRequest instead of fetch for better compatibility
     const result = await new Promise((resolve, reject) => {
@@ -106,7 +106,7 @@ async function loadAIIndicators(contentId, itemType = 'content') {
       };
       
       xhr.timeout = 10000; // 10 second timeout
-      xhr.open('GET', getCorrectUrl(endpoint));
+      xhr.open('GET', endpoint);
       xhr.setRequestHeader('Accept', 'application/json');
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.send();
@@ -202,7 +202,7 @@ async function showComprehensiveAnalysisModal(contentId, itemType = 'content') {
     showLoadingModal();
     
     // Determine endpoint based on item type
-    const endpoint = itemType === 'file' ? getCorrectUrl(`/files/${contentId}/analysis`) : getCorrectUrl(`/content/${contentId}/analysis`);
+    const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/${contentId}/analysis`;
     
     // Fetch analysis data using XMLHttpRequest for better compatibility
     const result = await new Promise((resolve, reject) => {
@@ -230,7 +230,7 @@ async function showComprehensiveAnalysisModal(contentId, itemType = 'content') {
       };
       
       xhr.timeout = 30000; // 30 second timeout for modal data
-      xhr.open('GET', getCorrectUrl(endpoint));
+      xhr.open('GET', endpoint);
       xhr.setRequestHeader('Accept', 'application/json');
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.send();

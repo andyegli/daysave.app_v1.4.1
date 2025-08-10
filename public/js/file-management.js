@@ -153,7 +153,7 @@ function initializeUploadModal() {
         submitBtn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Uploading...');
         
         $.ajax({
-          url: getCorrectUrl('/files/upload'),
+          url: '/files/upload',
           type: 'POST',
           data: formData,
           processData: false,
@@ -235,7 +235,7 @@ function initializeUploadModal() {
    */
   function deleteFile(fileId) {
     $.ajax({
-      url: getCorrectUrl(`/files/${fileId}`),
+      url: `/files/${fileId}`,
       type: 'DELETE',
       success: function(response) {
         if (response.success) {
@@ -343,7 +343,7 @@ function initializeUploadModal() {
     `);
     
     $.ajax({
-      url: getCorrectUrl(`/files/${fileId}`),
+      url: `/files/${fileId}`,
       type: 'GET',
       success: function(response) {
         // Since this is likely to return HTML, we'll show a simple message for now
@@ -403,7 +403,7 @@ function initializeUploadModal() {
    */
   function checkAnalysisStatus(fileId, indicatorContainer) {
     $.ajax({
-      url: getCorrectUrl(`/files/${fileId}/analysis`),
+      url: `/files/${fileId}/analysis`,
       type: 'GET',
       success: function(response) {
         if (response.success) {
@@ -506,7 +506,7 @@ function initializeUploadModal() {
   }
   
   async function copyFileUrlAction() {
-    const fileUrl = window.fileUrl || getCorrectUrl(`/files/${window.fileId}`);
+    const fileUrl = window.fileUrl || `/files/${window.fileId}`;
     if (fileUrl) {
       try {
         await navigator.clipboard.writeText(fileUrl);
@@ -554,7 +554,7 @@ function initializeUploadModal() {
       if (result.success) {
         // Redirect to files list with success message
         sessionStorage.setItem('deleteSuccess', 'File deleted successfully');
-        const redirectUrl = getCorrectUrl('/files');
+        const redirectUrl = '/files';
         window.location.href = redirectUrl;
       } else {
         throw new Error(result.message || 'Delete failed');
