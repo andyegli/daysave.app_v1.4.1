@@ -1229,9 +1229,6 @@ router.post('/', [
       content_type: detected_content_type
     });
 
-    // Log content creation
-    logger.user.contentAdd(req.user.id, content.id, url, isMultimediaURL(url) ? 'multimedia' : 'standard');
-    
     // Update usage count for single URL
     await new Promise((resolve, reject) => {
       updateUsage('content_items')(req, res, (err) => {
