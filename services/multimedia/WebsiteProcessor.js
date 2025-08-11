@@ -525,14 +525,17 @@ Respond in JSON format with keys: summary, tags, categories, suggestedTitle`;
             
             // Track AI usage
             if (this.aiUsageTracker && this.aiUsageTracker.trackGoogleAIUsage) {
-                await this.aiUsageTracker.trackGoogleAIUsage({
-                    userId: options.user_id || 'system',
-                    model: 'gemini-1.5-flash',
-                    operation: 'text_analysis',
-                    inputTokens: Math.ceil(prompt.length / 4), // Rough token estimate
-                    outputTokens: Math.ceil(text.length / 4),
-                    contentId: options.content_id
-                });
+                try {
+                    await this.aiUsageTracker.trackGoogleAIUsage({
+                        userId: options.user_id || 'system',
+                        response: response, // Pass the actual API response
+                        model: 'gemini-1.5-flash',
+                        operationType: 'text_analysis',
+                        contentId: options.content_id
+                    });
+                } catch (trackingError) {
+                    console.warn('AI usage tracking failed:', trackingError.message);
+                }
             }
             
             // Parse JSON response
