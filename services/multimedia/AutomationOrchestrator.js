@@ -420,24 +420,41 @@ class AutomationOrchestrator {
             
             this.activeJobs.set(jobId, job);
             
-            // Extract metadata and platform info
-            console.log(`🔍 [JOB-${jobId}] Extracting URL metadata...`);
-            const urlMetadata = await this.urlProcessor.extractUrlMetadata(url);
-            job.metadata = { ...job.metadata, ...urlMetadata };
-            job.platform = urlMetadata.platform;
+            // Perform comprehensive URL content analysis
+            console.log(`🔍 [JOB-${jobId}] Starting comprehensive content analysis...`);
+            const analysisResult = await this.urlProcessor.analyzeUrlContent(url, {
+                ...options,
+                user_id: options.user_id,
+                content_id: options.content_id,
+                analysisId: jobId
+            });
             
-            console.log(`   📝 Platform: ${urlMetadata.platform.toUpperCase()}`);
+            job.metadata = { ...job.metadata, ...analysisResult.metadata };
+            job.platform = analysisResult.platform;
             
-            // For now, return result indicating URL processing complete
-            // The actual multimedia processing will be handled by compatibility service
+            console.log(`   📝 Platform: ${analysisResult.platform.toUpperCase()}`);
+            console.log(`   📊 Analysis: ${analysisResult.status} (${analysisResult.processing_time}ms)`);
+            
+            // Return comprehensive analysis result - no compatibility mode needed!
             const result = {
                 success: true,
                 jobId,
-                url,
-                metadata: urlMetadata,
-                platform: urlMetadata.platform,
+                url: analysisResult.url,
+                platform: analysisResult.platform,
+                metadata: analysisResult.metadata,
+                transcription: analysisResult.transcription,
+                speakers: analysisResult.speakers,
+                summary: analysisResult.summary,
+                sentiment: analysisResult.sentiment,
+                thumbnails: analysisResult.thumbnails,
+                auto_tags: analysisResult.auto_tags,
+                user_tags: analysisResult.user_tags,
+                category: analysisResult.category,
+                generatedTitle: analysisResult.generatedTitle,
+                status: analysisResult.status,
+                analysisId: analysisResult.analysisId,
                 processingTime: Date.now() - startTime,
-                requiresCompatibilityMode: true // Flag that this needs old system processing
+                requiresCompatibilityMode: false // New system handles everything!
             };
 
             // Store result

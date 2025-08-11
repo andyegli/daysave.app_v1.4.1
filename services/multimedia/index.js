@@ -10,7 +10,7 @@
  */
 
 const VoicePrintDatabase = require('./VoicePrintDatabase');
-const MultimediaAnalyzer = require('./MultimediaAnalyzer');
+// MultimediaAnalyzer removed - replaced by modular enhanced system
 const ThumbnailGenerator = require('./ThumbnailGenerator');
 const VideoProcessor = require('./VideoProcessor');
 const AudioProcessor = require('./AudioProcessor');
@@ -21,7 +21,7 @@ const AutomationOrchestrator = require('./AutomationOrchestrator');
 
 module.exports = {
   VoicePrintDatabase,
-  MultimediaAnalyzer,
+  // MultimediaAnalyzer removed - replaced by enhanced modular system
   ThumbnailGenerator,
   VideoProcessor,
   AudioProcessor,

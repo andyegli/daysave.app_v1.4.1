@@ -1567,7 +1567,9 @@ async function executeTestRun(testRunId, userId) {
       throw new Error('Test run not found');
     }
     
-    const multimediaAnalyzer = new MultimediaAnalyzer();
+    // Use enhanced modular system instead of deprecated MultimediaAnalyzer
+    const { AutomationOrchestrator } = require('../services/multimedia');
+    const orchestrator = AutomationOrchestrator.getInstance();
     const allTests = [];
     
     // Create test combinations
