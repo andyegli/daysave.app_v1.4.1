@@ -7,7 +7,7 @@
  * This ensures we don't lose any functionality during the modernization process.
  */
 
-const { MultimediaAnalyzer } = require('../services/multimedia');
+const { UrlProcessor } = require('../services/multimedia');
 const { AutomationOrchestrator } = require('../services/multimedia');
 const BackwardCompatibilityService = require('../services/BackwardCompatibilityService');
 
@@ -69,11 +69,11 @@ class FunctionalityPreservationTest {
   async testUrlDetectionCapabilities() {
     console.log('🔍 Testing URL Detection Capabilities...');
     
-    const analyzer = new MultimediaAnalyzer({ enableLogging: false });
+    const urlProcessor = new UrlProcessor({ enableLogging: false });
     
     for (const url of this.testUrls) {
       try {
-        const isMultimedia = analyzer.isMultimediaUrl(url);
+        const isMultimedia = urlProcessor.isMultimediaUrl(url);
         
         console.log(`   📝 ${url}: ${isMultimedia ? '✅ Detected' : '❌ Not detected'}`);
         
@@ -99,11 +99,11 @@ class FunctionalityPreservationTest {
   async testMetadataExtraction() {
     console.log('📊 Testing Metadata Extraction...');
     
-    const analyzer = new MultimediaAnalyzer({ enableLogging: false });
+    const urlProcessor = new UrlProcessor({ enableLogging: false });
     
     for (const url of this.testUrls.slice(0, 3)) { // Test first 3 URLs
       try {
-        const metadata = await analyzer.extractUrlMetadata(url);
+        const metadata = await urlProcessor.extractUrlMetadata(url);
         
         console.log(`   📝 ${url}:`);
         console.log(`      Platform: ${metadata.platform}`);
@@ -131,7 +131,7 @@ class FunctionalityPreservationTest {
   async testPlatformDetection() {
     console.log('🏢 Testing Platform Detection...');
     
-    const analyzer = new MultimediaAnalyzer({ enableLogging: false });
+    const urlProcessor = new UrlProcessor({ enableLogging: false });
     
     const platformTests = [
       { url: 'https://www.youtube.com/watch?v=test', expected: 'youtube' },
@@ -144,7 +144,7 @@ class FunctionalityPreservationTest {
     
     for (const test of platformTests) {
       try {
-        const detected = analyzer.detectPlatform(test.url);
+        const detected = urlProcessor.detectPlatform(test.url);
         const passed = detected === test.expected;
         
         console.log(`   📝 ${test.url}: ${passed ? '✅' : '❌'} ${detected} (expected: ${test.expected})`);
@@ -171,13 +171,14 @@ class FunctionalityPreservationTest {
   async testContentAnalysis() {
     console.log('🎬 Testing Content Analysis (Basic)...');
     
-    const analyzer = new MultimediaAnalyzer({ enableLogging: false });
+    // Use the new AutomationOrchestrator for content analysis
+    const orchestrator = AutomationOrchestrator.getInstance();
     
     // Test with a simple YouTube URL (non-functional test - just check structure)
     const testUrl = 'https://www.youtube.com/watch?v=test123';
     
     try {
-      console.log('   📝 Testing analyzeContent method structure...');
+      console.log('   📝 Testing processUrl method structure...');
       
       // Mock options to test the method signature
       const options = {
@@ -188,10 +189,10 @@ class FunctionalityPreservationTest {
         content_id: 'test-content'
       };
       
-      // This should return quickly with minimal processing
-      const result = await analyzer.analyzeContent(testUrl, options);
+      // This should return quickly with minimal processing using new system
+      const result = await orchestrator.processUrl(testUrl, options);
       
-      console.log('   ✅ analyzeContent method executed successfully');
+      console.log('   ✅ processUrl method executed successfully');
       console.log(`      Result structure: ${Object.keys(result).join(', ')}`);
       
       // Store result structure for comparison

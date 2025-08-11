@@ -10,12 +10,12 @@
 const fs = require('fs');
 const path = require('path');
 const { ContentTypeDetector } = require('../scripts/populate-content-types');
-const { MultimediaAnalyzer } = require('../services/multimedia');
+const { UrlProcessor } = require('../services/multimedia');
 
 class ComprehensiveUrlTest {
   constructor() {
     this.detector = new ContentTypeDetector();
-    this.analyzer = new MultimediaAnalyzer({ enableLogging: false });
+    this.urlProcessor = new UrlProcessor({ enableLogging: false });
     this.results = [];
     this.summary = {
       total: 0,
@@ -152,10 +152,10 @@ class ComprehensiveUrlTest {
       testResult.detectedType = this.detector.detectFromUrl(url);
       
       // Test platform detection
-      testResult.platformDetection = this.analyzer.detectPlatform(url);
+      testResult.platformDetection = this.urlProcessor.detectPlatform(url);
       
       // Test multimedia URL detection
-      testResult.multimediaDetection = this.analyzer.isMultimediaUrl(url);
+      testResult.multimediaDetection = this.urlProcessor.isMultimediaUrl(url);
 
       // Validate results
       this.validateResults(testResult);

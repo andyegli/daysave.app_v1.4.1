@@ -80,9 +80,20 @@ class PerformanceMonitor extends EventEmitter {
     // Alert state tracking
     this.alertStates = new Map();
     
-    this.initialize();
+    // Initialize lazily to avoid constructor hangs
+    this.isInitialized = false;
   }
   
+  /**
+   * Ensure performance monitor is initialized
+   */
+  ensureInitialized() {
+    if (!this.isInitialized) {
+      this.initialize();
+      this.isInitialized = true;
+    }
+  }
+
   /**
    * Initialize performance monitoring
    */

@@ -352,8 +352,8 @@ class AutomationOrchestrator {
             
             // Initialize performance components
             console.log('📊 Initializing performance systems...');
-            await this.performanceOptimizer.initialize();
-            this.performanceMonitor.initialize();
+            await this.performanceOptimizer.ensureInitialized();
+            this.performanceMonitor.ensureInitialized();
             
             // Register processors
             console.log('🎬 Registering media processors...');
@@ -366,7 +366,7 @@ class AutomationOrchestrator {
             for (const [type, processor] of this.processors) {
                 const config = this.configManager.getProcessorConfig(type);
                 console.log(`   🔧 Initializing ${type} processor...`);
-                await processor.initialize(config);
+                await processor.ensureInitialized(config);
             }
             
             // Setup periodic cleanup

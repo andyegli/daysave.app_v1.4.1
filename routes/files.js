@@ -11,8 +11,21 @@ const { Op } = require('sequelize');
 const { AutomationOrchestrator } = require('../services/multimedia');
 const { ContentTypeDetector } = require('../scripts/populate-content-types');
 
-// Initialize automation orchestrator for file processing (singleton)
-const orchestrator = AutomationOrchestrator.getInstance();
+// Lazy initialization of automation orchestrator to avoid startup hanging
+let orchestrator = null;
+
+/**
+ * Get orchestrator instance with lazy initialization
+ */
+async function getOrchestrator() {
+  if (!orchestrator) {
+    console.log('🎛️ Lazy initializing AutomationOrchestrator...');
+    orchestrator = AutomationOrchestrator.getInstance();
+    await orchestrator.initialize();
+    console.log('✅ AutomationOrchestrator ready for file processing');
+  }
+  return orchestrator;
+}
 
 /**
  * Check if file type should trigger multimedia analysis
@@ -377,7 +390,8 @@ async function triggerFileAnalysis(fileRecord, user) {
 
     console.log(`🎯 Starting orchestrator processing...`);
     // Process file with new orchestrator for detailed analysis
-    const processingResult = await orchestrator.processContent(
+    const activeOrchestrator = await getOrchestrator();
+    const processingResult = await activeOrchestrator.processContent(
       fileBuffer,
       fileMetadata
     );
@@ -402,10 +416,8 @@ async function triggerFileAnalysis(fileRecord, user) {
     // Extract results from orchestrator response
     const formattedResults = processingResult.results;
     
-    // ✨ ENHANCED AI PROCESSING: Use BackwardCompatibilityService for AI-powered titles and tags
+    // ✨ ENHANCED AI PROCESSING: Use enhanced system for AI-powered titles and tags
     console.log(`🚀 Starting enhanced AI analysis for file ${fileRecord.id}`);
-    const BackwardCompatibilityService = require('../services/BackwardCompatibilityService');
-    const compatibilityService = new BackwardCompatibilityService();
     
     // Create a summary/transcription for AI analysis
     let contentForAI = '';
@@ -447,7 +459,17 @@ async function triggerFileAnalysis(fileRecord, user) {
           metadata: formattedResults.data.metadata || {}
         };
         
-        enhancedResults = await compatibilityService.convertToLegacyFormat(fakeAnalysisForAI);
+        // Use enhanced UrlProcessor for AI analysis
+        const { UrlProcessor } = require('../services/multimedia');
+        const urlProcessor = new UrlProcessor({ enableLogging: false });
+        
+        // Generate AI-enhanced results using the new system
+        enhancedResults = {
+          generatedTitle: await urlProcessor.generateTitle({ transcription: contentForAI }),
+          auto_tags: await urlProcessor.generateTags({ transcription: contentForAI }),
+          category: await urlProcessor.generateCategory({ transcription: contentForAI }),
+          sentiment: await urlProcessor.analyzeSentiment(contentForAI)
+        };
         
         console.log(`✨ Enhanced AI analysis completed for file ${fileRecord.id}`, {
           user_id: user.id,
@@ -2388,7 +2410,8 @@ router.post('/:id/reprocess', isAuthenticated, async (req, res) => {
           }
           
           // Use the automation orchestrator for reprocessing
-          const result = await orchestrator.processContent(fileBuffer, {
+          const activeOrchestrator = await getOrchestrator();
+          const result = await activeOrchestrator.processContent(fileBuffer, {
             filename: file.filename,
             mimetype: file.metadata?.mimetype,
             userId: userId,

@@ -11,12 +11,12 @@
 const fs = require('fs');
 const path = require('path');
 const { ContentTypeDetector } = require('../scripts/populate-content-types');
-const { MultimediaAnalyzer } = require('../services/multimedia');
+const { UrlProcessor } = require('../services/multimedia');
 
 class RealUrlValidationTest {
   constructor() {
     this.detector = new ContentTypeDetector();
-    this.analyzer = new MultimediaAnalyzer({ enableLogging: false });
+    this.urlProcessor = new UrlProcessor({ enableLogging: false });
     this.results = [];
     this.summary = {
       total: 0,
@@ -154,7 +154,7 @@ class RealUrlValidationTest {
       }
 
       // Test 2: Platform Detection
-      result.platformDetection = this.analyzer.detectPlatform(urlItem.url);
+      result.platformDetection = this.urlProcessor.detectPlatform(urlItem.url);
       
       const expectedPlatforms = this.getExpectedPlatforms(urlItem.url);
       if (expectedPlatforms.length > 0 && !expectedPlatforms.includes(result.platformDetection)) {
@@ -163,7 +163,7 @@ class RealUrlValidationTest {
       }
 
       // Test 3: Multimedia Detection
-      result.multimediaDetection = this.analyzer.isMultimediaUrl(urlItem.url);
+      result.multimediaDetection = this.urlProcessor.isMultimediaUrl(urlItem.url);
       
       const shouldBeMultimedia = ['Images', 'Videos', 'Audio', 'Video Platforms', 'Audio Platforms', 'Image Platforms'].includes(urlItem.category);
       if (shouldBeMultimedia && !result.multimediaDetection) {

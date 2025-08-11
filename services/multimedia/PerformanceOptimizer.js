@@ -56,10 +56,23 @@ class PerformanceOptimizer extends EventEmitter {
     this.jobQueue = [];
     this.workerPool = [];
     
-    // Initialize optimizer
-    this.initialize();
+    // Initialize optimizer lazily to avoid constructor hangs
+    this.initializationPromise = null;
+    this.isInitialized = false;
   }
   
+  /**
+   * Ensure performance optimizer is initialized
+   */
+  async ensureInitialized() {
+    if (this.isInitialized) return;
+    if (this.initializationPromise) return this.initializationPromise;
+    
+    this.initializationPromise = this.initialize();
+    await this.initializationPromise;
+    this.isInitialized = true;
+  }
+
   /**
    * Initialize performance optimizer
    */
@@ -87,6 +100,8 @@ class PerformanceOptimizer extends EventEmitter {
    * Process content with performance optimizations
    */
   async processWithOptimization(processor, buffer, metadata, options = {}) {
+    await this.ensureInitialized();
+    
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const startTime = Date.now();
     

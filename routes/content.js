@@ -4,13 +4,12 @@ const { isAuthenticated, checkUsageLimit, updateUsage, requireFeature } = requir
 const { Content, ContentGroup, ContentGroupMember } = require('../models');
 const { Op } = require('sequelize');
 const { AutomationOrchestrator } = require('../services/multimedia');
-const BackwardCompatibilityService = require('../services/BackwardCompatibilityService');
 const { ContentTypeDetector } = require('../scripts/populate-content-types');
 const logger = require('../config/logger');
 const { logging } = require('../config/config');
 
-// Initialize automation orchestrator (singleton)
-const orchestrator = AutomationOrchestrator.getInstance();
+// Lazy initialization of automation orchestrator to avoid startup hanging
+let orchestrator = null;
 
 /**
  * Detect if URL contains multimedia content that should be analyzed
@@ -158,13 +157,15 @@ async function triggerMultimediaAnalysis(content, user) {
       url: contentInstance.url
     };
 
-    // For URL-based content, we need to use the backward compatibility service
-    // since the orchestrator expects file buffers, not URLs
-    console.log('🔄 TRIGGER: Using backward compatibility service for URL processing...');
+    // Use enhanced AutomationOrchestrator for direct URL processing
+    console.log('🎬 TRIGGER: Using enhanced AutomationOrchestrator for URL processing...');
     
-    const compatibilityService = new BackwardCompatibilityService();
+    // Get or initialize orchestrator lazily
+    if (!orchestrator) {
+      orchestrator = AutomationOrchestrator.getInstance();
+    }
     
-    const processingResult = await compatibilityService.analyzeContent(contentInstance.url, {
+    const processingResult = await orchestrator.processUrl(contentInstance.url, {
       transcription: true,
       sentiment: true,
       summarization: true,

@@ -89,8 +89,21 @@ class ImageProcessor extends BaseMediaProcessor {
       }
     };
     
-    // Initialize image-specific services
-    this.initialize(options);
+    // Initialize image-specific services lazily to avoid constructor hanging
+    this.initializationPromise = null;
+    this.isInitialized = false;
+  }
+
+  /**
+   * Ensure processor is initialized
+   */
+  async ensureInitialized(options = {}) {
+    if (this.isInitialized) return;
+    if (this.initializationPromise) return this.initializationPromise;
+    
+    this.initializationPromise = this.initialize(options);
+    await this.initializationPromise;
+    this.isInitialized = true;
   }
 
   /**

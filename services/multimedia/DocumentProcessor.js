@@ -17,6 +17,10 @@ class DocumentProcessor extends BaseMediaProcessor {
         this.name = 'DocumentProcessor';
         this.supportedTypes = ['pdf', 'doc', 'docx', 'txt', 'rtf'];
         
+        // Lazy initialization flags
+        this.initializationPromise = null;
+        this.isInitialized = false;
+        
         // Initialize Google AI
         if (process.env.GOOGLE_AI_API_KEY) {
             this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
@@ -27,6 +31,18 @@ class DocumentProcessor extends BaseMediaProcessor {
 
         // Initialize AI usage tracker
         this.aiUsageTracker = new AiUsageTracker();
+    }
+
+    /**
+     * Ensure DocumentProcessor is initialized (lazy initialization)
+     */
+    async ensureInitialized(options = {}) {
+        if (this.isInitialized) return;
+        if (this.initializationPromise) return this.initializationPromise;
+        
+        this.initializationPromise = this.initialize(options);
+        await this.initializationPromise;
+        this.isInitialized = true;
     }
 
     /**

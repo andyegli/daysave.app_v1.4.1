@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { isAuthenticated, requireFeature } = require('../middleware');
 
-// Import backward compatibility service for seamless transition
-const BackwardCompatibilityService = require('../services/BackwardCompatibilityService');
+// Enhanced multimedia processing using AutomationOrchestrator
 
 // Import models
 const { Content, VideoAnalysis, Speaker, Thumbnail, OCRCaption } = require('../models');
@@ -30,8 +29,21 @@ const logger = require('../config/logger');
  * Results are stored in the database and linked to user content.
  */
 
-// Initialize backward compatibility service
-const compatibilityService = new BackwardCompatibilityService();
+// Initialize enhanced AutomationOrchestrator
+const { AutomationOrchestrator } = require('../services/multimedia');
+let orchestrator = null;
+
+/**
+ * Get orchestrator instance with lazy initialization
+ */
+async function getOrchestrator() {
+  if (!orchestrator) {
+    console.log('🎛️ Lazy initializing AutomationOrchestrator for multimedia analysis...');
+    orchestrator = AutomationOrchestrator.getInstance();
+    console.log('✅ AutomationOrchestrator ready for multimedia processing');
+  }
+  return orchestrator;
+}
 
 /**
  * POST /multimedia/analyze
@@ -88,14 +100,15 @@ router.post('/analyze', [
       ...options
     };
     
-    logger.info(`Starting backward compatible multimedia analysis for user ${req.user.id}`, {
+    logger.info(`Starting enhanced multimedia analysis for user ${req.user.id}`, {
       url,
       content_id,
       options: analysisOptions
     });
     
-    // Perform analysis through backward compatibility service
-    const analysisResults = await compatibilityService.analyzeContent(url, analysisOptions);
+    // Perform analysis through enhanced AutomationOrchestrator
+    const activeOrchestrator = await getOrchestrator();
+    const analysisResults = await activeOrchestrator.processUrl(url, analysisOptions);
     
     // Update content record if linked
     if (content_id) {
