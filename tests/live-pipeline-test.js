@@ -16,7 +16,7 @@ const path = require('path');
 
 class LivePipelineTest {
   constructor() {
-    this.baseUrl = 'http://localhost:3000';
+    this.baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     this.testUrls = [];
     this.results = [];
     this.cookies = null;

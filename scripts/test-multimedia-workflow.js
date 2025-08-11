@@ -14,7 +14,7 @@ const { Content, VideoAnalysis, Speaker, Thumbnail, OCRCaption, User } = require
 
 // Test configuration
 const TEST_CONFIG = {
-  baseUrl: 'http://localhost:3000',
+  baseUrl: process.env.BASE_URL || 'http://localhost:3000',
   testUrls: [
     'https://www.youtube.com/watch?v=dQw4w9WgXcQ', // Rick Roll (classic test video)
     'https://youtu.be/jNQXAC9IVRw', // Short YouTube video

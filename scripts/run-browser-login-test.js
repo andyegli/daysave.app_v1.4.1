@@ -6,7 +6,7 @@ const fetch = require('node-fetch');
 
 class BrowserLoginTest {
   constructor() {
-    this.baseUrl = 'http://localhost:3000';
+    this.baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     this.testUrls = [
       { url: 'https://www.youtube.com/watch?v=9bZkp7q19f0', platform: 'YouTube', type: 'video' },
       { url: 'https://www.instagram.com/reel/C5dPZWVI_r9/', platform: 'Instagram', type: 'video' },

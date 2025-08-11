@@ -16,7 +16,7 @@ const fetch = require('node-fetch');
 
 class BulkUrlIntegrationTest {
   constructor() {
-    this.baseUrl = 'http://localhost:3000';
+    this.baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     this.testResults = [];
     this.processedUrls = [];
     this.failedUrls = [];

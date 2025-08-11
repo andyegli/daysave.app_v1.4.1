@@ -94,6 +94,46 @@ All MFA-related events include the following standard audit fields:
 - **Session ID**: Session identifier (where applicable)
 - **Request ID**: Unique request identifier for tracing
 
+## Audit Logging System Enhancements (2025-08-11)
+
+### Foreign Key Constraint Resolution
+
+The audit logging system has been enhanced to handle invalid user IDs gracefully:
+
+- **User Validation**: All user IDs are validated before database insertion
+- **Graceful Degradation**: Invalid user IDs are set to null with original ID preserved in details
+- **File Logging Continuity**: File-based audit logging continues even if database logging fails
+- **Error Tracking**: All audit logging errors are logged for debugging and monitoring
+
+### Enhanced Error Handling
+
+```javascript
+// Example of enhanced audit logging with validation
+const logAuthEvent = async (event, data = {}) => {
+  // File logging always succeeds
+  enhancedLogger.info(`AUTH_EVENT: ${event}`, { ... });
+  
+  // Database logging with user validation
+  const userId = data.userId || data.adminId || data.user?.id || null;
+  let validatedUserId = null;
+  
+  if (userId) {
+    const userExists = await User.findByPk(userId, { attributes: ['id'], raw: true });
+    validatedUserId = userExists ? userId : null;
+  }
+  
+  await AuditLog.create({
+    action: event,
+    user_id: validatedUserId,
+    details: {
+      ...data,
+      originalUserId: userId !== validatedUserId ? userId : undefined,
+      timestamp: new Date().toISOString()
+    }
+  });
+};
+```
+
 ## State Tracking
 
 ### Previous vs New State
@@ -130,6 +170,34 @@ Admin operations log both previous and new states for complete audit trails:
 - Events are retained according to the configured log retention policy
 - Database audit logs can be exported for external security analysis
 - Log integrity is maintained through the AuditLog model with foreign key constraints
+
+### Automated Audit Log Archival (2025-08-11)
+
+A comprehensive archival system has been implemented to manage log retention:
+
+- **Configurable Retention**: Standard events (365 days), Critical events (7 years)
+- **Smart Event Classification**: Automatic categorization of critical security events
+- **Export Before Deletion**: All archived logs exported to JSON format
+- **Compliance Support**: 7-year retention for critical events (MFA, admin actions, security incidents)
+- **Batch Processing**: Efficient archival with configurable batch sizes
+- **Dry-run Support**: Test archival operations before execution
+
+#### Critical Events (7-year retention):
+- `MFA_ENABLED_SUCCESS`, `MFA_DISABLED_SUCCESS`
+- `ADMIN_MFA_REQUIRED_ENFORCED`
+- `PASSWORD_CHANGE_SUCCESS`
+- `USER_LOGIN_SUCCESS`, `USER_LOGIN_FAILED`
+- `API_KEY_CREATE`, `API_KEY_DELETE`
+- All admin user management actions
+
+#### Usage:
+```bash
+# Run archival with dry-run
+node scripts/audit-log-archival.js --dry-run --retention-days=90
+
+# Live archival with custom retention
+node scripts/audit-log-archival.js --retention-days=180 --critical-retention-days=2555
+```
 
 ## Monitoring & Alerting
 

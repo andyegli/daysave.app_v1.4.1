@@ -5,7 +5,7 @@ const readline = require('readline');
 
 class BulkUrlTester {
   constructor() {
-    this.baseUrl = 'http://localhost:3000';
+    this.baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     this.testUrls = [
       'https://www.youtube.com/watch?v=9bZkp7q19f0',
       'https://www.instagram.com/reel/C5dPZWVI_r9/',
@@ -53,7 +53,7 @@ class BulkUrlTester {
 
   async getAuthentication() {
     console.log('🔐 Authentication required...');
-    console.log('Please login to DaySave in your browser at: http://localhost:3000/auth/login');
+    console.log(`Please login to DaySave in your browser at: ${process.env.BASE_URL || 'http://localhost:3000'}/auth/login`);
     console.log('Then copy the session cookie value and paste it here.\n');
     
     const rl = readline.createInterface({

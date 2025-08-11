@@ -224,19 +224,23 @@ function generateCompactPlantUML(timeline) {
     console.log('🎨 Generating compact PlantUML Gantt chart...');
     
     const generatedDate = new Date().toISOString().split('T')[0];
-    let plantuml = `@startgantt
-title DaySave v1.4.1 Development Timeline (Generated ${generatedDate})
-
-`;
-
+    
     // Only include phases with significant commits and create high-level tasks
     const significantPhases = Object.values(timeline)
         .filter(group => group.commits.length > 0)
         .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
+    // Get the earliest start date for the project
+    const projectStartDate = significantPhases.length > 0 ? significantPhases[0].startDate : '2025-07-16';
+    
+    let plantuml = `@startgantt
+title DaySave v1.4.1 Development Timeline (Generated ${generatedDate})
+project starts ${projectStartDate}
+
+`;
+
     significantPhases.forEach(group => {
         if (group.commits.length > 0) {
-            plantuml += `[${group.phase.name}] starts ${group.startDate}\n`;
             plantuml += `[${group.phase.name}] lasts ${group.duration} days\n`;
             plantuml += `[${group.phase.name}] is colored in ${group.phase.color}\n`;
         }

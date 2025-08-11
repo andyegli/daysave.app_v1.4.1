@@ -12,7 +12,7 @@ const { JSDOM } = require('jsdom');
 
 // Test configuration
 const TEST_CONFIG = {
-  directUrl: 'http://localhost:3000',
+  directUrl: process.env.BASE_URL || 'http://localhost:3000',
   proxyUrl: 'http://localhost', // Assuming nginx proxy on port 80
   timeout: 10000,
   maxRetries: 3

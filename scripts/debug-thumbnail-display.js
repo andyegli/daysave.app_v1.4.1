@@ -82,9 +82,9 @@ async function diagnoseThumbailIssues() {
       let testUrl = null;
       
       if (sampleThumb.file_path.startsWith('uploads/thumbnails/')) {
-        testUrl = `http://localhost:3000/${sampleThumb.file_path}`;
+        testUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/${sampleThumb.file_path}`;
       } else {
-        testUrl = `http://localhost:3000/uploads/thumbnails/${path.basename(sampleThumb.file_path)}`;
+        testUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/uploads/thumbnails/${path.basename(sampleThumb.file_path)}`;
       }
       
       console.log(`   Testing URL: ${testUrl}`);
@@ -132,7 +132,7 @@ async function diagnoseThumbailIssues() {
     
     console.log('\n🔧 Quick Fix Commands:');
     console.log('   • Regenerate thumbnails: node scripts/fix-thumbnails.js');
-    console.log('   • Check static serving: curl http://localhost:3000/uploads/thumbnails/');
+    console.log(`   • Check static serving: curl ${process.env.BASE_URL || 'http://localhost:3000'}/uploads/thumbnails/`);
     console.log('   • Browser console: Open DevTools → Console tab');
     
   } catch (error) {

@@ -1441,12 +1441,16 @@ router.post('/', [
       });
       
       // Return success immediately - analysis will update content in background
+      const operationId = `content-${content.id}-${Date.now()}`;
+      
       res.json({ 
         success: true, 
         content,
+        operationId, // For progress tracking
         ai_analysis: {
           status: 'started',
-          message: 'Comprehensive AI analysis has been started and will update content when complete'
+          message: 'Comprehensive AI analysis has been started and will update content when complete',
+          progress_tracking: true
         }
       });
   } catch (error) {
@@ -1859,13 +1863,31 @@ router.get('/api/:id/status', isAuthenticated, async (req, res) => {
       return res.status(404).json({ error: 'Content not found' });
     }
     
-    // Check analysis completeness
-    const hasTranscription = !!(content.transcription && content.transcription.length > 10);
-    const hasSummary = !!(content.summary && content.summary.length > 10);
+    // Get analysis tables to check for completed processing
+    const { VideoAnalysis, AudioAnalysis, ImageAnalysis, ProcessingJob } = require('../models');
+    
+    // Check for analysis records in the new tables
+    const [videoAnalysis, audioAnalysis, imageAnalysis, processingJobs] = await Promise.all([
+      VideoAnalysis.findOne({ where: { content_id: contentId, user_id: userId } }),
+      AudioAnalysis.findOne({ where: { content_id: contentId, user_id: userId } }),
+      ImageAnalysis.findOne({ where: { content_id: contentId, user_id: userId } }),
+      ProcessingJob.findAll({
+        where: { content_id: contentId, user_id: userId },
+        order: [['createdAt', 'DESC']],
+        limit: 5
+      })
+    ]);
+    
+    const analysis = videoAnalysis || audioAnalysis || imageAnalysis;
+    const latestJob = processingJobs.length > 0 ? processingJobs[0] : null;
+    
+    // Check analysis completeness - prioritize new analysis tables over legacy content fields
+    const hasTranscription = !!(analysis?.transcription || content.transcription && content.transcription.length > 10);
+    const hasSummary = !!(analysis?.summary || content.summary && content.summary.length > 10);
     const hasTitle = !!(content.generated_title && content.generated_title.length > 0);
     const hasTags = !!(content.auto_tags && content.auto_tags.length > 0);
     const hasThumbnails = content.thumbnails && content.thumbnails.length > 0;
-    const hasSentiment = !!(content.sentiment);
+    const hasSentiment = !!(analysis?.sentiment || content.sentiment);
     
     // Calculate completion percentage
     const features = [];
@@ -1880,15 +1902,33 @@ router.get('/api/:id/status', isAuthenticated, async (req, res) => {
     );
     
     if (isMultimedia) {
-      features.push(
-        { name: 'Download', completed: true }, // Always completed if we have the content
-        { name: 'Processing', completed: hasSummary || hasTranscription },
-        { name: 'Transcription', completed: hasTranscription },
-        { name: 'Summary', completed: hasSummary },
-        { name: 'Thumbnails', completed: hasThumbnails },
-        { name: 'Tags', completed: hasTags },
-        { name: 'Sentiment', completed: hasSentiment }
+      // Check if this is a Facebook/Instagram share link (limited extractable content)
+      const isSocialShareLink = content.url && (
+        content.url.includes('facebook.com/share/') ||
+        content.url.includes('instagram.com/') ||
+        content.url.includes('fb.watch/')
       );
+      
+      if (isSocialShareLink) {
+        // For social share links, only expect basic metadata
+        features.push(
+          { name: 'Processing', completed: hasTitle || hasTags },
+          { name: 'Title', completed: hasTitle },
+          { name: 'Tags', completed: hasTags },
+          { name: 'Metadata', completed: hasTitle && hasTags }
+        );
+      } else {
+        // For extractable multimedia (YouTube, direct video URLs, etc.)
+        features.push(
+          { name: 'Download', completed: true }, // Always completed if we have the content
+          { name: 'Processing', completed: hasSummary || hasTranscription },
+          { name: 'Transcription', completed: hasTranscription },
+          { name: 'Summary', completed: hasSummary },
+          { name: 'Thumbnails', completed: hasThumbnails },
+          { name: 'Tags', completed: hasTags },
+          { name: 'Sentiment', completed: hasSentiment }
+        );
+      }
     } else {
       features.push(
         { name: 'Processing', completed: hasSummary || hasTitle },
@@ -1901,22 +1941,33 @@ router.get('/api/:id/status', isAuthenticated, async (req, res) => {
     completedFeatures = features.filter(f => f.completed).length;
     const progressPercentage = Math.round((completedFeatures / features.length) * 100);
     
-    // Determine status
+    // Determine status - check processing jobs first for accurate status
     let status = 'waiting';
-    if (progressPercentage === 0) {
-      status = 'waiting';
-    } else if (progressPercentage === 100) {
+    
+    // If we have a completed processing job and analysis data, it's completed
+    if (latestJob && latestJob.status === 'completed' && analysis) {
       status = 'analysed';
-    } else if (progressPercentage > 0) {
+    } else if (latestJob && latestJob.status === 'processing') {
       status = 'processing';
+    } else if (latestJob && latestJob.status === 'failed') {
+      status = 'incomplete';
+    } else {
+      // Fallback to feature-based status determination
+      if (progressPercentage === 0) {
+        status = 'waiting';
+      } else if (progressPercentage === 100) {
+        status = 'analysed';
+      } else if (progressPercentage > 0) {
+        status = 'processing';
+      }
     }
     
     // Check for errors (if content is old but incomplete analysis)
     const isOld = (Date.now() - new Date(content.createdAt).getTime()) > (15 * 60 * 1000); // 15 minutes
     if (isOld && isMultimedia) {
-      if (progressPercentage === 0) {
+      if (progressPercentage === 0 && !analysis) {
         status = 'incomplete'; // No analysis started
-      } else if (progressPercentage > 0 && progressPercentage < 100 && !hasTranscription && !hasSummary) {
+      } else if (progressPercentage > 0 && progressPercentage < 100 && !hasTranscription && !hasSummary && !analysis) {
         status = 'incomplete'; // Analysis started but core features failed
       }
     }
@@ -1933,10 +1984,13 @@ router.get('/api/:id/status', isAuthenticated, async (req, res) => {
         hasTags: hasTags,
         hasThumbnails: hasThumbnails,
         hasSentiment: hasSentiment,
-        transcriptionLength: content.transcription?.length || 0,
-        summaryLength: content.summary?.length || 0,
+        transcriptionLength: (analysis?.transcription || content.transcription)?.length || 0,
+        summaryLength: (analysis?.summary || content.summary)?.length || 0,
         tagCount: content.auto_tags?.length || 0,
-        thumbnailCount: content.thumbnails?.length || 0
+        thumbnailCount: content.thumbnails?.length || 0,
+        hasAnalysisRecord: !!analysis,
+        analysisType: analysis ? (videoAnalysis ? 'video' : audioAnalysis ? 'audio' : 'image') : null,
+        latestJobStatus: latestJob?.status || null
       },
       metadata: {
         contentId: contentId,

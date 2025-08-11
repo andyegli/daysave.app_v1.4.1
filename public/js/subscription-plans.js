@@ -162,6 +162,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <small class="text-muted">
                             <div><i class="fas fa-cloud-upload-alt me-2"></i>${plan.max_file_uploads === -1 ? 'Unlimited' : plan.max_file_uploads} file uploads</div>
                             <div><i class="fas fa-hdd me-2"></i>${plan.max_storage_gb === -1 ? 'Unlimited' : plan.max_storage_gb}GB storage</div>
+                            <div><i class="fas fa-robot me-2"></i>${plan.max_ai_tokens_per_month === -1 ? 'Unlimited' : (plan.max_ai_tokens_per_month / 1000).toLocaleString()}K AI tokens/month</div>
                             <div><i class="fas fa-key me-2"></i>${plan.max_api_keys === -1 ? 'Unlimited' : plan.max_api_keys} API keys</div>
                             <div><i class="fas fa-users me-2"></i>${plan.max_contacts === -1 ? 'Unlimited' : plan.max_contacts} contacts</div>
                         </small>
@@ -187,6 +188,8 @@ document.addEventListener('DOMContentLoaded', function() {
             { key: 'max_file_uploads', label: 'File Uploads', icon: 'fas fa-cloud-upload-alt' },
             { key: 'max_file_size_mb', label: 'Max File Size', icon: 'fas fa-file', suffix: 'MB' },
             { key: 'max_storage_gb', label: 'Storage', icon: 'fas fa-hdd', suffix: 'GB' },
+            { key: 'max_ai_tokens_per_month', label: 'AI Tokens/Month', icon: 'fas fa-robot', type: 'tokens' },
+            { key: 'max_ai_cost_per_month_usd', label: 'AI Cost Limit/Month', icon: 'fas fa-dollar-sign', type: 'currency' },
             { key: 'max_api_keys', label: 'API Keys', icon: 'fas fa-key' },
             { key: 'max_contacts', label: 'Contacts', icon: 'fas fa-users' },
             { key: 'max_content_items', label: 'Content Items', icon: 'fas fa-file-alt' },
@@ -207,6 +210,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         value = value ? '<i class="fas fa-check text-success"></i>' : '<i class="fas fa-times text-danger"></i>';
                     } else if (value === -1) {
                         value = '<i class="fas fa-infinity text-primary"></i>';
+                    } else if (feature.type === 'tokens') {
+                        value = `${(value / 1000).toLocaleString()}K`;
+                    } else if (feature.type === 'currency') {
+                        value = `$${parseFloat(value).toFixed(2)}`;
                     } else if (feature.suffix) {
                         value = `${value}${feature.suffix}`;
                     }
@@ -338,6 +345,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <ul class="list-unstyled">
                     <li><i class="fas fa-check text-success me-2"></i>${plan.max_file_uploads === -1 ? 'Unlimited' : plan.max_file_uploads} file uploads</li>
                     <li><i class="fas fa-check text-success me-2"></i>${plan.max_storage_gb === -1 ? 'Unlimited' : plan.max_storage_gb}GB storage</li>
+                    <li><i class="fas fa-check text-success me-2"></i>${plan.max_ai_tokens_per_month === -1 ? 'Unlimited' : (plan.max_ai_tokens_per_month / 1000).toLocaleString()}K AI tokens/month</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Monthly AI cost limit: ${plan.max_ai_cost_per_month_usd === -1 ? 'Unlimited' : '$' + parseFloat(plan.max_ai_cost_per_month_usd).toFixed(2)}</li>
                     <li><i class="fas fa-check text-success me-2"></i>${plan.max_api_keys === -1 ? 'Unlimited' : plan.max_api_keys} API keys</li>
                     <li><i class="fas fa-check text-success me-2"></i>${plan.max_contacts === -1 ? 'Unlimited' : plan.max_contacts} contacts</li>
                     <li><i class="fas fa-check text-success me-2"></i>AI Analysis: ${plan.ai_analysis_enabled ? 'Yes' : 'No'}</li>

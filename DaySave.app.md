@@ -50,6 +50,12 @@ DaySave.app is a comprehensive personal content management platform that allows 
 - **Bootstrap Design System**: Modern, responsive design with glassmorphism effects
 - **Interactive Dashboard**: Comprehensive overview of content and analytics
 - **Content Gallery**: Visual content browser with filtering and search
+- **Usage Analytics Dashboard**: Personal usage monitoring and cost tracking 🆕
+  - **Real-time Metrics**: AI token usage, storage costs, and monthly spending
+  - **Visual Analytics**: Interactive charts showing 12-month usage trends
+  - **Subscription Monitoring**: Live progress bars showing usage vs limits
+  - **Cost Breakdown**: Detailed analysis of recent content processing costs
+  - **Alert Integration**: Visual warnings for approaching subscription limits
 - **Profile Management**: Enhanced user settings and security configuration 🆕
   - **Password Change**: Secure password modification with current password verification
   - **MFA Setup**: User-friendly TOTP setup with QR code generation and backup codes
@@ -66,9 +72,19 @@ DaySave.app is a comprehensive personal content management platform that allows 
   - **Status Monitoring**: Real-time MFA status display (enabled, required, configured)
   - **Enforcement Tracking**: Complete audit trail of admin MFA actions
   - **Recovery Tools**: Admin MFA reset capabilities for locked-out users
+- **Usage Analytics & Cost Management**: Comprehensive usage monitoring and cost control 🆕
+  - **Real-time Usage Tracking**: AI token usage, storage costs, and subscription monitoring
+  - **Admin Usage Dashboard**: System-wide usage statistics and top user analytics
+  - **Cost Configuration**: Dynamic pricing models for AI services and storage providers
+  - **Usage Limits Management**: Subscription plan configuration with enforced thresholds
+  - **Historical Analytics**: 12-month usage trends and cost forecasting
+  - **Alert System**: Configurable usage alerts and overage warnings
 - **API Key Management**: Secure API access with usage tracking and quotas
 - **System Monitoring**: Health checks, performance metrics, and error tracking
-- **Audit Logging**: Comprehensive activity tracking and security auditing
+- **Audit Logging**: Comprehensive activity tracking and security auditing 🆕
+  - **Enhanced Audit System**: Fixed foreign key constraints with user validation
+  - **Archival Management**: Automated log retention with 7-year compliance support
+  - **Event Classification**: Smart retention policies for critical vs standard events
 - **Passkey Administration**: Admin oversight of user passkey configurations
 
 ## Technical Architecture

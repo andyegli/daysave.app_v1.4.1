@@ -132,7 +132,7 @@ async function main() {
     console.log('✅ Device fingerprinting test data created successfully!');
     console.log(`📱 User Devices: ${devices.length}`);
     console.log(`🔐 Login Attempts: ${attempts.length}`);
-    console.log('🌐 You can now view the admin dashboard at: http://localhost:3000/admin/device-fingerprinting');
+    console.log(`🌐 You can now view the admin dashboard at: ${process.env.BASE_URL || 'http://localhost:3000'}/admin/device-fingerprinting`);
     console.log('================================');
     
   } catch (error) {

@@ -11,7 +11,7 @@ const fetch = require('node-fetch');
 
 class AIPipelineTest {
   constructor() {
-    this.baseUrl = 'http://localhost:3000';
+    this.baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     this.testResults = {
       googleVision: { tested: false, working: false, details: '' },
       openaiVision: { tested: false, working: false, details: '' },

@@ -21,10 +21,10 @@ const { URL } = require('url');
 
 // Test configuration
 const testUrls = [
-  'http://localhost:3000',
-  'http://localhost:3000/dashboard',
-  'http://localhost:3000/js/form-handlers.js',
-  'http://localhost:3000/api/places/autocomplete'
+  process.env.BASE_URL || 'http://localhost:3000',
+  `${process.env.BASE_URL || 'http://localhost:3000'}/dashboard`,
+  `${process.env.BASE_URL || 'http://localhost:3000'}/js/form-handlers.js`,
+  `${process.env.BASE_URL || 'http://localhost:3000'}/api/places/autocomplete`
 ];
 
 // Security headers to check

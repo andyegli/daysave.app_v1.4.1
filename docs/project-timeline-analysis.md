@@ -90,12 +90,30 @@ Run the script to generate charts:
 # Generate Mermaid chart (default output: daysave-timeline.mmd)
 node scripts/generate-gantt-chart.js --format=mermaid
 
-# Generate PlantUML chart (default output: daysave-timeline.puml)  
-node scripts/generate-gantt-chart.js --format=plantuml
+# Generate compact PlantUML chart (default, URI-friendly)
+node scripts/generate-gantt-chart.js --format=plantuml --compact
+
+# Generate detailed PlantUML chart (may hit URI limits on large projects)
+node scripts/generate-gantt-chart.js --format=plantuml --detailed
 
 # Custom output location
 node scripts/generate-gantt-chart.js --format=mermaid --output=reports/timeline.mmd
 ```
+
+### Chart Size Options
+
+**Compact Mode (Default for PlantUML)**:
+- High-level phase overview
+- URI-friendly for online viewers
+- ~1KB file size
+- Best for: Quick overview, presentations
+
+**Detailed Mode**:
+- Individual task breakdown
+- Comprehensive commit mapping
+- ~24KB+ file size
+- May require local PlantUML CLI
+- Best for: Detailed analysis, documentation
 
 ### Manual Chart Viewing
 

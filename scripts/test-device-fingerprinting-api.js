@@ -154,7 +154,7 @@ async function main() {
     console.log('');
     console.log('================================');
     console.log('✅ All API tests completed successfully!');
-    console.log('🌐 The admin dashboard should now work at: http://localhost:3000/admin/device-fingerprinting');
+    console.log(`🌐 The admin dashboard should now work at: ${process.env.BASE_URL || 'http://localhost:3000'}/admin/device-fingerprinting`);
     console.log('================================');
     
   } catch (error) {
