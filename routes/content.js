@@ -132,6 +132,14 @@ async function triggerMultimediaAnalysis(content, user) {
       }
     }
     
+    // Validate that we have valid instances before proceeding
+    if (!contentInstance || !contentInstance.id) {
+      throw new Error('Content instance is invalid or missing ID');
+    }
+    if (!userInstance || !userInstance.id) {
+      throw new Error('User instance is invalid or missing ID');
+    }
+    
     console.log(`🎬 TRIGGER: Starting multimedia analysis for content ${contentInstance.id}`, {
       user_id: userInstance.id,
       content_id: contentInstance.id,
@@ -165,6 +173,30 @@ async function triggerMultimediaAnalysis(content, user) {
       orchestrator = AutomationOrchestrator.getInstance();
     }
     
+    // Generate operation ID for progress tracking
+    const operationId = `content-${contentInstance.id}-${Date.now()}`;
+    
+    // Initialize progress tracking if WebSocket service is available
+    const progressCallback = (progress) => {
+      // Log progress for debugging
+      console.log(`🔄 [${operationId}] ${progress.percentage}% - ${progress.stage}: ${progress.message}`);
+      
+      // Emit progress via global event emitter if available
+      if (global.progressWebSocket) {
+        global.progressWebSocket.updateProgress(operationId, progress);
+      }
+    };
+    
+    // Start operation tracking
+    if (global.progressWebSocket) {
+      global.progressWebSocket.startOperation(operationId, {
+        type: 'content_analysis',
+        url: contentInstance.url,
+        userId: userInstance.id,
+        contentId: contentInstance.id
+      });
+    }
+    
     const processingResult = await orchestrator.processUrl(contentInstance.url, {
       transcription: true,
       sentiment: true,
@@ -174,7 +206,9 @@ async function triggerMultimediaAnalysis(content, user) {
       enableSummarization: true,
       enableSentimentAnalysis: true,
       user_id: userInstance.id,
-      content_id: contentInstance.id
+      content_id: contentInstance.id,
+      progressCallback,
+      operationId
     });
 
     // Extract results from backward compatibility service
@@ -225,9 +259,9 @@ async function triggerMultimediaAnalysis(content, user) {
     }
 
     // Log processing results
-    console.log(`🎬 Multimedia analysis completed for content ${content.id}`, {
-      user_id: user.id,
-      content_id: content.id,
+    console.log(`🎬 Multimedia analysis completed for content ${contentInstance.id}`, {
+      user_id: userInstance.id,
+      content_id: contentInstance.id,
       analysis_id: formattedResults.analysisId,
       platform: formattedResults.platform,
       processing_time: formattedResults.processing_time,
@@ -239,6 +273,11 @@ async function triggerMultimediaAnalysis(content, user) {
     
     // Update content record if we have data to update
     if (Object.keys(updateData).length > 0) {
+      // Final validation before database update
+      if (!contentInstance?.id || !userInstance?.id) {
+        throw new Error(`Cannot update content: contentInstance.id=${contentInstance?.id}, userInstance.id=${userInstance?.id}`);
+      }
+      
       await Content.update(updateData, {
         where: { id: contentInstance.id, user_id: userInstance.id }
       });
@@ -249,11 +288,25 @@ async function triggerMultimediaAnalysis(content, user) {
         job_id: processingResult.jobId,
         updates: Object.keys(updateData)
       });
+      
+      // Complete operation tracking
+      if (global.progressWebSocket) {
+        global.progressWebSocket.completeOperation(operationId, {
+          success: true,
+          updatedFields: Object.keys(updateData),
+          processingTime: processingResult.processingTime
+        });
+      }
     }
     
   } catch (error) {
     const errorContentId = content?.id || 'unknown';
     const errorUserId = user?.id || 'unknown';
+    
+    // Track error if operation was started
+    if (global.progressWebSocket && typeof operationId !== 'undefined') {
+      global.progressWebSocket.errorOperation(operationId, error);
+    }
     
     console.error(`❌ TRIGGER ERROR: Analysis failed for content ${errorContentId}:`, {
       user_id: errorUserId,
@@ -2197,4 +2250,5 @@ router.get('/:id/analysis/view', isAuthenticated, async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;
+module.exports.triggerMultimediaAnalysis = triggerMultimediaAnalysis; 
