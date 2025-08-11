@@ -2714,7 +2714,7 @@ router.get('/api/analytics/performance', isAuthenticated, isAdmin, async (req, r
       error: 'Failed to fetch performance metrics'
     });
   }
-});
+}););
 
 // Admin Dashboard Stats API Endpoints
 router.get('/api/stats/users', isAuthenticated, isAdmin, async (req, res) => {

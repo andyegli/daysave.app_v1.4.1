@@ -37,7 +37,7 @@ async function loadAllData() {
     console.log('✅ All analytics data loaded successfully');
   } catch (error) {
     console.error('❌ Error loading analytics data:', error);
-    showError('Failed to load analytics data');
+    showError('Failed to load analytics data. Please check your connection and try again.');
   }
 }
 
@@ -120,6 +120,7 @@ async function loadPerformanceData() {
     if (data.success) {
       updatePerformanceMetrics(data.data);
       updateSystemInfo(data.data.system);
+      updateActivitySummary(data.data);
     }
   } catch (error) {
     console.error('Error loading performance data:', error);
@@ -246,18 +247,77 @@ function updateOverviewStats(data) {
 // Update activity summary
 function updateActivitySummary(data) {
   const summaryElement = document.getElementById('activitySummary');
+  
+  if (!data) {
+    summaryElement.innerHTML = `
+      <div class="text-center py-4">
+        <i class="bi bi-clock-history text-muted fs-2"></i>
+        <p class="text-muted mt-2">No recent activity data</p>
+      </div>
+    `;
+    return;
+  }
+  
+  // Use data from the performance endpoint or overview data
+  const activityData = {
+    jobsProcessed: data.jobStatus ? data.jobStatus.reduce((sum, js) => sum + js.count, 0) : 0,
+    performanceJobs: data.performance ? data.performance.length : 0,
+    systemUptime: data.system ? data.system.uptime : 0,
+    memoryUsage: data.system ? data.system.memory?.percentage : 0
+  };
+  
   summaryElement.innerHTML = `
-    <div class="activity-item">
-      <strong>Recent Logins:</strong> ${data.recentLogins || 0}
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="d-flex align-items-center p-2 bg-light rounded">
+          <div class="me-3">
+            <i class="bi bi-gear-fill text-primary fs-4"></i>
+          </div>
+          <div>
+            <div class="fw-bold">${activityData.jobsProcessed}</div>
+            <small class="text-muted">Processing Jobs</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex align-items-center p-2 bg-light rounded">
+          <div class="me-3">
+            <i class="bi bi-speedometer2 text-success fs-4"></i>
+          </div>
+          <div>
+            <div class="fw-bold">${activityData.performanceJobs}</div>
+            <small class="text-muted">Performance Metrics</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex align-items-center p-2 bg-light rounded">
+          <div class="me-3">
+            <i class="bi bi-clock text-info fs-4"></i>
+          </div>
+          <div>
+            <div class="fw-bold">${activityData.systemUptime}h</div>
+            <small class="text-muted">System Uptime</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex align-items-center p-2 bg-light rounded">
+          <div class="me-3">
+            <i class="bi bi-memory text-warning fs-4"></i>
+          </div>
+          <div>
+            <div class="fw-bold">${activityData.memoryUsage}%</div>
+            <small class="text-muted">Memory Usage</small>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="activity-item">
-      <strong>Files Uploaded Today:</strong> ${data.filesUploadedToday || 0}
-    </div>
-    <div class="activity-item">
-      <strong>Content Processed:</strong> ${data.contentProcessed || 0}
-    </div>
-    <div class="activity-item">
-      <strong>API Calls Today:</strong> ${data.apiCallsToday || 0}
+    <div class="mt-3 text-center">
+      <small class="text-muted">
+        <i class="bi bi-info-circle me-1"></i>
+        Last updated: ${new Date().toLocaleTimeString()}
+      </small>
     </div>
   `;
 }
@@ -288,42 +348,176 @@ function updateTopUsersTable(data) {
 
 // Update performance metrics
 function updatePerformanceMetrics(data) {
-  // Update performance indicators
-  if (data.memory) {
-    const memoryElement = document.getElementById('memoryUsage');
-    if (memoryElement) {
-      memoryElement.innerHTML = `
-        <div class="metric-value">${Math.round(data.memory.used / 1024 / 1024)}MB</div>
-        <div class="metric-label">Memory Used</div>
-      `;
-    }
+  const performanceElement = document.getElementById('performanceMetrics');
+  
+  if (!data || (!data.performance && !data.jobStatus && !data.system)) {
+    performanceElement.innerHTML = `
+      <div class="text-center py-4">
+        <i class="bi bi-info-circle text-muted fs-1"></i>
+        <p class="text-muted mt-2">No performance data available</p>
+        <small class="text-muted">Performance metrics will appear when there is processing activity</small>
+      </div>
+    `;
+    return;
+  }
+
+  let performanceHTML = '<div class="row">';
+  
+  // Performance metrics
+  if (data.performance && data.performance.length > 0) {
+    performanceHTML += `
+      <div class="col-12 mb-3">
+        <h6><i class="bi bi-speedometer me-2"></i>Processing Performance</h6>
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>AI Job</th>
+                <th>Avg Time</th>
+                <th>Min Time</th>
+                <th>Max Time</th>
+                <th>Jobs</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.performance.map(p => `
+                <tr>
+                  <td><span class="badge bg-primary">${p.aiJob}</span></td>
+                  <td>${p.avgTime}s</td>
+                  <td>${p.minTime}s</td>
+                  <td>${p.maxTime}s</td>
+                  <td>${p.jobCount}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
   }
   
-  if (data.cpu) {
-    const cpuElement = document.getElementById('cpuUsage');
-    if (cpuElement) {
-      cpuElement.innerHTML = `
-        <div class="metric-value">${data.cpu.percentage}%</div>
-        <div class="metric-label">CPU Usage</div>
-      `;
-    }
+  // Job status distribution
+  if (data.jobStatus && data.jobStatus.length > 0) {
+    performanceHTML += `
+      <div class="col-md-6 mb-3">
+        <h6><i class="bi bi-list-check me-2"></i>Job Status</h6>
+        ${data.jobStatus.map(js => `
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="badge ${getStatusBadgeClass(js.status)}">${js.status}</span>
+            <span class="fw-bold">${js.count}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+  
+  // System metrics preview
+  if (data.system) {
+    performanceHTML += `
+      <div class="col-md-6">
+        <h6><i class="bi bi-memory me-2"></i>System Resources</h6>
+        <div class="mb-2">
+          <small class="text-muted">Memory Usage</small>
+          <div class="progress">
+            <div class="progress-bar" style="width: ${data.system.memory.percentage}%">
+              ${data.system.memory.used}MB / ${data.system.memory.total}MB
+            </div>
+          </div>
+        </div>
+        <div class="row text-center">
+          <div class="col-6">
+            <div class="metric-badge badge bg-info">
+              ${data.system.uptime}h uptime
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="metric-badge badge bg-secondary">
+              ${data.system.platform}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  performanceHTML += '</div>';
+  
+  // If no data at all, show empty state
+  if (!data.performance?.length && !data.jobStatus?.length && !data.system) {
+    performanceHTML = `
+      <div class="text-center py-4">
+        <i class="bi bi-info-circle text-muted fs-1"></i>
+        <p class="text-muted mt-2">No performance data available</p>
+        <small class="text-muted">Performance metrics will appear when there is processing activity</small>
+      </div>
+    `;
+  }
+  
+  performanceElement.innerHTML = performanceHTML;
+}
+
+// Helper function for job status badges
+function getStatusBadgeClass(status) {
+  switch (status.toLowerCase()) {
+    case 'completed': return 'bg-success';
+    case 'failed': return 'bg-danger';
+    case 'pending': return 'bg-warning';
+    case 'processing': return 'bg-info';
+    default: return 'bg-secondary';
   }
 }
 
 // Update system info
 function updateSystemInfo(data) {
   const systemInfoElement = document.getElementById('systemInfo');
+  
+  if (!data) {
+    systemInfoElement.innerHTML = `
+      <div class="text-center py-4">
+        <i class="bi bi-info-circle text-muted fs-2"></i>
+        <p class="text-muted mt-2">No system information available</p>
+      </div>
+    `;
+    return;
+  }
+  
   systemInfoElement.innerHTML = `
     <div class="row">
-      <div class="col-6">
-        <strong>Memory:</strong> ${formatBytes(data.memory)}<br>
-        <strong>CPU Load:</strong> ${data.cpuLoad}%<br>
-        <strong>Free Space:</strong> ${formatBytes(data.freeSpace)}
+      <div class="col-md-6 mb-3">
+        <div class="border-start border-primary border-3 ps-3">
+          <h6 class="mb-2"><i class="bi bi-memory me-2"></i>Memory Usage</h6>
+          <div class="progress mb-2">
+            <div class="progress-bar" style="width: ${data.memory?.percentage || 0}%">
+              ${data.memory?.percentage || 0}%
+            </div>
+          </div>
+          <small class="text-muted">
+            ${data.memory?.used || 0}MB / ${data.memory?.total || 0}MB used
+          </small>
+        </div>
       </div>
-      <div class="col-6">
-        <strong>Platform:</strong> ${data.platform}<br>
-        <strong>Node.js:</strong> ${data.nodeVersion}<br>
-        <strong>Uptime:</strong> ${data.uptime}h
+      <div class="col-md-6 mb-3">
+        <div class="border-start border-success border-3 ps-3">
+          <h6 class="mb-2"><i class="bi bi-clock me-2"></i>System Uptime</h6>
+          <div class="fs-4 text-success fw-bold">${data.uptime || 0}h</div>
+          <small class="text-muted">Hours running</small>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="border-start border-info border-3 ps-3">
+          <h6 class="mb-2"><i class="bi bi-gear me-2"></i>Environment</h6>
+          <div><strong>Platform:</strong> ${data.platform || 'Unknown'}</div>
+          <div><strong>Node.js:</strong> ${data.nodeVersion || 'Unknown'}</div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="border-start border-warning border-3 ps-3">
+          <h6 class="mb-2"><i class="bi bi-cpu me-2"></i>Performance</h6>
+          <div class="text-warning fw-bold">
+            ${data.memory?.percentage ? (data.memory.percentage < 80 ? 'Good' : 'High Usage') : 'Monitoring'}
+          </div>
+          <small class="text-muted">Memory status</small>
+        </div>
       </div>
     </div>
   `;
