@@ -9,7 +9,23 @@ console.log('🔄 Multi-Domain Protocol Fix: Supporting localhost (all ports), d
 // Flag to prevent redirect loops
 let protocolFixApplied = false;
 
-// Function to normalize localhost URLs to maintain port consistency
+/**
+ * Normalize localhost URLs to maintain port consistency
+ * 
+ * PROBLEM SOLVED: OAuth callbacks and internal redirects were causing port inconsistencies
+ * where users would start on localhost but end up on localhost:3000 or vice versa.
+ * 
+ * SOLUTION: This function ensures that all localhost URLs maintain the same port
+ * as the current page, preventing jarring URL changes during navigation.
+ * 
+ * EXAMPLES:
+ * - Current page: localhost:3000 → All URLs get port 3000
+ * - Current page: localhost → All URLs have no port
+ * - Current page: localhost:80 → All URLs have no port (80 is default)
+ * 
+ * @param {string} url - URL to normalize
+ * @returns {string} - Normalized URL with consistent port
+ */
 function normalizeLocalhostUrl(url) {
   if (!url || typeof url !== 'string') return url;
   
@@ -19,7 +35,7 @@ function normalizeLocalhostUrl(url) {
   if (hostname === 'localhost') {
     // If we're on localhost with a specific port, ensure consistency
     if (currentPort && currentPort !== '80' && currentPort !== '443') {
-      // We have a specific port, ensure it's maintained
+      // We have a specific port (like 3000), ensure it's maintained in all URLs
       const portInUrl = url.match(/localhost:(\d+)/);
       if (!portInUrl && url.includes('localhost')) {
         // URL has localhost but no port, add current port
@@ -210,7 +226,22 @@ function fixProtocolInElements(fromProtocol, toProtocol) {
   });
 }
 
-// Global function to redirect while maintaining port consistency
+/**
+ * Global safe redirect function with port consistency
+ * 
+ * PURPOSE: Provides a centralized way to redirect that maintains URL consistency
+ * and prevents the localhost/localhost:3000 switching problem.
+ * 
+ * USAGE: Replace direct window.location.href assignments with window.safeRedirect(url)
+ * 
+ * FEATURES:
+ * - Maintains current port for localhost URLs
+ * - Applies protocol fixes (HTTP/HTTPS)
+ * - Prevents redirect loops
+ * - Logs all redirects for debugging
+ * 
+ * @param {string} url - URL to redirect to
+ */
 window.safeRedirect = function(url) {
   if (window.location.hostname === 'localhost') {
     const currentPort = window.location.port;

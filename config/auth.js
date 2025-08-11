@@ -6,8 +6,23 @@ const WebAuthnStrategy = require('passport-fido2-webauthn');
 const { User, SocialAccount, Role, UserPasskey } = require('../models');
 const { logOAuthFlow, logOAuthError, logAuthEvent, logAuthError } = require('./logger');
 
-// Dynamic callback URL generation - Google OAuth compatible
+/**
+ * Dynamic callback URL generation - Google OAuth compatible
+ * 
+ * IMPORTANT: This function ensures URL consistency during OAuth flows to prevent
+ * port-switching issues that occur when hardcoded localhost:3000 URLs are used.
+ * 
+ * FIXED ISSUE: Previously hardcoded localhost:3000 caused URLs to change from
+ * localhost to localhost:3000 during OAuth login, breaking user experience.
+ * 
+ * SOLUTION: Uses BASE_URL environment variable or defaults to localhost without
+ * port specification, allowing nginx proxy or direct connections to work seamlessly.
+ * 
+ * @param {string} provider - OAuth provider name (google, microsoft, apple)
+ * @returns {string} - Complete callback URL for the provider
+ */
 const getCallbackURL = (provider) => {
+  // Check for provider-specific environment variable first
   const envVar = `${provider.toUpperCase()}_CALLBACK_URL`;
   if (process.env[envVar]) {
     return process.env[envVar];
@@ -25,6 +40,8 @@ const getCallbackURL = (provider) => {
   // - https://daysave.app/auth/google/callback (production)
   
   // Use BASE_URL or default to localhost for development (Google OAuth compatible)
+  // This prevents port inconsistencies by using environment-defined URL or
+  // letting the system handle port resolution automatically
   return `${process.env.BASE_URL || 'http://localhost'}/auth/${provider}/callback`;
 };
 

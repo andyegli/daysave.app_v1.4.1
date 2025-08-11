@@ -1,5 +1,16 @@
-// Content Management JavaScript
-// This file handles all content management functionality
+/**
+ * Content Management JavaScript - External file for CSP compliance
+ * This file handles all content management functionality
+ * 
+ * MAJOR FIX (v1.4.1): Added port-aware redirect logic to solve OAuth URL inconsistency
+ * issue where users would start on localhost but end up on localhost:3000 during login.
+ * 
+ * KEY FEATURES:
+ * - Port-consistent redirects for localhost development
+ * - Protocol fixes (HTTPS→HTTP for localhost)
+ * - Safe navigation that maintains URL format
+ * - Prevents jarring URL changes during OAuth flows
+ */
 
 // Helper function to fix localhost SSL protocol issues
 function getCorrectUrl(path) {
@@ -72,6 +83,7 @@ if (false && window.location.hostname === 'localhost') {
 // COMPREHENSIVE PAGE LOAD PROTOCOL CHECK
 document.addEventListener('DOMContentLoaded', function() {
   // Double-check protocol after DOM load - DISABLED for daysave.local
+  // PORT-AWARE PROTOCOL FIX: Maintains port consistency during HTTPS→HTTP redirects
   if (false && window.location.hostname === 'localhost' && !window.location.hostname.includes('daysave.local') && window.location.protocol === 'https:') {
     console.log('🔄 DOM LOADED - HTTPS→HTTP REDIRECT for localhost...');
     const currentPort = window.location.port;
@@ -334,7 +346,8 @@ async function handleFileUpload(form) {
       modal.hide();
       
       setTimeout(() => {
-        // SAFE NAVIGATION - No HTTPS triggers
+        // SAFE NAVIGATION WITH PORT CONSISTENCY - No HTTPS triggers
+        // FIXED: OAuth login URL consistency issue where localhost vs localhost:3000 would switch
         if (window.location.hostname === 'localhost') {
           const currentPort = window.location.port;
           const portSuffix = (currentPort && currentPort !== '80') ? `:${currentPort}` : '';
@@ -421,6 +434,9 @@ async function handleUrlContent(form) {
           // Delay page reload to give status monitoring a chance to work
           setTimeout(() => {
             if (window.location.hostname === 'localhost') {
+              // PORT-AWARE REDIRECT: Maintain current port to prevent localhost/localhost:3000 switching
+              // This fixes the OAuth login URL inconsistency issue where users would start on one
+              // localhost format and end up on another after redirects
               const currentPort = window.location.port;
               const portSuffix = (currentPort && currentPort !== '80') ? `:${currentPort}` : '';
               window.location.href = `http://localhost${portSuffix}${window.location.pathname}${window.location.search}`;
@@ -432,6 +448,9 @@ async function handleUrlContent(form) {
           // Standard reload for content without analysis
           setTimeout(() => { 
             if (window.location.hostname === 'localhost') {
+              // PORT-AWARE REDIRECT: Maintain current port to prevent localhost/localhost:3000 switching
+              // This fixes the OAuth login URL inconsistency issue where users would start on one
+              // localhost format and end up on another after redirects
               const currentPort = window.location.port;
               const portSuffix = (currentPort && currentPort !== '80') ? `:${currentPort}` : '';
               window.location.href = `http://localhost${portSuffix}${window.location.pathname}${window.location.search}`;
@@ -546,6 +565,9 @@ function showAlert(message, type = 'info') {
           setTimeout(() => {
             // Fix for localhost HTTPS/HTTP protocol issues
             if (window.location.hostname === 'localhost') {
+              // PORT-AWARE REDIRECT: Maintain current port to prevent localhost/localhost:3000 switching
+              // This fixes the OAuth login URL inconsistency issue where users would start on one
+              // localhost format and end up on another after redirects
               const currentPort = window.location.port;
               const portSuffix = (currentPort && currentPort !== '80') ? `:${currentPort}` : '';
               window.location.href = `http://localhost${portSuffix}${window.location.pathname}${window.location.search}`;
