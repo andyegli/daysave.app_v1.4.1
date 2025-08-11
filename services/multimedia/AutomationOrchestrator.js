@@ -451,7 +451,7 @@ class AutomationOrchestrator {
                     summary: websiteResult.aiInsights.summary || '',
                     sentiment: { label: websiteResult.analysis.sentiment, score: 0.5 },
                     thumbnails: [],
-                    auto_tags: Array.isArray(websiteResult.aiInsights.tags) ? websiteResult.aiInsights.tags.join(', ') : websiteResult.aiInsights.tags || '',
+                    auto_tags: Array.isArray(websiteResult.aiInsights.tags) ? websiteResult.aiInsights.tags : (websiteResult.aiInsights.tags ? [websiteResult.aiInsights.tags] : []),
                     user_tags: [],
                     category: Array.isArray(websiteResult.aiInsights.categories) ? websiteResult.aiInsights.categories.join(', ') : websiteResult.aiInsights.categories || '',
                     generatedTitle: websiteResult.aiInsights.suggestedTitle || websiteResult.metadata.title,
