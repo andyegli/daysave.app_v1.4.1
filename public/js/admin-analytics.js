@@ -1,6 +1,14 @@
 // Analytics Dashboard JavaScript - External file to comply with CSP
 console.log('📊 Analytics Dashboard script loaded!');
 
+// Protocol fix helper function
+function getCorrectUrl(path) {
+  if (window.location.hostname === 'localhost') {
+    return path.replace('https://localhost', 'http://localhost');
+  }
+  return path;
+}
+
 // Chart instances
 let userActivityChart = null;
 let roleDistributionChart = null;
@@ -37,7 +45,7 @@ async function loadAllData() {
 async function loadOverviewData() {
   try {
     console.log('📊 Fetching overview data...');
-    const response = await fetch('/admin/api/analytics/overview', {
+    const response = await fetch(getCorrectUrl('/admin/api/analytics/overview'), {
       credentials: 'include'
     });
     const data = await response.json();
@@ -68,7 +76,7 @@ async function loadOverviewData() {
 async function loadUserTrends() {
   try {
     console.log('📊 Fetching user trends...');
-    const response = await fetch('/admin/api/analytics/user-trends?days=30', {
+    const response = await fetch(getCorrectUrl('/admin/api/analytics/user-trends?days=30'), {
       credentials: 'include'
     });
     const data = await response.json();
@@ -86,7 +94,7 @@ async function loadUserTrends() {
 async function loadContentStats() {
   try {
     console.log('📊 Fetching content stats...');
-    const response = await fetch('/admin/api/analytics/content-stats', {
+    const response = await fetch(getCorrectUrl('/admin/api/analytics/content-stats'), {
       credentials: 'include'
     });
     const data = await response.json();
@@ -104,7 +112,7 @@ async function loadContentStats() {
 async function loadPerformanceData() {
   try {
     console.log('📊 Fetching performance data...');
-    const response = await fetch('/admin/api/analytics/performance?hours=24', {
+    const response = await fetch(getCorrectUrl('/admin/api/analytics/performance?hours=24'), {
       credentials: 'include'
     });
     const data = await response.json();

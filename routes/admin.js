@@ -2532,7 +2532,7 @@ router.get('/api/analytics/user-trends', isAuthenticated, isAdmin, async (req, r
 // Analytics API - Content Statistics
 router.get('/api/analytics/content-stats', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const { Content, File } = require('../models');
+    const { Content, File, User } = require('../models');
     const { Op, sequelize } = require('sequelize');
     
     // Content type distribution
@@ -2597,11 +2597,20 @@ router.get('/api/analytics/content-stats', isAuthenticated, isAdmin, async (req,
           count: parseInt(ft.dataValues.count),
           totalSize: parseInt(ft.dataValues.totalSize) || 0
         })),
-        topUsers: storageByUser.map(user => ({
-          username: user.User ? user.User.username : 'Unknown',
-          fileCount: parseInt(user.dataValues.fileCount),
-          totalSize: parseInt(user.dataValues.totalSize) || 0
-        })),
+        topUsers: storageByUser.map(user => {
+          const totalSize = parseInt(user.dataValues.totalSize) || 0;
+          const fileCount = parseInt(user.dataValues.fileCount);
+          // Calculate percentage based on max storage or arbitrary scale
+          const maxStorage = Math.max(...storageByUser.map(u => parseInt(u.dataValues.totalSize) || 0));
+          const percentage = maxStorage > 0 ? Math.round((totalSize / maxStorage) * 100) : 0;
+          
+          return {
+            username: user.User ? user.User.username : 'Unknown',
+            fileCount: fileCount,
+            storageUsed: totalSize,
+            percentage: percentage
+          };
+        }),
         weeklyTrend: weeklyContent.map(wc => ({
           week: wc.dataValues.week,
           count: parseInt(wc.dataValues.count)
