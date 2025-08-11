@@ -832,6 +832,44 @@ class UrlProcessor {
   }
 
   /**
+   * Check if URL is a general website (not a multimedia platform)
+   * @param {string} url - URL to check
+   * @returns {boolean} True if it's a general website
+   */
+  isWebsiteUrl(url) {
+    try {
+      const urlObj = new URL(url);
+      
+      // Must be HTTP/HTTPS
+      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+        return false;
+      }
+      
+      // Exclude known multimedia platforms (same logic as WebsiteProcessor)
+      const multimediaDomains = [
+        'youtube.com', 'youtu.be',
+        'instagram.com', 'tiktok.com',
+        'facebook.com', 'fb.com',
+        'twitter.com', 'x.com',
+        'vimeo.com', 'dailymotion.com',
+        'soundcloud.com', 'spotify.com',
+        'imgur.com', 'flickr.com'
+      ];
+      
+      const domain = urlObj.hostname.toLowerCase().replace('www.', '');
+      const isMultimediaPlatform = multimediaDomains.some(md => domain.includes(md));
+      
+      // Check if it's a direct media file
+      const mediaExtensions = /\.(mp4|avi|mov|mp3|wav|jpg|jpeg|png|gif|pdf)$/i;
+      const isDirectMedia = mediaExtensions.test(urlObj.pathname);
+      
+      return !isMultimediaPlatform && !isDirectMedia;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
    * Process URL content and return file buffer for orchestrator
    * @param {string} url - URL to process
    * @param {Object} options - Processing options
@@ -843,16 +881,27 @@ class UrlProcessor {
         console.log('🔗 Processing URL content:', url);
       }
 
-      // Validate URL
-      if (!this.isMultimediaUrl(url)) {
-        throw new Error('URL does not contain multimedia content');
+      // Check if it's a general website first
+      if (this.isWebsiteUrl(url)) {
+        return {
+          success: true,
+          url,
+          metadata: { platform: 'website', type: 'website' },
+          platform: 'website',
+          contentType: 'website',
+          requiresWebsiteProcessor: true
+        };
       }
 
-      // Extract metadata
+      // Validate URL for multimedia content
+      if (!this.isMultimediaUrl(url)) {
+        throw new Error('URL does not contain multimedia content and is not a supported website');
+      }
+
+      // Extract metadata for multimedia URLs
       const metadata = await this.extractUrlMetadata(url);
       
-      // For now, we'll return metadata and let the compatibility service handle it
-      // In a future enhancement, we could download the content and return a buffer
+      // For multimedia URLs, return metadata and let the compatibility service handle it
       return {
         success: true,
         url,

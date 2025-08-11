@@ -12,6 +12,7 @@ const VideoProcessor = require('./VideoProcessor');
 const AudioProcessor = require('./AudioProcessor');
 const ImageProcessor = require('./ImageProcessor');
 const DocumentProcessor = require('./DocumentProcessor');
+const WebsiteProcessor = require('./WebsiteProcessor');
 const UrlProcessor = require('./UrlProcessor');
 const PluginRegistry = require('./PluginRegistry');
 const ConfigurationManager = require('./ConfigurationManager');
@@ -361,6 +362,7 @@ class AutomationOrchestrator {
             this.processors.set('audio', new AudioProcessor());
             this.processors.set('image', new ImageProcessor());
             this.processors.set('document', new DocumentProcessor());
+            this.processors.set('website', new WebsiteProcessor());
             
             // Initialize all processors with configuration
             for (const [type, processor] of this.processors) {
@@ -400,9 +402,12 @@ class AutomationOrchestrator {
             console.log(`\n🔗 Starting URL processing job: ${jobId}`);
             console.log(`   📍 URL: ${url}`);
             
-            // Validate URL
-            if (!this.urlProcessor.isMultimediaUrl(url)) {
-                throw new Error('URL does not contain multimedia content');
+            // Validate URL - check for multimedia content OR website content
+            const isMultimedia = this.urlProcessor.isMultimediaUrl(url);
+            const isWebsite = this.urlProcessor.isWebsiteUrl(url);
+            
+            if (!isMultimedia && !isWebsite) {
+                throw new Error('URL does not contain multimedia content and is not a supported website');
             }
 
             // Create job record
@@ -422,13 +427,50 @@ class AutomationOrchestrator {
             
             // Perform comprehensive URL content analysis
             console.log(`🔍 [JOB-${jobId}] Starting comprehensive content analysis...`);
-            const analysisResult = await this.urlProcessor.analyzeUrlContent(url, {
-                ...options,
-                user_id: options.user_id,
-                content_id: options.content_id,
-                analysisId: jobId,
-                progressCallback: options.progressCallback // Pass through progress callback
-            });
+            
+            let analysisResult;
+            
+            if (isWebsite) {
+                // Use WebsiteProcessor for general websites
+                console.log(`🌐 Processing as website using WebsiteProcessor...`);
+                const websiteProcessor = this.processors.get('website');
+                const websiteResult = await websiteProcessor.process(options.user_id, url, {
+                    ...options,
+                    content_id: options.content_id,
+                    progressCallback: options.progressCallback,
+                    startTime
+                });
+                
+                // Convert WebsiteProcessor result to standard format
+                analysisResult = {
+                    url: websiteResult.url,
+                    platform: websiteResult.platform,
+                    metadata: websiteResult.metadata,
+                    transcription: { text: '', length: 0, word_count: 0 },
+                    speakers: [],
+                    summary: websiteResult.aiInsights.summary,
+                    sentiment: { label: websiteResult.analysis.sentiment, score: 0.5 },
+                    thumbnails: [],
+                    auto_tags: websiteResult.aiInsights.tags,
+                    user_tags: [],
+                    category: websiteResult.aiInsights.categories,
+                    generatedTitle: websiteResult.aiInsights.suggestedTitle,
+                    status: 'completed',
+                    analysisId: jobId,
+                    processing_time: websiteResult.processingTime
+                };
+                
+            } else {
+                // Use UrlProcessor for multimedia content
+                console.log(`🎬 Processing as multimedia using UrlProcessor...`);
+                analysisResult = await this.urlProcessor.analyzeUrlContent(url, {
+                    ...options,
+                    user_id: options.user_id,
+                    content_id: options.content_id,
+                    analysisId: jobId,
+                    progressCallback: options.progressCallback // Pass through progress callback
+                });
+            }
             
             job.metadata = { ...job.metadata, ...analysisResult.metadata };
             job.platform = analysisResult.platform;

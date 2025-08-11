@@ -1,0 +1,244 @@
+@startuml URL Processing Logic Flow
+!theme plain
+title DaySave URL Processing Logic Flow
+
+actor User as U
+participant "Backend Route" as BR
+participant "AutomationOrchestrator" as AO
+participant "UrlProcessor" as UP
+participant "WebsiteProcessor" as WP
+participant "BackwardCompatibilityService" as BCS
+participant "MultimediaAnalyzer" as MA
+database "Database" as DB
+
+note over U, DB
+  Current URL Processing Architecture
+  Handles both multimedia URLs and general websites
+end note
+
+U -> BR: Submit URL for processing
+activate BR
+
+BR -> AO: processUrl(url, options)
+activate AO
+
+note right of AO
+  AutomationOrchestrator is the central coordinator
+  Uses singleton pattern for system-wide coordination
+end note
+
+AO -> UP: isMultimediaUrl(url)
+activate UP
+UP -> UP: Check against multimedia patterns
+note right of UP
+  Patterns include:
+  - YouTube (youtube.com, youtu.be)
+  - Instagram, TikTok, Facebook
+  - Vimeo, Dailymotion, Twitch
+  - SoundCloud, Spotify
+  - Direct media files (.mp4, .mp3, etc.)
+end note
+UP --> AO: boolean result
+deactivate UP
+
+AO -> UP: isWebsiteUrl(url)
+activate UP
+UP -> UP: Check URL structure
+note right of UP
+  Website URL criteria:
+  - HTTP/HTTPS protocol
+  - NOT a multimedia platform
+  - NOT a direct media file
+  - General website content
+end note
+UP --> AO: boolean result
+deactivate UP
+
+alt Neither multimedia nor website
+  AO -> AO: throw Error("URL not supported")
+  AO --> BR: Error response
+  BR --> U: Error message
+else Valid URL detected
+  AO -> AO: Create job record with unique ID
+  
+  alt Website URL detected
+    note over AO, WP
+      Website Processing Path
+      For general business websites, blogs, etc.
+    end note
+    
+    AO -> WP: process(userId, url, options)
+    activate WP
+    
+    WP -> WP: fetchWebsiteContent(url)
+    note right of WP
+      HTTP fetch with:
+      - User-Agent headers
+      - Redirect following
+      - Size limits (5MB)
+      - Timeout (30s)
+    end note
+    
+    WP -> WP: extractWebsiteData($, url)
+    note right of WP
+      Extract:
+      - Title, description, keywords
+      - Text content (max 50k chars)
+      - Headings (h1-h6)
+      - Links and social media links
+    end note
+    
+    WP -> WP: detectEmbeddedMedia($, url)
+    note right of WP
+      Detect:
+      - Images (max 10)
+      - Embedded videos (YouTube, Vimeo, etc.)
+      - Audio elements
+    end note
+    
+    WP -> WP: analyzeContent(websiteData)
+    note right of WP
+      Basic analysis:
+      - Word count, reading time
+      - Business type detection
+      - Topic extraction
+    end note
+    
+    alt Google AI available
+      WP -> WP: generateAIInsights(websiteData)
+      note right of WP
+        AI-powered:
+        - Content summarization
+        - Tag generation
+        - Category classification
+        - Title improvement
+      end note
+    end
+    
+    WP --> AO: Website processing result
+    deactivate WP
+    
+    AO -> AO: Convert to standard format
+    note right of AO
+      Standardize output:
+      - Map website result to multimedia format
+      - Include metadata, summary, tags
+      - Set platform as 'website'
+    end note
+    
+  else Multimedia URL detected
+    note over AO, UP
+      Multimedia Processing Path
+      For YouTube, social media, streaming platforms
+    end note
+    
+    AO -> UP: analyzeUrlContent(url, options)
+    activate UP
+    
+    UP -> UP: extractUrlMetadata(url)
+    note right of UP
+      Platform detection:
+      - Extract video IDs
+      - Generate thumbnails URLs
+      - Set platform-specific metadata
+    end note
+    
+    UP -> UP: detectPlatform(url)
+    note right of UP
+      Platform-specific handling:
+      - YouTube: video ID extraction
+      - Instagram: post detection
+      - TikTok: content analysis
+      - etc.
+    end note
+    
+    alt YouTube URL
+      UP -> UP: getYouTubeTranscription(url)
+      note right of UP
+        YouTube Processing:
+        1. Extract video ID
+        2. Try yt-dlp caption extraction
+        3. Fallback to audio download
+        4. Convert VTT to plain text
+      end note
+      
+      UP -> UP: extractYouTubeTranscriptionWithYtDlp(url)
+      note right of UP
+        yt-dlp command:
+        - Extract auto-generated captions
+        - Extract manual captions
+        - Output VTT format
+        - Convert to text
+      end note
+      
+      alt Transcription successful
+        UP -> UP: generateSummary(transcription)
+        UP -> UP: analyzeSentiment(transcription)
+        UP -> UP: estimateSpeakerCount(transcription)
+      end
+    end
+    
+    UP -> UP: generateTags(results)
+    UP -> UP: generateCategory(results)
+    UP -> UP: generateTitle(results)
+    
+    UP --> AO: Multimedia analysis result
+    deactivate UP
+  end
+  
+  AO -> AO: Store job results
+  AO -> AO: Update metrics
+  AO -> AO: Clean up active job
+  
+  AO --> BR: Complete processing result
+  deactivate AO
+  
+  BR -> DB: Store analysis results
+  activate DB
+  note right of DB
+    Store in appropriate tables:
+    - Content metadata
+    - Analysis results
+    - Transcriptions
+    - Tags and categories
+  end note
+  DB --> BR: Storage confirmation
+  deactivate DB
+  
+  BR --> U: Processing complete with results
+end
+
+deactivate BR
+
+note over AO, UP
+  **Key Processing Features:**
+  
+  **URL Validation:**
+  - Multimedia pattern matching
+  - Website structure validation
+  - Protocol verification
+  
+  **Multimedia Support:**
+  - YouTube transcription via yt-dlp
+  - Social media content detection
+  - Direct media file support
+  
+  **Website Analysis:**
+  - Content scraping and extraction
+  - AI-powered summarization
+  - Business type detection
+  
+  **Error Handling:**
+  - Graceful fallbacks
+  - Timeout management
+  - Invalid URL rejection
+end note
+
+note over BCS, MA
+  **Backward Compatibility:**
+  The system maintains compatibility with
+  legacy MultimediaAnalyzer through
+  BackwardCompatibilityService
+end note
+
+@enduml
