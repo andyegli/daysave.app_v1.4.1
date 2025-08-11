@@ -174,13 +174,17 @@ function createTimeline(commits) {
 /**
  * Generate PlantUML Gantt chart
  */
-function generatePlantUML(timeline) {
+function generatePlantUML(timeline, compact = true) {
     console.log('🎨 Generating PlantUML Gantt chart...');
     
+    if (compact) {
+        return generateCompactPlantUML(timeline);
+    }
+    
+    const generatedDate = new Date().toISOString().split('T')[0];
     let plantuml = `@startgantt
 !theme plain
-title DaySave v1.4.1 Development Timeline & Project Phases
-subtitle Generated from Git commit history on ${new Date().toISOString().split('T')[0]}
+title DaySave v1.4.1 Development Timeline & Project Phases (Generated ${generatedDate})
 
 ' Color scheme
 skinparam {
@@ -197,8 +201,8 @@ skinparam {
             plantuml += `' ${group.phase.name} (${group.commits.length} commits)\n`;
             plantuml += `project starts ${group.startDate}\n`;
             
-            // Group related commits into logical tasks
-            const tasks = groupCommitsIntoTasks(group.commits);
+            // Group related commits into logical tasks (limit for URI length)
+            const tasks = groupCommitsIntoTasks(group.commits, 8);
             
             tasks.forEach(task => {
                 const duration = calculateTaskDuration(task.commits);
@@ -206,6 +210,35 @@ skinparam {
             });
             
             plantuml += '\n';
+        }
+    });
+
+    plantuml += '@endgantt\n';
+    return plantuml;
+}
+
+/**
+ * Generate compact PlantUML Gantt chart (URI-friendly)
+ */
+function generateCompactPlantUML(timeline) {
+    console.log('🎨 Generating compact PlantUML Gantt chart...');
+    
+    const generatedDate = new Date().toISOString().split('T')[0];
+    let plantuml = `@startgantt
+title DaySave v1.4.1 Development Timeline (Generated ${generatedDate})
+
+`;
+
+    // Only include phases with significant commits and create high-level tasks
+    const significantPhases = Object.values(timeline)
+        .filter(group => group.commits.length > 0)
+        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+
+    significantPhases.forEach(group => {
+        if (group.commits.length > 0) {
+            plantuml += `[${group.phase.name}] starts ${group.startDate}\n`;
+            plantuml += `[${group.phase.name}] lasts ${group.duration} days\n`;
+            plantuml += `[${group.phase.name}] is colored in ${group.phase.color}\n`;
         }
     });
 
@@ -246,11 +279,21 @@ function generateMermaid(timeline) {
 }
 
 /**
- * Group related commits into logical tasks
+ * Group related commits into logical tasks (with size optimization)
  */
-function groupCommitsIntoTasks(commits) {
+function groupCommitsIntoTasks(commits, maxTasks = 10) {
     const tasks = [];
     let currentTask = null;
+    
+    // For PlantUML, we need to limit the number of tasks per phase to avoid URI length issues
+    if (commits.length > maxTasks) {
+        // Group commits by date ranges for large phases
+        const dateGroups = groupCommitsByDateRange(commits, maxTasks);
+        return dateGroups.map(group => ({
+            name: `${group.name} (${group.commits.length} commits)`,
+            commits: group.commits
+        }));
+    }
     
     commits.forEach(commit => {
         const taskName = extractTaskName(commit.message);
@@ -272,7 +315,56 @@ function groupCommitsIntoTasks(commits) {
         tasks.push(currentTask);
     }
     
+    // Limit tasks to prevent URI too long errors
+    if (tasks.length > maxTasks) {
+        return groupTasksByDate(tasks, maxTasks);
+    }
+    
     return tasks;
+}
+
+/**
+ * Group commits by date ranges for large phases
+ */
+function groupCommitsByDateRange(commits, maxGroups) {
+    const sortedCommits = commits.sort((a, b) => a.date - b.date);
+    const groups = [];
+    const commitsPerGroup = Math.ceil(commits.length / maxGroups);
+    
+    for (let i = 0; i < commits.length; i += commitsPerGroup) {
+        const groupCommits = sortedCommits.slice(i, i + commitsPerGroup);
+        const startDate = groupCommits[0].dateString;
+        const endDate = groupCommits[groupCommits.length - 1].dateString;
+        
+        groups.push({
+            name: startDate === endDate ? `Development ${startDate}` : `Development ${startDate} to ${endDate}`,
+            commits: groupCommits
+        });
+    }
+    
+    return groups;
+}
+
+/**
+ * Group tasks by date to reduce count
+ */
+function groupTasksByDate(tasks, maxTasks) {
+    const tasksPerGroup = Math.ceil(tasks.length / maxTasks);
+    const groups = [];
+    
+    for (let i = 0; i < tasks.length; i += tasksPerGroup) {
+        const groupTasks = tasks.slice(i, i + tasksPerGroup);
+        const allCommits = groupTasks.flatMap(task => task.commits);
+        const startDate = allCommits[0].dateString;
+        const endDate = allCommits[allCommits.length - 1].dateString;
+        
+        groups.push({
+            name: `${groupTasks[0].name.substring(0, 20)}... (${groupTasks.length} tasks)`,
+            commits: allCommits
+        });
+    }
+    
+    return groups;
 }
 
 /**
@@ -338,12 +430,17 @@ function main() {
     const args = process.argv.slice(2);
     let outputPath = 'daysave-timeline.puml';
     let format = 'plantuml';
+    let compact = true;
     
     args.forEach(arg => {
         if (arg.startsWith('--output=')) {
             outputPath = arg.split('=')[1];
         } else if (arg.startsWith('--format=')) {
             format = arg.split('=')[1].toLowerCase();
+        } else if (arg === '--detailed' || arg === '--full') {
+            compact = false;
+        } else if (arg === '--compact') {
+            compact = true;
         }
     });
     
@@ -367,7 +464,7 @@ function main() {
         
         // Generate chart
         const content = format === 'plantuml' 
-            ? generatePlantUML(timeline)
+            ? generatePlantUML(timeline, compact)
             : generateMermaid(timeline);
         
         // Write output
