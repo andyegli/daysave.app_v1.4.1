@@ -494,9 +494,30 @@ class UrlProcessor {
    */
   async analyzeUrlContent(url, options = {}) {
     const startTime = Date.now();
-    const { user_id, content_id } = options;
+    const { user_id, content_id, progressCallback } = options;
+    
+    // Helper function to report progress
+    const reportProgress = (stage, percentage, message, details = {}) => {
+      if (progressCallback && typeof progressCallback === 'function') {
+        progressCallback({
+          stage,
+          percentage,
+          message,
+          details,
+          url,
+          timestamp: new Date().toISOString(),
+          elapsed: Date.now() - startTime
+        });
+      }
+      
+      if (this.enableLogging) {
+        console.log(`🔄 [${percentage}%] ${stage}: ${message}`);
+      }
+    };
     
     try {
+      reportProgress('initialization', 5, 'Starting comprehensive URL content analysis', { url });
+      
       if (this.enableLogging) {
         console.log('🎬 Starting comprehensive URL content analysis:', url);
       }
@@ -533,11 +554,13 @@ class UrlProcessor {
       };
 
       // Validate URL
+      reportProgress('validation', 10, 'Validating URL and detecting multimedia content');
       if (!this.isMultimediaUrl(url)) {
         throw new Error('URL does not contain multimedia content');
       }
 
       // Extract metadata
+      reportProgress('metadata', 15, 'Extracting URL metadata and platform information');
       results.metadata = await this.extractUrlMetadata(url);
       results.platform = results.metadata.platform;
 
@@ -557,6 +580,8 @@ class UrlProcessor {
         // For YouTube URLs, attempt to get actual transcription
         if (analysisOptions.transcription) {
           try {
+            reportProgress('transcription', 25, 'Extracting YouTube transcription (this may take several seconds)');
+            
             if (this.enableLogging) {
               console.log('🎬 Getting YouTube transcription...');
             }
@@ -565,6 +590,11 @@ class UrlProcessor {
             
             if (transcriptionResult && transcriptionResult.text) {
               results.transcription = transcriptionResult.text;
+              
+              reportProgress('transcription', 50, 'Transcription extraction completed', {
+                length: transcriptionResult.text.length,
+                wordCount: transcriptionResult.text.split(' ').length
+              });
               
               if (this.enableLogging) {
                 console.log('✅ Transcription completed:', {
@@ -575,16 +605,19 @@ class UrlProcessor {
 
               // Generate comprehensive summary using transcription
               if (analysisOptions.enableSummarization && results.transcription.length > 100) {
+                reportProgress('ai_summary', 60, 'Generating AI-powered summary');
                 results.summary = await this.generateSummary(results);
               }
 
               // Perform sentiment analysis
               if (analysisOptions.enableSentimentAnalysis && results.transcription.length > 50) {
+                reportProgress('ai_sentiment', 70, 'Analyzing sentiment and emotions');
                 results.sentiment = await this.analyzeSentiment(results.transcription);
               }
 
               // Simulate speaker identification based on transcription
               if (analysisOptions.speaker_identification && results.transcription.length > 100) {
+                reportProgress('ai_speakers', 80, 'Identifying speakers and voices');
                 const speakerCount = this.estimateSpeakerCount(results.transcription);
                 results.speakers = Array.from({ length: speakerCount }, (_, i) => ({
                   id: uuidv4(),
@@ -615,9 +648,20 @@ class UrlProcessor {
         results.generatedTitle = await this.generateTitle(results);
       }
 
+      // Generate AI tags and categories (final AI processing)
+      reportProgress('ai_finalization', 90, 'Generating AI tags and categories');
+      
       // Set final status and processing time
       results.status = 'completed';
       results.processing_time = Date.now() - startTime;
+
+      reportProgress('completion', 100, 'Analysis complete!', {
+        platform: results.platform,
+        transcriptionLength: results.transcription.length,
+        summaryLength: results.summary.length,
+        tagCount: results.auto_tags.length,
+        processingTime: results.processing_time
+      });
 
       if (this.enableLogging) {
         console.log('✅ URL content analysis completed:', {

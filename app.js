@@ -741,10 +741,18 @@ checkDatabaseConnection().then(async (connected) => {
   // Error handling middleware
   app.use(errorHandler);
 
-  // Start the server
+  // Start the server with WebSocket support
   const PORT = process.env.APP_PORT || process.env.PORT || 3000;
-  app.listen(PORT, () => {
+  const http = require('http');
+  const server = http.createServer(app);
+  
+  // Initialize WebSocket Progress Service
+  const ProgressWebSocketService = require('./services/ProgressWebSocketService');
+  global.progressWebSocket = new ProgressWebSocketService(server);
+  
+  server.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📡 WebSocket progress service available at ws://localhost:${PORT}/progress`);
     console.log(`📁 Auth logs will be written to: ${logBasePath}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   });

@@ -426,7 +426,8 @@ class AutomationOrchestrator {
                 ...options,
                 user_id: options.user_id,
                 content_id: options.content_id,
-                analysisId: jobId
+                analysisId: jobId,
+                progressCallback: options.progressCallback // Pass through progress callback
             });
             
             job.metadata = { ...job.metadata, ...analysisResult.metadata };
