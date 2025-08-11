@@ -32,11 +32,11 @@
                 </div>
                 <div class="flex-grow-1 ms-3">
                   <h6 class="mb-1 text-muted">AI Tokens Used</h6>
-                  <h4 class="mb-0"><%= currentUsage.ai.tokens.toLocaleString() %></h4>
+                  <h4 class="mb-0"><%= parseInt(currentUsage.ai.tokens || 0).toLocaleString() %></h4>
                   <% if (limits.tokens.limit !== -1) { %>
                   <small class="text-muted">
-                    of <%= limits.tokens.limit.toLocaleString() %> 
-                    (<%= Math.round(limits.tokens.percentage) %>%)
+                    of <%= parseInt(limits.tokens.limit || 0).toLocaleString() %> 
+                    (<%= Math.round(limits.tokens.percentage || 0) %>%)
                   </small>
                   <div class="progress mt-2" style="height: 4px;">
                     <div class="progress-bar <%= limits.tokens.exceeded ? 'bg-danger' : (limits.tokens.percentage > alertThreshold ? 'bg-warning' : 'bg-success') %>" 
@@ -240,7 +240,7 @@
                     </td>
                     <td><span class="badge bg-secondary"><%= item.type %></span></td>
                     <td><%= new Date(item.createdAt).toLocaleDateString() %></td>
-                    <td><%= item.usage.tokens ? item.usage.tokens.toLocaleString() : '-' %></td>
+                    <td><%= parseInt(item.usage.tokens || 0).toLocaleString() || '-' %></td>
                     <td>$<%= parseFloat(item.usage.aiCost || 0).toFixed(4) %></td>
                     <td>$<%= parseFloat(item.usage.storageCost || 0).toFixed(4) %></td>
                     <td><strong>$<%= parseFloat(item.usage.totalCost || 0).toFixed(4) %></strong></td>
@@ -279,7 +279,7 @@
               <div class="border rounded p-3 text-center">
                 <h6 class="text-muted mb-1">Monthly AI Tokens</h6>
                 <h4 class="mb-0">
-                  <%= subscriptionPlan.max_ai_tokens_per_month === -1 ? 'Unlimited' : subscriptionPlan.max_ai_tokens_per_month.toLocaleString() %>
+                  <%= parseInt(subscriptionPlan.max_ai_tokens_per_month || 0) === -1 ? 'Unlimited' : parseInt(subscriptionPlan.max_ai_tokens_per_month || 0).toLocaleString() %>
                 </h4>
               </div>
             </div>
