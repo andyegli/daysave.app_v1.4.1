@@ -28,6 +28,8 @@
  * - Role: User roles and permissions
  * - Face: Face recognition data
  * - Speaker: Voice identification data
+ * - AiPricingConfig: AI provider pricing configuration
+ * - StoragePricingConfig: Storage provider pricing configuration
  * - Thumbnail: Generated thumbnails
  * - VideoAnalysis, AudioAnalysis, ImageAnalysis: AI analysis results
  * 

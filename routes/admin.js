@@ -3499,7 +3499,7 @@ router.post('/settings', isAuthenticated, isAdmin, async (req, res) => {
 
 // Usage Overview and Analytics Routes
 const UsageLimitService = require('../services/usageLimitService');
-const { SubscriptionPlan } = require('../models');
+const { SubscriptionPlan, AiPricingConfig, StoragePricingConfig } = require('../models');
 const usageLimitService = new UsageLimitService();
 
 /**
@@ -3690,6 +3690,141 @@ router.post('/usage-limits/update', isAuthenticated, isAdmin, async (req, res) =
     console.error('Error updating usage limits:', error);
     req.flash('error', 'Failed to update usage limits. Please try again.');
     res.redirect('/admin/usage-limits');
+  }
+});
+
+/**
+ * Cost Configuration Management
+ */
+router.get('/cost-configuration', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    console.log(`💰 Admin ${req.user.username} accessing cost configuration`);
+
+    // Get all current pricing configurations
+    const [aiPricing, storagePricing] = await Promise.all([
+      AiPricingConfig.getAllCurrentPricing(),
+      StoragePricingConfig.getAllCurrentPricing()
+    ]);
+
+    // Get current month usage statistics for impact analysis
+    const systemStats = await usageLimitService.getSystemUsageStatistics();
+
+    res.render('admin/cost-configuration', {
+      title: 'Cost Configuration - Admin - DaySave',
+      user: req.user,
+      aiPricing,
+      storagePricing,
+      currentMonthCost: systemStats.total.totalCost,
+      aiCost: systemStats.ai.totalCost,
+      storageCost: systemStats.storage.totalCost
+    });
+
+  } catch (error) {
+    console.error('Error loading cost configuration:', error);
+    handleAdminError(req, res, error, { route: 'cost-configuration' });
+  }
+});
+
+/**
+ * Save new pricing configuration
+ */
+router.post('/api/cost-configuration', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { type, provider, model, storage_class, effective_date, is_active, notes } = req.body;
+
+    let result;
+    if (type === 'ai') {
+      const { input_cost, output_cost, thinking_cost } = req.body;
+      
+      result = await AiPricingConfig.create({
+        provider,
+        model,
+        input_cost_per_million_tokens: parseFloat(input_cost) || 0,
+        output_cost_per_million_tokens: parseFloat(output_cost) || 0,
+        thinking_cost_per_million_tokens: thinking_cost ? parseFloat(thinking_cost) : null,
+        is_active: is_active === 'on',
+        effective_date: new Date(effective_date),
+        notes
+      });
+    } else if (type === 'storage') {
+      const { storage_cost, operation_cost, egress_cost } = req.body;
+      
+      result = await StoragePricingConfig.create({
+        provider,
+        storage_class,
+        storage_cost_per_gb_month: parseFloat(storage_cost) || 0,
+        operation_cost_per_1k: parseFloat(operation_cost) || 0,
+        egress_cost_per_gb: parseFloat(egress_cost) || 0,
+        is_active: is_active === 'on',
+        effective_date: new Date(effective_date),
+        notes
+      });
+    }
+
+    // Log the admin action
+    logAuthEvent('ADMIN_COST_CONFIG_CREATED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      type,
+      provider,
+      model: model || storage_class,
+      configId: result.id,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    res.json({ success: true, id: result.id });
+
+  } catch (error) {
+    console.error('Error saving cost configuration:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save cost configuration'
+    });
+  }
+});
+
+/**
+ * Delete pricing configuration
+ */
+router.delete('/api/cost-configuration/:id', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Try to find in both tables
+    const [aiConfig, storageConfig] = await Promise.all([
+      AiPricingConfig.findByPk(id),
+      StoragePricingConfig.findByPk(id)
+    ]);
+
+    const config = aiConfig || storageConfig;
+    if (!config) {
+      return res.status(404).json({
+        success: false,
+        error: 'Configuration not found'
+      });
+    }
+
+    await config.destroy();
+
+    // Log the admin action
+    logAuthEvent('ADMIN_COST_CONFIG_DELETED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      configId: id,
+      type: aiConfig ? 'ai' : 'storage',
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('Error deleting cost configuration:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete cost configuration'
+    });
   }
 });
 
