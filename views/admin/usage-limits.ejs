@@ -1,0 +1,316 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Page Header -->
+    <div class="col-12 mb-4">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="h3 mb-0">Subscription Plan Limits</h1>
+          <p class="text-muted mb-0">Manage AI token and cost limits for each subscription plan</p>
+        </div>
+        <div>
+          <a href="/admin/usage-overview" class="btn btn-outline-secondary">
+            <i class="fas fa-chart-line me-1"></i> Usage Overview
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plan Limits Management -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 pt-4 pb-0">
+          <h5 class="card-title mb-0">Plan Limit Configuration</h5>
+          <p class="text-muted small mb-0">Adjust limits for AI tokens, AI costs, storage costs, and total costs per plan</p>
+        </div>
+        <div class="card-body">
+          <form id="planLimitsForm" method="POST" action="/admin/usage-limits/update">
+            <div class="table-responsive">
+              <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 15%;">Plan</th>
+                    <th style="width: 15%;">Monthly Price</th>
+                    <th style="width: 17.5%;">AI Tokens/Month</th>
+                    <th style="width: 17.5%;">AI Cost Limit</th>
+                    <th style="width: 17.5%;">Storage Cost Limit</th>
+                    <th style="width: 17.5%;">Total Cost Limit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% subscriptionPlans.forEach(plan => { %>
+                  <tr>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        <div class="bg-<%= plan.name === 'free' ? 'secondary' : (plan.name === 'small' ? 'primary' : (plan.name === 'medium' ? 'info' : (plan.name === 'large' ? 'warning' : 'success'))) %> bg-opacity-10 rounded p-2 me-2">
+                          <i class="fas fa-<%= plan.name === 'free' ? 'gift' : (plan.name === 'unlimited' ? 'infinity' : 'star') %> text-<%= plan.name === 'free' ? 'secondary' : (plan.name === 'small' ? 'primary' : (plan.name === 'medium' ? 'info' : (plan.name === 'large' ? 'warning' : 'success'))) %>"></i>
+                        </div>
+                        <div>
+                          <div class="fw-medium"><%= plan.display_name %></div>
+                          <small class="text-muted"><%= plan.name %></small>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <strong>$<%= plan.price_monthly %></strong>
+                      <small class="text-muted d-block">per month</small>
+                    </td>
+                    <td>
+                      <div class="input-group input-group-sm">
+                        <input type="number" 
+                               class="form-control" 
+                               name="plans[<%= plan.id %>][max_ai_tokens_per_month]" 
+                               value="<%= plan.max_ai_tokens_per_month === -1 ? '' : plan.max_ai_tokens_per_month %>"
+                               placeholder="Unlimited"
+                               min="-1"
+                               step="1000">
+                        <span class="input-group-text">tokens</span>
+                      </div>
+                      <small class="text-muted">-1 for unlimited</small>
+                    </td>
+                    <td>
+                      <div class="input-group input-group-sm">
+                        <span class="input-group-text">$</span>
+                        <input type="number" 
+                               class="form-control" 
+                               name="plans[<%= plan.id %>][max_ai_cost_per_month_usd]" 
+                               value="<%= plan.max_ai_cost_per_month_usd === -1 ? '' : plan.max_ai_cost_per_month_usd %>"
+                               placeholder="Unlimited"
+                               min="-1"
+                               step="0.01">
+                      </div>
+                      <small class="text-muted">-1 for unlimited</small>
+                    </td>
+                    <td>
+                      <div class="input-group input-group-sm">
+                        <span class="input-group-text">$</span>
+                        <input type="number" 
+                               class="form-control" 
+                               name="plans[<%= plan.id %>][max_storage_cost_per_month_usd]" 
+                               value="<%= plan.max_storage_cost_per_month_usd === -1 ? '' : plan.max_storage_cost_per_month_usd %>"
+                               placeholder="Unlimited"
+                               min="-1"
+                               step="0.01">
+                      </div>
+                      <small class="text-muted">-1 for unlimited</small>
+                    </td>
+                    <td>
+                      <div class="input-group input-group-sm">
+                        <span class="input-group-text">$</span>
+                        <input type="number" 
+                               class="form-control" 
+                               name="plans[<%= plan.id %>][max_total_cost_per_month_usd]" 
+                               value="<%= plan.max_total_cost_per_month_usd === -1 ? '' : plan.max_total_cost_per_month_usd %>"
+                               placeholder="Unlimited"
+                               min="-1"
+                               step="0.01">
+                      </div>
+                      <small class="text-muted">-1 for unlimited</small>
+                    </td>
+                  </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Usage Alert Settings -->
+            <div class="row mt-4">
+              <div class="col-12">
+                <h6 class="mb-3">Usage Alert Settings</h6>
+              </div>
+              <% subscriptionPlans.forEach(plan => { %>
+              <div class="col-md-6 col-lg-4 mb-3">
+                <div class="border rounded p-3">
+                  <h6 class="mb-3"><%= plan.display_name %> Plan</h6>
+                  
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" 
+                           type="checkbox" 
+                           name="plans[<%= plan.id %>][usage_alerts_enabled]" 
+                           value="1"
+                           <%= plan.usage_alerts_enabled ? 'checked' : '' %>
+                           id="alerts_<%= plan.id %>">
+                    <label class="form-check-label" for="alerts_<%= plan.id %>">
+                      Enable usage alerts
+                    </label>
+                  </div>
+                  
+                  <div class="mb-0">
+                    <label class="form-label small">Alert threshold (%)</label>
+                    <div class="input-group input-group-sm">
+                      <input type="number" 
+                             class="form-control" 
+                             name="plans[<%= plan.id %>][usage_alert_threshold_percent]" 
+                             value="<%= plan.usage_alert_threshold_percent %>"
+                             min="1"
+                             max="100"
+                             step="5">
+                      <span class="input-group-text">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <% }); %>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="row mt-4">
+              <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <button type="submit" class="btn btn-primary">
+                      <i class="fas fa-save me-1"></i> Save Changes
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary ms-2" onclick="resetForm()">
+                      <i class="fas fa-undo me-1"></i> Reset
+                    </button>
+                  </div>
+                  <div>
+                    <button type="button" class="btn btn-outline-info" onclick="previewChanges()">
+                      <i class="fas fa-eye me-1"></i> Preview Impact
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Suggested Limits Help -->
+    <div class="col-12 mt-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 pt-4 pb-0">
+          <h5 class="card-title mb-0">Suggested Limits & Guidelines</h5>
+          <p class="text-muted small mb-0">Recommended limits based on plan pricing and typical usage patterns</p>
+        </div>
+        <div class="card-body">
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <h6 class="text-success mb-3">💡 Suggested Token Limits</h6>
+              <ul class="list-unstyled">
+                <li class="mb-2">
+                  <strong>Free Plan:</strong> 50,000 tokens/month
+                  <small class="text-muted d-block">Enough for ~125 typical AI analyses</small>
+                </li>
+                <li class="mb-2">
+                  <strong>Small Plan:</strong> 200,000 tokens/month
+                  <small class="text-muted d-block">Enough for ~500 typical AI analyses</small>
+                </li>
+                <li class="mb-2">
+                  <strong>Medium Plan:</strong> 800,000 tokens/month
+                  <small class="text-muted d-block">Enough for ~2,000 typical AI analyses</small>
+                </li>
+                <li class="mb-2">
+                  <strong>Large Plan:</strong> 2,000,000 tokens/month
+                  <small class="text-muted d-block">Enough for ~5,000 typical AI analyses</small>
+                </li>
+                <li>
+                  <strong>Unlimited Plan:</strong> No limits
+                  <small class="text-muted d-block">True enterprise usage</small>
+                </li>
+              </ul>
+            </div>
+            
+            <div class="col-lg-6">
+              <h6 class="text-info mb-3">💰 Suggested Cost Limits</h6>
+              <ul class="list-unstyled">
+                <li class="mb-2">
+                  <strong>Free Plan:</strong> $4.00 total/month
+                  <small class="text-muted d-block">$3.00 AI + $1.00 storage</small>
+                </li>
+                <li class="mb-2">
+                  <strong>Small Plan:</strong> $20.00 total/month
+                  <small class="text-muted d-block">$15.00 AI + $5.00 storage (200% of plan cost)</small>
+                </li>
+                <li class="mb-2">
+                  <strong>Medium Plan:</strong> $75.00 total/month
+                  <small class="text-muted d-block">$60.00 AI + $15.00 storage (250% of plan cost)</small>
+                </li>
+                <li class="mb-2">
+                  <strong>Large Plan:</strong> $200.00 total/month
+                  <small class="text-muted d-block">$160.00 AI + $40.00 storage (250% of plan cost)</small>
+                </li>
+                <li>
+                  <strong>Unlimited Plan:</strong> No limits
+                  <small class="text-muted d-block">Monitor usage for billing purposes</small>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="alert alert-info mt-4">
+            <h6 class="alert-heading">
+              <i class="fas fa-lightbulb me-1"></i> Pricing Context
+            </h6>
+            <p class="mb-2">
+              <strong>Current AI Pricing:</strong> ~$0.25 per 1,000 tokens (GPT-4o-mini)<br>
+              <strong>Storage Pricing:</strong> ~$0.02 per GB per month
+            </p>
+            <p class="mb-0">
+              <strong>Philosophy:</strong> Set limits at 200-250% of plan cost to provide generous usage while encouraging appropriate plan selection.
+              Free plans should be limited enough to encourage upgrades but generous enough for evaluation.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function resetForm() {
+  if (confirm('Are you sure you want to reset all changes?')) {
+    document.getElementById('planLimitsForm').reset();
+  }
+}
+
+function previewChanges() {
+  // Collect form data
+  const formData = new FormData(document.getElementById('planLimitsForm'));
+  const changes = {};
+  
+  // Process form data
+  for (let [key, value] of formData.entries()) {
+    if (key.startsWith('plans[')) {
+      // Parse plan updates
+      const planId = key.match(/plans\[([^\]]+)\]/)[1];
+      const field = key.match(/\[([^\]]+)\]$/)[1];
+      
+      if (!changes[planId]) changes[planId] = {};
+      changes[planId][field] = value;
+    }
+  }
+  
+  // Show preview modal (would implement with actual data)
+  alert('Preview functionality would show the impact of these changes on current users and system costs.');
+}
+
+// Form submission with confirmation
+document.getElementById('planLimitsForm').addEventListener('submit', function(e) {
+  if (!confirm('Are you sure you want to update these subscription plan limits? This will affect all users immediately.')) {
+    e.preventDefault();
+  }
+});
+
+// Auto-calculate total from AI + Storage when values change
+document.querySelectorAll('input[name*="max_ai_cost_per_month_usd"], input[name*="max_storage_cost_per_month_usd"]').forEach(input => {
+  input.addEventListener('change', function() {
+    const planId = this.name.match(/plans\[([^\]]+)\]/)[1];
+    const aiCostInput = document.querySelector(`input[name="plans[${planId}][max_ai_cost_per_month_usd]"]`);
+    const storageCostInput = document.querySelector(`input[name="plans[${planId}][max_storage_cost_per_month_usd]"]`);
+    const totalCostInput = document.querySelector(`input[name="plans[${planId}][max_total_cost_per_month_usd]"]`);
+    
+    const aiCost = parseFloat(aiCostInput.value) || 0;
+    const storageCost = parseFloat(storageCostInput.value) || 0;
+    
+    if (aiCost > 0 && storageCost > 0) {
+      totalCostInput.value = (aiCost + storageCost).toFixed(2);
+    }
+  });
+});
+</script>
+
+<%- include('../partials/footer') %>

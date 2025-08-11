@@ -3497,6 +3497,234 @@ router.post('/settings', isAuthenticated, isAdmin, async (req, res) => {
   }
 });
 
+// Usage Overview and Analytics Routes
+const UsageLimitService = require('../services/usageLimitService');
+const { SubscriptionPlan } = require('../models');
+const usageLimitService = new UsageLimitService();
+
+/**
+ * Admin Usage Overview Dashboard
+ */
+router.get('/usage-overview', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    console.log(`📊 Admin ${req.user.username} accessing usage overview`);
+
+    // Get system-wide usage statistics
+    const systemStats = await usageLimitService.getSystemUsageStatistics();
+    
+    // Get top users by usage
+    const topUsers = await usageLimitService.getTopUsersByUsage(null, 15);
+    
+    // Get system usage history for charts (simplified for now)
+    const systemHistory = await getSystemUsageHistory(12);
+
+    res.render('admin/usage-overview', {
+      title: 'Usage Overview - Admin - DaySave',
+      user: req.user,
+      systemStats,
+      topUsers,
+      systemHistory,
+      billingPeriod: usageLimitService.getCurrentBillingPeriod()
+    });
+
+  } catch (error) {
+    console.error('Error loading admin usage overview:', error);
+    handleAdminError(req, res, error, { route: 'usage-overview' });
+  }
+});
+
+/**
+ * API endpoint for top users by usage
+ */
+router.get('/api/usage/top-users', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const billingPeriod = req.query.period || null;
+    
+    const topUsers = await usageLimitService.getTopUsersByUsage(billingPeriod, limit);
+    
+    res.json({
+      success: true,
+      data: topUsers
+    });
+  } catch (error) {
+    console.error('Error getting top users:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get top users data'
+    });
+  }
+});
+
+/**
+ * API endpoint for plan usage statistics
+ */
+router.get('/api/usage/plan-stats', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    // This would require a more complex query - simplified for now
+    const planStats = [
+      { displayName: 'Free', activeUsers: 0, averageUsage: 0, usersNearLimit: 0 },
+      { displayName: 'Small', activeUsers: 0, averageUsage: 0, usersNearLimit: 0 },
+      { displayName: 'Medium', activeUsers: 0, averageUsage: 0, usersNearLimit: 0 },
+      { displayName: 'Large', activeUsers: 0, averageUsage: 0, usersNearLimit: 0 },
+      { displayName: 'Unlimited', activeUsers: 0, averageUsage: 0, usersNearLimit: 0 }
+    ];
+    
+    res.json({
+      success: true,
+      data: planStats
+    });
+  } catch (error) {
+    console.error('Error getting plan stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get plan statistics'
+    });
+  }
+});
+
+/**
+ * Admin Usage Limits Management
+ */
+router.get('/usage-limits', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    console.log(`⚙️ Admin ${req.user.username} accessing usage limits management`);
+
+    // Get all subscription plans
+    const subscriptionPlans = await SubscriptionPlan.findAll({
+      order: [['sort_order', 'ASC']]
+    });
+
+    res.render('admin/usage-limits', {
+      title: 'Usage Limits - Admin - DaySave',
+      user: req.user,
+      subscriptionPlans
+    });
+
+  } catch (error) {
+    console.error('Error loading usage limits management:', error);
+    handleAdminError(req, res, error, { route: 'usage-limits' });
+  }
+});
+
+/**
+ * Update subscription plan limits
+ */
+router.post('/usage-limits/update', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    console.log(`⚙️ Admin ${req.user.username} updating usage limits`);
+
+    const { plans } = req.body;
+    const updateResults = [];
+
+    // Process each plan update
+    for (const [planId, updates] of Object.entries(plans || {})) {
+      try {
+        // Prepare update data
+        const updateData = {};
+        
+        // Handle numeric fields
+        if (updates.max_ai_tokens_per_month !== undefined) {
+          updateData.max_ai_tokens_per_month = updates.max_ai_tokens_per_month === '' ? -1 : parseInt(updates.max_ai_tokens_per_month);
+        }
+        if (updates.max_ai_cost_per_month_usd !== undefined) {
+          updateData.max_ai_cost_per_month_usd = updates.max_ai_cost_per_month_usd === '' ? -1 : parseFloat(updates.max_ai_cost_per_month_usd);
+        }
+        if (updates.max_storage_cost_per_month_usd !== undefined) {
+          updateData.max_storage_cost_per_month_usd = updates.max_storage_cost_per_month_usd === '' ? -1 : parseFloat(updates.max_storage_cost_per_month_usd);
+        }
+        if (updates.max_total_cost_per_month_usd !== undefined) {
+          updateData.max_total_cost_per_month_usd = updates.max_total_cost_per_month_usd === '' ? -1 : parseFloat(updates.max_total_cost_per_month_usd);
+        }
+        
+        // Handle boolean fields
+        updateData.usage_alerts_enabled = updates.usage_alerts_enabled === '1';
+        
+        // Handle alert threshold
+        if (updates.usage_alert_threshold_percent !== undefined) {
+          updateData.usage_alert_threshold_percent = parseInt(updates.usage_alert_threshold_percent);
+        }
+
+        // Update the plan
+        const [updatedRows] = await SubscriptionPlan.update(updateData, {
+          where: { id: planId }
+        });
+
+        updateResults.push({
+          planId,
+          success: updatedRows > 0,
+          updates: updateData
+        });
+
+      } catch (planError) {
+        console.error(`Error updating plan ${planId}:`, planError);
+        updateResults.push({
+          planId,
+          success: false,
+          error: planError.message
+        });
+      }
+    }
+
+    // Log the admin action
+    logAuthEvent('ADMIN_USAGE_LIMITS_UPDATED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      updateResults,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    const successCount = updateResults.filter(r => r.success).length;
+    const totalCount = updateResults.length;
+
+    if (successCount === totalCount) {
+      req.flash('success', `Successfully updated limits for all ${totalCount} subscription plans.`);
+    } else {
+      req.flash('warning', `Updated ${successCount} of ${totalCount} plans. Some updates may have failed.`);
+    }
+
+    res.redirect('/admin/usage-limits');
+
+  } catch (error) {
+    console.error('Error updating usage limits:', error);
+    req.flash('error', 'Failed to update usage limits. Please try again.');
+    res.redirect('/admin/usage-limits');
+  }
+});
+
+/**
+ * Helper function to get system usage history
+ */
+async function getSystemUsageHistory(monthsBack = 12) {
+  const history = [];
+  const now = new Date();
+  
+  for (let i = 0; i < monthsBack; i++) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const billingPeriod = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    
+    try {
+      const stats = await usageLimitService.getSystemUsageStatistics(billingPeriod);
+      history.push({
+        ...stats,
+        month: date.toLocaleString('default', { month: 'long', year: 'numeric' })
+      });
+    } catch (error) {
+      console.error(`Error getting stats for ${billingPeriod}:`, error);
+      history.push({
+        billingPeriod,
+        month: date.toLocaleString('default', { month: 'long', year: 'numeric' }),
+        ai: { recordCount: 0, totalTokens: 0, totalCost: 0, uniqueUsers: 0 },
+        storage: { recordCount: 0, totalCost: 0, uniqueUsers: 0 },
+        total: { recordCount: 0, totalCost: 0, uniqueUsers: 0 }
+      });
+    }
+  }
+  
+  return history.reverse(); // Return chronological order
+}
+
 // Root admin route - redirect to dashboard
 router.get('/', isAuthenticated, isAdmin, (req, res) => {
   // Log admin access

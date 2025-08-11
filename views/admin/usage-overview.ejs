@@ -1,0 +1,457 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Page Header -->
+    <div class="col-12 mb-4">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="h3 mb-0">System Usage Overview</h1>
+          <p class="text-muted mb-0">Monitor system-wide AI usage, costs, and user activity</p>
+        </div>
+        <div>
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary" onclick="refreshData()">
+              <i class="fas fa-sync-alt me-1"></i> Refresh
+            </button>
+            <button type="button" class="btn btn-outline-secondary" onclick="exportData()">
+              <i class="fas fa-download me-1"></i> Export
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Overview Cards -->
+    <div class="col-12 mb-4">
+      <div class="row g-3">
+        <!-- Total Users with Usage -->
+        <div class="col-md-6 col-lg-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                  <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                    <i class="fas fa-users text-primary fs-4"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <h6 class="mb-1 text-muted">Active Users</h6>
+                  <h4 class="mb-0"><%= systemStats.total.uniqueUsers %></h4>
+                  <small class="text-muted">with usage this month</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Total AI Tokens -->
+        <div class="col-md-6 col-lg-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                  <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                    <i class="fas fa-robot text-success fs-4"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <h6 class="mb-1 text-muted">AI Tokens Used</h6>
+                  <h4 class="mb-0"><%= systemStats.ai.totalTokens.toLocaleString() %></h4>
+                  <small class="text-muted"><%= systemStats.ai.recordCount %> requests</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Total AI Costs -->
+        <div class="col-md-6 col-lg-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                  <div class="bg-info bg-opacity-10 rounded-3 p-3">
+                    <i class="fas fa-brain text-info fs-4"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <h6 class="mb-1 text-muted">AI Costs</h6>
+                  <h4 class="mb-0">$<%= systemStats.ai.totalCost.toFixed(2) %></h4>
+                  <small class="text-muted">this month</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Total Storage Costs -->
+        <div class="col-md-6 col-lg-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                  <div class="bg-warning bg-opacity-10 rounded-3 p-3">
+                    <i class="fas fa-hdd text-warning fs-4"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <h6 class="mb-1 text-muted">Storage Costs</h6>
+                  <h4 class="mb-0">$<%= systemStats.storage.totalCost.toFixed(2) %></h4>
+                  <small class="text-muted">this month</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monthly Trends and Breakdown -->
+    <div class="col-12 mb-4">
+      <div class="row g-4">
+        <!-- System Usage Trends -->
+        <div class="col-lg-8">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pt-4 pb-0">
+              <h5 class="card-title mb-0">System Usage Trends</h5>
+              <p class="text-muted small mb-0">12-month system-wide usage</p>
+            </div>
+            <div class="card-body">
+              <canvas id="systemTrendsChart" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Usage Distribution -->
+        <div class="col-lg-4">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pt-4 pb-0">
+              <h5 class="card-title mb-0">Cost Distribution</h5>
+              <p class="text-muted small mb-0">Current month breakdown</p>
+            </div>
+            <div class="card-body">
+              <canvas id="costDistributionChart" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Users by Usage -->
+    <div class="col-12 mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 pt-4 pb-0">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h5 class="card-title mb-0">Top Users by Usage</h5>
+              <p class="text-muted small mb-0">Highest usage for <%= billingPeriod %></p>
+            </div>
+            <button class="btn btn-outline-primary btn-sm" onclick="loadTopUsers()">
+              <i class="fas fa-sync-alt me-1"></i> Refresh
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>User</th>
+                  <th>Plan</th>
+                  <th>AI Tokens</th>
+                  <th>AI Cost</th>
+                  <th>Storage Cost</th>
+                  <th>Total Cost</th>
+                  <th>Operations</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="topUsersTable">
+                <% if (topUsers && topUsers.length > 0) { %>
+                  <% topUsers.forEach((item, index) => { %>
+                  <tr>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                          <span class="text-primary fw-bold small"><%= index + 1 %></span>
+                        </div>
+                        <div>
+                          <div class="fw-medium"><%= item.user.username %></div>
+                          <small class="text-muted"><%= item.user.email %></small>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="badge bg-secondary">Loading...</span></td>
+                    <td><%= item.usage.ai.tokens.toLocaleString() %></td>
+                    <td>$<%= item.usage.ai.cost.toFixed(4) %></td>
+                    <td>$<%= item.usage.storage.cost.toFixed(4) %></td>
+                    <td><strong>$<%= item.usage.total.cost.toFixed(4) %></strong></td>
+                    <td><%= item.usage.total.recordCount %></td>
+                    <td>
+                      <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-info" onclick="viewUserDetails('<%= item.user.id %>')">
+                          <i class="fas fa-eye"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" onclick="viewUserUsage('<%= item.user.id %>')">
+                          <i class="fas fa-chart-bar"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <% }); %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                      <i class="fas fa-chart-bar fa-2x mb-2 d-block"></i>
+                      No usage data found for this period.
+                    </td>
+                  </tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subscription Plan Usage -->
+    <div class="col-12 mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 pt-4 pb-0">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h5 class="card-title mb-0">Plan Usage Distribution</h5>
+              <p class="text-muted small mb-0">Users approaching limits by plan</p>
+            </div>
+            <a href="/admin/subscription-plans" class="btn btn-outline-primary btn-sm">
+              <i class="fas fa-cog me-1"></i> Manage Plans
+            </a>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3" id="planUsageStats">
+            <!-- Plan usage stats will be loaded here -->
+            <div class="col-12 text-center text-muted py-4">
+              <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+              <p>Loading plan usage statistics...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Settings -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 pt-4 pb-0">
+          <h5 class="card-title mb-0">Usage Management</h5>
+          <p class="text-muted small mb-0">System-wide usage settings and controls</p>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6 col-lg-3">
+              <a href="/admin/subscription-plans" class="btn btn-outline-primary w-100">
+                <i class="fas fa-list-alt mb-2 d-block"></i>
+                Manage Plans
+              </a>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <a href="/admin/usage-limits" class="btn btn-outline-info w-100">
+                <i class="fas fa-sliders-h mb-2 d-block"></i>
+                Adjust Limits
+              </a>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <a href="/admin/usage-alerts" class="btn btn-outline-warning w-100">
+                <i class="fas fa-bell mb-2 d-block"></i>
+                Alert Settings
+              </a>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <a href="/admin/usage-reports" class="btn btn-outline-success w-100">
+                <i class="fas fa-file-export mb-2 d-block"></i>
+                Export Reports
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// System Usage Trends Chart
+const systemTrendsCtx = document.getElementById('systemTrendsChart').getContext('2d');
+const systemTrendsChart = new Chart(systemTrendsCtx, {
+  type: 'line',
+  data: {
+    labels: [<% systemHistory.forEach((month, index) => { %>'<%= month.month %>'<% if (index < systemHistory.length - 1) { %>,<% } %><% }); %>],
+    datasets: [
+      {
+        label: 'AI Costs ($)',
+        data: [<% systemHistory.forEach((month, index) => { %><%= month.ai.totalCost %><% if (index < systemHistory.length - 1) { %>,<% } %><% }); %>],
+        borderColor: 'rgb(54, 162, 235)',
+        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+        tension: 0.4,
+        fill: true
+      },
+      {
+        label: 'Storage Costs ($)',
+        data: [<% systemHistory.forEach((month, index) => { %><%= month.storage.totalCost %><% if (index < systemHistory.length - 1) { %>,<% } %><% }); %>],
+        borderColor: 'rgb(255, 99, 132)',
+        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+        tension: 0.4,
+        fill: true
+      },
+      {
+        label: 'Total Users',
+        data: [<% systemHistory.forEach((month, index) => { %><%= month.total.uniqueUsers %><% if (index < systemHistory.length - 1) { %>,<% } %><% }); %>],
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+        tension: 0.4,
+        yAxisID: 'y1'
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+      }
+    },
+    scales: {
+      y: {
+        type: 'linear',
+        display: true,
+        position: 'left',
+        beginAtZero: true,
+        ticks: {
+          callback: function(value) {
+            return '$' + value.toFixed(2);
+          }
+        }
+      },
+      y1: {
+        type: 'linear',
+        display: true,
+        position: 'right',
+        beginAtZero: true,
+        grid: {
+          drawOnChartArea: false,
+        },
+      }
+    }
+  }
+});
+
+// Cost Distribution Chart
+const costDistributionCtx = document.getElementById('costDistributionChart').getContext('2d');
+const costDistributionChart = new Chart(costDistributionCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['AI Costs', 'Storage Costs'],
+    datasets: [{
+      data: [<%= systemStats.ai.totalCost %>, <%= systemStats.storage.totalCost %>],
+      backgroundColor: [
+        'rgba(54, 162, 235, 0.8)',
+        'rgba(255, 99, 132, 0.8)'
+      ],
+      borderColor: [
+        'rgb(54, 162, 235)',
+        'rgb(255, 99, 132)'
+      ],
+      borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+      }
+    }
+  }
+});
+
+// Admin Dashboard Functions
+function refreshData() {
+  location.reload();
+}
+
+function exportData() {
+  window.open('/admin/api/usage/export?month=<%= billingPeriod %>', '_blank');
+}
+
+function loadTopUsers() {
+  // Refresh top users table
+  fetch('/admin/api/usage/top-users')
+    .then(response => response.json())
+    .then(data => {
+      // Update table with new data
+      console.log('Top users data:', data);
+    })
+    .catch(error => {
+      console.error('Error loading top users:', error);
+    });
+}
+
+function viewUserDetails(userId) {
+  window.open(`/admin/users/${userId}`, '_blank');
+}
+
+function viewUserUsage(userId) {
+  window.open(`/admin/users/${userId}/usage`, '_blank');
+}
+
+// Load plan usage statistics
+document.addEventListener('DOMContentLoaded', function() {
+  loadPlanUsageStats();
+});
+
+function loadPlanUsageStats() {
+  fetch('/admin/api/usage/plan-stats')
+    .then(response => response.json())
+    .then(data => {
+      const container = document.getElementById('planUsageStats');
+      if (data.success && data.data.length > 0) {
+        container.innerHTML = data.data.map(plan => `
+          <div class="col-md-6 col-lg-4">
+            <div class="border rounded p-3">
+              <h6 class="mb-2">${plan.displayName} Plan</h6>
+              <div class="d-flex justify-content-between mb-1">
+                <small>Active Users:</small>
+                <small><strong>${plan.activeUsers}</strong></small>
+              </div>
+              <div class="d-flex justify-content-between mb-1">
+                <small>Avg Usage:</small>
+                <small>$${plan.averageUsage.toFixed(4)}</small>
+              </div>
+              <div class="d-flex justify-content-between">
+                <small>Near Limit:</small>
+                <small class="${plan.usersNearLimit > 0 ? 'text-warning' : 'text-success'}">
+                  ${plan.usersNearLimit} users
+                </small>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        container.innerHTML = '<div class="col-12 text-center text-muted">No plan data available</div>';
+      }
+    })
+    .catch(error => {
+      console.error('Error loading plan stats:', error);
+      document.getElementById('planUsageStats').innerHTML = 
+        '<div class="col-12 text-center text-danger">Error loading plan statistics</div>';
+    });
+}
+</script>
+
+<%- include('../partials/footer') %>

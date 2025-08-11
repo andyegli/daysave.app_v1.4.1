@@ -1,0 +1,401 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Page Header -->
+    <div class="col-12 mb-4">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="h3 mb-0">Usage Analytics</h1>
+          <p class="text-muted mb-0">Monitor your AI usage, costs, and subscription limits</p>
+        </div>
+        <div>
+          <span class="badge bg-primary fs-6">
+            <%= subscriptionPlan.displayName %> Plan
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Usage Overview Cards -->
+    <div class="col-12 mb-4">
+      <div class="row g-3">
+        <!-- AI Tokens Used -->
+        <div class="col-md-6 col-lg-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                  <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                    <i class="fas fa-robot text-primary fs-4"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <h6 class="mb-1 text-muted">AI Tokens Used</h6>
+                  <h4 class="mb-0"><%= currentUsage.ai.tokens.toLocaleString() %></h4>
+                  <% if (limits.tokens.limit !== -1) { %>
+                  <small class="text-muted">
+                    of <%= limits.tokens.limit.toLocaleString() %> 
+                    (<%= Math.round(limits.tokens.percentage) %>%)
+                  </small>
+                  <div class="progress mt-2" style="height: 4px;">
+                    <div class="progress-bar <%= limits.tokens.exceeded ? 'bg-danger' : (limits.tokens.percentage > alertThreshold ? 'bg-warning' : 'bg-success') %>" 
+                         style="width: <%= Math.min(100, limits.tokens.percentage) %>%"></div>
+                  </div>
+                  <% } else { %>
+                  <small class="text-success">Unlimited</small>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Costs -->
+        <div class="col-md-6 col-lg-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                  <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                    <i class="fas fa-brain text-success fs-4"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <h6 class="mb-1 text-muted">AI Costs</h6>
+                  <h4 class="mb-0">$<%= currentUsage.ai.cost.toFixed(4) %></h4>
+                  <% if (limits.aiCost.limit !== -1) { %>
+                  <small class="text-muted">
+                    of $<%= limits.aiCost.limit.toFixed(2) %> 
+                    (<%= Math.round(limits.aiCost.percentage) %>%)
+                  </small>
+                  <div class="progress mt-2" style="height: 4px;">
+                    <div class="progress-bar <%= limits.aiCost.exceeded ? 'bg-danger' : (limits.aiCost.percentage > alertThreshold ? 'bg-warning' : 'bg-success') %>" 
+                         style="width: <%= Math.min(100, limits.aiCost.percentage) %>%"></div>
+                  </div>
+                  <% } else { %>
+                  <small class="text-success">Unlimited</small>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Storage Costs -->
+        <div class="col-md-6 col-lg-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                  <div class="bg-info bg-opacity-10 rounded-3 p-3">
+                    <i class="fas fa-hdd text-info fs-4"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <h6 class="mb-1 text-muted">Storage Costs</h6>
+                  <h4 class="mb-0">$<%= currentUsage.storage.cost.toFixed(4) %></h4>
+                  <% if (limits.storageCost.limit !== -1) { %>
+                  <small class="text-muted">
+                    of $<%= limits.storageCost.limit.toFixed(2) %> 
+                    (<%= Math.round(limits.storageCost.percentage) %>%)
+                  </small>
+                  <div class="progress mt-2" style="height: 4px;">
+                    <div class="progress-bar <%= limits.storageCost.exceeded ? 'bg-danger' : (limits.storageCost.percentage > alertThreshold ? 'bg-warning' : 'bg-success') %>" 
+                         style="width: <%= Math.min(100, limits.storageCost.percentage) %>%"></div>
+                  </div>
+                  <% } else { %>
+                  <small class="text-success">Unlimited</small>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Total Costs -->
+        <div class="col-md-6 col-lg-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="flex-shrink-0">
+                  <div class="bg-warning bg-opacity-10 rounded-3 p-3">
+                    <i class="fas fa-dollar-sign text-warning fs-4"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <h6 class="mb-1 text-muted">Total Costs</h6>
+                  <h4 class="mb-0">$<%= currentUsage.total.cost.toFixed(4) %></h4>
+                  <% if (limits.totalCost.limit !== -1) { %>
+                  <small class="text-muted">
+                    of $<%= limits.totalCost.limit.toFixed(2) %> 
+                    (<%= Math.round(limits.totalCost.percentage) %>%)
+                  </small>
+                  <div class="progress mt-2" style="height: 4px;">
+                    <div class="progress-bar <%= limits.totalCost.exceeded ? 'bg-danger' : (limits.totalCost.percentage > alertThreshold ? 'bg-warning' : 'bg-success') %>" 
+                         style="width: <%= Math.min(100, limits.totalCost.percentage) %>%"></div>
+                  </div>
+                  <% } else { %>
+                  <small class="text-success">Unlimited</small>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Usage Alerts -->
+    <% if (shouldAlert) { %>
+    <div class="col-12 mb-4">
+      <div class="alert alert-<%= alertLevel === 'critical' ? 'danger' : 'warning' %> d-flex align-items-center" role="alert">
+        <i class="fas fa-<%= alertLevel === 'critical' ? 'exclamation-triangle' : 'exclamation-circle' %> me-2"></i>
+        <div>
+          <strong><%= alertLevel === 'critical' ? 'Usage Limit Exceeded!' : 'Usage Alert' %></strong>
+          <% if (alertLevel === 'critical') { %>
+            You have exceeded one or more usage limits for your <%= subscriptionPlan.displayName %> plan.
+            Please consider upgrading your plan or reducing usage.
+          <% } else { %>
+            You have used more than <%= alertThreshold %>% of one or more limits for your <%= subscriptionPlan.displayName %> plan.
+          <% } %>
+          <a href="/subscription/plans" class="alert-link ms-2">View Plans</a>
+        </div>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- Usage Charts -->
+    <div class="col-12 mb-4">
+      <div class="row g-4">
+        <!-- Monthly Trends Chart -->
+        <div class="col-lg-8">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pt-4 pb-0">
+              <h5 class="card-title mb-0">Monthly Usage Trends</h5>
+              <p class="text-muted small mb-0">12-month usage history</p>
+            </div>
+            <div class="card-body">
+              <canvas id="usageTrendsChart" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Usage Breakdown -->
+        <div class="col-lg-4">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pt-4 pb-0">
+              <h5 class="card-title mb-0">This Month's Breakdown</h5>
+              <p class="text-muted small mb-0">Current period: <%= billingPeriod %></p>
+            </div>
+            <div class="card-body">
+              <canvas id="usageBreakdownChart" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Content with Costs -->
+    <div class="col-12 mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 pt-4 pb-0">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h5 class="card-title mb-0">Recent Content Analysis</h5>
+              <p class="text-muted small mb-0">Your latest submissions with associated costs</p>
+            </div>
+            <a href="/content" class="btn btn-outline-primary btn-sm">View All</a>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Content</th>
+                  <th>Type</th>
+                  <th>Processing Date</th>
+                  <th>AI Tokens</th>
+                  <th>AI Cost</th>
+                  <th>Storage Cost</th>
+                  <th>Total Cost</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (recentContent && recentContent.length > 0) { %>
+                  <% recentContent.forEach(item => { %>
+                  <tr>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        <i class="fas fa-<%= item.type === 'video' ? 'play' : (item.type === 'audio' ? 'volume-up' : (item.type === 'image' ? 'image' : 'link')) %> me-2 text-muted"></i>
+                        <div>
+                          <div class="fw-medium"><%= item.title || item.url %></div>
+                          <% if (item.title && item.url) { %>
+                          <small class="text-muted"><%= item.url.length > 50 ? item.url.substring(0, 50) + '...' : item.url %></small>
+                          <% } %>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="badge bg-secondary"><%= item.type %></span></td>
+                    <td><%= new Date(item.createdAt).toLocaleDateString() %></td>
+                    <td><%= item.usage.tokens ? item.usage.tokens.toLocaleString() : '-' %></td>
+                    <td>$<%= item.usage.aiCost ? item.usage.aiCost.toFixed(4) : '0.0000' %></td>
+                    <td>$<%= item.usage.storageCost ? item.usage.storageCost.toFixed(4) : '0.0000' %></td>
+                    <td><strong>$<%= item.usage.totalCost ? item.usage.totalCost.toFixed(4) : '0.0000' %></strong></td>
+                    <td>
+                      <span class="badge bg-<%= item.status === 'completed' ? 'success' : (item.status === 'processing' ? 'primary' : 'warning') %>">
+                        <%= item.status %>
+                      </span>
+                    </td>
+                  </tr>
+                  <% }); %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                      <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                      No content analyzed yet. <a href="/content">Start analyzing content</a> to see usage data here.
+                    </td>
+                  </tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plan Information -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 pt-4 pb-0">
+          <h5 class="card-title mb-0">Your Plan: <%= subscriptionPlan.displayName %></h5>
+          <p class="text-muted small mb-0"><%= subscriptionPlan.description %></p>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6 col-lg-3">
+              <div class="border rounded p-3 text-center">
+                <h6 class="text-muted mb-1">Monthly AI Tokens</h6>
+                <h4 class="mb-0">
+                  <%= subscriptionPlan.max_ai_tokens_per_month === -1 ? 'Unlimited' : subscriptionPlan.max_ai_tokens_per_month.toLocaleString() %>
+                </h4>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="border rounded p-3 text-center">
+                <h6 class="text-muted mb-1">Monthly AI Budget</h6>
+                <h4 class="mb-0">
+                  <%= subscriptionPlan.max_ai_cost_per_month_usd === -1 ? 'Unlimited' : '$' + subscriptionPlan.max_ai_cost_per_month_usd %>
+                </h4>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="border rounded p-3 text-center">
+                <h6 class="text-muted mb-1">Storage Budget</h6>
+                <h4 class="mb-0">
+                  <%= subscriptionPlan.max_storage_cost_per_month_usd === -1 ? 'Unlimited' : '$' + subscriptionPlan.max_storage_cost_per_month_usd %>
+                </h4>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="border rounded p-3 text-center">
+                <h6 class="text-muted mb-1">Total Budget</h6>
+                <h4 class="mb-0">
+                  <%= subscriptionPlan.max_total_cost_per_month_usd === -1 ? 'Unlimited' : '$' + subscriptionPlan.max_total_cost_per_month_usd %>
+                </h4>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 text-center">
+            <a href="/subscription/plans" class="btn btn-primary">Upgrade Plan</a>
+            <a href="/subscription/manage" class="btn btn-outline-secondary ms-2">Manage Subscription</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Usage Trends Chart
+const trendsCtx = document.getElementById('usageTrendsChart').getContext('2d');
+const trendsChart = new Chart(trendsCtx, {
+  type: 'line',
+  data: {
+    labels: [<% usageHistory.forEach((month, index) => { %>'<%= month.month %>'<% if (index < usageHistory.length - 1) { %>,<% } %><% }); %>],
+    datasets: [
+      {
+        label: 'AI Costs ($)',
+        data: [<% usageHistory.forEach((month, index) => { %><%= month.ai.cost %><% if (index < usageHistory.length - 1) { %>,<% } %><% }); %>],
+        borderColor: 'rgb(54, 162, 235)',
+        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+        tension: 0.4,
+        fill: true
+      },
+      {
+        label: 'Storage Costs ($)',
+        data: [<% usageHistory.forEach((month, index) => { %><%= month.storage.cost %><% if (index < usageHistory.length - 1) { %>,<% } %><% }); %>],
+        borderColor: 'rgb(255, 99, 132)',
+        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+        tension: 0.4,
+        fill: true
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: function(value) {
+            return '$' + value.toFixed(4);
+          }
+        }
+      }
+    }
+  }
+});
+
+// Usage Breakdown Chart
+const breakdownCtx = document.getElementById('usageBreakdownChart').getContext('2d');
+const breakdownChart = new Chart(breakdownCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['AI Costs', 'Storage Costs'],
+    datasets: [{
+      data: [<%= currentUsage.ai.cost %>, <%= currentUsage.storage.cost %>],
+      backgroundColor: [
+        'rgba(54, 162, 235, 0.8)',
+        'rgba(255, 99, 132, 0.8)'
+      ],
+      borderColor: [
+        'rgb(54, 162, 235)',
+        'rgb(255, 99, 132)'
+      ],
+      borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+      }
+    }
+  }
+});
+</script>
+
+<%- include('../partials/footer') %>

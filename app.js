@@ -312,6 +312,7 @@ checkDatabaseConnection().then(async (connected) => {
   app.use('/auth', require('./routes/auth'));
   app.use('/passkeys', require('./routes/passkeys'));
   app.use('/admin', require('./routes/admin'));
+  app.use('/dashboard', require('./routes/dashboard'));
   app.use('/contacts', require('./routes/contacts'));
   app.use('/files', require('./routes/files'));
   app.use('/content', require('./routes/content'));

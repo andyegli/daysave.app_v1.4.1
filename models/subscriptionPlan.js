@@ -66,6 +66,43 @@ module.exports = (sequelize) => {
       allowNull: false,
       defaultValue: 1
     },
+    // AI and Cost Limits
+    max_ai_tokens_per_month: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 10000,
+      comment: 'Maximum AI tokens allowed per month (-1 for unlimited)'
+    },
+    max_ai_cost_per_month_usd: {
+      type: DataTypes.DECIMAL(10, 4),
+      allowNull: false,
+      defaultValue: 1.0000,
+      comment: 'Maximum AI costs allowed per month in USD (-1 for unlimited)'
+    },
+    max_storage_cost_per_month_usd: {
+      type: DataTypes.DECIMAL(10, 4),
+      allowNull: false,
+      defaultValue: 1.0000,
+      comment: 'Maximum storage costs allowed per month in USD (-1 for unlimited)'
+    },
+    max_total_cost_per_month_usd: {
+      type: DataTypes.DECIMAL(10, 4),
+      allowNull: false,
+      defaultValue: 2.0000,
+      comment: 'Maximum total costs (AI + Storage) allowed per month in USD (-1 for unlimited)'
+    },
+    usage_alerts_enabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+      comment: 'Whether to send usage alerts to users'
+    },
+    usage_alert_threshold_percent: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 80,
+      comment: 'Percentage of limit at which to send usage alerts'
+    },
     // Feature access flags
     ai_analysis_enabled: {
       type: DataTypes.BOOLEAN,
