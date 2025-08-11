@@ -2,11 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { User, Role, UserPasskey, UserDevice, LoginAttempt, AdminSetting } = require('../models');
 const { logAuthEvent, logAuthError } = require('../config/logger');
-const { isAuthenticated, isAdmin, requireTesterPermission } = require('../middleware');
+const { isAuthenticated, isAdmin, requireTesterPermission, ensureRoleLoaded } = require('../middleware');
 const { body, validationResult, param } = require('express-validator');
 const { deviceFingerprinting } = require('../middleware/deviceFingerprinting');
 const { clearDevHttpAccessCache } = require('../middleware/devHttpAccess');
 const geoLocationService = require('../services/geoLocationService');
+
+// Apply ensureRoleLoaded middleware to all admin routes
+router.use(ensureRoleLoaded);
 
 // Enhanced admin error handler
 const handleAdminError = (req, res, error, context = {}) => {
