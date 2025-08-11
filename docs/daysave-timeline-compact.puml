@@ -1,0 +1,29 @@
+@startgantt
+title DaySave v1.4.1 Timeline
+subtitle 2025-08-11
+
+[Modular Architecture Refactor] starts 2025-07-16
+[Modular Architecture Refactor] lasts 27 days
+[Modular Architecture Refactor] is colored in #2596be
+[System Stabilization] starts 2025-07-16
+[System Stabilization] lasts 27 days
+[System Stabilization] is colored in #a1d8c9
+[Production Readiness] starts 2025-07-16
+[Production Readiness] lasts 21 days
+[Production Readiness] is colored in #fbce3c
+[Feature Integration] starts 2025-07-17
+[Feature Integration] lasts 26 days
+[Feature Integration] is colored in #fbda6a
+[System Modernization] starts 2025-07-22
+[System Modernization] lasts 21 days
+[System Modernization] is colored in #309b9c
+[Infrastructure & DevOps] starts 2025-07-23
+[Infrastructure & DevOps] lasts 14 days
+[Infrastructure & DevOps] is colored in #d8e2a8
+[Advanced Features] starts 2025-07-23
+[Advanced Features] lasts 13 days
+[Advanced Features] is colored in #87c0a9
+[Authentication & Security] starts 2025-07-28
+[Authentication & Security] lasts 12 days
+[Authentication & Security] is colored in #f0e28b
+@endgantt
