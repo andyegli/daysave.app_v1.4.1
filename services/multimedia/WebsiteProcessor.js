@@ -156,6 +156,26 @@ class WebsiteProcessor extends BaseMediaProcessor {
     }
 
     /**
+     * Report progress in the format expected by the WebSocket service
+     * @param {number} percentage - Progress percentage (0-100)
+     * @param {string} stage - Current processing stage
+     * @param {string} message - Progress message
+     */
+    reportProgress(percentage, stage, message) {
+        if (this.progressCallback && typeof this.progressCallback === 'function') {
+            this.progressCallback({
+                percentage,
+                stage,
+                message,
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        // Also call the base class method for logging
+        this.updateProgress(percentage, stage, message);
+    }
+
+    /**
      * Process website URL for content analysis
      * @param {string} userId - User ID
      * @param {string} url - Website URL to process
@@ -166,12 +186,15 @@ class WebsiteProcessor extends BaseMediaProcessor {
         try {
             await this.ensureInitialized();
             
+            // Set up progress callback for this processing session
+            this.progressCallback = options.progressCallback || null;
+            
             if (this.enableLogging) {
                 console.log(`🌐 Processing website: ${url}`);
             }
             
             // Update progress
-            this.updateProgress(5, 'initialization', 'Starting website analysis');
+            this.reportProgress(5, 'initialization', 'Starting website analysis');
             
             // Validate URL
             if (!this.isWebsiteUrl(url)) {
@@ -179,26 +202,26 @@ class WebsiteProcessor extends BaseMediaProcessor {
             }
             
             // Fetch and parse website content
-            this.updateProgress(15, 'fetching', 'Fetching website content');
+            this.reportProgress(15, 'fetching', 'Fetching website content');
             const htmlContent = await this.fetchWebsiteContent(url);
             
-            this.updateProgress(25, 'parsing', 'Parsing HTML content');
+            this.reportProgress(25, 'parsing', 'Parsing HTML content');
             const $ = cheerio.load(htmlContent);
             
             // Extract various content types
-            this.updateProgress(35, 'extraction', 'Extracting website metadata');
+            this.reportProgress(35, 'extraction', 'Extracting website metadata');
             const websiteData = await this.extractWebsiteData($, url);
             
-            this.updateProgress(50, 'media_detection', 'Detecting embedded media');
+            this.reportProgress(50, 'media_detection', 'Detecting embedded media');
             const embeddedMedia = await this.detectEmbeddedMedia($, url);
             
-            this.updateProgress(65, 'content_analysis', 'Analyzing content');
+            this.reportProgress(65, 'content_analysis', 'Analyzing content');
             const contentAnalysis = await this.analyzeContent(websiteData, options);
             
-            this.updateProgress(85, 'ai_processing', 'Generating AI insights');
+            this.reportProgress(85, 'ai_processing', 'Generating AI insights');
             const aiInsights = await this.generateAIInsights(websiteData, options);
             
-            this.updateProgress(100, 'completion', 'Website analysis complete');
+            this.reportProgress(100, 'completion', 'Website analysis complete');
             
             const result = {
                 success: true,
