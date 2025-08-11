@@ -1,3 +1,31 @@
+/**
+ * Migration: Create Cost Configuration Tables
+ * 
+ * PURPOSE:
+ * Creates database tables for storing dynamic AI and storage pricing configuration.
+ * Replaces hardcoded pricing with database-driven configuration that can be
+ * managed through the admin interface without code deployments.
+ * 
+ * TABLES CREATED:
+ * - ai_pricing_config: AI provider and model pricing configuration
+ * - storage_pricing_config: Storage provider and class pricing configuration
+ * 
+ * FEATURES:
+ * - UUID primary keys for security and scalability
+ * - Effective date support for pricing history
+ * - Active/inactive status management
+ * - Comprehensive indexing for performance
+ * - Multi-provider and multi-model support
+ * 
+ * INDEXES:
+ * - Provider/model lookup indexes
+ * - Active status and effective date indexes
+ * - Performance optimization for common queries
+ * 
+ * AUTHOR: DaySave Development Team
+ * CREATED: 2025-08-11
+ */
+
 'use strict';
 
 /** @type {import('sequelize-cli').Migration} */

@@ -1,3 +1,38 @@
+<%- 
+/*
+ * Cost Configuration Admin Interface
+ * 
+ * PURPOSE:
+ * Provides a comprehensive admin interface for managing AI and storage pricing
+ * configuration. Allows real-time updates to cost calculations without code
+ * deployments or application restarts.
+ * 
+ * FEATURES:
+ * - Visual AI pricing table with provider badges
+ * - Storage pricing management with cost breakdown
+ * - Add/edit/delete pricing configurations
+ * - Pricing impact analysis dashboard
+ * - Export capabilities for pricing data
+ * - Real-time cost calculation preview
+ * - Effective date management for pricing changes
+ * 
+ * SECTIONS:
+ * - AI Provider Pricing: Token-based costs for all AI models
+ * - Storage Provider Pricing: Storage, operation, and egress costs
+ * - Pricing Impact Analysis: System-wide cost analysis
+ * - Add/Edit Modal: Form interface for pricing management
+ * 
+ * INTEGRATIONS:
+ * - Cost Configuration Service for dynamic pricing
+ * - Usage Limit Service for impact analysis
+ * - Admin authentication and authorization
+ * - Bootstrap UI components and modals
+ * 
+ * AUTHOR: DaySave Development Team
+ * CREATED: 2025-08-11 (Dynamic Cost Configuration System)
+ */
+-%>
+
 <%- include('../partials/header') %>
 
 <div class="container-fluid">

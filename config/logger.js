@@ -384,16 +384,53 @@ const logAuthEvent = async (event, data = {}) => {
   
   // Also store in database for analytics
   try {
-    // Dynamically import AuditLog to avoid circular dependency issues
-    const { AuditLog } = require('../models');
+    // Dynamically import models to avoid circular dependency issues
+    const { AuditLog, User } = require('../models');
+    
+    // Extract user ID and validate it exists if provided
+    const userId = data.userId || data.adminId || data.user?.id || null;
+    let validatedUserId = null;
+    
+    // If we have a user ID, validate it exists in the database
+    if (userId) {
+      try {
+        const userExists = await User.findByPk(userId, { 
+          attributes: ['id'], // Only fetch the ID to minimize query overhead
+          raw: true 
+        });
+        if (userExists) {
+          validatedUserId = userId;
+        } else {
+          // Log that we found an invalid user ID but continue with null
+          enhancedLogger.warn('Invalid user ID in audit log, setting to null', {
+            channel: 'system',
+            event: 'AUDIT_LOG_INVALID_USER_ID',
+            originalEvent: event,
+            invalidUserId: userId,
+            timestamp: new Date().toISOString()
+          });
+        }
+      } catch (userValidationError) {
+        // If user validation fails, log it but continue with null user_id
+        enhancedLogger.warn('User validation failed for audit log', {
+          channel: 'system',
+          event: 'AUDIT_LOG_USER_VALIDATION_ERROR',
+          originalEvent: event,
+          userId: userId,
+          error: userValidationError.message,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
     
     await AuditLog.create({
       action: event,
-      user_id: data.userId || data.adminId || data.user?.id || null,
+      user_id: validatedUserId,
       target_type: data.targetType || null,
       target_id: data.targetId || null,
       details: {
         ...data,
+        originalUserId: userId !== validatedUserId ? userId : undefined, // Preserve original if different
         timestamp: new Date().toISOString()
       }
     });

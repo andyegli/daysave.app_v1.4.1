@@ -1,3 +1,60 @@
+/**
+ * AI Pricing Configuration Model for DaySave
+ * 
+ * PURPOSE:
+ * Defines the AI pricing configuration model for storing dynamic cost calculations
+ * for AI providers and models. Replaces hardcoded pricing with database-driven
+ * configuration that can be managed through the admin interface.
+ * 
+ * FEATURES:
+ * - UUID primary keys for security and scalability
+ * - Multi-provider support (OpenAI, Google AI, Google Cloud, etc.)
+ * - Flexible pricing models (input/output/thinking tokens)
+ * - Special pricing units (per image, per minute, per second)
+ * - Effective date tracking for pricing history
+ * - Active/inactive status management
+ * - Built-in cost calculation methods
+ * 
+ * FIELDS:
+ * - id: UUID primary key
+ * - provider: AI provider name (openai, google_ai, google_cloud)
+ * - model: Model name (gpt-4o-mini, gemini-1.5-flash, etc.)
+ * - input_cost_per_million_tokens: Cost per 1M input tokens in USD
+ * - output_cost_per_million_tokens: Cost per 1M output tokens in USD
+ * - thinking_cost_per_million_tokens: Cost per 1M thinking tokens (reasoning models)
+ * - special_pricing_unit: Special pricing unit type
+ * - special_pricing_cost: Cost per special unit
+ * - is_active: Whether this pricing is currently active
+ * - effective_date: When this pricing becomes effective
+ * - notes: Additional notes about this pricing
+ * 
+ * PRICING MODELS:
+ * - Token-based: Most language models (GPT, Gemini)
+ * - Image-based: Image generation models (DALL-E, Imagen)
+ * - Time-based: Audio processing models (Whisper)
+ * - Request-based: API services (Vision, Translation)
+ * 
+ * METHODS:
+ * - calculateCost(): Calculate cost for given token usage
+ * - calculateSpecialCost(): Calculate cost for special units
+ * - getCurrentPricing(): Get current active pricing for provider/model
+ * - getAllCurrentPricing(): Get all active pricing configurations
+ * 
+ * INDEXES:
+ * - provider, model, effective_date (unique)
+ * - provider, model for quick lookups
+ * - is_active, effective_date for active pricing queries
+ * 
+ * VALIDATION:
+ * - Provider validation against allowed values
+ * - Special pricing unit validation
+ * - Decimal precision for cost fields
+ * - Required field enforcement
+ * 
+ * AUTHOR: DaySave Development Team
+ * CREATED: 2025-08-11 (Dynamic Cost Configuration System)
+ */
+
 const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {

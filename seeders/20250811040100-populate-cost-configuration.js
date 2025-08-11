@@ -1,3 +1,35 @@
+/**
+ * Seeder: Populate Cost Configuration with Current Pricing
+ * 
+ * PURPOSE:
+ * Populates the cost configuration tables with current pricing from all supported
+ * AI and storage providers. Migrates hardcoded pricing values to database-driven
+ * configuration for dynamic cost management.
+ * 
+ * DATA POPULATED:
+ * - 24 AI model pricing configurations across multiple providers
+ * - 5 storage pricing configurations for different storage classes
+ * - Current market pricing as of August 2025
+ * 
+ * AI PROVIDERS INCLUDED:
+ * - OpenAI: GPT-4, GPT-4o, GPT-3.5, Whisper, DALL-E, Embeddings
+ * - Google AI: Gemini 2.5, Gemini 2.0, Gemini 1.5, Imagen, Veo
+ * - Google Cloud: Vision API, Speech-to-Text, Translation
+ * 
+ * STORAGE PROVIDERS INCLUDED:
+ * - Google Cloud Storage: Standard, Nearline, Coldline, Archive
+ * - Local Storage: Free development tier
+ * 
+ * PRICING PHILOSOPHY:
+ * - Competitive market rates for AI tokens
+ * - Storage costs based on GCS pricing tiers
+ * - Special pricing for non-token operations
+ * - Future-proof provider extensibility
+ * 
+ * AUTHOR: DaySave Development Team
+ * CREATED: 2025-08-11
+ */
+
 'use strict';
 
 /** @type {import('sequelize-cli').Migration} */

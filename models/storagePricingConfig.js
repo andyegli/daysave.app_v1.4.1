@@ -1,3 +1,67 @@
+/**
+ * Storage Pricing Configuration Model for DaySave
+ * 
+ * PURPOSE:
+ * Defines the storage pricing configuration model for storing dynamic cost calculations
+ * for storage providers and classes. Enables database-driven storage cost management
+ * with support for multiple providers and storage tiers.
+ * 
+ * FEATURES:
+ * - UUID primary keys for security and scalability
+ * - Multi-provider support (Google Cloud Storage, AWS S3, Local, etc.)
+ * - Storage class optimization (Standard, Nearline, Coldline, Archive)
+ * - Comprehensive cost tracking (storage, operations, egress)
+ * - Effective date tracking for pricing history
+ * - Active/inactive status management
+ * - Built-in cost calculation methods
+ * 
+ * FIELDS:
+ * - id: UUID primary key
+ * - provider: Storage provider name (google_cloud_storage, aws_s3, local)
+ * - storage_class: Storage class (standard, nearline, coldline, archive)
+ * - storage_cost_per_gb_month: Cost per GB per month in USD
+ * - operation_cost_per_1k: Cost per 1,000 operations in USD
+ * - egress_cost_per_gb: Cost per GB of data egress in USD
+ * - is_active: Whether this pricing is currently active
+ * - effective_date: When this pricing becomes effective
+ * - notes: Additional notes about this pricing
+ * 
+ * STORAGE CLASSES:
+ * - Standard: Frequently accessed data
+ * - Nearline: Accessed less than once per month
+ * - Coldline: Accessed less than once per quarter
+ * - Archive: Accessed less than once per year
+ * - Intelligent Tiering: Automatic tier optimization
+ * 
+ * COST COMPONENTS:
+ * - Storage: Monthly cost per GB of data stored
+ * - Operations: Cost per API operation (read, write, list)
+ * - Egress: Cost per GB of data transferred out
+ * - Early deletion: Additional charges for early deletion
+ * 
+ * METHODS:
+ * - calculateStorageCost(): Calculate storage cost for size and duration
+ * - calculateOperationCost(): Calculate cost for operations
+ * - calculateEgressCost(): Calculate cost for data egress
+ * - getCurrentPricing(): Get current active pricing for provider/class
+ * - getAllCurrentPricing(): Get all active pricing configurations
+ * - getProviderPricing(): Get all pricing for specific provider
+ * 
+ * INDEXES:
+ * - provider, storage_class, effective_date (unique)
+ * - provider, storage_class for quick lookups
+ * - is_active, effective_date for active pricing queries
+ * 
+ * VALIDATION:
+ * - Provider validation against allowed values
+ * - Storage class validation against allowed values
+ * - Decimal precision for cost fields
+ * - Required field enforcement
+ * 
+ * AUTHOR: DaySave Development Team
+ * CREATED: 2025-08-11 (Dynamic Cost Configuration System)
+ */
+
 const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
