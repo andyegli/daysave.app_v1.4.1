@@ -1,0 +1,302 @@
+@startuml External AI Service Integrations
+!theme plain
+
+title DaySave AutomationOrchestrator - External AI Service Integrations\nDetailed Integration Architecture
+
+' Color scheme
+!define INTERNAL_COLOR #E8F4FD
+!define EXTERNAL_COLOR #FFE6E6
+!define AI_COLOR #E6E6FA
+!define API_COLOR #FFF8DC
+!define DATA_COLOR #F0FFF0
+
+' Internal DaySave System
+package "DaySave Internal System" as Internal <<INTERNAL_COLOR>> {
+    
+    package "Media Processors" as Processors {
+        class VideoProcessor {
+            + extractOCRCaptions()
+            + generateThumbnails()
+            + analyzeQuality()
+        }
+        
+        class AudioProcessor {
+            + transcribeAudio()
+            + performSpeakerDiarization()
+            + analyzeSentiment()
+        }
+        
+        class ImageProcessor {
+            + detectObjects()
+            + extractOCR()
+            + generateAIDescription()
+            + analyzeQuality()
+        }
+        
+        class DocumentProcessor {
+            + extractText()
+            + generateSummary()
+            + generateTags()
+            + generateTitle()
+        }
+        
+        class UrlProcessor {
+            + getYouTubeTranscription()
+            + generateSummary()
+            + analyzeSentiment()
+            + generateTags()
+        }
+    }
+    
+    class AutomationOrchestrator {
+        + processUrl()
+        + processContent()
+        + formatResults()
+    }
+    
+    class BaseMediaProcessor {
+        # openai: OpenAI
+        # progressCallback: Function
+        + reportProgress()
+        + handleRetry()
+    }
+}
+
+' External AI Services
+cloud "External AI Services" as ExternalCloud <<EXTERNAL_COLOR>> {
+    
+    package "OpenAI Services" as OpenAIServices <<AI_COLOR>> {
+        interface "OpenAI API" as OpenAIAPI {
+            + GPT-4 Text Analysis
+            + GPT-4 Vision
+            + Embeddings
+            + Moderation
+        }
+        
+        note as OpenAIFeatures
+            **OpenAI Integration Features:**
+            • Content summarization
+            • Sentiment analysis  
+            • Tag generation
+            • Title generation
+            • Image description
+            • Content moderation
+            • Text embeddings
+        end note
+    }
+    
+    package "Google Cloud AI" as GoogleServices <<AI_COLOR>> {
+        interface "Cloud Vision API" as VisionAPI {
+            + Object Detection
+            + OCR Text Extraction
+            + Face Detection
+            + Image Analysis
+        }
+        
+        interface "Cloud Speech API" as SpeechAPI {
+            + Speech-to-Text
+            + Language Detection
+            + Speaker Diarization
+            + Audio Analysis
+        }
+        
+        note as GoogleFeatures
+            **Google Cloud AI Features:**
+            • High-accuracy OCR
+            • Object/landmark detection
+            • Audio transcription
+            • Multi-language support
+            • Speaker identification
+            • Content safety detection
+        end note
+    }
+    
+    package "Media Processing Tools" as MediaTools <<API_COLOR>> {
+        interface "yt-dlp" as YTDLP {
+            + Extract Video Metadata
+            + Download Audio Streams
+            + Extract Captions
+            + Platform Support
+        }
+        
+        interface "FFmpeg" as FFmpeg {
+            + Video Processing
+            + Audio Extraction
+            + Thumbnail Generation
+            + Format Conversion
+        }
+        
+        note as MediaToolsFeatures
+            **Media Tools Features:**
+            • Multi-platform video download
+            • Caption extraction
+            • Audio/video processing
+            • Thumbnail generation
+            • Format conversion
+        end note
+    }
+}
+
+' Data Flow and API Calls
+package "API Integration Layer" as APILayer <<API_COLOR>> {
+    
+    class "OpenAI Client" as OpenAIClient {
+        - apiKey: string
+        + createChatCompletion()
+        + createEmbedding()
+        + moderateContent()
+        + analyzeImage()
+    }
+    
+    class "Google Cloud Client" as GoogleClient {
+        - credentials: ServiceAccount
+        + detectObjects()
+        + extractText()
+        + transcribeAudio()
+        + detectLanguage()
+    }
+    
+    class "Media Processing Client" as MediaClient {
+        + executeYtDlp()
+        + executeFFmpeg()
+        + processVideo()
+        + extractAudio()
+    }
+    
+    class "Error Handling & Retry" as ErrorHandler {
+        + retryWithBackoff()
+        + handleAPIErrors()
+        + logFailures()
+        + fallbackProcessing()
+    }
+}
+
+' Data Models and Responses
+package "Response Data Models" as DataModels <<DATA_COLOR>> {
+    
+    class "OpenAI Response" as OpenAIResponse {
+        + choices: Array
+        + usage: Object
+        + model: string
+        + content: string
+    }
+    
+    class "Vision API Response" as VisionResponse {
+        + textAnnotations: Array
+        + faceAnnotations: Array
+        + objectAnnotations: Array
+        + confidence: number
+    }
+    
+    class "Speech API Response" as SpeechResponse {
+        + alternatives: Array
+        + transcript: string
+        + confidence: number
+        + languageCode: string
+    }
+    
+    class "Media Processing Response" as MediaResponse {
+        + metadata: Object
+        + captions: Array
+        + audioStreams: Array
+        + thumbnails: Array
+    }
+}
+
+' Integration Relationships
+AutomationOrchestrator --> VideoProcessor
+AutomationOrchestrator --> AudioProcessor  
+AutomationOrchestrator --> ImageProcessor
+AutomationOrchestrator --> DocumentProcessor
+AutomationOrchestrator --> UrlProcessor
+
+VideoProcessor --|> BaseMediaProcessor
+AudioProcessor --|> BaseMediaProcessor
+ImageProcessor --|> BaseMediaProcessor
+DocumentProcessor --|> BaseMediaProcessor
+
+' API Client usage
+VideoProcessor --> OpenAIClient : AI analysis
+VideoProcessor --> GoogleClient : OCR extraction
+VideoProcessor --> MediaClient : thumbnail generation
+
+AudioProcessor --> GoogleClient : transcription
+AudioProcessor --> OpenAIClient : sentiment analysis
+AudioProcessor --> MediaClient : audio processing
+
+ImageProcessor --> GoogleClient : object detection
+ImageProcessor --> OpenAIClient : description generation
+ImageProcessor --> MediaClient : image processing
+
+DocumentProcessor --> OpenAIClient : text analysis
+
+UrlProcessor --> MediaClient : yt-dlp integration
+UrlProcessor --> OpenAIClient : content analysis
+
+' External service connections
+OpenAIClient ..> OpenAIAPI : HTTPS requests
+GoogleClient ..> VisionAPI : gRPC/REST
+GoogleClient ..> SpeechAPI : gRPC/REST
+MediaClient ..> YTDLP : subprocess execution
+MediaClient ..> FFmpeg : subprocess execution
+
+' Error handling integration
+OpenAIClient --> ErrorHandler : error recovery
+GoogleClient --> ErrorHandler : error recovery
+MediaClient --> ErrorHandler : error recovery
+
+' Response handling
+OpenAIAPI --> OpenAIResponse : returns
+VisionAPI --> VisionResponse : returns
+SpeechAPI --> SpeechResponse : returns
+YTDLP --> MediaResponse : returns
+FFmpeg --> MediaResponse : returns
+
+' Specific Integration Details
+note as VideoIntegration
+    **Video Processing Integration:**
+    1. FFmpeg extracts thumbnails and metadata
+    2. Google Vision API performs OCR on frames
+    3. OpenAI GPT-4 Vision analyzes content
+    4. Results combined and formatted
+end note
+
+note as AudioIntegration
+    **Audio Processing Integration:**
+    1. Google Speech API transcribes audio
+    2. Speaker diarization identifies speakers
+    3. OpenAI analyzes transcript sentiment
+    4. Results formatted with confidence scores
+end note
+
+note as URLIntegration
+    **URL Processing Integration:**
+    1. yt-dlp extracts platform content
+    2. Captions downloaded and converted
+    3. OpenAI performs comprehensive analysis
+    4. Platform-specific optimizations applied
+end note
+
+' Configuration and Security
+note as SecurityConfig
+    **Security & Configuration:**
+    • API keys stored in environment variables
+    • Service account credentials for Google Cloud
+    • Rate limiting and quota management
+    • Request/response logging for debugging
+    • Error handling with graceful degradation
+    • Timeout configuration for all services
+end note
+
+' Performance Considerations
+note as PerformanceConfig
+    **Performance Optimizations:**
+    • Async processing with Promise.all()
+    • Connection pooling for HTTP clients
+    • Request batching where possible
+    • Caching for repeated requests
+    • Progress tracking for long operations
+    • Memory-efficient streaming for large files
+end note
+
+@enduml

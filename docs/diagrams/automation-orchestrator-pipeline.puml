@@ -1,0 +1,301 @@
+@startuml AutomationOrchestrator AI Processing Pipeline
+!define RECTANGLE class
+!define INTERFACE interface
+!theme plain
+
+title DaySave AutomationOrchestrator & AI Processing Pipeline\nDetailed System Architecture
+
+' Color scheme
+!define ORCHESTRATOR_COLOR #E8F4FD
+!define PROCESSOR_COLOR #F0F8FF
+!define SERVICE_COLOR #FFF8DC
+!define DATABASE_COLOR #E6FFE6
+!define EXTERNAL_COLOR #FFE6E6
+!define FLOW_COLOR #D4EDDA
+
+' Main Orchestrator
+package "AutomationOrchestrator (Singleton)" as Orchestrator <<ORCHESTRATOR_COLOR>> {
+    class AutomationOrchestrator {
+        - instance: AutomationOrchestrator
+        - processors: Map<string, BaseMediaProcessor>
+        - urlProcessor: UrlProcessor
+        - pluginRegistry: PluginRegistry
+        - configManager: ConfigurationManager
+        - performanceOptimizer: PerformanceOptimizer
+        - performanceMonitor: PerformanceMonitor
+        - progressTracker: ProgressTracker
+        - processingQueue: Array
+        - activeJobs: Map
+        - resultCache: Map
+        - metrics: Object
+        + getInstance(): AutomationOrchestrator
+        + initialize(): Promise<void>
+        + processUrl(url, options): Promise<Object>
+        + processContent(buffer, metadata): Promise<Object>
+        + detectMediaType(buffer, metadata): string
+        + getAvailableFeatures(mediaType): Object
+        + formatResults(results, mediaType): Object
+    }
+}
+
+' Core Services
+package "Core Services" as CoreServices <<SERVICE_COLOR>> {
+    class PluginRegistry {
+        + initialize(): Promise<void>
+        + isFeatureAvailable(feature): boolean
+        + getStatusReport(): Object
+    }
+    
+    class ConfigurationManager {
+        + initialize(): Promise<void>
+        + getProcessorConfig(type): Object
+        + isFeatureEnabled(feature): boolean
+        + getConfig(path, default): any
+    }
+    
+    class PerformanceOptimizer {
+        + processWithOptimization(processor, buffer, metadata, options): Promise<Object>
+        + ensureInitialized(): Promise<void>
+    }
+    
+    class PerformanceMonitor {
+        + ensureInitialized(): void
+        + emit(event, data): void
+    }
+    
+    class ProgressTracker {
+        + createJob(jobId, mediaType, metadata): Object
+        + startStage(jobId, stageName, details): void
+        + updateStageProgress(jobId, stageName, progress, details): void
+        + completeStage(jobId, stageName, result): void
+        + failStage(jobId, stageName, error): void
+    }
+}
+
+' Media Processors
+package "Media Processors" as Processors <<PROCESSOR_COLOR>> {
+    abstract class BaseMediaProcessor {
+        # enableLogging: boolean
+        # processorType: string
+        # currentProgress: number
+        # progressCallback: Function
+        # openai: OpenAI
+        # config: Object
+        + {abstract} ensureInitialized(options): Promise<void>
+        + {abstract} process(buffer, metadata, options): Promise<Object>
+        + {abstract} validate(buffer, metadata): Promise<boolean>
+        + {abstract} getSupportedFormats(): Array<string>
+        + {abstract} cleanup(): Promise<void>
+    }
+    
+    class VideoProcessor extends BaseMediaProcessor {
+        + process(buffer, metadata, options): Promise<Object>
+        + validate(buffer, metadata): Promise<boolean>
+        + getSupportedFormats(): Array<string>
+        + generateThumbnails(buffer): Promise<Array>
+        + extractOCRCaptions(buffer): Promise<Object>
+        + analyzeQuality(buffer): Promise<Object>
+    }
+    
+    class AudioProcessor extends BaseMediaProcessor {
+        + process(buffer, metadata, options): Promise<Object>
+        + validate(buffer, metadata): Promise<boolean>
+        + getSupportedFormats(): Array<string>
+        + transcribeAudio(buffer): Promise<Object>
+        + performSpeakerDiarization(buffer): Promise<Object>
+        + analyzeSentiment(text): Promise<Object>
+    }
+    
+    class ImageProcessor extends BaseMediaProcessor {
+        + process(buffer, metadata, options): Promise<Object>
+        + validate(buffer, metadata): Promise<boolean>
+        + getSupportedFormats(): Array<string>
+        + generateThumbnails(buffer): Promise<Array>
+        + detectObjects(buffer): Promise<Object>
+        + extractOCR(buffer): Promise<Object>
+        + generateAIDescription(buffer): Promise<string>
+    }
+    
+    class DocumentProcessor extends BaseMediaProcessor {
+        + process(buffer, metadata, options): Promise<Object>
+        + validate(buffer, metadata): Promise<boolean>
+        + getSupportedFormats(): Array<string>
+        + extractText(buffer): Promise<string>
+        + generateSummary(text): Promise<string>
+        + generateTags(text): Promise<Array>
+        + generateTitle(text): Promise<string>
+    }
+    
+    class UrlProcessor {
+        + isMultimediaUrl(url): boolean
+        + detectPlatform(url): string
+        + extractUrlMetadata(url): Promise<Object>
+        + getYouTubeTranscription(url): Promise<Object>
+        + analyzeUrlContent(url, options): Promise<Object>
+        + processUrl(url, options): Promise<Object>
+    }
+}
+
+' Progress & Communication
+package "Progress & Communication" as Progress <<FLOW_COLOR>> {
+    class ProgressWebSocketService {
+        + startOperation(operationId, data): void
+        + updateProgress(operationId, progressData): void
+        + completeOperation(operationId, finalData): void
+        + errorOperation(operationId, error): void
+        + getActiveOperations(): Array
+    }
+    
+    note bottom of ProgressWebSocketService
+        Provides real-time progress updates
+        via WebSocket for long-running
+        operations like YouTube processing
+    end note
+}
+
+' External Services
+package "External AI Services" as ExternalServices <<EXTERNAL_COLOR>> {
+    class "OpenAI GPT" as OpenAI {
+        + generateDescription()
+        + analyzeSentiment()
+        + generateSummary()
+        + generateTags()
+        + generateTitle()
+    }
+    
+    class "Google Cloud Vision" as GoogleVision {
+        + detectObjects()
+        + extractOCR()
+        + analyzeImage()
+    }
+    
+    class "Google Cloud Speech" as GoogleSpeech {
+        + transcribeAudio()
+        + detectLanguage()
+    }
+    
+    class "yt-dlp" as YTDLP {
+        + extractCaptions()
+        + downloadAudio()
+        + getMetadata()
+    }
+}
+
+' Database Layer
+package "Database Models" as Database <<DATABASE_COLOR>> {
+    class Content {
+        + id: string
+        + user_id: string
+        + url: string
+        + transcription: text
+        + summary: text
+        + generated_title: string
+        + auto_tags: json
+        + user_tags: json
+        + sentiment: json
+        + metadata: json
+        + content_type: string
+    }
+    
+    class Thumbnail {
+        + id: string
+        + content_id: string
+        + file_path: string
+        + thumbnail_type: string
+        + width: integer
+        + height: integer
+        + timestamp_seconds: float
+    }
+    
+    class ProcessingJob {
+        + id: string
+        + content_id: string
+        + user_id: string
+        + status: string
+        + progress: integer
+        + current_stage: string
+        + started_at: timestamp
+        + estimated_completion: timestamp
+    }
+}
+
+' Content Route Handler
+package "Route Handler" as Routes <<FLOW_COLOR>> {
+    class ContentRoutes {
+        + triggerMultimediaAnalysis(content, user): Promise<void>
+        + handleBulkUrlSubmission(req, res): Promise<Object>
+        + POST /content/: create content
+        + GET /content/:id/analysis: get analysis
+        + POST /content/:id/reprocess: reprocess content
+    }
+}
+
+' Relationships - Orchestrator Core
+AutomationOrchestrator *-- PluginRegistry : uses
+AutomationOrchestrator *-- ConfigurationManager : uses
+AutomationOrchestrator *-- PerformanceOptimizer : uses
+AutomationOrchestrator *-- PerformanceMonitor : uses
+AutomationOrchestrator *-- ProgressTracker : uses
+AutomationOrchestrator *-- UrlProcessor : uses
+
+' Processor relationships
+AutomationOrchestrator o-- VideoProcessor : manages
+AutomationOrchestrator o-- AudioProcessor : manages
+AutomationOrchestrator o-- ImageProcessor : manages
+AutomationOrchestrator o-- DocumentProcessor : manages
+
+VideoProcessor --|> BaseMediaProcessor
+AudioProcessor --|> BaseMediaProcessor
+ImageProcessor --|> BaseMediaProcessor
+DocumentProcessor --|> BaseMediaProcessor
+
+' External service usage
+VideoProcessor ..> GoogleVision : uses
+VideoProcessor ..> OpenAI : uses
+AudioProcessor ..> GoogleSpeech : uses
+AudioProcessor ..> OpenAI : uses
+ImageProcessor ..> GoogleVision : uses
+ImageProcessor ..> OpenAI : uses
+DocumentProcessor ..> OpenAI : uses
+UrlProcessor ..> YTDLP : uses
+UrlProcessor ..> OpenAI : uses
+
+' Progress communication
+AutomationOrchestrator --> ProgressWebSocketService : emits progress
+ContentRoutes --> ProgressWebSocketService : tracks operations
+
+' Route integration
+ContentRoutes --> AutomationOrchestrator : processUrl()
+ContentRoutes --> AutomationOrchestrator : processContent()
+
+' Database interactions
+ContentRoutes --> Content : updates
+VideoProcessor --> Thumbnail : creates
+AudioProcessor --> ProcessingJob : updates
+ImageProcessor --> Thumbnail : creates
+AutomationOrchestrator --> ProcessingJob : tracks
+
+' Processing Flow Notes
+note as ProcessingFlow
+    **Main Processing Flow:**
+    1. Content created via Routes
+    2. AutomationOrchestrator detects media type
+    3. Appropriate processor selected
+    4. External AI services called
+    5. Results formatted and stored
+    6. Progress tracked via WebSocket
+    7. Database updated with results
+end note
+
+note as ArchitecturalNotes
+    **Key Architectural Features:**
+    • Singleton pattern for orchestrator
+    • Plugin-based extensibility
+    • Performance optimization
+    • Real-time progress tracking
+    • Comprehensive error handling
+    • Result caching
+    • Retry mechanisms
+end note
+
+@enduml

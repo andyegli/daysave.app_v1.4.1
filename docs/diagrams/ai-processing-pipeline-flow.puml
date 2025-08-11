@@ -1,0 +1,338 @@
+@startuml AI Processing Pipeline Flow
+!theme plain
+
+title DaySave AI Processing Pipeline - Detailed Flow Chart\nFrom Content Creation to Analysis Completion
+
+' Color definitions
+!define START_COLOR #90EE90
+!define PROCESS_COLOR #87CEEB
+!define DECISION_COLOR #FFE4B5
+!define AI_COLOR #DDA0DD
+!define DATABASE_COLOR #98FB98
+!define ERROR_COLOR #FFB6C1
+!define END_COLOR #F0E68C
+
+' Start
+start
+:User submits URL or uploads file;
+note right: Content Routes Handler receives request
+
+' Initial Processing
+:Create Content record in database;
+note right
+    - Generate unique content ID
+    - Store URL or file metadata
+    - Set initial status
+end note
+
+:Initialize AutomationOrchestrator (Singleton);
+note right: Get existing instance or create new one
+
+if (Content Type?) then (URL)
+    :UrlProcessor.isMultimediaUrl();
+    note right: Check if URL contains multimedia content
+    
+    if (Is Multimedia URL?) then (yes)
+        :UrlProcessor.detectPlatform();
+        note right
+            Detect platform:
+            - YouTube
+            - Instagram  
+            - Facebook
+            - TikTok
+            - etc.
+        end note
+        
+        :UrlProcessor.extractUrlMetadata();
+        note right: Get basic metadata, thumbnails, title
+        
+        if (YouTube URL?) then (yes)
+            :UrlProcessor.getYouTubeTranscription();
+            note right
+                Using yt-dlp:
+                1. Extract captions (VTT format)
+                2. Convert to plain text
+                3. Fallback to audio download
+            end note
+        else (no)
+            :Extract platform-specific metadata;
+        endif
+        
+        :UrlProcessor.analyzeUrlContent();
+        note right
+            Comprehensive analysis:
+            - Generate summary
+            - Analyze sentiment  
+            - Create auto-tags
+            - Generate title
+            - Speaker identification
+        end note
+        
+    else (no)
+        :Standard URL processing;
+        note right: Non-multimedia content handling
+    endif
+    
+else (File Upload)
+    :AutomationOrchestrator.detectMediaType();
+    note right
+        Detection methods:
+        - File extension analysis
+        - MIME type checking
+        - Buffer header analysis (magic numbers)
+    end note
+    
+    :Select appropriate processor;
+    note right
+        Processor selection:
+        - VideoProcessor for video files
+        - AudioProcessor for audio files  
+        - ImageProcessor for images
+        - DocumentProcessor for documents
+    end note
+    
+    :Initialize processor with configuration;
+    note right: Load processor-specific settings and AI services
+    
+    :Validate file format and integrity;
+    note right: Ensure file is valid and processable
+    
+    if (Media Type?) then (Video)
+        partition "Video Processing Pipeline" #PROCESS_COLOR {
+            :VideoProcessor.process();
+            
+            :Extract metadata (duration, resolution, codec);
+            
+            :Generate thumbnails at key frames;
+            note right: Create multiple thumbnail sizes
+            
+            if (OCR Enabled?) then (yes)
+                :Extract OCR captions from video frames;
+                note right: Google Cloud Vision API
+            endif
+            
+            if (Quality Analysis Enabled?) then (yes)
+                :Analyze video quality metrics;
+                note right: Resolution, clarity, encoding quality
+            endif
+            
+            :Format video processing results;
+        }
+        
+    elseif (Audio) then
+        partition "Audio Processing Pipeline" #PROCESS_COLOR {
+            :AudioProcessor.process();
+            
+            :Extract audio metadata;
+            
+            if (Transcription Enabled?) then (yes)
+                :Transcribe audio to text;
+                note right: Google Cloud Speech-to-Text API
+            endif
+            
+            if (Speaker Diarization Enabled?) then (yes)
+                :Identify different speakers;
+                note right: Analyze voice patterns and segments
+            endif
+            
+            if (Sentiment Analysis Enabled?) then (yes)
+                :Analyze emotional content;
+                note right: OpenAI GPT analysis
+            endif
+            
+            :Format audio processing results;
+        }
+        
+    elseif (Image) then
+        partition "Image Processing Pipeline" #PROCESS_COLOR {
+            :ImageProcessor.process();
+            
+            :Extract image metadata (dimensions, format);
+            
+            :Generate multiple thumbnail sizes;
+            
+            if (Object Detection Enabled?) then (yes)
+                :Detect objects and entities;
+                note right: Google Cloud Vision API
+            endif
+            
+            if (OCR Enabled?) then (yes)
+                :Extract text from image;
+                note right: Google Cloud Vision OCR
+            endif
+            
+            if (AI Description Enabled?) then (yes)
+                :Generate AI description;
+                note right: OpenAI GPT-4 Vision analysis
+            endif
+            
+            if (Quality Analysis Enabled?) then (yes)
+                :Analyze image quality;
+                note right: Resolution, clarity, composition
+            endif
+            
+            :Format image processing results;
+        }
+        
+    else (Document)
+        partition "Document Processing Pipeline" #PROCESS_COLOR {
+            :DocumentProcessor.process();
+            
+            :Extract text content;
+            note right: Support for PDF, DOC, TXT formats
+            
+            if (AI Analysis Enabled?) then (yes)
+                :Generate AI summary;
+                note right: OpenAI GPT analysis of content
+            endif
+            
+            if (Tag Generation Enabled?) then (yes)
+                :Generate auto-tags;
+                note right: Extract key topics and themes
+            endif
+            
+            if (Title Generation Enabled?) then (yes)
+                :Generate descriptive title;
+                note right: Create meaningful title from content
+            endif
+            
+            :Format document processing results;
+        }
+    endif
+endif
+
+' AI Enhancement Phase
+partition "AI Enhancement Phase" #AI_COLOR {
+    if (Has transcription/text?) then (yes)
+        :OpenAI GPT Analysis;
+        note right
+            AI-powered enhancements:
+            - Summary generation
+            - Sentiment analysis
+            - Tag generation
+            - Title improvement
+            - Category classification
+        end note
+    endif
+    
+    :Combine all analysis results;
+    note right: Merge processor results with AI enhancements
+}
+
+' Progress Tracking
+partition "Progress Tracking" #PROCESS_COLOR {
+    :ProgressTracker monitors all stages;
+    note right
+        Stage tracking:
+        - Validation: 10%
+        - Metadata extraction: 25%
+        - Core processing: 50%
+        - AI analysis: 75%
+        - Finalization: 100%
+    end note
+    
+    :ProgressWebSocketService broadcasts updates;
+    note right: Real-time progress to frontend via WebSocket
+}
+
+' Performance Optimization
+partition "Performance Optimization" #PROCESS_COLOR {
+    :PerformanceOptimizer manages resources;
+    note right
+        Optimization features:
+        - Memory usage monitoring
+        - CPU load balancing
+        - Queue management
+        - Resource cleanup
+    end note
+    
+    :PerformanceMonitor tracks metrics;
+    note right: System health and performance alerts
+}
+
+' Database Storage
+partition "Database Storage" #DATABASE_COLOR {
+    :Format unified results;
+    note right
+        Standardized output:
+        - jobId and mediaType
+        - Processing time and metrics
+        - Analysis results by type
+        - Thumbnails and related data
+    end note
+    
+    :Update Content record;
+    note right
+        Store in database:
+        - transcription
+        - summary  
+        - generated_title
+        - auto_tags
+        - sentiment
+        - metadata
+    end note
+    
+    :Create related records;
+    note right
+        Additional tables:
+        - Thumbnails
+        - ProcessingJobs
+        - VideoAnalysis/AudioAnalysis/ImageAnalysis
+    end note
+}
+
+' Result Caching
+if (Caching Enabled?) then (yes)
+    :Cache results for future access;
+    note right: Store in memory cache with expiration
+endif
+
+' Cleanup
+:Cleanup temporary files and resources;
+note right: Remove temp files, free memory, close connections
+
+' Error Handling
+note as ErrorHandling
+    **Error Handling Throughout Pipeline:**
+    • Retry mechanisms for failed operations
+    • Graceful degradation when AI services unavail
+    • Comprehensive error logging
+    • Progress tracking continues on partial failures
+    • User feedback on processing status
+end note
+
+' Completion
+:Analysis complete;
+note right
+    Final status:
+    - Success/failure indication
+    - Processing time metrics
+    - Analysis results summary
+    - User notification ready
+end note
+
+stop
+
+' Performance Notes
+note as PerformanceNotes
+    **Performance Features:**
+    • Singleton pattern prevents multiple orchestrator instances
+    • Async processing with progress tracking
+    • Memory-efficient streaming for large files
+    • Result caching reduces repeated processing
+    • Queue management prevents system overload
+    • Automatic cleanup prevents resource leaks
+end note
+
+' Architecture Notes  
+note as ArchitectureNotes
+    **Key Architecture Benefits:**
+    • Modular processor design allows easy extension
+    • Plugin registry enables feature toggles
+    • Configuration manager centralizes settings
+    • Progress tracking provides user feedback
+    • Error recovery maintains system stability
+    • Performance monitoring ensures reliability
+end note
+
+@enduml
