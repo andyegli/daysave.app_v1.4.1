@@ -344,29 +344,36 @@ checkDatabaseConnection().then(async (connected) => {
     });
   });
 
-  // Test endpoints for AI pipeline testing (publicly accessible)
+  // Test endpoints for AI pipeline testing (publicly accessible) - Enhanced with new architecture
   app.get('/test-google-api', async (req, res) => {
     try {
-      const MultimediaAnalyzer = require('./services/multimedia/MultimediaAnalyzer');
-      const analyzer = new MultimediaAnalyzer({ enableLogging: false });
+      // Use new ImageProcessor to test Google Vision API
+      const { ImageProcessor } = require('./services/multimedia');
+      const imageProcessor = new ImageProcessor({ enableLogging: false });
+      
+      // Initialize the processor to check Google Vision availability
+      await imageProcessor.initialize();
       
       // Check if Google Vision API is available
-      if (analyzer.visionClient || analyzer.googleApiKey) {
+      if (imageProcessor.visionClient || process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_API_KEY) {
         res.json({
           success: true,
-          message: 'Google Vision API is accessible',
-          method: analyzer.visionClient ? 'Service Account' : 'API Key'
+          message: 'Google Vision API is accessible via enhanced ImageProcessor',
+          method: imageProcessor.visionClient ? 'Service Account' : 'API Key',
+          architecture: 'Enhanced Modular System'
         });
       } else {
         res.json({
           success: false,
-          message: 'Google Vision API credentials not configured'
+          message: 'Google Vision API credentials not configured',
+          architecture: 'Enhanced Modular System'
         });
       }
     } catch (error) {
       res.json({
         success: false,
-        message: `Google Vision API test failed: ${error.message}`
+        message: `Google Vision API test failed: ${error.message}`,
+        architecture: 'Enhanced Modular System'
       });
     }
   });
@@ -400,48 +407,70 @@ checkDatabaseConnection().then(async (connected) => {
 
   app.get('/test-object-detection', async (req, res) => {
     try {
-      const MultimediaAnalyzer = require('./services/multimedia/MultimediaAnalyzer');
-      const analyzer = new MultimediaAnalyzer({ enableLogging: false });
+      // Use new ImageProcessor for object detection testing
+      const { ImageProcessor } = require('./services/multimedia');
+      const imageProcessor = new ImageProcessor({ enableLogging: false });
       
-      if (analyzer.visionClient || analyzer.googleApiKey || process.env.OPENAI_API_KEY) {
+      // Initialize to check availability
+      await imageProcessor.initialize();
+      
+      if (imageProcessor.visionClient || process.env.GOOGLE_API_KEY || process.env.OPENAI_API_KEY) {
         res.json({
           success: true,
-          message: 'Object detection service available via Google Vision or OpenAI'
+          message: 'Object detection service available via enhanced ImageProcessor (Google Vision or OpenAI)',
+          providers: {
+            googleVision: !!imageProcessor.visionClient,
+            openai: !!process.env.OPENAI_API_KEY
+          },
+          architecture: 'Enhanced Modular System'
         });
       } else {
         res.json({
           success: false,
-          message: 'No API keys configured for object detection'
+          message: 'No API keys configured for object detection',
+          architecture: 'Enhanced Modular System'
         });
       }
     } catch (error) {
       res.json({
         success: false,
-        message: `Object detection test failed: ${error.message}`
+        message: `Object detection test failed: ${error.message}`,
+        architecture: 'Enhanced Modular System'
       });
     }
   });
 
   app.get('/test-ocr', async (req, res) => {
     try {
-      const MultimediaAnalyzer = require('./services/multimedia/MultimediaAnalyzer');
-      const analyzer = new MultimediaAnalyzer({ enableLogging: false });
+      // Use new ImageProcessor for OCR testing
+      const { ImageProcessor } = require('./services/multimedia');
+      const imageProcessor = new ImageProcessor({ enableLogging: false });
       
-      if (analyzer.visionClient || analyzer.googleApiKey || process.env.OPENAI_API_KEY) {
+      // Initialize to check availability
+      await imageProcessor.initialize();
+      
+      if (imageProcessor.visionClient || process.env.GOOGLE_API_KEY || process.env.OPENAI_API_KEY) {
         res.json({
           success: true,
-          message: 'OCR text extraction service available via Google Vision or OpenAI'
+          message: 'OCR text extraction service available via enhanced ImageProcessor (Google Vision or OpenAI)',
+          providers: {
+            googleVision: !!imageProcessor.visionClient,
+            openai: !!process.env.OPENAI_API_KEY
+          },
+          architecture: 'Enhanced Modular System'
         });
       } else {
         res.json({
           success: false,
-          message: 'No API keys configured for OCR'
+          message: 'No API keys configured for OCR',
+          architecture: 'Enhanced Modular System'
         });
       }
     } catch (error) {
       res.json({
         success: false,
-        message: `OCR test failed: ${error.message}`
+        message: `OCR test failed: ${error.message}`,
+        architecture: 'Enhanced Modular System'
       });
     }
   });
