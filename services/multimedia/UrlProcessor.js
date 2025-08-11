@@ -708,14 +708,78 @@ class UrlProcessor {
    */
   async generateSummary(results) {
     try {
-      // Placeholder for AI summary generation
-      // In a real implementation, this would use OpenAI or similar
+      if (this.enableLogging) {
+        console.log('📝 Starting AI-powered summary generation...');
+      }
+
+      // Check if we have content to summarize
+      let contentToSummarize = '';
+      
+      if (results.transcription && results.transcription.length > 100) {
+        contentToSummarize = results.transcription;
+      } else if (results.metadata && results.metadata.description) {
+        contentToSummarize = results.metadata.description;
+      } else if (results.metadata && results.metadata.title) {
+        contentToSummarize = results.metadata.title;
+      }
+
+      if (!contentToSummarize || contentToSummarize.length < 50) {
+        return 'Summary could not be generated for this content.';
+      }
+
+      // Initialize OpenAI if not already done
+      const { OpenAI } = require('openai');
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+      });
+
+      if (!openai || !process.env.OPENAI_API_KEY) {
+        if (this.enableLogging) {
+          console.log('⚠️ OpenAI not available for summary generation, using fallback');
+        }
+        // Fallback to intelligent truncation
+        const words = contentToSummarize.split(' ');
+        return words.slice(0, 50).join(' ') + (words.length > 50 ? '...' : '');
+      }
+
+      if (this.enableLogging) {
+        console.log(`🤖 Sending content to OpenAI for summarization (${contentToSummarize.length} chars)`);
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: "You are a helpful assistant that creates concise, informative summaries while preserving key information and context. Focus on the main points and key information."
+          },
+          {
+            role: "user",
+            content: `Please summarize the following content in approximately 100-150 words. Focus on the main points and key information:\n\n${contentToSummarize}`
+          }
+        ],
+        max_tokens: 300,
+        temperature: 0.3
+      });
+
+      const summary = response.choices[0].message.content.trim();
+      
+      if (this.enableLogging) {
+        console.log(`✅ Generated AI summary (${summary.length} chars)`);
+      }
+      
+      return summary;
+
+    } catch (error) {
+      if (this.enableLogging) {
+        console.error('❌ AI summary generation failed:', error.message);
+      }
+      
+      // Fallback to intelligent truncation
       if (results.transcription && results.transcription.length > 100) {
         const words = results.transcription.split(' ');
         return words.slice(0, 50).join(' ') + (words.length > 50 ? '...' : '');
       }
-      return 'Summary could not be generated for this content.';
-    } catch (error) {
       return 'Summary generation failed.';
     }
   }
@@ -817,7 +881,103 @@ class UrlProcessor {
    */
   async generateTitle(results) {
     try {
-      // Placeholder for AI title generation
+      if (this.enableLogging) {
+        console.log('📝 Starting AI-powered title generation...');
+      }
+
+      // Check if we have content to create a title from
+      let contentForTitle = '';
+      
+      if (results.transcription && results.transcription.length > 50) {
+        contentForTitle = results.transcription;
+      } else if (results.metadata && results.metadata.description) {
+        contentForTitle = results.metadata.description;
+      } else if (results.metadata && results.metadata.title && results.metadata.title !== 'YouTube Video') {
+        contentForTitle = results.metadata.title;
+      }
+
+      if (!contentForTitle || contentForTitle.length < 20) {
+        // Fallback based on platform
+        if (results.platform) {
+          return `${results.platform.charAt(0).toUpperCase() + results.platform.slice(1)} Content`;
+        }
+        return 'Multimedia Content';
+      }
+
+      // Initialize OpenAI if not already done
+      const { OpenAI } = require('openai');
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+      });
+
+      if (!openai || !process.env.OPENAI_API_KEY) {
+        if (this.enableLogging) {
+          console.log('⚠️ OpenAI not available for title generation, using fallback');
+        }
+        // Fallback to intelligent truncation
+        const words = contentForTitle.split(' ');
+        return words.slice(0, 8).join(' ') + (words.length > 8 ? '...' : '');
+      }
+
+      // Use the first part of content for title generation (don't overwhelm the AI)
+      const contentPreview = contentForTitle.length > 2000 ? 
+        contentForTitle.substring(0, 2000) + '...' : contentForTitle;
+
+      if (this.enableLogging) {
+        console.log(`🤖 Sending content to OpenAI for title generation (${contentPreview.length} chars)`);
+      }
+
+      const prompt = `Based on the following content, create an engaging and descriptive title.
+
+The title should be:
+- Concise (5-10 words maximum)
+- Descriptive of the main topic or theme
+- Engaging and clickable
+- Professional and appropriate
+- Capture the essence of the content
+
+Content: ${contentPreview}
+
+Respond with only the title, no quotes or additional text.`;
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert content creator who specializes in writing engaging titles that capture the essence of content. Create compelling titles that are descriptive yet concise.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 50
+      });
+
+      const generatedTitle = response.choices[0].message.content.trim();
+      
+      // Clean up title (remove quotes if present)
+      let cleanTitle = generatedTitle.replace(/^["']|["']$/g, '');
+      
+      // Ensure title isn't too long
+      if (cleanTitle.length > 60) {
+        cleanTitle = cleanTitle.substring(0, 57) + '...';
+      }
+      
+      if (this.enableLogging) {
+        console.log(`✅ Generated AI title: "${cleanTitle}"`);
+      }
+      
+      return cleanTitle;
+
+    } catch (error) {
+      if (this.enableLogging) {
+        console.error('❌ AI title generation failed:', error.message);
+      }
+      
+      // Fallback title generation
       if (results.transcription && results.transcription.length > 50) {
         const words = results.transcription.split(' ');
         return words.slice(0, 8).join(' ') + (words.length > 8 ? '...' : '');
@@ -825,8 +985,6 @@ class UrlProcessor {
       if (results.platform) {
         return `${results.platform.charAt(0).toUpperCase() + results.platform.slice(1)} Content`;
       }
-      return 'Multimedia Content';
-    } catch (error) {
       return 'Untitled Content';
     }
   }
