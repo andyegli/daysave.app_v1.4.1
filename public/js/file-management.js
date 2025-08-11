@@ -168,7 +168,9 @@ function initializeUploadModal() {
               setTimeout(() => {
                 // Fix for localhost HTTPS/HTTP protocol issues
                 if (window.location.hostname === 'localhost') {
-                  window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
+                  const currentPort = window.location.port;
+                  const portSuffix = (currentPort && currentPort !== '80') ? `:${currentPort}` : '';
+                  window.location.href = `http://localhost${portSuffix}${window.location.pathname}${window.location.search}`;
                 } else {
                   window.location.reload();
                 }

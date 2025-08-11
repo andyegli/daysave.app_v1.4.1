@@ -1,31 +1,75 @@
 /**
  * Multi-Domain Protocol Fix
- * Smart protocol handling for localhost:3000, daysave.local, and daysave.app
- * Prevents redirect loops while ensuring proper protocol usage
+ * Smart protocol handling for localhost (any port), daysave.local, and daysave.app
+ * Prevents redirect loops while ensuring proper protocol usage and port consistency
  */
 
-console.log('🔄 Multi-Domain Protocol Fix: Supporting localhost:3000, daysave.local, daysave.app');
+console.log('🔄 Multi-Domain Protocol Fix: Supporting localhost (all ports), daysave.local, daysave.app');
 
 // Flag to prevent redirect loops
 let protocolFixApplied = false;
+
+// Function to normalize localhost URLs to maintain port consistency
+function normalizeLocalhostUrl(url) {
+  if (!url || typeof url !== 'string') return url;
+  
+  const currentPort = window.location.port;
+  const hostname = window.location.hostname;
+  
+  if (hostname === 'localhost') {
+    // If we're on localhost with a specific port, ensure consistency
+    if (currentPort && currentPort !== '80' && currentPort !== '443') {
+      // We have a specific port, ensure it's maintained
+      const portInUrl = url.match(/localhost:(\d+)/);
+      if (!portInUrl && url.includes('localhost')) {
+        // URL has localhost but no port, add current port
+        const correctedUrl = url.replace('localhost', `localhost:${currentPort}`);
+        console.log('🔧 Added missing port to localhost URL:', url, '→', correctedUrl);
+        return correctedUrl;
+      } else if (portInUrl && portInUrl[1] !== currentPort) {
+        // URL has different port, correct it to current port
+        const correctedUrl = url.replace(`localhost:${portInUrl[1]}`, `localhost:${currentPort}`);
+        console.log('🔧 Corrected port in localhost URL:', url, '→', correctedUrl);
+        return correctedUrl;
+      }
+    } else if (!currentPort || currentPort === '80') {
+      // We're on port 80 or no port, remove any port from URLs
+      const correctedUrl = url.replace(/localhost:\d+/g, 'localhost');
+      if (correctedUrl !== url) {
+        console.log('🔧 Removed port from localhost URL:', url, '→', correctedUrl);
+      }
+      return correctedUrl;
+    }
+  }
+  
+  return url;
+}
 
 function getCorrectUrl(path) {
   const hostname = window.location.hostname;
   
   // Handle different domains appropriately
   if (hostname === 'localhost') {
-    // For localhost, only fix if it's trying to use wrong protocol
-    const isDirectConnection = window.location.port === '3000';
-    if (isDirectConnection) {
-      // Direct connection to port 3000 - ensure HTTP
-      const correctedPath = path.replace('https://localhost', 'http://localhost');
-      if (correctedPath !== path) {
-        console.log('🔧 Direct localhost:3000 - corrected HTTPS to HTTP:', correctedPath);
+    // First normalize the port
+    let normalizedPath = normalizeLocalhostUrl(path);
+    
+    // Then handle protocol
+    const currentPort = window.location.port;
+    const isHttpsPort = currentPort === '443';
+    
+    if (isHttpsPort) {
+      // Port 443 should use HTTPS
+      normalizedPath = normalizedPath.replace('http://localhost', 'https://localhost');
+    } else {
+      // All other ports (including 3000, 80, or no port) should use HTTP
+      const correctedPath = normalizedPath.replace('https://localhost', 'http://localhost');
+      if (correctedPath !== normalizedPath) {
+        console.log('🔧 Localhost - corrected HTTPS to HTTP:', normalizedPath, '→', correctedPath);
       }
-      return correctedPath;
+      normalizedPath = correctedPath;
     }
-    // Proxy connection - leave as-is
-    return path;
+    
+    return normalizedPath;
   } else if (hostname === 'daysave.local' || hostname === 'daysave.app') {
     // For production domains, ensure HTTPS
     if (path.includes(`http://${hostname}`)) {
@@ -166,4 +210,22 @@ function fixProtocolInElements(fromProtocol, toProtocol) {
   });
 }
 
-console.log('✅ Multi-Domain Protocol Fix: ENABLED for localhost:3000, daysave.local, daysave.app');
+// Global function to redirect while maintaining port consistency
+window.safeRedirect = function(url) {
+  if (window.location.hostname === 'localhost') {
+    const currentPort = window.location.port;
+    if (currentPort && currentPort !== '80' && currentPort !== '443') {
+      // Ensure port is maintained in localhost URLs
+      if (url.includes('localhost') && !url.includes(':')) {
+        url = url.replace('localhost', `localhost:${currentPort}`);
+        console.log('🔧 Added port to redirect URL:', url);
+      }
+    }
+  }
+  
+  const correctedUrl = getCorrectUrl(url);
+  console.log('🔄 Safe redirect to:', correctedUrl);
+  window.location.href = correctedUrl;
+};
+
+console.log('✅ Multi-Domain Protocol Fix: ENABLED for localhost (all ports), daysave.local, daysave.app');

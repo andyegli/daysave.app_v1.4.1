@@ -24,8 +24,8 @@ const getCallbackURL = (provider) => {
   // - http://localhost/auth/google/callback (nginx proxy on port 80)
   // - https://daysave.app/auth/google/callback (production)
   
-  // Default to localhost:3000 for development (Google OAuth compatible)
-  return `http://localhost:3000/auth/${provider}/callback`;
+  // Use BASE_URL or default to localhost for development (Google OAuth compatible)
+  return `${process.env.BASE_URL || 'http://localhost'}/auth/${provider}/callback`;
 };
 
 // OAuth Configuration

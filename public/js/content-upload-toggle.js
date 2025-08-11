@@ -442,7 +442,9 @@ async function handleFileUploadSubmission() {
       setTimeout(() => {
         // SAFE NAVIGATION - No HTTPS triggers
         if (window.location.hostname === 'localhost') {
-          const safeUrl = `http://localhost${window.location.pathname}${window.location.search}`;
+          const currentPort = window.location.port;
+          const portSuffix = (currentPort && currentPort !== '80') ? `:${currentPort}` : '';
+          const safeUrl = `http://localhost${portSuffix}${window.location.pathname}${window.location.search}`;
           console.log('🔄 Safe navigation to:', safeUrl);
           window.location.replace(safeUrl);
         } else {
@@ -786,7 +788,9 @@ async function handleBulkUrlSubmission() {
       setTimeout(() => {
         // Fix for localhost HTTPS/HTTP protocol issues
         if (window.location.hostname === 'localhost') {
-          window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
+          const currentPort = window.location.port;
+          const portSuffix = (currentPort && currentPort !== '80') ? `:${currentPort}` : '';
+          window.location.href = `http://localhost${portSuffix}${window.location.pathname}${window.location.search}`;
         } else {
           window.location.href = window.location.href;
         }

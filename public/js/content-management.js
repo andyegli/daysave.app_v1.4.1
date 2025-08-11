@@ -74,7 +74,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // Double-check protocol after DOM load - DISABLED for daysave.local
   if (false && window.location.hostname === 'localhost' && !window.location.hostname.includes('daysave.local') && window.location.protocol === 'https:') {
     console.log('🔄 DOM LOADED - HTTPS→HTTP REDIRECT for localhost...');
-    window.location.replace(`http://localhost${window.location.pathname}${window.location.search}`);
+    const currentPort = window.location.port;
+    const portSuffix = (currentPort && currentPort !== '80') ? `:${currentPort}` : '';
+    window.location.replace(`http://localhost${portSuffix}${window.location.pathname}${window.location.search}`);
     return;
   }
   
@@ -334,7 +336,9 @@ async function handleFileUpload(form) {
       setTimeout(() => {
         // SAFE NAVIGATION - No HTTPS triggers
         if (window.location.hostname === 'localhost') {
-          const safeUrl = `http://localhost${window.location.pathname}${window.location.search}`;
+          const currentPort = window.location.port;
+          const portSuffix = (currentPort && currentPort !== '80') ? `:${currentPort}` : '';
+          const safeUrl = `http://localhost${portSuffix}${window.location.pathname}${window.location.search}`;
           console.log('🔄 Safe navigation to:', safeUrl);
           window.location.replace(safeUrl);
         } else {
@@ -417,7 +421,9 @@ async function handleUrlContent(form) {
           // Delay page reload to give status monitoring a chance to work
           setTimeout(() => {
             if (window.location.hostname === 'localhost') {
-              window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
+              const currentPort = window.location.port;
+              const portSuffix = (currentPort && currentPort !== '80') ? `:${currentPort}` : '';
+              window.location.href = `http://localhost${portSuffix}${window.location.pathname}${window.location.search}`;
             } else {
               window.location.reload();
             }
@@ -426,7 +432,9 @@ async function handleUrlContent(form) {
           // Standard reload for content without analysis
           setTimeout(() => { 
             if (window.location.hostname === 'localhost') {
-              window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
+              const currentPort = window.location.port;
+              const portSuffix = (currentPort && currentPort !== '80') ? `:${currentPort}` : '';
+              window.location.href = `http://localhost${portSuffix}${window.location.pathname}${window.location.search}`;
             } else {
               window.location.reload();
             }
@@ -538,7 +546,9 @@ function showAlert(message, type = 'info') {
           setTimeout(() => {
             // Fix for localhost HTTPS/HTTP protocol issues
             if (window.location.hostname === 'localhost') {
-              window.location.href = `http://localhost${window.location.pathname}${window.location.search}`;
+              const currentPort = window.location.port;
+              const portSuffix = (currentPort && currentPort !== '80') ? `:${currentPort}` : '';
+              window.location.href = `http://localhost${portSuffix}${window.location.pathname}${window.location.search}`;
             } else {
               window.location.reload();
             }
