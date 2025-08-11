@@ -2494,7 +2494,7 @@ router.get('/api/analytics/user-trends', isAuthenticated, isAdmin, async (req, r
       ],
       include: [{
         model: require('../models').Role,
-        attributes: ['name', 'display_name']
+        attributes: ['name', 'description']
       }],
       group: ['role_id', 'Role.id'],
       order: [[sequelize.fn('COUNT', sequelize.col('User.id')), 'DESC']]
@@ -2512,7 +2512,7 @@ router.get('/api/analytics/user-trends', isAuthenticated, isAdmin, async (req, r
           count: parseInt(a.dataValues.count)
         })),
         roleDistribution: roleDistribution.map(r => ({
-          role: r.Role ? r.Role.display_name || r.Role.name : 'No Role',
+          role: r.Role ? r.Role.name : 'No Role',
           count: parseInt(r.dataValues.count)
         }))
       },
@@ -2548,30 +2548,28 @@ router.get('/api/analytics/content-stats', isAuthenticated, isAdmin, async (req,
       order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
     });
 
-    // File type distribution
+    // File type distribution (without file_size since it doesn't exist in files table)
     const fileTypes = await File.findAll({
       attributes: [
         'content_type',
-        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
-        [sequelize.fn('SUM', sequelize.col('file_size')), 'totalSize']
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
       ],
       group: ['content_type'],
       order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
     });
 
-    // Storage usage by user
+    // Storage usage by user (simplified without file_size)
     const storageByUser = await File.findAll({
       attributes: [
         'user_id',
-        [sequelize.fn('COUNT', sequelize.col('File.id')), 'fileCount'],
-        [sequelize.fn('SUM', sequelize.col('file_size')), 'totalSize']
+        [sequelize.fn('COUNT', sequelize.col('File.id')), 'fileCount']
       ],
       include: [{
         model: User,
         attributes: ['username', 'email']
       }],
       group: ['user_id', 'User.id'],
-      order: [[sequelize.fn('SUM', sequelize.col('file_size')), 'DESC']],
+      order: [[sequelize.fn('COUNT', sequelize.col('File.id')), 'DESC']],
       limit: 10
     });
 
@@ -2598,19 +2596,18 @@ router.get('/api/analytics/content-stats', isAuthenticated, isAdmin, async (req,
         fileTypes: fileTypes.map(ft => ({
           type: ft.content_type || 'Unknown',
           count: parseInt(ft.dataValues.count),
-          totalSize: parseInt(ft.dataValues.totalSize) || 0
+          totalSize: 0 // File size not available in current schema
         })),
         topUsers: storageByUser.map(user => {
-          const totalSize = parseInt(user.dataValues.totalSize) || 0;
           const fileCount = parseInt(user.dataValues.fileCount);
-          // Calculate percentage based on max storage or arbitrary scale
-          const maxStorage = Math.max(...storageByUser.map(u => parseInt(u.dataValues.totalSize) || 0));
-          const percentage = maxStorage > 0 ? Math.round((totalSize / maxStorage) * 100) : 0;
+          // Calculate percentage based on max file count since no storage size available
+          const maxFileCount = Math.max(...storageByUser.map(u => parseInt(u.dataValues.fileCount) || 0));
+          const percentage = maxFileCount > 0 ? Math.round((fileCount / maxFileCount) * 100) : 0;
           
           return {
             username: user.User ? user.User.username : 'Unknown',
             fileCount: fileCount,
-            storageUsed: totalSize,
+            storageUsed: 0, // File size not available in current schema
             percentage: percentage
           };
         }),
