@@ -524,14 +524,16 @@ Respond in JSON format with keys: summary, tags, categories, suggestedTitle`;
             const text = response.text();
             
             // Track AI usage
-            await this.aiUsageTracker.trackUsage(
-                options.user_id || 'system',
-                'google_ai',
-                'text_analysis',
-                prompt.length,
-                text.length,
-                options.content_id
-            );
+            if (this.aiUsageTracker && this.aiUsageTracker.trackGoogleAIUsage) {
+                await this.aiUsageTracker.trackGoogleAIUsage({
+                    userId: options.user_id || 'system',
+                    model: 'gemini-1.5-flash',
+                    operation: 'text_analysis',
+                    inputTokens: Math.ceil(prompt.length / 4), // Rough token estimate
+                    outputTokens: Math.ceil(text.length / 4),
+                    contentId: options.content_id
+                });
+            }
             
             // Parse JSON response
             try {
