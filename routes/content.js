@@ -146,13 +146,43 @@ async function triggerMultimediaAnalysis(content, user) {
       url: contentInstance.url
     });
 
+    // Create processing job record BEFORE analysis starts (for usage tracking)
+    const { ProcessingJob } = require('../models');
+    const { v4: uuidv4 } = require('uuid');
+    
+    const processingJobId = uuidv4();
+    const processingJob = await ProcessingJob.create({
+      id: processingJobId,
+      user_id: userInstance.id,
+      content_id: contentInstance.id,
+      job_type: 'url_analysis',
+      media_type: 'url',
+      status: 'processing',
+      progress: 0,
+      job_config: {
+        features: ['transcription', 'sentiment', 'summarization', 'thumbnails', 'speakers'],
+        orchestrator: true,
+        version: '2.0',
+        source: 'url'
+      },
+      input_metadata: {
+        url: contentInstance.url,
+        contentId: contentInstance.id,
+        userId: userInstance.id
+      },
+      started_at: new Date()
+    });
+    
+    console.log(`✅ Created processing job for URL analysis: ${processingJobId}`);
+
     // Enhanced logging for analysis start
     logger.multimedia.start(userInstance.id, contentInstance.id, contentInstance.url, {
       transcription: true,
       sentiment: true,
       summarization: true,
       thumbnails: true,
-      speakers: true
+      speakers: true,
+      processingJobId: processingJobId
     });
 
     // Create a buffer/stream from URL for processing
@@ -161,6 +191,12 @@ async function triggerMultimediaAnalysis(content, user) {
       filename: contentInstance.url,
       contentId: contentInstance.id,
       userId: userInstance.id,
+      user_id: userInstance.id, // Compatibility
+      content_id: contentInstance.id, // Compatibility
+      processingJobId: processingJobId,
+      processing_job_id: processingJobId, // Compatibility
+      fileId: null, // URLs don't have files
+      file_id: null, // Compatibility
       source: 'url',
       url: contentInstance.url
     };
@@ -288,6 +324,32 @@ async function triggerMultimediaAnalysis(content, user) {
         job_id: processingResult.jobId,
         updates: Object.keys(updateData)
       });
+      
+      // Update processing job with completion data
+      await processingJob.update({
+        status: 'completed',
+        progress: 100,
+        job_config: {
+          ...processingJob.job_config,
+          actualMediaType: processingResult.mediaType || 'url',
+          completedFeatures: Object.keys(updateData)
+        },
+        processing_results: {
+          ...processingResult,
+          contentUpdates: updateData
+        },
+        performance_metrics: {
+          processingTime: processingResult.processingTime || 0,
+          orchestratorJobId: processingResult.jobId,
+          processingJobId: processingJobId,
+          features: Object.keys(updateData).length,
+          contentId: contentInstance.id
+        },
+        completed_at: new Date(),
+        duration_ms: processingResult.processingTime || 0
+      });
+      
+      console.log(`✅ Updated processing job ${processingJobId} with completion data`);
       
       // Complete operation tracking
       if (global.progressWebSocket) {

@@ -363,6 +363,21 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: 'SET NULL',
       onUpdate: 'CASCADE'
     });
+
+    // ProcessingJob has usage tracking records
+    ProcessingJob.hasMany(models.ExternalAiUsage, { 
+      foreignKey: 'processing_job_id',
+      as: 'aiUsage',
+      onDelete: 'SET NULL',
+      onUpdate: 'CASCADE'
+    });
+
+    ProcessingJob.hasMany(models.StorageUsage, { 
+      foreignKey: 'processing_job_id',
+      as: 'storageUsage',
+      onDelete: 'SET NULL',
+      onUpdate: 'CASCADE'
+    });
   };
 
   /**

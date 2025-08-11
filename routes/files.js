@@ -388,12 +388,51 @@ async function triggerFileAnalysis(fileRecord, user) {
       filePath: filePath
     };
 
-    console.log(`🎯 Starting orchestrator processing...`);
+    console.log(`🎯 Creating processing job record before analysis...`);
+    
+    // Create processing job record BEFORE processing starts (for usage tracking)
+    const { ProcessingJob } = require('../models');
+    const { v4: uuidv4 } = require('uuid');
+    
+    // Create preliminary processing job
+    const processingJobId = uuidv4();
+    const processingJob = await ProcessingJob.create({
+      id: processingJobId,
+      user_id: user.id,
+      file_id: fileRecord.id,
+      job_type: 'multimedia_analysis', // Will be updated with specific type later
+      media_type: 'unknown', // Will be updated after detection
+      status: 'processing',
+      progress: 0,
+      job_config: {
+        features: ['analysis', 'transcription', 'ai_processing'],
+        orchestrator: true,
+        version: '2.0'
+      },
+      input_metadata: fileMetadata,
+      started_at: new Date()
+    });
+    
+    console.log(`✅ Created processing job: ${processingJobId}`);
+    
+    // Add processing job info to metadata for usage tracking
+    const enhancedMetadata = {
+      ...fileMetadata,
+      processingJobId: processingJobId,
+      userId: user.id,
+      user_id: user.id, // Compatibility
+      contentId: null, // Files don't have content_id
+      content_id: null, // Compatibility  
+      fileId: fileRecord.id,
+      file_id: fileRecord.id // Compatibility
+    };
+
+    console.log(`🎯 Starting orchestrator processing with usage tracking...`);
     // Process file with new orchestrator for detailed analysis
     const activeOrchestrator = await getOrchestrator();
     const processingResult = await activeOrchestrator.processContent(
       fileBuffer,
-      fileMetadata
+      enhancedMetadata
     );
 
     console.log(`🎯 Orchestrator processing completed for ${fileRecord.id}`, {
@@ -519,34 +558,31 @@ async function triggerFileAnalysis(fileRecord, user) {
     // ✨ ENHANCED DATABASE STORAGE: Store ALL AI outputs in dedicated analysis tables
     console.log(`💾 Building comprehensive database storage for all AI outputs...`);
     
-    // Create processing job record first
-    const { ProcessingJob } = require('../models');
-    const processingJob = await ProcessingJob.create({
-      user_id: user.id,
-      file_id: fileRecord.id,
+    // Update the existing processing job record with completion data
+    await processingJob.update({
       job_type: `${formattedResults.mediaType}_analysis`,
       media_type: formattedResults.mediaType,
       status: 'completed',
       progress: 100,
       job_config: {
+        ...processingJob.job_config,
         features: Object.keys(formattedResults.data),
-        orchestrator: true,
-        version: '2.0'
+        actualMediaType: formattedResults.mediaType
       },
-      input_metadata: fileMetadata,
       processing_results: formattedResults.data,
       performance_metrics: {
         processingTime: processingResult.processingTime,
         jobId: processingResult.jobId,
+        orchestratorJobId: processingResult.jobId,
+        processingJobId: processingJobId,
         features: Object.keys(formattedResults.data).length,
         warnings: processingResult.warnings?.length || 0
       },
-      started_at: new Date(Date.now() - (processingResult.processingTime || 0)),
       completed_at: new Date(),
       duration_ms: processingResult.processingTime || 0
     });
     
-    console.log(`✅ Created processing job record: ${processingJob.id}`);
+    console.log(`✅ Updated processing job record: ${processingJob.id} with completion data`);
     
     // Store media-specific analysis in dedicated tables
     let analysisRecord = null;

@@ -747,16 +747,32 @@ Return only the extracted text, preserving original formatting and line breaks w
       const extractedText = response.choices[0].message.content || '';
 
       // Track AI usage if we have the necessary metadata
-      if (options.userId) {
+      const userId = options.userId || options.user_id;
+      const processingJobId = options.processingJobId || options.processing_job_id;
+      const contentId = options.contentId || options.content_id;
+      const fileId = options.fileId || options.file_id;
+      
+      if (this.enableLogging) {
+        console.log(`🔧 DEBUG: AI Usage Tracking Info:`, {
+          userId,
+          processingJobId,
+          contentId,
+          fileId,
+          hasOptions: !!options,
+          optionKeys: Object.keys(options)
+        });
+      }
+      
+      if (userId) {
         try {
           await this.aiUsageTracker.trackOpenAIUsage({
-            userId: options.userId,
+            userId: userId,
             response: response,
             model: "gpt-4o-mini",
             operationType: 'ocr',
-            contentId: options.contentId || null,
-            fileId: options.fileId || null,
-            processingJobId: options.processingJobId || null,
+            contentId: contentId || null,
+            fileId: fileId || null,
+            processingJobId: processingJobId || null,
             sessionId: options.sessionId || null,
             requestDurationMs: requestDuration,
             metadata: {
@@ -764,12 +780,21 @@ Return only the extracted text, preserving original formatting and line breaks w
               imagePath: path.basename(imagePath),
               mimeType: mimeType,
               imageSize: imageBuffer.length,
-              extractedTextLength: extractedText.length
+              extractedTextLength: extractedText.length,
+              processingJobInfo: { processingJobId, userId, contentId, fileId }
             }
           });
+          
+          if (this.enableLogging) {
+            console.log(`💰 Successfully tracked OpenAI usage for job: ${processingJobId}`);
+          }
         } catch (trackingError) {
           console.warn('Failed to track OpenAI Vision usage:', trackingError.message);
           // Don't fail the main operation due to tracking issues
+        }
+      } else {
+        if (this.enableLogging) {
+          console.warn('⚠️ No userId found - skipping AI usage tracking');
         }
       }
       

@@ -131,9 +131,15 @@ class PerformanceOptimizer extends EventEmitter {
         return await this.queueJob(processor, buffer, metadata, options, jobId);
       }
       
-      // Process with resource management
+      // Process with resource management - ensure metadata includes usage tracking info
+      const enrichedMetadata = {
+        ...metadata,
+        performanceJobId: jobId, // Add performance optimizer job ID
+        processingJobId: metadata.processingJobId || metadata.jobId // Preserve processing job ID
+      };
+      
       const result = await this.processWithResourceManagement(
-        processor, buffer, metadata, options, jobId
+        processor, buffer, enrichedMetadata, options, jobId
       );
       
       // Cache successful results
@@ -313,8 +319,14 @@ class PerformanceOptimizer extends EventEmitter {
         // For buffer-based processing, we need to create a temporary file
         // or modify the processor API to handle buffers directly
         if (processor.processBuffer && typeof processor.processBuffer === 'function') {
-          // Use buffer processing method if available
-          const result = await processor.processBuffer(userId, buffer, metadata, options);
+          // Use buffer processing method if available - merge metadata into options
+          const enrichedOptions = {
+            ...options,
+            ...metadata, // Include all metadata (processingJobId, userId, contentId, fileId)
+            metadata: metadata // Also include as metadata property for backwards compatibility
+          };
+          
+          const result = await processor.processBuffer(userId, buffer, metadata, enrichedOptions);
           clearTimeout(timeoutId);
           resolve(result);
         } else {
@@ -335,7 +347,14 @@ class PerformanceOptimizer extends EventEmitter {
           fs.writeFileSync(tempFilePath, buffer);
           
           try {
-            const result = await processor.process(userId, tempFilePath, options);
+            // Merge metadata into options to ensure usage tracking data is available
+            const enrichedOptions = {
+              ...options,
+              ...metadata, // Include all metadata (processingJobId, userId, contentId, fileId)
+              metadata: metadata // Also include as metadata property for backwards compatibility
+            };
+            
+            const result = await processor.process(userId, tempFilePath, enrichedOptions);
             clearTimeout(timeoutId);
             resolve(result);
           } finally {

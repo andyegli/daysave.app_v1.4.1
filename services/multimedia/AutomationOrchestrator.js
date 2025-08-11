@@ -537,12 +537,18 @@ class AutomationOrchestrator {
         try {
             console.log(`\n🎯 Starting new processing job: ${jobId}`);
             
-            // Create job record
+            // Create job record with processing job ID for usage tracking
             const job = {
                 id: jobId,
                 startTime,
                 status: 'processing',
-                metadata,
+                metadata: {
+                    ...metadata,
+                    processingJobId: jobId, // Add processing job ID for usage tracking
+                    userId: metadata.userId || metadata.user_id, // Ensure userId is available
+                    contentId: metadata.contentId || metadata.content_id, // Ensure contentId is available
+                    fileId: metadata.fileId || metadata.file_id // Ensure fileId is available
+                },
                 results: {},
                 errors: [],
                 warnings: []
@@ -592,11 +598,11 @@ class AutomationOrchestrator {
             
             console.log(`🔧 DEBUG: Processing options for ${mediaType}:`, JSON.stringify(processingOptions, null, 2));
             
-            // Enhanced processing with progress tracking
+            // Enhanced processing with progress tracking - pass enriched metadata
             const results = await this.processWithDetailedTracking(
                 processor, 
                 fileBuffer, 
-                { ...metadata, jobId }, 
+                job.metadata, // Use enriched metadata that includes processingJobId, userId, etc.
                 processingOptions,
                 jobId,
                 mediaType

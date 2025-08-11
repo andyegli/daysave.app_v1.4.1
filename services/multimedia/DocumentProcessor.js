@@ -359,29 +359,48 @@ Requirements:
         const requestDuration = Date.now() - startTime;
 
         // Track AI usage if we have the necessary metadata
-        if (metadata.userId) {
+        const userId = metadata.userId || metadata.user_id;
+        const processingJobId = metadata.processingJobId || metadata.processing_job_id;
+        const contentId = metadata.contentId || metadata.content_id;
+        const fileId = metadata.fileId || metadata.file_id;
+        
+        console.log(`🔧 DEBUG: DocumentProcessor AI Usage Tracking Info:`, {
+            userId,
+            processingJobId,
+            contentId,
+            fileId,
+            hasMetadata: !!metadata,
+            metadataKeys: Object.keys(metadata)
+        });
+        
+        if (userId) {
             try {
                 await this.aiUsageTracker.trackOpenAIUsage({
-                    userId: metadata.userId,
+                    userId: userId,
                     response: response,
                     model: "gpt-3.5-turbo",
                     operationType: 'text_analysis',
-                    contentId: metadata.contentId || null,
-                    fileId: metadata.fileId || null,
-                    processingJobId: metadata.processingJobId || null,
+                    contentId: contentId || null,
+                    fileId: fileId || null,
+                    processingJobId: processingJobId || null,
                     sessionId: metadata.sessionId || null,
                     requestDurationMs: requestDuration,
                     metadata: {
                         documentType: 'text_document',
                         textLength: text.length,
                         previewLength: preview.length,
-                        prompt: prompt.substring(0, 200) + '...' // Store truncated prompt for debugging
+                        prompt: prompt.substring(0, 200) + '...',
+                        processingJobInfo: { processingJobId, userId, contentId, fileId }
                     }
                 });
+                
+                console.log(`💰 Successfully tracked OpenAI usage for job: ${processingJobId}`);
             } catch (trackingError) {
                 console.warn('Failed to track OpenAI usage:', trackingError.message);
                 // Don't fail the main operation due to tracking issues
             }
+        } else {
+            console.warn('⚠️ No userId found - skipping AI usage tracking');
         }
 
         const analysisText = response.choices[0].message.content;
