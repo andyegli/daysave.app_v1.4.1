@@ -63,11 +63,11 @@
                 </div>
                 <div class="flex-grow-1 ms-3">
                   <h6 class="mb-1 text-muted">AI Costs</h6>
-                  <h4 class="mb-0">$<%= currentUsage.ai.cost.toFixed(4) %></h4>
+                  <h4 class="mb-0">$<%= parseFloat(currentUsage.ai.cost || 0).toFixed(4) %></h4>
                   <% if (limits.aiCost.limit !== -1) { %>
                   <small class="text-muted">
-                    of $<%= limits.aiCost.limit.toFixed(2) %> 
-                    (<%= Math.round(limits.aiCost.percentage) %>%)
+                    of $<%= parseFloat(limits.aiCost.limit || 0).toFixed(2) %> 
+                    (<%= Math.round(limits.aiCost.percentage || 0) %>%)
                   </small>
                   <div class="progress mt-2" style="height: 4px;">
                     <div class="progress-bar <%= limits.aiCost.exceeded ? 'bg-danger' : (limits.aiCost.percentage > alertThreshold ? 'bg-warning' : 'bg-success') %>" 
@@ -94,11 +94,11 @@
                 </div>
                 <div class="flex-grow-1 ms-3">
                   <h6 class="mb-1 text-muted">Storage Costs</h6>
-                  <h4 class="mb-0">$<%= currentUsage.storage.cost.toFixed(4) %></h4>
+                  <h4 class="mb-0">$<%= parseFloat(currentUsage.storage.cost || 0).toFixed(4) %></h4>
                   <% if (limits.storageCost.limit !== -1) { %>
                   <small class="text-muted">
-                    of $<%= limits.storageCost.limit.toFixed(2) %> 
-                    (<%= Math.round(limits.storageCost.percentage) %>%)
+                    of $<%= parseFloat(limits.storageCost.limit || 0).toFixed(2) %> 
+                    (<%= Math.round(limits.storageCost.percentage || 0) %>%)
                   </small>
                   <div class="progress mt-2" style="height: 4px;">
                     <div class="progress-bar <%= limits.storageCost.exceeded ? 'bg-danger' : (limits.storageCost.percentage > alertThreshold ? 'bg-warning' : 'bg-success') %>" 
@@ -125,11 +125,11 @@
                 </div>
                 <div class="flex-grow-1 ms-3">
                   <h6 class="mb-1 text-muted">Total Costs</h6>
-                  <h4 class="mb-0">$<%= currentUsage.total.cost.toFixed(4) %></h4>
+                  <h4 class="mb-0">$<%= parseFloat(currentUsage.total.cost || 0).toFixed(4) %></h4>
                   <% if (limits.totalCost.limit !== -1) { %>
                   <small class="text-muted">
-                    of $<%= limits.totalCost.limit.toFixed(2) %> 
-                    (<%= Math.round(limits.totalCost.percentage) %>%)
+                    of $<%= parseFloat(limits.totalCost.limit || 0).toFixed(2) %> 
+                    (<%= Math.round(limits.totalCost.percentage || 0) %>%)
                   </small>
                   <div class="progress mt-2" style="height: 4px;">
                     <div class="progress-bar <%= limits.totalCost.exceeded ? 'bg-danger' : (limits.totalCost.percentage > alertThreshold ? 'bg-warning' : 'bg-success') %>" 
@@ -241,9 +241,9 @@
                     <td><span class="badge bg-secondary"><%= item.type %></span></td>
                     <td><%= new Date(item.createdAt).toLocaleDateString() %></td>
                     <td><%= item.usage.tokens ? item.usage.tokens.toLocaleString() : '-' %></td>
-                    <td>$<%= item.usage.aiCost ? item.usage.aiCost.toFixed(4) : '0.0000' %></td>
-                    <td>$<%= item.usage.storageCost ? item.usage.storageCost.toFixed(4) : '0.0000' %></td>
-                    <td><strong>$<%= item.usage.totalCost ? item.usage.totalCost.toFixed(4) : '0.0000' %></strong></td>
+                    <td>$<%= parseFloat(item.usage.aiCost || 0).toFixed(4) %></td>
+                    <td>$<%= parseFloat(item.usage.storageCost || 0).toFixed(4) %></td>
+                    <td><strong>$<%= parseFloat(item.usage.totalCost || 0).toFixed(4) %></strong></td>
                     <td>
                       <span class="badge bg-<%= item.status === 'completed' ? 'success' : (item.status === 'processing' ? 'primary' : 'warning') %>">
                         <%= item.status %>

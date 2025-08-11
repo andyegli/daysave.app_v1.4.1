@@ -118,7 +118,7 @@ async function getRecentContentWithUsage(userId, limit = 10) {
           model: Content,
           as: 'content',
           required: false,
-          attributes: ['id', 'url', 'title', 'content_type']
+          attributes: ['id', 'url', 'content_type']
         },
         {
           model: ExternalAiUsage,
@@ -145,7 +145,10 @@ async function getRecentContentWithUsage(userId, limit = 10) {
 
       return {
         id: job.id,
-        title: job.content?.title || 'Processing Job',
+        title: job.content?.url ? (() => {
+          try { return new URL(job.content.url).hostname; } 
+          catch { return job.content.url.substring(0, 50) + '...'; }
+        })() : 'Processing Job',
         url: job.content?.url || `Job ${job.id.substring(0, 8)}`,
         type: job.media_type || 'unknown',
         status: job.status,
