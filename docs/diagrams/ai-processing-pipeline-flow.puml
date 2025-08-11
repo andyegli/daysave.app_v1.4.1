@@ -292,14 +292,7 @@ endif
 note right: Remove temp files, free memory, close connections
 
 ' Error Handling
-note as ErrorHandling
-    **Error Handling Throughout Pipeline:**
-    • Retry mechanisms for failed operations
-    • Graceful degradation when AI services unavail
-    • Comprehensive error logging
-    • Progress tracking continues on partial failures
-    • User feedback on processing status
-end note
+floating note left: **Error Handling Throughout Pipeline:**\n• Retry mechanisms for failed operations\n• Graceful degradation when AI services unavailable\n• Comprehensive error logging\n• Progress tracking continues on partial failures\n• User feedback on processing status
 
 ' Completion
 :Analysis complete;
@@ -314,25 +307,9 @@ end note
 stop
 
 ' Performance Notes
-note as PerformanceNotes
-    **Performance Features:**
-    • Singleton pattern prevents multiple orchestrator instances
-    • Async processing with progress tracking
-    • Memory-efficient streaming for large files
-    • Result caching reduces repeated processing
-    • Queue management prevents system overload
-    • Automatic cleanup prevents resource leaks
-end note
+floating note right: **Performance Features:**\n• Singleton pattern prevents multiple orchestrator instances\n• Async processing with progress tracking\n• Memory-efficient streaming for large files\n• Result caching reduces repeated processing\n• Queue management prevents system overload\n• Automatic cleanup prevents resource leaks
 
 ' Architecture Notes  
-note as ArchitectureNotes
-    **Key Architecture Benefits:**
-    • Modular processor design allows easy extension
-    • Plugin registry enables feature toggles
-    • Configuration manager centralizes settings
-    • Progress tracking provides user feedback
-    • Error recovery maintains system stability
-    • Performance monitoring ensures reliability
-end note
+floating note left: **Key Architecture Benefits:**\n• Modular processor design allows easy extension\n• Plugin registry enables feature toggles\n• Configuration manager centralizes settings\n• Progress tracking provides user feedback\n• Error recovery maintains system stability\n• Performance monitoring ensures reliability
 
 @enduml
