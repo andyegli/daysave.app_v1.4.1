@@ -2452,8 +2452,8 @@ router.get('/api/analytics/overview', isAuthenticated, isAdmin, async (req, res)
 // Analytics API - User Activity Trends
 router.get('/api/analytics/user-trends', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const { User, AuditLog } = require('../models');
-    const { Op, sequelize } = require('sequelize');
+    const { User, AuditLog, sequelize } = require('../models');
+    const { Op } = require('sequelize');
     const days = parseInt(req.query.days) || 30;
     
     const startDate = new Date();
@@ -2535,8 +2535,8 @@ router.get('/api/analytics/user-trends', isAuthenticated, isAdmin, async (req, r
 // Analytics API - Content Statistics
 router.get('/api/analytics/content-stats', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const { Content, File, User } = require('../models');
-    const { Op, sequelize } = require('sequelize');
+    const { Content, File, User, sequelize } = require('../models');
+    const { Op } = require('sequelize');
     
     // Content type distribution
     const contentTypes = await Content.findAll({
@@ -2638,8 +2638,8 @@ router.get('/api/analytics/content-stats', isAuthenticated, isAdmin, async (req,
 // Analytics API - System Performance
 router.get('/api/analytics/performance', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const { TestMetric, ProcessingJob } = require('../models');
-    const { Op, sequelize } = require('sequelize');
+    const { TestMetric, ProcessingJob, sequelize } = require('../models');
+    const { Op } = require('sequelize');
     
     const hours = parseInt(req.query.hours) || 24;
     const startTime = new Date(Date.now() - hours * 60 * 60 * 1000);
