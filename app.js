@@ -88,6 +88,10 @@ const app = express();
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+// Trust proxy for HTTPS termination (nginx)
+// Configure Express to trust the first proxy (nginx)
+app.set('trust proxy', 1);
+
 // Security middleware (apply first)
 app.use(securityHeaders());
 // app.use(require('./middleware').logAllHeaders); // Disabled - too verbose for normal operation

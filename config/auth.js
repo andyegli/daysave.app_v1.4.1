@@ -27,11 +27,50 @@ const oauthConfig = {
   }
 };
 
-// WebAuthn Configuration
+// WebAuthn Configuration - Dynamic origin handling for localhost and production
+const getWebAuthnOrigin = () => {
+  console.log('🔍 DEBUG: WEBAUTHN_ORIGIN env var:', process.env.WEBAUTHN_ORIGIN);
+  console.log('🔍 DEBUG: BASE_URL env var:', process.env.BASE_URL);
+  console.log('🔍 DEBUG: ALLOWED_ORIGINS env var:', process.env.ALLOWED_ORIGINS);
+  
+  if (process.env.WEBAUTHN_ORIGIN) {
+    console.log('🔍 Using env WEBAUTHN_ORIGIN:', process.env.WEBAUTHN_ORIGIN);
+    return process.env.WEBAUTHN_ORIGIN;
+  }
+  
+  // Build origins array from ALLOWED_ORIGINS and localhost defaults
+  const origins = [];
+  
+  // Add localhost development origins
+  const appPort = process.env.APP_PORT || 3000;
+  origins.push(
+    `http://localhost:${appPort}`,
+    `https://localhost`,
+    `https://localhost:443`,
+    `http://localhost:3000`
+  );
+  
+  // Add origins from ALLOWED_ORIGINS environment variable
+  if (process.env.ALLOWED_ORIGINS) {
+    const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',')
+      .map(origin => origin.trim())
+      .filter(origin => origin.length > 0);
+    
+    origins.push(...allowedOrigins);
+    console.log('🔍 Added origins from ALLOWED_ORIGINS:', allowedOrigins);
+  }
+  
+  // Remove duplicates
+  const uniqueOrigins = [...new Set(origins)];
+  
+  console.log('🔍 Using dynamic origins array:', uniqueOrigins);
+  return uniqueOrigins;
+};
+
 const webauthnConfig = {
   rpID: process.env.WEBAUTHN_RP_ID || 'localhost',
   rpName: process.env.WEBAUTHN_RP_NAME || 'DaySave',
-  origin: process.env.WEBAUTHN_ORIGIN || `http://localhost:${process.env.APP_PORT || 3000}`,
+  origin: getWebAuthnOrigin(),
   timeout: 60000,
   challengeTimeout: 60000
 };
@@ -149,6 +188,7 @@ passport.deserializeUser(async (id, done) => {
 passport.use(new WebAuthnStrategy(
   {
     ...webauthnConfig,
+
     store: {
       challenge: (req, challenge) => {
         req.session.challenge = challenge;

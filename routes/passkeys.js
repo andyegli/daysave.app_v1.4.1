@@ -255,36 +255,6 @@ router.get('/authenticate/begin', async (req, res) => {
 
 // Passkey Authentication Verification - Complete passkey login
 router.post('/authenticate/finish', async (req, res) => {
-  console.log('🚀 /authenticate/finish route reached!');
-  
-  // Debug request information
-  console.log('🔍 Passkey Authentication Debug:', {
-    headers: {
-      origin: req.headers.origin,
-      host: req.headers.host,
-      referer: req.headers.referer,
-      'x-forwarded-proto': req.headers['x-forwarded-proto'],
-      'x-forwarded-host': req.headers['x-forwarded-host']
-    },
-    url: req.url,
-    protocol: req.protocol,
-    secure: req.secure,
-    originalUrl: req.originalUrl
-  });
-
-  // Ensure the origin header is properly set for WebAuthn validation
-  if (!req.headers.origin && req.headers.referer) {
-    const refererUrl = new URL(req.headers.referer);
-    req.headers.origin = refererUrl.origin;
-    console.log('🔧 Set origin from referer:', req.headers.origin);
-  }
-
-  // Force the origin to match our WebAuthn configuration for debugging
-  if (req.headers.origin !== 'https://localhost') {
-    console.log('⚠️ Origin mismatch detected, forcing to https://localhost. Original:', req.headers.origin);
-    req.headers.origin = 'https://localhost';
-  }
-
   try {
     const { credential } = req.body;
     

@@ -22,7 +22,7 @@ services:
       # WebAuthn configuration for HTTPS
       - WEBAUTHN_RP_ID=localhost
       - WEBAUTHN_RP_NAME=DaySave
-      - WEBAUTHN_ORIGIN=https://localhost
+      # - WEBAUTHN_ORIGIN=https://localhost  # Commented out to use dynamic array
     ports:
       - "${APP_PORT:-3000}:3000"
       # - "${ANALYZER_PORT:-3001}:3001"  # Multimedia analyzer service not currently used
