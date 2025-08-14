@@ -95,7 +95,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # Expose ports
 EXPOSE 3000
-EXPOSE 3001
+# EXPOSE 3001  # Multimedia analyzer service not currently used
 
 # Start the application with proper environment
 CMD ["node", "app.js"] 
