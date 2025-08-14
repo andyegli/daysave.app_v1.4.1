@@ -232,16 +232,24 @@ class FileUploadService {
     const extension = path.extname(file.originalname);
     const fileName = `${userId}/${timestamp}_${fileId}${extension}`;
 
+    // Ensure userId is passed to storage methods for tracking
+    const uploadOptions = {
+      ...options,
+      userId: userId,
+      fileId: fileId,
+      uploadStartTime: Date.now()
+    };
+
     // Try Google Cloud Storage first if available
     if (this.storage) {
       try {
         console.log('📤 Attempting Google Cloud Storage upload for:', file.originalname);
-        return await this.uploadToCloudStorage(file, fileName, options);
+        return await this.uploadToCloudStorage(file, fileName, uploadOptions);
       } catch (gcsError) {
         console.log('⚠️ Google Cloud Storage upload failed, falling back to local storage:', gcsError.message);
         // Fallback to local storage
         try {
-          return await this.uploadToLocalStorage(file, fileName, options);
+          return await this.uploadToLocalStorage(file, fileName, uploadOptions);
         } catch (localError) {
           console.error('❌ Both Google Cloud Storage and local storage failed:', localError.message);
           throw new Error(`Upload failed: ${localError.message}`);
@@ -251,7 +259,7 @@ class FileUploadService {
       // Use local storage directly
       try {
         console.log('📁 Using local storage for:', file.originalname);
-        return await this.uploadToLocalStorage(file, fileName, options);
+        return await this.uploadToLocalStorage(file, fileName, uploadOptions);
       } catch (localError) {
         console.error('❌ Local storage upload failed:', localError.message);
         throw new Error(`Upload failed: ${localError.message}`);

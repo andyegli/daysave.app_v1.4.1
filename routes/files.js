@@ -155,9 +155,10 @@ async function copyAnalysisToFileRecord(fileId, userId) {
  * Generate sophisticated AI title for images using OpenAI (same approach as videos)
  * @param {string} imageDescription - AI description of the image
  * @param {Object} analysisData - Additional analysis data (objects, tags, etc.)
+ * @param {Object} options - Options including userId, fileId, etc. for tracking
  * @returns {Promise<string|null>} Generated title or null if failed
  */
-async function generateSophisticatedImageTitle(imageDescription, analysisData = {}) {
+async function generateSophisticatedImageTitle(imageDescription, analysisData = {}, options = {}) {
   try {
     console.log('📝 Starting sophisticated AI-powered title generation for image');
     
@@ -166,6 +167,10 @@ async function generateSophisticatedImageTitle(imageDescription, analysisData = 
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
     });
+    
+    // Initialize AI usage tracker for cost tracking
+    const AiUsageTracker = require('../services/aiUsageTracker');
+    const aiUsageTracker = new AiUsageTracker();
     
     if (!openai || !process.env.OPENAI_API_KEY) {
       console.log('⚠️ OpenAI not available for title generation');
@@ -219,6 +224,7 @@ BAD examples to avoid:
 
 Respond with only the title, no quotes or additional text.`;
 
+    const startTime = Date.now();
     const response = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -234,6 +240,33 @@ Respond with only the title, no quotes or additional text.`;
       temperature: 0.7,
       max_tokens: 80
     });
+
+    const requestDuration = Date.now() - startTime;
+
+    // Track AI usage for cost calculation
+    if (options.userId) {
+      try {
+        await aiUsageTracker.trackOpenAIUsage({
+          userId: options.userId,
+          response: response,
+          model: "gpt-4",
+          operationType: 'text_generation',
+          contentId: options.contentId || null,
+          fileId: options.fileId || null,
+          processingJobId: options.processingJobId || null,
+          sessionId: options.sessionId || null,
+          requestDurationMs: requestDuration,
+          metadata: {
+            operationType: 'image_title_generation',
+            descriptionLength: contentToAnalyze.length,
+            prompt: prompt.substring(0, 200) + '...' // Store truncated prompt for debugging
+          }
+        });
+      } catch (trackingError) {
+        console.warn('Failed to track OpenAI usage for image title generation:', trackingError.message);
+        // Don't fail the main operation due to tracking issues
+      }
+    }
 
     let generatedTitle = response.choices[0].message.content.trim();
     
@@ -820,7 +853,12 @@ async function triggerFileAnalysis(fileRecord, user) {
         // Generate sophisticated AI title using the same function as core pipeline
         try {
           console.log(`🎯 Generating sophisticated AI title for image...`);
-          const aiTitle = await generateSophisticatedImageTitle(updateData.summary, formattedResults.data);
+          const aiTitle = await generateSophisticatedImageTitle(updateData.summary, formattedResults.data, {
+            userId: user.id,
+            fileId: fileRecord.id,
+            contentId: null,
+            processingJobId: processingResult.jobId || null
+          });
           if (aiTitle) {
             updateData.generated_title = aiTitle;
             updateData.metadata.title = aiTitle;
@@ -1904,7 +1942,12 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
         file.summary.substring(0, 100) === file.generated_title.substring(0, 100)) {
       console.log(`🔧 Regenerating poor quality title for ${file.filename}`);
       try {
-        const aiTitle = await generateSophisticatedImageTitle(file.summary, {});
+        const aiTitle = await generateSophisticatedImageTitle(file.summary, {}, {
+          userId: file.user_id,
+          fileId: file.id,
+          contentId: null,
+          processingJobId: null
+        });
         if (aiTitle && aiTitle !== file.generated_title) {
           await file.update({ 
             generated_title: aiTitle,

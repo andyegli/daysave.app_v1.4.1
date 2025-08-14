@@ -250,7 +250,12 @@ class ImageProcessor extends BaseMediaProcessor {
             description: results.results.description,
             objects: results.results.objects,
             tags: results.results.tags,
-            ocrText: results.results.ocrText
+            ocrText: results.results.ocrText,
+            userId: userId,
+            fileId: options.fileId || null,
+            contentId: options.contentId || null,
+            processingJobId: options.processingJobId || null,
+            sessionId: options.sessionId || null
           });
           console.log(`🎯 DEBUG: Sophisticated title generated:`, generatedTitle);
           results.results.generatedTitle = generatedTitle;
@@ -1078,6 +1083,7 @@ BAD examples to avoid:
 
 Respond with only the title, no quotes or additional text.`;
 
+      const startTime = Date.now();
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4',
         messages: [
@@ -1093,6 +1099,33 @@ Respond with only the title, no quotes or additional text.`;
         temperature: 0.7,
         max_tokens: 80
       });
+
+      const requestDuration = Date.now() - startTime;
+
+      // Track AI usage for cost calculation
+      if (context.userId) {
+        try {
+          await this.aiUsageTracker.trackOpenAIUsage({
+            userId: context.userId,
+            response: response,
+            model: "gpt-4",
+            operationType: 'text_generation',
+            contentId: context.contentId || null,
+            fileId: context.fileId || null,
+            processingJobId: context.processingJobId || null,
+            sessionId: context.sessionId || null,
+            requestDurationMs: requestDuration,
+            metadata: {
+              operationType: 'image_title_generation_processor',
+              descriptionLength: contentToAnalyze.length,
+              prompt: prompt.substring(0, 200) + '...' // Store truncated prompt for debugging
+            }
+          });
+        } catch (trackingError) {
+          console.warn('Failed to track OpenAI usage in ImageProcessor title generation:', trackingError.message);
+          // Don't fail the main operation due to tracking issues
+        }
+      }
 
       let generatedTitle = response.choices[0].message.content.trim();
       
