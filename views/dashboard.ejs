@@ -41,26 +41,7 @@
   .dashboard-icon.info { background: linear-gradient(45deg, #42a5f5, #1e88e5); }
 </style>
 
-<body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="/">
-                <img src="/images/logo1.png" alt="DaySave Logo" width="30" height="30" class="me-2">
-                <span>DaySave</span>
-            </a>
-            <div class="navbar-nav ms-auto">
-                <% if (user) { %>
-                    <a href="/dashboard" class="btn btn-outline-light me-2">Dashboard</a>
-                    <a href="/auth/logout" class="btn btn-outline-danger">Logout</a>
-                <% } else { %>
-                    <a href="/auth/login" class="btn btn-outline-light">Login</a>
-                <% } %>
-            </div>
-        </div>
-    </nav>
-
-    <main class="container mt-5">
+<main class="container mt-5">
         <h1 class="mb-4">Welcome, <%= user.first_name ? user.first_name : user.username %>!</h1>
         
         <!-- Success Messages -->
@@ -184,13 +165,10 @@
 
     </main>
 
-    <!-- Bootstrap 5 JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
     <!-- Admin Session Fix Script -->
-    <script src="/js/admin-session-fix.js"></script>
+    <script src="/js/admin-session-fix.js?v=<%= Date.now() %>"></script>
     
     <!-- Dashboard specific scripts -->
-    <script src="/js/dashboard.js"></script>
-</body>
-</html> 
+    <script src="/js/dashboard.js?v=<%= Date.now() %>"></script>
+
+<%- include('partials/footer') %> 
