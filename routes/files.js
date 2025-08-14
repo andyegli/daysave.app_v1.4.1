@@ -262,8 +262,9 @@ Respond with only the title, no quotes or additional text.`;
             prompt: prompt.substring(0, 200) + '...' // Store truncated prompt for debugging
           }
         });
+        console.log('💰 AI usage tracked successfully for image title generation');
       } catch (trackingError) {
-        console.warn('Failed to track OpenAI usage for image title generation:', trackingError.message);
+        console.warn('❌ Failed to track OpenAI usage for image title generation:', trackingError.message);
         // Don't fail the main operation due to tracking issues
       }
     }
