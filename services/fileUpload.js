@@ -742,12 +742,19 @@ class FileUploadService {
         raw: true
       });
 
-      return stats[0] || {
+      const result = stats[0] || {
         totalFiles: 0,
         totalSize: 0,
         cloudFiles: 0,
         localFiles: 0
       };
+      
+      // Handle null totalSize from SUM query when no files exist
+      if (result.totalSize === null) {
+        result.totalSize = 0;
+      }
+      
+      return result;
     } catch (error) {
       console.error('Error getting upload stats:', error);
       return {

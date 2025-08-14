@@ -1596,6 +1596,13 @@ router.get('/api/settings', isAuthenticated, async (req, res) => {
 // Get File Statistics
 router.get('/api/stats', isAuthenticated, async (req, res) => {
   try {
+    // Add cache-busting headers to ensure fresh data
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
     const stats = await FileUploadService.getUploadStats(req.user.id);
     res.json(stats);
   } catch (error) {

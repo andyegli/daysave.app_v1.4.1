@@ -28,6 +28,10 @@ $(document).ready(function() {
   initializeFileModals();
   initializeAIAnalysisIntegration();
   
+  // Refresh statistics on page load and periodically
+  refreshStatistics();
+  setInterval(refreshStatistics, 30000); // Refresh every 30 seconds
+  
   /**
    * Initialize file operations (delete, share, etc.)
    */
@@ -100,7 +104,12 @@ $(document).ready(function() {
         if (result.success) {
           // Close modal and reload page
           bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
-          location.reload();
+          // Refresh statistics before reload
+          if (typeof refreshStatistics === 'function') {
+            refreshStatistics().then(() => location.reload());
+          } else {
+            location.reload();
+          }
         } else {
           throw new Error(result.message || 'Update failed');
         }
@@ -166,11 +175,23 @@ function initializeUploadModal() {
               // Close modal and refresh page
               $('#uploadModal').modal('hide');
               setTimeout(() => {
-                // Fix for localhost HTTPS/HTTP protocol issues
-                if (window.location.hostname === 'localhost') {
-                  window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+                // Refresh statistics before reload
+                if (typeof refreshStatistics === 'function') {
+                  refreshStatistics().then(() => {
+                    // Fix for localhost HTTPS/HTTP protocol issues
+                    if (window.location.hostname === 'localhost') {
+                      window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+                    } else {
+                      window.location.reload();
+                    }
+                  });
                 } else {
-                  window.location.reload();
+                  // Fix for localhost HTTPS/HTTP protocol issues
+                  if (window.location.hostname === 'localhost') {
+                    window.location.href = `http://localhost:${window.location.port || 3000}${window.location.pathname}${window.location.search}`;
+                  } else {
+                    window.location.reload();
+                  }
                 }
               }, 1000);
             } else {
@@ -591,6 +612,57 @@ function initializeUploadModal() {
     downloadFileAction,
     copyFileUrlAction,
     editFileMetadataAction,
-    deleteFileConfirmAction
+    deleteFileConfirmAction,
+    refreshStatistics
   };
-}); 
+});
+
+/**
+ * Refresh file statistics dynamically
+ */
+async function refreshStatistics() {
+  try {
+    const response = await fetch('/files/api/stats', {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Cache-Control': 'no-cache'
+      }
+    });
+    
+    if (!response.ok) {
+      console.warn('Failed to refresh statistics:', response.status);
+      return;
+    }
+    
+    const stats = await response.json();
+    
+    // Update statistics display elements
+    const totalFilesElement = document.querySelector('[class*="bg-primary"] h3');
+    const totalSizeElement = document.querySelector('[class*="bg-success"] h3'); 
+    const cloudFilesElement = document.querySelector('[class*="bg-info"] h3');
+    const localFilesElement = document.querySelector('[class*="bg-warning"] h3');
+    
+    if (totalFilesElement) {
+      totalFilesElement.textContent = stats.totalFiles || 0;
+    }
+    
+    if (totalSizeElement) {
+      const sizeMB = ((stats.totalSize || 0) / 1024 / 1024).toFixed(1);
+      totalSizeElement.textContent = `${sizeMB} MB`;
+    }
+    
+    if (cloudFilesElement) {
+      cloudFilesElement.textContent = stats.cloudFiles || 0;
+    }
+    
+    if (localFilesElement) {
+      localFilesElement.textContent = stats.localFiles || 0;
+    }
+    
+    console.log('📊 Statistics refreshed:', stats);
+    
+  } catch (error) {
+    console.error('Error refreshing statistics:', error);
+  }
+} 
