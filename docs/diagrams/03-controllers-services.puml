@@ -1,0 +1,93 @@
+@startuml DaySave Controllers and Services
+!theme plain
+title DaySave Controller and Service Layer
+
+' Define colors and styles
+skinparam packageStyle rectangle
+skinparam backgroundColor #F8F9FA
+skinparam component {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontColor #1976D2
+}
+skinparam rectangle {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #E65100
+}
+
+' Route Controllers
+rectangle "API Route Controllers" {
+    component AuthController as "auth.js"
+    component ContentController as "content.js"
+    component FileController as "files.js"
+    component AdminController as "admin.js"
+    component ContactController as "contacts.js"
+    component MultimediaController as "multimedia.js"
+    component ProfileController as "profile.js"
+    component SubscriptionController as "subscription.js"
+    component ApiKeyController as "apiKeys.js"
+    component PlacesController as "places.js"
+    component PasskeyController as "passkeys.js"
+    component DashboardController as "dashboard.js"
+}
+
+' Core Services
+rectangle "Core Business Services" {
+    component FileUploadService as "fileUpload.js"
+    component SubscriptionService as "subscriptionService.js"
+    component ApiKeyService as "apiKeyService.js"
+    component StartupValidation as "startupValidation.js"
+    component AiUsageTracker as "aiUsageTracker.js"
+    component StorageUsageTracker as "storageUsageTracker.js"
+    component GeoLocationService as "geoLocationService.js"
+    component SocialMediaCredentials as "socialMediaCredentialService.js"
+    component ProgressWebSocket as "ProgressWebSocketService.js"
+    component UsageLimitService as "usageLimitService.js"
+    component CostConfigService as "costConfigurationService.js"
+    component BackwardCompatibility as "BackwardCompatibilityService.js"
+}
+
+' Multimedia Services
+rectangle "Multimedia Processing Services" {
+    component AutomationOrchestrator as "AutomationOrchestrator.js"
+    component AudioProcessor as "AudioProcessor.js"
+    component VideoProcessor as "VideoProcessor.js"
+    component ImageProcessor as "ImageProcessor.js"
+    component DocumentProcessor as "DocumentProcessor.js"
+    component UrlProcessor as "UrlProcessor.js"
+    component WebsiteProcessor as "WebsiteProcessor.js"
+    component ThumbnailGenerator as "ThumbnailGenerator.js"
+    component FaceRecognitionService as "FaceRecognitionService.js"
+    component VoicePrintDatabase as "VoicePrintDatabase.js"
+    component PerformanceMonitor as "PerformanceMonitor.js"
+    component PerformanceOptimizer as "PerformanceOptimizer.js"
+    component ConfigurationManager as "ConfigurationManager.js"
+    component ErrorIsolationManager as "ErrorIsolationManager.js"
+    component ProgressTracker as "ProgressTracker.js"
+    component ResultFormatter as "ResultFormatter.js"
+    component PluginRegistry as "PluginRegistry.js"
+    component BaseMediaProcessor as "BaseMediaProcessor.js"
+}
+
+' Service Dependencies
+AuthController --> ApiKeyService
+ContentController --> FileUploadService
+ContentController --> AiUsageTracker
+MultimediaController --> AutomationOrchestrator
+FileController --> StorageUsageTracker
+AdminController --> UsageLimitService
+
+AutomationOrchestrator --> AudioProcessor
+AutomationOrchestrator --> VideoProcessor
+AutomationOrchestrator --> ImageProcessor
+AutomationOrchestrator --> DocumentProcessor
+AutomationOrchestrator --> UrlProcessor
+
+AudioProcessor --> VoicePrintDatabase
+VideoProcessor --> ThumbnailGenerator
+ImageProcessor --> FaceRecognitionService
+
+note bottom : 12 route controllers + 31 service modules\nModular architecture with clear separation of concerns\nMultimedia processing pipeline with AI integration
+
+@enduml

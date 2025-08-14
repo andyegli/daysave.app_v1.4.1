@@ -1,0 +1,198 @@
+@startuml DaySave MVC Architecture
+
+!theme plain
+title DaySave MVC Architecture Diagram
+
+' Define colors and styles
+skinparam packageStyle rectangle
+skinparam backgroundColor #F8F9FA
+skinparam package {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontColor #1976D2
+    FontStyle bold
+}
+skinparam rectangle {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #E65100
+}
+skinparam component {
+    BackgroundColor #E8F5E8
+    BorderColor #4CAF50
+    FontColor #2E7D32
+}
+
+' Models Layer
+package "Models (Data Layer)" {
+    rectangle "Core Models" {
+        component User
+        component Role
+        component Permission
+        component Content
+        component File
+        component Contact
+        component Subscription
+    }
+    
+    rectangle "Analysis Models" {
+        component VideoAnalysis
+        component AudioAnalysis
+        component ImageAnalysis
+        component OCRCaption
+        component Speaker
+        component Face
+        component Thumbnail
+    }
+    
+    rectangle "System Models" {
+        component ProcessingJob
+        component AuditLog
+        component ApiKey
+        component Session
+        component AdminSetting
+    }
+    
+    rectangle "Social Models" {
+        component SocialAccount
+        component ContactGroup
+        component ContentGroup
+        component Relationship
+    }
+}
+
+' Views Layer
+package "Views (Presentation Layer)" {
+    rectangle "Authentication Views" {
+        component LoginView as "login.ejs"
+        component RegisterView as "register.ejs" 
+        component ForgotPasswordView as "forgot-password.ejs"
+        component PasskeyAuthView as "passkey-auth.ejs"
+    }
+    
+    rectangle "Dashboard Views" {
+        component DashboardView as "dashboard.ejs"
+        component AdminDashboardView as "admin-dashboard.ejs"
+        component ProfileView as "profile.ejs"
+        component IndexView as "index.ejs"
+    }
+    
+    rectangle "Content Views" {
+        component ContentListView as "content/list.ejs"
+        component ContentManageView as "content/manage.ejs"
+        component ContentAnalysisView as "content/analysis.ejs"
+        component FileDetailView as "files/detail.ejs"
+    }
+    
+    rectangle "Admin Views" {
+        component AdminUserListView as "admin/user-list.ejs"
+        component AdminAnalyticsView as "admin/analytics.ejs"
+        component AdminSettingsView as "admin/settings.ejs"
+        component AdminLogsView as "admin/logs.ejs"
+    }
+    
+    rectangle "Shared Components" {
+        component HeaderPartial as "partials/header.ejs"
+        component FooterPartial as "partials/footer.ejs"
+        component AIAnalysisModal as "partials/ai-analysis-modal.ejs"
+    }
+}
+
+' Controllers Layer  
+package "Controllers (Business Logic)" {
+    rectangle "Route Controllers" {
+        component AuthController as "routes/auth.js"
+        component ContentController as "routes/content.js"
+        component FileController as "routes/files.js"
+        component AdminController as "routes/admin.js"
+        component MultimediaController as "routes/multimedia.js"
+        component ProfileController as "routes/profile.js"
+        component ContactController as "routes/contacts.js"
+        component SubscriptionController as "routes/subscription.js"
+        component ApiKeyController as "routes/apiKeys.js"
+        component PlacesController as "routes/places.js"
+        component PasskeyController as "routes/passkeys.js"
+    }
+    
+    rectangle "Service Controllers" {
+        component MultimediaAnalyzer as "services/multimedia/"
+        component FileUploadService as "services/fileUpload.js"
+        component SubscriptionService as "services/subscriptionService.js"
+        component ApiKeyService as "services/apiKeyService.js"
+        component StartupValidation as "services/startupValidation.js"
+        component AiUsageTracker as "services/aiUsageTracker.js"
+    }
+}
+
+' Middleware Layer
+package "Middleware Layer" {
+    rectangle "Security Middleware" {
+        component Authentication as "middleware/auth.js"
+        component Authorization as "middleware/auth.js"
+        component DeviceFingerprinting as "middleware/deviceFingerprinting.js"
+        component SecurityHeaders as "middleware/security.js"
+        component CORS as "middleware/security.js"
+    }
+    
+    rectangle "Processing Middleware" {
+        component RequestValidation as "middleware/validation.js"
+        component InputSanitization as "middleware/security.js"
+        component ErrorHandling as "middleware/error.js"
+        component RequestLogging as "middleware/security.js"
+        component ApiKeyValidation as "middleware/apiKey.js"
+    }
+}
+
+' External Services
+package "External Services" {
+    rectangle "AI Services" {
+        component OpenAIAPI as "OpenAI API"
+        component GoogleVisionAPI as "Google Vision API"
+        component GoogleSpeechAPI as "Google Speech API"
+        component GoogleCloudStorage as "Google Cloud Storage"
+    }
+    
+    rectangle "Infrastructure" {
+        component MySQLDatabase as "MySQL Database"
+        component FileSystem as "File System"
+        component EmailService as "Email Service"
+        component OAuthProviders as "OAuth Providers"
+    }
+}
+
+' Main Application
+rectangle "Main Application" {
+    component ExpressServer as "app.js (Express Server)"
+}
+
+' Define relationships
+ExpressServer --> AuthController
+ExpressServer --> ContentController
+ExpressServer --> FileController
+ExpressServer --> AdminController
+ExpressServer --> MultimediaController
+
+AuthController --> Authentication
+ContentController --> Authorization
+FileController --> RequestValidation
+
+AuthController --> User
+AuthController --> Role
+ContentController --> Content
+ContentController --> File
+FileController --> ProcessingJob
+
+AuthController --> LoginView
+ContentController --> ContentListView
+AdminController --> AdminDashboardView
+
+MultimediaAnalyzer --> VideoAnalysis
+MultimediaAnalyzer --> AudioAnalysis
+MultimediaAnalyzer --> OpenAIAPI
+MultimediaAnalyzer --> GoogleVisionAPI
+
+User --> MySQLDatabase
+Content --> MySQLDatabase
+File --> FileSystem
+
+@enduml

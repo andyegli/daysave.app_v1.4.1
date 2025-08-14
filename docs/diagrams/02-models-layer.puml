@@ -1,0 +1,97 @@
+@startuml DaySave Models Layer
+!theme plain
+title DaySave Models Layer - Database Schema Overview
+
+' Define colors and styles
+skinparam packageStyle rectangle
+skinparam backgroundColor #F8F9FA
+skinparam component {
+    BackgroundColor #E8F5E8
+    BorderColor #4CAF50
+    FontColor #2E7D32
+}
+skinparam rectangle {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #E65100
+}
+
+' Core Models
+rectangle "Core User Models" {
+    component User
+    component Role
+    component Permission
+    component RolePermission
+    component UserRole
+    component SocialAccount
+    component UserPasskey
+    component UserDevice
+}
+
+' Content Models
+rectangle "Content Management" {
+    component Content
+    component File
+    component Comment
+    component ContentGroup
+    component ShareLog
+    component ProcessingJob
+}
+
+' Contact Models  
+rectangle "Contact System" {
+    component Contact
+    component ContactGroup
+    component ContactGroupMember
+    component Address
+    component Phone
+    component Email
+    component Relationship
+}
+
+' AI Analysis Models
+rectangle "AI Analysis Results" {
+    component VideoAnalysis
+    component AudioAnalysis
+    component ImageAnalysis
+    component DocumentAnalysis
+    component OCRCaption
+    component Speaker
+    component Face
+    component Thumbnail
+    component VoicePrint
+}
+
+' Administrative Models
+rectangle "System Administration" {
+    component AuditLog
+    component AuditArchive
+    component ApiKey
+    component AdminSetting
+    component LoginAttempt
+    component Session
+    component PasswordReset
+}
+
+' Subscription Models
+rectangle "Billing & Usage" {
+    component Subscription
+    component UsageTracking
+    component CostConfiguration
+    component StorageUsage
+    component AiUsage
+    component UsageAlert
+}
+
+' Key Relationships
+User ||--o{ Content : creates
+User ||--o{ Contact : owns
+User ||--o{ Subscription : has
+Content ||--o{ File : contains
+Content ||--o{ VideoAnalysis : analyzed_by
+File ||--o{ ProcessingJob : processed_by
+Speaker ||--o{ VoicePrint : identified_by
+
+note bottom : 75 total models with comprehensive relationships\nMySQL database with 67+ migration files\nUUID primary keys throughout
+
+@enduml

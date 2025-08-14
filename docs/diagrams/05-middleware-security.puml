@@ -1,0 +1,96 @@
+@startuml DaySave Middleware and Security Layer
+!theme plain
+title DaySave Middleware and Security Architecture
+
+' Define colors and styles
+skinparam packageStyle rectangle
+skinparam backgroundColor #F8F9FA
+skinparam component {
+    BackgroundColor #FFEBEE
+    BorderColor #D32F2F
+    FontColor #B71C1C
+}
+skinparam rectangle {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #E65100
+}
+
+' Security Middleware
+rectangle "Authentication & Authorization" {
+    component AuthMiddleware as "auth.js"
+    component PasskeyAuth as "WebAuthn/FIDO2"
+    component MfaValidation as "MFA/TOTP Validation"
+    component SessionManagement as "Session Management"
+    component RoleBasedAccess as "Role-Based Access Control"
+    component DeviceFingerprinting as "deviceFingerprinting.js"
+    component TestAuth as "testAuth.js"
+}
+
+' Security Headers and Protection
+rectangle "Security Protection" {
+    component SecurityHeaders as "security.js"
+    component CorsPolicy as "CORS Configuration"
+    component CspPolicy as "Content Security Policy"
+    component RateLimiting as "Rate Limiting"
+    component InputSanitization as "Input Sanitization"
+    component XssProtection as "XSS Protection"
+    component CsrfProtection as "CSRF Protection"
+}
+
+' Validation and Processing
+rectangle "Request Processing" {
+    component RequestValidation as "validation.js"
+    component InputValidation as "Express Validator"
+    component ErrorHandling as "error.js"
+    component RequestLogging as "Request Logging"
+    component ResponseCompression as "Compression"
+    component StaticFileServing as "Static File Middleware"
+}
+
+' API and Access Control
+rectangle "API Management" {
+    component ApiKeyValidation as "apiKey.js"
+    component SubscriptionLimits as "subscription.js"
+    component UsageLimits as "Usage Limit Enforcement"
+    component QuotaManagement as "API Quota Management"
+    component AccessLogging as "Access Audit Logging"
+}
+
+' Development and Testing
+rectangle "Development Support" {
+    component DevHttpAccess as "devHttpAccess.js"
+    component LocalhostFixes as "Localhost Protocol Fixes"
+    component DebugMiddleware as "Debug Information"
+    component PerformanceMetrics as "Performance Monitoring"
+}
+
+' External Security Services
+rectangle "External Security Integration" {
+    component GoogleOAuth as "Google OAuth 2.0"
+    component MicrosoftOAuth as "Microsoft OAuth"
+    component AppleSignIn as "Apple Sign In"
+    component SendGridEmail as "SendGrid Email Service"
+    component GoogleCloudIAM as "Google Cloud IAM"
+}
+
+' Middleware Flow
+AuthMiddleware --> SessionManagement
+AuthMiddleware --> RoleBasedAccess
+SessionManagement --> DeviceFingerprinting
+SecurityHeaders --> CorsPolicy
+SecurityHeaders --> CspPolicy
+RequestValidation --> InputValidation
+ErrorHandling --> RequestLogging
+ApiKeyValidation --> SubscriptionLimits
+
+' External Service Dependencies
+AuthMiddleware --> GoogleOAuth
+AuthMiddleware --> MicrosoftOAuth
+AuthMiddleware --> AppleSignIn
+MfaValidation --> SendGridEmail
+AccessLogging --> GoogleCloudIAM
+
+note bottom : Comprehensive security middleware stack\nMulti-layer protection with OAuth integration\nCSP compliance with zero inline scripts\nAudit logging and performance monitoring
+
+@enduml

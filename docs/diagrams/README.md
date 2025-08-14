@@ -1,185 +1,171 @@
-# DaySave Application Flow Diagrams
-
-This directory contains comprehensive flow diagrams showing how the DaySave application processes different types of multimedia content. These diagrams illustrate the modular architecture implemented in v1.4.2 with the AutomationOrchestrator system.
+# DaySave Architecture Diagrams - A4 Print Ready
 
 ## Overview
+The DaySave MVC architecture has been split into 6 A4-friendly diagrams for easy printing and documentation. Each diagram focuses on a specific layer or aspect of the system.
 
-The DaySave application uses a sophisticated multimedia analysis pipeline that automatically processes four main content types:
+---
 
-- **Video** (MP4, AVI, MOV, WebM, MKV, etc.)
-- **Audio** (MP3, WAV, M4A, AAC, OGG, FLAC, etc.)
-- **Images** (JPG, PNG, GIF, BMP, WebP, etc.)
-- **Documents** (PDF, TXT, CSV, DOC, DOCX, etc.)
+## 📄 Diagram Files
 
-## Diagram Files
+### 1. **01-mvc-overview.puml** - High-Level Architecture
+**Purpose**: Executive summary showing main architectural layers
+**Content**: 
+- Presentation Layer (Views)
+- Controller Layer (Routes & Services)
+- Middleware Layer (Security & Validation)
+- Data Layer (Models & Database)
+- External Services (AI & Cloud)
 
-### 1. Video Processing Flow (`video-processing-flow.mmd`)
+**Best for**: Stakeholder presentations, system overview
 
-Shows the complete video processing pipeline with **8 parallel processing streams**:
+---
 
-- **Audio Track Extraction** → Speech-to-Text → Speaker Diarization → Voice Print Recognition
-- **Video Frame Extraction** → Object Detection → Scene Analysis
-- **Thumbnail Generation** → Key Moments Detection → Multiple Sizes (150px, 300px, 500px)
-- **OCR Caption Extraction** → Frame Interval Processing → Text Confidence Scoring
-- **Motion Analysis** → Motion Vector Analysis
-- **Scene Detection** → Scene Change Detection
-- **Chapter Detection** → Chapter Boundary Detection
-- **Quality Analysis** → Bitrate/Resolution Assessment
+### 2. **02-models-layer.puml** - Database Schema
+**Purpose**: Complete data model and database structure
+**Content**:
+- 75 Sequelize models organized by function
+- Core User Models (User, Role, Permission)
+- Content Management (Content, File, Comment)
+- Contact System (Contact, Address, Phone)
+- AI Analysis Results (VideoAnalysis, OCR, Thumbnails)
+- System Administration (AuditLog, ApiKey)
+- Billing & Usage (Subscription, UsageTracking)
 
-**Key Features:**
-- FFmpeg integration for video processing
-- Google Speech-to-Text with OpenAI Whisper fallback
-- Google Vision AI for object detection
-- Comprehensive thumbnail and key moment generation
-- OCR text extraction from video frames
+**Best for**: Database design review, technical documentation
 
-### 2. Audio Processing Flow (`audio-processing-flow.mmd`)
+---
 
-Shows the audio processing pipeline with **5 parallel processing streams**:
+### 3. **03-controllers-services.puml** - Business Logic
+**Purpose**: Route controllers and service layer architecture
+**Content**:
+- 12 API Route Controllers (auth, content, files, admin, etc.)
+- 31 Core Business Services
+- Multimedia Processing Services (17 specialized processors)
+- Service dependencies and relationships
 
-- **Transcription Stream** → Smart provider selection based on duration
-- **Speaker Analysis Stream** → Speaker segmentation and confidence scoring
-- **Voice Print Stream** → Voice print extraction and speaker identification
-- **Quality Analysis Stream** → Sample rate, bitrate, and noise level analysis
-- **Enhancement Stream** → Volume normalization and noise reduction
+**Best for**: API documentation, service architecture review
 
-**Key Features:**
-- Smart routing: Google Speech-to-Text for <30s files, OpenAI Whisper for >30s
-- VoicePrintDatabase integration for speaker recognition
-- Comprehensive audio quality assessment
-- Language detection and confidence scoring
+---
 
-### 3. Image Processing Flow (`image-processing-flow.mmd`)
+### 4. **04-views-layer.puml** - User Interface
+**Purpose**: Frontend templates and UI components
+**Content**:
+- 49+ EJS Templates organized by function
+- Authentication Views (login, register, MFA)
+- Content Management Views
+- Admin Dashboard Views
+- Reusable Partials and Components
+- 53 External JavaScript Files (CSP compliant)
 
-Shows the image processing pipeline with **6 parallel processing streams**:
+**Best for**: UI/UX review, frontend architecture
 
-- **Object Detection Stream** → Google Vision AI with OpenAI Vision fallback
-- **OCR Text Extraction Stream** → Text confidence scoring and language detection
-- **AI Description Stream** → OpenAI GPT-4 Vision for comprehensive descriptions
-- **Thumbnail Generation Stream** → Multiple sizes (150px, 300px, 500px, 800px)
-- **Quality Analysis Stream** → Resolution, aspect ratio, and color space analysis
-- **Face Detection Stream** → Face encoding and recognition
+---
 
-**Key Features:**
-- AI-powered image descriptions using OpenAI GPT-4 Vision
-- Comprehensive object detection with fallback providers
-- Advanced OCR with handwriting detection
-- Face recognition infrastructure with encoding storage
+### 5. **05-middleware-security.puml** - Security Architecture
+**Purpose**: Security, authentication, and middleware stack
+**Content**:
+- Authentication & Authorization (WebAuthn, MFA, RBAC)
+- Security Protection (CORS, CSP, Rate Limiting)
+- Request Processing (Validation, Error Handling)
+- API Management (API Keys, Usage Limits)
+- External Security Integration (OAuth providers)
 
-### 4. Document Processing Flow (`document-processing-flow.mmd`)
+**Best for**: Security review, compliance documentation
 
-Shows the document processing pipeline with **4 parallel processing streams**:
+---
 
-- **Text Extraction Stream** → Format-specific extraction (PDF, Office, OCR)
-- **Structure Analysis Stream** → Page/section detection, table extraction
-- **Content Analysis Stream** → Topic detection, entity recognition
-- **Security Scan Stream** → Malware detection, privacy information scanning
+### 6. **06-external-integrations.puml** - External Services
+**Purpose**: Third-party service integrations and dependencies
+**Content**:
+- AI & Machine Learning (OpenAI, Google Cloud AI)
+- Cloud Infrastructure (Google Cloud Storage, SQL, IAM)
+- OAuth Authentication (Google, Microsoft, Apple)
+- Communication Services (SendGrid, Twilio)
+- Social Media Platforms (11 supported platforms)
+- Payment Processing (Stripe)
+- Monitoring & Analytics
 
-**Key Features:**
-- Multi-format support (PDF, Office documents, plain text)
-- Document structure analysis and metadata extraction
-- Content classification and entity recognition
-- Security scanning for sensitive data detection
+**Best for**: Integration review, vendor management
 
-### 5. Unified Orchestration Flow (`unified-orchestration-flow.mmd`)
+---
 
-Shows how the **AutomationOrchestrator** coordinates all media type processing:
+## 🖨️ Printing Guidelines
 
-- **Media Type Detection Engine** → Automatic processor selection
-- **BaseMediaProcessor Interface** → Common features across all processors
-- **Processor-Specific Features** → Specialized functionality per media type
-- **Unified AI Enhancement Layer** → Common AI operations
-- **ResultFormatter** → Standardized output for UI consumption
-- **Unified Database Storage** → Comprehensive data persistence
+### Page Setup for A4
+- **Orientation**: Landscape recommended for most diagrams
+- **Margins**: 1 inch (2.54 cm) all sides
+- **Scale**: Fit to page width
+- **Quality**: 300 DPI minimum for clear text
 
-**Key Features:**
-- Modular architecture with independent processors
-- Common interface for progress tracking, error handling, and resource management
-- Unified AI services integration (OpenAI, Google Cloud)
-- Standardized result formatting for consistent UI display
+### Recommended Print Order
+1. **01-mvc-overview.puml** - Start with system overview
+2. **05-middleware-security.puml** - Security context
+3. **02-models-layer.puml** - Data foundation
+4. **03-controllers-services.puml** - Business logic
+5. **04-views-layer.puml** - User interface
+6. **06-external-integrations.puml** - External dependencies
 
-## Architecture Benefits
+### Color Printing vs Black & White
+- **Color**: Recommended for better component distinction
+- **Black & White**: Still readable with good contrast ratios
+- **Alternative**: Print overview in color, details in B&W
 
-### 🔄 Independent Processing
-Each media type has its own dedicated processor, allowing modifications without affecting others.
+---
 
-### 🔧 Granular Control
-Individual processing options can be configured per job type and media format.
+## 🔧 Generating Images
 
-### 🎨 Uniform Display
-All content types use the same display interface through the ResultFormatter.
+### Using PlantUML
+```bash
+# Install PlantUML
+npm install -g plantuml
 
-### ⚡ Performance Optimization
-Parallel processing streams maximize throughput and resource utilization.
+# Generate all diagrams
+plantuml docs/diagrams/*.puml
 
-### 🧩 Extensibility
-New media types and processing features can be easily added through the plugin system.
+# Generate specific diagram
+plantuml docs/diagrams/01-mvc-overview.puml
+```
 
-### 🔒 Error Isolation
-Failures in one processor don't cascade to others through the ErrorIsolationManager.
+### Online Rendering
+- **PlantUML Server**: http://www.plantuml.com/plantuml/uml/
+- **VSCode Extension**: PlantUML extension for live preview
+- **IntelliJ Plugin**: PlantUML integration plugin
 
-## Database Integration
+---
 
-The diagrams show integration with comprehensive database models:
+## 📋 Usage Scenarios
 
-- **Content Table** - URL-based content entries
-- **Files Table** - Uploaded file records
-- **VideoAnalysis Table** - Video-specific analysis results
-- **AudioAnalysis Table** - Audio-specific analysis results
-- **ImageAnalysis Table** - Image-specific analysis results
-- **ProcessingJob Table** - Job tracking and progress monitoring
-- **Thumbnail Table** - Generated thumbnails and key moments
-- **Speaker Table** - Speaker identification and voice prints
-- **Face Table** - Face detection and recognition data
+### 📊 **Technical Documentation**
+Print diagrams 2, 3, and 5 for complete technical reference:
+- Database schema (02)
+- Service architecture (03) 
+- Security implementation (05)
 
-## AI Services Integration
+### 👥 **Stakeholder Presentations**
+Print diagrams 1 and 6 for business overview:
+- System architecture (01)
+- External integrations (06)
 
-All processors integrate with advanced AI services:
+### 🔍 **Code Reviews**
+Print diagrams 3 and 4 for development review:
+- Controllers and services (03)
+- UI components and templates (04)
 
-- **OpenAI GPT-4** - Content summarization, sentiment analysis, tag generation
-- **OpenAI Vision** - Image analysis and description generation
-- **OpenAI Whisper** - Audio transcription fallback
-- **Google Cloud Vision** - Object detection, OCR, face detection
-- **Google Speech-to-Text** - Primary audio transcription
-- **Google Cloud Storage** - Secure file storage and retrieval
+### 🔒 **Security Audits**
+Print diagrams 5 and 6 for security assessment:
+- Middleware and security (05)
+- External service security (06)
 
-## Usage Instructions
+---
 
-### Viewing Diagrams
+## 📝 Notes
 
-1. **Online Mermaid Editor**: Copy the content of any `.mmd` file to [mermaid.live](https://mermaid.live)
-2. **VS Code**: Install the Mermaid Preview extension
-3. **GitHub**: The diagrams will render automatically when viewing on GitHub
-4. **Documentation Sites**: Most documentation platforms support Mermaid rendering
+- **Diagram Complexity**: Each diagram is optimized for A4 size while maintaining readability
+- **Component Count**: Actual component counts may vary as the system evolves
+- **Relationships**: Key relationships are shown; not all connections are displayed for clarity
+- **Updates**: Diagrams should be updated when major architectural changes occur
 
-### Understanding the Flow
+---
 
-1. Start with `unified-orchestration-flow.mmd` for the overall architecture
-2. Review individual media type diagrams for specific processing details
-3. Follow the arrows to understand data flow and processing stages
-4. Note the parallel processing streams for performance optimization
-
-### Integration Points
-
-Each diagram shows key integration points:
-- **Input Sources**: URL uploads, file uploads, platform detection
-- **Processing Stages**: Validation, analysis, enhancement, storage
-- **AI Integration**: Multiple AI service providers with fallback chains
-- **Database Storage**: Comprehensive data persistence across multiple tables
-- **UI Integration**: Real-time updates, progress tracking, user interface
-
-## Development Notes
-
-These diagrams reflect the current implementation in DaySave v1.4.2 with the modular automation pipeline. They serve as:
-
-- **Architecture Documentation** - Understanding system design and data flow
-- **Development Guide** - Reference for adding new features or processors
-- **Troubleshooting Aid** - Visualizing processing stages for debugging
-- **Integration Reference** - Understanding how components interact
-
-For technical implementation details, refer to:
-- `/services/multimedia/` - Processor implementations
-- `/routes/` - API endpoint integration
-- `/models/` - Database schema definitions
-- `/migrations/` - Database structure evolution
-- `/docs/` - Additional technical documentation 
+*Generated: January 2025 | DaySave v1.4.1*
+*Total Components: 75 models, 31 services, 12 controllers, 49+ templates*

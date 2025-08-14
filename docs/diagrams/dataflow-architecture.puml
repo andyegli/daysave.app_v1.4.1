@@ -1,0 +1,191 @@
+@startuml DaySave Data Flow Architecture
+
+!theme plain
+title DaySave Data Flow Architecture
+
+' Define colors and styles
+skinparam backgroundColor #F8F9FA
+skinparam actor {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontColor #1976D2
+}
+skinparam boundary {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #E65100
+}
+skinparam control {
+    BackgroundColor #E8F5E8
+    BorderColor #4CAF50
+    FontColor #2E7D32
+}
+skinparam entity {
+    BackgroundColor #F3E5F5
+    BorderColor #7B1FA2
+    FontColor #4A148C
+}
+skinparam database {
+    BackgroundColor #E0F2F1
+    BorderColor #00695C
+    FontColor #004D40
+}
+
+' External Actors
+actor "User" as user
+actor "Admin" as admin
+actor "API Client" as api_client
+
+' External Systems
+boundary "OAuth Providers" as oauth
+boundary "Email Service" as email
+boundary "File Storage" as storage
+boundary "AI Services" as ai_services
+
+' Client Layer
+package "Client Layer" {
+    boundary "Web Browser" as browser
+    boundary "Mobile App" as mobile
+    boundary "API Client App" as api_app
+}
+
+' Application Layer
+package "Application Layer" {
+    control "Express Server" as express
+    control "Route Handlers" as routes
+    control "Middleware Stack" as middleware
+    control "Session Management" as session
+    
+    control "Authentication Service" as auth_service
+    control "File Upload Service" as file_service
+    control "Multimedia Analyzer" as multimedia_service
+    control "Subscription Service" as subscription_service
+    control "API Key Service" as apikey_service
+}
+
+' Business Logic Layer
+package "Business Logic Layer" {
+    control "Content Processor" as content_processor
+    control "AI Analysis Engine" as ai_engine
+    control "Notification Service" as notification_service
+    control "Audit Logger" as audit_logger
+    control "Performance Monitor" as performance_monitor
+}
+
+' Data Layer
+package "Data Layer" {
+    database "MySQL Database" as mysql
+    entity "Users & Auth" as user_data
+    entity "Content & Files" as content_data
+    entity "Analysis Results" as analysis_data
+    entity "System Data" as system_data
+    entity "Audit Logs" as audit_data
+    
+    database "File System" as filesystem
+    database "Session Store" as session_store
+}
+
+' External AI Services
+package "External AI Services" {
+    boundary "OpenAI API" as openai
+    boundary "Google Vision API" as google_vision
+    boundary "Google Speech API" as google_speech
+    boundary "Google Cloud Storage" as gcs
+}
+
+' Data Flow Relationships
+user -> browser : "Login Request"
+browser -> express : "POST /auth/login"
+express -> middleware : "Security Check"
+middleware -> auth_service : "Validate Credentials"
+auth_service -> user_data : "Query User"
+user_data -> auth_service : "User Info"
+auth_service -> session : "Create Session"
+session -> session_store : "Store Session"
+session_store -> browser : "Session Cookie"
+
+user -> browser : "Upload File"
+browser -> express : "POST /content/upload"
+express -> middleware : "Auth & Validation"
+middleware -> file_service : "Process Upload"
+file_service -> filesystem : "Store File"
+filesystem -> file_service : "File Path"
+file_service -> content_data : "Save Metadata"
+content_data -> multimedia_service : "Trigger Analysis"
+
+multimedia_service -> ai_engine : "Process Content"
+ai_engine -> openai : "Text Analysis"
+ai_engine -> google_vision : "Image Analysis"
+ai_engine -> google_speech : "Audio Analysis"
+openai -> ai_engine : "Analysis Results"
+google_vision -> ai_engine : "Vision Results"
+google_speech -> ai_engine : "Speech Results"
+ai_engine -> analysis_data : "Store Results"
+analysis_data -> notification_service : "Notify Completion"
+notification_service -> browser : "Real-time Update"
+
+admin -> browser : "Admin Dashboard"
+browser -> express : "GET /admin/dashboard"
+express -> middleware : "Admin Auth Check"
+middleware -> routes : "Admin Controller"
+routes -> system_data : "System Metrics"
+routes -> audit_data : "Audit Logs"
+system_data -> browser : "Dashboard Data"
+
+api_client -> api_app : "API Request"
+api_app -> express : "REST API Call"
+express -> middleware : "API Key Validation"
+middleware -> apikey_service : "Validate Key"
+apikey_service -> system_data : "Check Permissions"
+system_data -> routes : "Process Request"
+routes -> content_data : "Data Operation"
+content_data -> audit_logger : "Log Activity"
+audit_logger -> audit_data : "Store Audit"
+audit_data -> api_app : "API Response"
+
+user -> browser : "View Subscription"
+browser -> express : "GET /subscription"
+express -> subscription_service : "Get User Plan"
+subscription_service -> system_data : "Query Subscription"
+system_data -> subscription_service : "Plan Details"
+subscription_service -> browser : "Subscription Info"
+
+multimedia_service -> content_processor : "Queue Job"
+content_processor -> ai_services : "External API Calls"
+ai_services -> content_processor : "Processing Results"
+content_processor -> analysis_data : "Store Analysis"
+analysis_data -> performance_monitor : "Update Metrics"
+performance_monitor -> notification_service : "Status Update"
+notification_service -> browser : "Live Progress"
+
+express -> middleware : "Error Occurs"
+middleware -> audit_logger : "Log Error"
+audit_logger -> audit_data : "Store Error Log"
+audit_data -> notification_service : "Alert Admin"
+notification_service -> email : "Send Alert"
+email -> admin : "Error Notification"
+
+performance_monitor -> mysql : "Health Check"
+mysql -> performance_monitor : "Status"
+performance_monitor -> system_data : "Backup Trigger"
+system_data -> filesystem : "Create Backup"
+filesystem -> gcs : "Upload Backup"
+gcs -> system_data : "Backup Confirmation"
+
+' Connect entities to database
+user_data -> mysql
+content_data -> mysql
+analysis_data -> mysql
+system_data -> mysql
+audit_data -> mysql
+
+note over user, gcs
+  All data flows include:
+  - Security validation
+  - Input sanitization  
+  - Error handling
+  - Audit logging
+  - Performance monitoring
+end note
+
+@enduml

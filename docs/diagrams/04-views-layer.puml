@@ -1,0 +1,125 @@
+@startuml DaySave Views Layer
+!theme plain
+title DaySave Views Layer - EJS Templates and UI Components
+
+' Define colors and styles
+skinparam packageStyle rectangle
+skinparam backgroundColor #F8F9FA
+skinparam component {
+    BackgroundColor #F3E5F5
+    BorderColor #7B1FA2
+    FontColor #4A148C
+}
+skinparam rectangle {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #E65100
+}
+
+' Authentication Views
+rectangle "Authentication Templates" {
+    component LoginView as "login.ejs"
+    component RegisterView as "register.ejs"
+    component ForgotPasswordView as "forgot-password.ejs"
+    component ResetPasswordView as "reset-password.ejs"
+    component VerifyEmailView as "verify-email.ejs"
+    component PasskeyAuthView as "passkey-auth.ejs"
+    component MfaSetupView as "mfa-setup.ejs"
+    component BackupCodesView as "backup-codes.ejs"
+}
+
+' Main Application Views
+rectangle "Core Application Views" {
+    component IndexView as "index.ejs"
+    component DashboardView as "dashboard.ejs"
+    component ProfileView as "profile.ejs"
+    component SettingsView as "settings.ejs"
+    component ContactView as "contact.ejs"
+    component AboutView as "about.ejs"
+    component HelpView as "help.ejs"
+}
+
+' Content Management Views
+rectangle "Content Management" {
+    component ContentListView as "content/list.ejs"
+    component ContentDetailView as "content/detail.ejs"
+    component ContentManageView as "content/manage.ejs"
+    component ContentAnalysisView as "content/analysis.ejs"
+    component ContentUploadView as "content/upload.ejs"
+    component FileDetailView as "files/detail.ejs"
+    component FileListView as "files/list.ejs"
+}
+
+' Contact Management Views
+rectangle "Contact System Views" {
+    component ContactsListView as "contacts/list.ejs"
+    component ContactDetailView as "contacts/detail.ejs"
+    component ContactEditView as "contacts/edit.ejs"
+    component ContactGroupsView as "contacts/groups.ejs"
+    component AddContactView as "contacts/add.ejs"
+}
+
+' Administration Views
+rectangle "Admin Dashboard Views" {
+    component AdminDashboardView as "admin/dashboard.ejs"
+    component AdminUsersView as "admin/users.ejs"
+    component AdminAnalyticsView as "admin/analytics.ejs"
+    component AdminSettingsView as "admin/settings.ejs"
+    component AdminLogsView as "admin/logs.ejs"
+    component AdminSubscriptionsView as "admin/subscriptions.ejs"
+    component AdminSystemView as "admin/system.ejs"
+}
+
+' Legal and Static Views
+rectangle "Static Content Views" {
+    component PrivacyView as "privacy.ejs"
+    component TermsView as "terms.ejs"
+    component CookiesView as "cookies.ejs"
+    component ErrorView as "error.ejs"
+    component MaintenanceView as "maintenance.ejs"
+}
+
+' Shared Components
+rectangle "Reusable Partials" {
+    component HeaderPartial as "partials/header.ejs"
+    component FooterPartial as "partials/footer.ejs"
+    component NavigationPartial as "partials/nav.ejs"
+    component SidebarPartial as "partials/sidebar.ejs"
+    component AIAnalysisModal as "partials/ai-analysis-modal.ejs"
+    component ContactModal as "partials/contact-modal.ejs"
+    component ConfirmationModal as "partials/confirmation-modal.ejs"
+    component LoadingSpinner as "partials/loading-spinner.ejs"
+    component PaginationPartial as "partials/pagination.ejs"
+    component BreadcrumbPartial as "partials/breadcrumb.ejs"
+}
+
+' External JavaScript Files (CSP Compliant)
+rectangle "External JavaScript Files" {
+    component AuthScripts as "js/auth-handlers.js"
+    component ContentScripts as "js/content-management.js"
+    component ContactScripts as "js/contact-management.js"
+    component AIAnalysisScripts as "js/ai-analysis.js"
+    component FormHandlers as "js/form-handlers.js"
+    component UtilityScripts as "js/utilities.js"
+    component AdminScripts as "js/admin-dashboard.js"
+    component MapScripts as "js/contact-maps.js"
+    component ProtocolFix as "js/localhost-protocol-fix.js"
+}
+
+' Template Dependencies
+LoginView ..> HeaderPartial
+LoginView ..> FooterPartial
+DashboardView ..> NavigationPartial
+ContentListView ..> AIAnalysisModal
+ContactsListView ..> ContactModal
+AdminDashboardView ..> SidebarPartial
+
+' JavaScript Dependencies
+LoginView ..> AuthScripts
+ContentListView ..> ContentScripts
+ContactsListView ..> ContactScripts
+DashboardView ..> AIAnalysisScripts
+
+note bottom : 49+ EJS templates with Bootstrap 5 styling\n53 external JavaScript files (CSP compliant)\nModular partials for code reuse\nResponsive design with glassmorphism effects
+
+@enduml

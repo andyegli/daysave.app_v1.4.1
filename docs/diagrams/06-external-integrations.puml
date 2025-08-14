@@ -1,0 +1,138 @@
+@startuml DaySave External Service Integrations
+!theme plain
+title DaySave External Service Architecture
+
+' Define colors and styles
+skinparam packageStyle rectangle
+skinparam backgroundColor #F8F9FA
+skinparam component {
+    BackgroundColor #E8F5E8
+    BorderColor #4CAF50
+    FontColor #2E7D32
+}
+skinparam rectangle {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #E65100
+}
+
+' AI and Machine Learning Services
+rectangle "AI & Machine Learning" {
+    component OpenAI as "OpenAI API"
+    component GoogleVision as "Google Cloud Vision API"
+    component GoogleSpeech as "Google Cloud Speech-to-Text"
+    component GoogleTranslate as "Google Cloud Translation"
+    component GoogleNaturalLanguage as "Google Natural Language AI"
+    
+    note right of OpenAI : Content summarization\nSentiment analysis\nText generation
+    note right of GoogleVision : Image analysis\nOCR text extraction\nObject detection
+    note right of GoogleSpeech : Audio transcription\nSpeaker identification\nLanguage detection
+}
+
+' Cloud Storage and Infrastructure
+rectangle "Cloud Infrastructure" {
+    component GoogleCloudStorage as "Google Cloud Storage"
+    component GoogleCloudSQL as "Google Cloud SQL"
+    component GoogleCloudRun as "Google Cloud Run"
+    component GoogleCloudIAM as "Google Cloud IAM"
+    component GoogleMaps as "Google Maps API"
+    component GooglePlaces as "Google Places API"
+    
+    note right of GoogleCloudStorage : File storage\nBackup management\nCDN distribution
+    note right of GoogleCloudSQL : MySQL database\nAutomated backups\nHigh availability
+}
+
+' Authentication Providers
+rectangle "OAuth Authentication" {
+    component GoogleOAuth as "Google OAuth 2.0"
+    component MicrosoftOAuth as "Microsoft Azure AD"
+    component AppleSignIn as "Apple Sign In"
+    component PasskeyWebAuthn as "WebAuthn/FIDO2"
+    
+    note right of GoogleOAuth : User authentication\nProfile information\nEmail verification
+    note right of PasskeyWebAuthn : Biometric authentication\nPasswordless login\nHardware security keys
+}
+
+' Communication Services
+rectangle "Communication & Notifications" {
+    component SendGrid as "SendGrid Email"
+    component Twilio as "Twilio SMS"
+    component WebSocketService as "WebSocket Real-time"
+    component PushNotifications as "Push Notifications"
+    
+    note right of SendGrid : Email verification\nPassword reset\nNotifications
+    note right of Twilio : SMS verification\nTwo-factor authentication\nAlert notifications
+}
+
+' Social Media Platforms
+rectangle "Social Media Integration" {
+    component Facebook as "Facebook API"
+    component YouTube as "YouTube Data API"
+    component Instagram as "Instagram Basic Display"
+    component TikTok as "TikTok API"
+    component Twitter as "Twitter API v2"
+    component Pinterest as "Pinterest API"
+    component LinkedIn as "LinkedIn API"
+    component Snapchat as "Snapchat API"
+    component WhatsApp as "WhatsApp Business API"
+    component Telegram as "Telegram Bot API"
+    component WeChat as "WeChat API"
+    
+    note bottom : 11 social platforms supported\nContent extraction and analysis\nAutomated posting capabilities
+}
+
+' Payment and Billing
+rectangle "Payment Processing" {
+    component Stripe as "Stripe Payments"
+    component StripeSubscriptions as "Stripe Subscriptions"
+    component StripeBilling as "Stripe Billing Portal"
+    
+    note right of Stripe : Secure payment processing\nSubscription management\nInvoicing and billing
+}
+
+' Monitoring and Analytics
+rectangle "Monitoring & Analytics" {
+    component GoogleAnalytics as "Google Analytics"
+    component GoogleCloudMonitoring as "Google Cloud Monitoring"
+    component GoogleCloudLogging as "Google Cloud Logging"
+    component ErrorTracking as "Error Tracking Service"
+    
+    note right of GoogleCloudMonitoring : Application monitoring\nPerformance metrics\nHealth checks
+}
+
+' Development and Testing
+rectangle "Development Tools" {
+    component GitHub as "GitHub Repository"
+    component GitHubActions as "GitHub Actions CI/CD"
+    component Docker as "Docker Registry"
+    component DockerHub as "Docker Hub"
+    
+    note right of GitHubActions : Automated testing\nDeployment pipeline\nCode quality checks
+}
+
+' Core Application Connection
+rectangle "DaySave Application" as App {
+    note right : Express.js server\nSequelize ORM\nMySQL database\nDocker containerized
+}
+
+' Define key relationships
+App --> OpenAI : AI Analysis
+App --> GoogleVision : Image Processing
+App --> GoogleSpeech : Audio Transcription
+App --> GoogleCloudStorage : File Storage
+App --> GoogleOAuth : User Authentication
+App --> SendGrid : Email Services
+App --> Stripe : Payment Processing
+App --> Facebook : Content Extraction
+App --> YouTube : Video Analysis
+App --> GoogleMaps : Location Services
+
+' Data Flow Indicators
+OpenAI -[hidden]-> GoogleVision
+GoogleVision -[hidden]-> GoogleSpeech
+GoogleOAuth -[hidden]-> MicrosoftOAuth
+Facebook -[hidden]-> YouTube
+
+note bottom : Comprehensive external service integration\n20+ APIs for full-featured platform\nSecure authentication and data handling\nScalable cloud infrastructure
+
+@enduml
