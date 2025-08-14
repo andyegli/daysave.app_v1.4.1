@@ -407,7 +407,7 @@ async function handleFileUpload(form) {
     
     let errorMessage = error.message;
     if (error.message.includes('Failed to load')) {
-      errorMessage = 'Server connection failed. Please ensure the server is running on http://localhost:3000';
+      errorMessage = 'Server connection failed. Please ensure the server is running and accessible';
     } else if (error.message.includes('ERR_SSL_PROTOCOL_ERROR')) {
       errorMessage = 'SSL Protocol error. Attempting to fix...';
       // Force redirect to HTTP

@@ -36,6 +36,15 @@ const webauthnConfig = {
   challengeTimeout: 60000
 };
 
+// Debug WebAuthn configuration
+console.log('🔐 WebAuthn Configuration:', {
+  rpID: webauthnConfig.rpID,
+  rpName: webauthnConfig.rpName,
+  origin: webauthnConfig.origin,
+  env_origin: process.env.WEBAUTHN_ORIGIN,
+  env_base_url: process.env.BASE_URL
+});
+
 // Helper function to get the default role
 const getDefaultRole = async () => {
   try {
