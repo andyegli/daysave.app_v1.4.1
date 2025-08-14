@@ -32,7 +32,7 @@ class FileUploadService {
         'application/pdf', 'text/plain', 'text/csv',
         'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
       ],
-      bucketName: process.env.GOOGLE_CLOUD_STORAGE_BUCKET || 'daysave-uploads'
+      bucketName: process.env.GOOGLE_CLOUD_STORAGE_BUCKET || 'daysave-v141-2-uploads'
     };
   }
 

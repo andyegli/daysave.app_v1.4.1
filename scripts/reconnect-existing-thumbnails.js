@@ -56,7 +56,7 @@ class ThumbnailReconnector {
   initializeGCS() {
     try {
       this.storage = new Storage();
-      this.bucketName = process.env.GCS_BUCKET_NAME || 'daysave-v141-2-uploads';
+      this.bucketName = process.env.GOOGLE_CLOUD_STORAGE_BUCKET || 'daysave-v141-2-uploads';
       this.bucket = this.storage.bucket(this.bucketName);
       console.log(`☁️ Google Cloud Storage initialized with bucket: ${this.bucketName}`);
     } catch (error) {
