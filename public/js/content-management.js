@@ -442,7 +442,8 @@ async function handleUrlContent(form) {
     const res = await fetch('/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
+      credentials: 'include' // Ensure cookies are sent for authentication
     });
     
     // Handle subscription-related errors
@@ -493,8 +494,27 @@ async function handleUrlContent(form) {
       alert.classList.remove('d-none');
     } else {
       alert.className = 'alert alert-danger mt-2';
-      alert.textContent = result.error || 'Failed to add content.';
+      let errorMessage = result.error || 'Failed to add content.';
+      
+      // Include additional error details if available
+      if (result.details) {
+        if (Array.isArray(result.details)) {
+          errorMessage += ' Details: ' + result.details.join(', ');
+        } else {
+          errorMessage += ' Details: ' + result.details;
+        }
+      }
+      
+      alert.textContent = errorMessage;
       alert.classList.remove('d-none');
+      
+      // Log detailed error for debugging
+      console.error('Content creation failed:', {
+        status: res.status,
+        error: result.error,
+        details: result.details,
+        response: result
+      });
     }
   } catch (err) {
     const alert = document.getElementById('addContentAlert');

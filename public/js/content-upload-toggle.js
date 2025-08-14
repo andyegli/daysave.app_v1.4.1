@@ -795,6 +795,7 @@ async function handleBulkUrlSubmission() {
              
              xhr.open('POST', getCorrectUrl('/content'));
              xhr.setRequestHeader('Content-Type', 'application/json');
+             xhr.withCredentials = true; // Include authentication cookies
              xhr.send(JSON.stringify({
                url: url,
                ...commonData
