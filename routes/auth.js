@@ -886,6 +886,12 @@ router.get('/recover-passkey', async (req, res) => {
 // Username/password login
 router.post('/login', isNotAuthenticated, async (req, res, next) => {
   const { username, password } = req.body;
+  
+  const clientDetails = {
+    ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+    userAgent: req.headers['user-agent'] || 'unknown'
+  };
+  
   if (!username || !password) {
     return res.render('auth/login', {
       title: 'Login - DaySave',
@@ -893,6 +899,7 @@ router.post('/login', isNotAuthenticated, async (req, res, next) => {
       user: null
     });
   }
+  
   try {
     const user = await User.findOne({
       where: {
@@ -902,40 +909,190 @@ router.post('/login', isNotAuthenticated, async (req, res, next) => {
         ]
       }
     });
+    
     if (!user) {
+      logAuthEvent('LOGIN_FAILED_USER_NOT_FOUND', { ...clientDetails, username });
       return res.render('auth/login', {
         title: 'Login - DaySave',
         error: 'Invalid username/email or password.',
         user: null
       });
     }
+    
     if (!user.email_verified) {
+      logAuthEvent('LOGIN_FAILED_EMAIL_NOT_VERIFIED', { ...clientDetails, userId: user.id, username: user.username });
       return res.render('auth/login', {
         title: 'Login - DaySave',
         error: 'Please verify your email before logging in.',
         user: null
       });
     }
+    
     const bcrypt = require('bcryptjs');
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
+      logAuthEvent('LOGIN_FAILED_INVALID_PASSWORD', { ...clientDetails, userId: user.id, username: user.username });
       return res.render('auth/login', {
         title: 'Login - DaySave',
         error: 'Invalid username/email or password.',
         user: null
       });
     }
+    
+    // Check if user has 2FA enabled
+    if (user.totp_enabled) {
+      // Store user ID in session for 2FA verification
+      req.session.pendingUserId = user.id;
+      req.session.pendingUserEmail = user.email;
+      req.session.pendingUserUsername = user.username;
+      
+      logAuthEvent('LOGIN_2FA_REQUIRED', { 
+        ...clientDetails, 
+        userId: user.id, 
+        username: user.username,
+        email: user.email 
+      });
+      
+      return res.redirect('/auth/verify-2fa');
+    }
+    
+    // No 2FA required, complete login
     req.login(user, (err) => {
       if (err) {
+        logAuthError('LOGIN_SESSION_ERROR', err, { ...clientDetails, userId: user.id });
         return next(err);
       }
+      
+      logAuthEvent('LOGIN_SUCCESS', { 
+        ...clientDetails, 
+        userId: user.id, 
+        username: user.username,
+        email: user.email 
+      });
+      
       return res.redirect('/dashboard');
     });
+    
   } catch (err) {
+    logAuthError('LOGIN_ERROR', err, { ...clientDetails, username });
     return res.render('auth/login', {
       title: 'Login - DaySave',
       error: 'An error occurred. Please try again.',
       user: null
+    });
+  }
+});
+
+// Show 2FA verification page
+router.get('/verify-2fa', (req, res) => {
+  // Check if user has pending 2FA verification
+  if (!req.session.pendingUserId) {
+    return res.redirect('/auth/login?error=Session expired. Please log in again.');
+  }
+  
+  res.render('auth/verify-2fa', {
+    title: 'Two-Factor Authentication - DaySave',
+    error: req.query.error,
+    success: req.query.success
+  });
+});
+
+// Handle 2FA verification
+router.post('/verify-2fa', async (req, res, next) => {
+  const { code } = req.body;
+  
+  const clientDetails = {
+    ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+    userAgent: req.headers['user-agent'] || 'unknown'
+  };
+  
+  // Check if user has pending 2FA verification
+  if (!req.session.pendingUserId) {
+    return res.redirect('/auth/login?error=Session expired. Please log in again.');
+  }
+  
+  if (!code || !/^\d{6}$/.test(code)) {
+    return res.render('auth/verify-2fa', {
+      title: 'Two-Factor Authentication - DaySave',
+      error: 'Please enter a valid 6-digit verification code.',
+      success: null
+    });
+  }
+  
+  try {
+    const user = await User.findByPk(req.session.pendingUserId);
+    if (!user) {
+      return res.redirect('/auth/login?error=User not found. Please log in again.');
+    }
+    
+    if (!user.totp_enabled || !user.totp_secret) {
+      logAuthEvent('2FA_VERIFY_NO_SECRET', { ...clientDetails, userId: user.id });
+      return res.render('auth/verify-2fa', {
+        title: 'Two-Factor Authentication - DaySave',
+        error: '2FA is not properly configured. Please contact support.',
+        success: null
+      });
+    }
+    
+    // Verify the TOTP code
+    const speakeasy = require('speakeasy');
+    const isValid = speakeasy.totp.verify({
+      secret: user.totp_secret,
+      encoding: 'base32',
+      token: code,
+      window: 2 // Allow for time drift
+    });
+    
+    // Log verification attempt
+    logAuthEvent(isValid ? '2FA_VERIFY_SUCCESS' : '2FA_VERIFY_FAILED', {
+      ...clientDetails,
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+      codeLength: code.length,
+      attemptedAt: new Date().toISOString()
+    });
+    
+    if (!isValid) {
+      return res.render('auth/verify-2fa', {
+        title: 'Two-Factor Authentication - DaySave',
+        error: 'Invalid verification code. Please try again.',
+        success: null
+      });
+    }
+    
+    // 2FA verification successful, complete login
+    req.login(user, (err) => {
+      if (err) {
+        logAuthError('2FA_LOGIN_SESSION_ERROR', err, { ...clientDetails, userId: user.id });
+        return next(err);
+      }
+      
+      // Clear pending session data
+      delete req.session.pendingUserId;
+      delete req.session.pendingUserEmail;
+      delete req.session.pendingUserUsername;
+      
+      logAuthEvent('LOGIN_SUCCESS_WITH_2FA', {
+        ...clientDetails,
+        userId: user.id,
+        username: user.username,
+        email: user.email
+      });
+      
+      return res.redirect('/dashboard');
+    });
+    
+  } catch (error) {
+    logAuthError('2FA_VERIFY_ERROR', error, {
+      ...clientDetails,
+      userId: req.session.pendingUserId
+    });
+    
+    return res.render('auth/verify-2fa', {
+      title: 'Two-Factor Authentication - DaySave',
+      error: 'An error occurred. Please try again.',
+      success: null
     });
   }
 });
