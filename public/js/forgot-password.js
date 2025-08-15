@@ -5,10 +5,10 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form[action="/auth/forgot-password"]');
-    const emailInput = document.getElementById('email');
+    const identifierInput = document.getElementById('identifier');
     const submitButton = form.querySelector('button[type="submit"]');
     
-    if (!form || !emailInput || !submitButton) {
+    if (!form || !identifierInput || !submitButton) {
         console.warn('Forgot password form elements not found');
         return;
     }
@@ -19,16 +19,22 @@ document.addEventListener('DOMContentLoaded', function() {
         return emailRegex.test(email);
     }
 
-    // Real-time email validation
-    emailInput.addEventListener('input', function() {
-        const email = this.value.trim();
+    // Username validation (basic)
+    function validateUsername(username) {
+        return username.length >= 3 && /^[a-zA-Z0-9_.-]+$/.test(username);
+    }
+
+    // Real-time identifier validation
+    identifierInput.addEventListener('input', function() {
+        const identifier = this.value.trim();
         
-        if (email === '') {
+        if (identifier === '') {
             this.classList.remove('is-valid', 'is-invalid');
             return;
         }
 
-        if (validateEmail(email)) {
+        // Check if it's an email or username
+        if (validateEmail(identifier) || validateUsername(identifier)) {
             this.classList.remove('is-invalid');
             this.classList.add('is-valid');
         } else {
@@ -39,19 +45,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Form submission handling
     form.addEventListener('submit', function(e) {
-        const email = emailInput.value.trim();
+        const identifier = identifierInput.value.trim();
         
-        if (!email) {
+        if (!identifier) {
             e.preventDefault();
-            emailInput.classList.add('is-invalid');
-            showAlert('Please enter your email address.', 'danger');
+            identifierInput.classList.add('is-invalid');
+            showAlert('Please enter your email address or username.', 'danger');
             return;
         }
 
-        if (!validateEmail(email)) {
+        if (!validateEmail(identifier) && !validateUsername(identifier)) {
             e.preventDefault();
-            emailInput.classList.add('is-invalid');
-            showAlert('Please enter a valid email address.', 'danger');
+            identifierInput.classList.add('is-invalid');
+            showAlert('Please enter a valid email address or username.', 'danger');
             return;
         }
 
@@ -82,8 +88,8 @@ document.addEventListener('DOMContentLoaded', function() {
         form.parentNode.insertBefore(alertDiv, form);
     }
 
-    // Auto-focus email input
-    emailInput.focus();
+    // Auto-focus identifier input
+    identifierInput.focus();
     
     console.log('Forgot password form initialized');
 });

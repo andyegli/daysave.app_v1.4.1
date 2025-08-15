@@ -1029,31 +1029,47 @@ router.get('/forgot-password', isNotAuthenticated, (req, res) => {
 
 // Forgot Password - Send reset email
 router.post('/forgot-password', isNotAuthenticated, async (req, res) => {
-  const { email } = req.body;
+  const { identifier } = req.body;
   
   const clientDetails = {
     ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
-  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    logAuthEvent('PASSWORD_RESET_INVALID_EMAIL', { ...clientDetails, email });
+  if (!identifier) {
+    logAuthEvent('PASSWORD_RESET_INVALID_INPUT', { ...clientDetails, identifier });
     return res.render('auth/forgot-password', {
       title: 'Forgot Password - DaySave',
       user: null,
-      error: 'Please enter a valid email address.',
+      error: 'Please enter your email address or username.',
+      success: null
+    });
+  }
+  
+  // Check if identifier is email or username
+  const isEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(identifier);
+  const isUsername = /^[a-zA-Z0-9_.-]+$/.test(identifier) && identifier.length >= 3;
+  
+  if (!isEmail && !isUsername) {
+    logAuthEvent('PASSWORD_RESET_INVALID_FORMAT', { ...clientDetails, identifier });
+    return res.render('auth/forgot-password', {
+      title: 'Forgot Password - DaySave',
+      user: null,
+      error: 'Please enter a valid email address or username.',
       success: null
     });
   }
   
   try {
-    const user = await User.findOne({ where: { email } });
+    // Find user by email or username
+    const whereClause = isEmail ? { email: identifier } : { username: identifier };
+    const user = await User.findOne({ where: whereClause });
     
     // Always show success message for security (don't reveal if email exists)
     const successMessage = 'If an account with this email exists, you will receive password reset instructions.';
     
     if (!user) {
-      logAuthEvent('PASSWORD_RESET_EMAIL_NOT_FOUND', { ...clientDetails, email });
+      logAuthEvent('PASSWORD_RESET_USER_NOT_FOUND', { ...clientDetails, identifier, isEmail });
       return res.render('auth/forgot-password', {
         title: 'Forgot Password - DaySave',
         user: null,
@@ -1077,7 +1093,7 @@ router.post('/forgot-password', isNotAuthenticated, async (req, res) => {
     const resetUrl = `${process.env.BASE_URL || `http://localhost:${process.env.APP_PORT || 3000}`}/auth/reset-password?token=${resetToken}`;
     
     await sendMail({
-      to: email,
+      to: user.email,
       subject: 'Password Reset - DaySave',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -1101,7 +1117,6 @@ router.post('/forgot-password', isNotAuthenticated, async (req, res) => {
         </div>
       `
     });
-    });
     
     logAuthEvent('PASSWORD_RESET_EMAIL_SENT', {
       ...clientDetails,
@@ -1119,7 +1134,7 @@ router.post('/forgot-password', isNotAuthenticated, async (req, res) => {
   } catch (error) {
     logAuthError('PASSWORD_RESET_ERROR', error, {
       ...clientDetails,
-      email: email
+      identifier: identifier
     });
     
     res.render('auth/forgot-password', {
