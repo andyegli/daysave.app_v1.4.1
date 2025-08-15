@@ -161,23 +161,30 @@ async function openEnableMfaModal() {
           <div class="qr-code-container mb-3">
             <img src="${result.data.qrCode}" alt="QR Code" class="img-fluid" style="max-width: 200px;">
           </div>
-          <div class="alert alert-info small">
-            <i class="fas fa-info-circle me-2"></i>
-            <strong>Look for the DaySave logo!</strong> Your authenticator app should display the DaySave logo next to this entry.
-          </div>
+          ${result.data.logoStatus === 'included' ? `
+            <div class="alert alert-info small">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>Look for the DaySave logo!</strong> Your authenticator app should display the DaySave logo next to this entry.
+            </div>
+          ` : result.data.logoStatus === 'skipped_localhost' ? `
+            <div class="alert alert-warning small">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>Development Mode:</strong> Logo not included as authenticator apps cannot access localhost URLs. In production, the DaySave logo will appear.
+            </div>
+          ` : ''}
           <p class="small text-muted">
             Or enter this key manually: <br>
             <code class="user-select-all">${result.data.secret}</code>
           </p>
-          ${result.data.logoUrl ? `
-            <details class="small text-muted mt-2">
-              <summary>Technical Details</summary>
-              <div class="mt-2">
-                <strong>Logo URL:</strong> <code>${result.data.logoUrl}</code><br>
-                <strong>TOTP URL:</strong> <code class="text-break">${result.data.otpAuthUrl}</code>
-              </div>
-            </details>
-          ` : ''}
+          <details class="small text-muted mt-2">
+            <summary>Technical Details</summary>
+            <div class="mt-2">
+              <strong>Environment:</strong> <code>${result.data.environment}</code><br>
+              <strong>Logo Status:</strong> <code>${result.data.logoStatus}</code><br>
+              ${result.data.logoUrl ? `<strong>Logo URL:</strong> <code>${result.data.logoUrl}</code><br>` : ''}
+              <strong>TOTP URL:</strong> <code class="text-break">${result.data.otpAuthUrl}</code>
+            </div>
+          </details>
         </div>
         <div class="mb-3">
           <label for="mfaVerificationCode" class="form-label">Enter verification code</label>

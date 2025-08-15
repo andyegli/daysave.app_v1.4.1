@@ -134,9 +134,9 @@ router.post('/mfa/setup', isAuthenticated, async (req, res) => {
       });
     }
     
-    // Generate secret and QR code with logo
+    // Generate secret and QR code with logo (if available)
     const baseUrl = process.env.BASE_URL || 'https://localhost';
-    const logoUrl = `${baseUrl}/images/daysave-2fa-logo.png`;
+    const isLocalhost = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
     
     const secret = speakeasy.generateSecret({
       name: `DaySave (${userEmail})`,
@@ -144,8 +144,20 @@ router.post('/mfa/setup', isAuthenticated, async (req, res) => {
       length: 32
     });
     
-    // Enhance TOTP URL with logo parameter
-    const enhancedOtpAuthUrl = `${secret.otpauth_url}&image=${encodeURIComponent(logoUrl)}`;
+    let enhancedOtpAuthUrl = secret.otpauth_url;
+    let logoUrl = null;
+    let logoStatus = 'none';
+    
+    // Only add logo for production/public URLs (not localhost)
+    if (!isLocalhost && process.env.NODE_ENV === 'production') {
+      logoUrl = `${baseUrl}/images/daysave-2fa-logo.svg`;
+      enhancedOtpAuthUrl = `${secret.otpauth_url}&image=${encodeURIComponent(logoUrl)}`;
+      logoStatus = 'included';
+    } else {
+      // For localhost/development, don't include logo as external apps can't access it
+      logoStatus = 'skipped_localhost';
+      console.log('🎨 2FA Logo: Skipped for localhost - external authenticator apps cannot access localhost URLs');
+    }
     
     // Generate QR code as data URL using enhanced URL
     const qrCodeDataURL = await qrcode.toDataURL(enhancedOtpAuthUrl);
@@ -163,7 +175,9 @@ router.post('/mfa/setup', isAuthenticated, async (req, res) => {
       secret: secret.base32,
       manualEntryKey: secret.base32,
       otpAuthUrl: enhancedOtpAuthUrl,
-      logoUrl: logoUrl
+      logoUrl: logoUrl,
+      logoStatus: logoStatus,
+      environment: isLocalhost ? 'development' : 'production'
     });
     
   } catch (error) {
