@@ -157,19 +157,36 @@ async function openEnableMfaModal() {
     if (result.success) {
       document.getElementById('mfaSetupContent').innerHTML = `
         <div class="text-center mb-3">
-          <h6>Scan QR Code with your authenticator app</h6>
+          <h6><i class="fas fa-qrcode me-2"></i>Scan QR Code with your authenticator app</h6>
           <div class="qr-code-container mb-3">
             <img src="${result.data.qrCode}" alt="QR Code" class="img-fluid" style="max-width: 200px;">
+          </div>
+          <div class="alert alert-info small">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Look for the DaySave logo!</strong> Your authenticator app should display the DaySave logo next to this entry.
           </div>
           <p class="small text-muted">
             Or enter this key manually: <br>
             <code class="user-select-all">${result.data.secret}</code>
           </p>
+          ${result.data.logoUrl ? `
+            <details class="small text-muted mt-2">
+              <summary>Technical Details</summary>
+              <div class="mt-2">
+                <strong>Logo URL:</strong> <code>${result.data.logoUrl}</code><br>
+                <strong>TOTP URL:</strong> <code class="text-break">${result.data.otpAuthUrl}</code>
+              </div>
+            </details>
+          ` : ''}
         </div>
         <div class="mb-3">
           <label for="mfaVerificationCode" class="form-label">Enter verification code</label>
           <input type="text" class="form-control" id="mfaVerificationCode" 
                  placeholder="000000" maxlength="6" pattern="[0-9]{6}">
+          <div class="form-text">
+            <i class="fas fa-mobile-alt me-1"></i>
+            Enter the 6-digit code from your authenticator app
+          </div>
         </div>
       `;
       

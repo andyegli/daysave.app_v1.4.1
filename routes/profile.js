@@ -134,15 +134,21 @@ router.post('/mfa/setup', isAuthenticated, async (req, res) => {
       });
     }
     
-    // Generate secret and QR code
+    // Generate secret and QR code with logo
+    const baseUrl = process.env.BASE_URL || 'https://localhost';
+    const logoUrl = `${baseUrl}/images/daysave-2fa-logo.png`;
+    
     const secret = speakeasy.generateSecret({
       name: `DaySave (${userEmail})`,
       issuer: 'DaySave',
       length: 32
     });
     
-    // Generate QR code as data URL
-    const qrCodeDataURL = await qrcode.toDataURL(secret.otpauth_url);
+    // Enhance TOTP URL with logo parameter
+    const enhancedOtpAuthUrl = `${secret.otpauth_url}&image=${encodeURIComponent(logoUrl)}`;
+    
+    // Generate QR code as data URL using enhanced URL
+    const qrCodeDataURL = await qrcode.toDataURL(enhancedOtpAuthUrl);
     
     // Store temporary secret (not activated until verified)
     await user.update({
@@ -155,7 +161,9 @@ router.post('/mfa/setup', isAuthenticated, async (req, res) => {
       success: true,
       qrCode: qrCodeDataURL,
       secret: secret.base32,
-      manualEntryKey: secret.base32
+      manualEntryKey: secret.base32,
+      otpAuthUrl: enhancedOtpAuthUrl,
+      logoUrl: logoUrl
     });
     
   } catch (error) {
