@@ -718,12 +718,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Handle forgot password link
-  const forgotPasswordLink = document.getElementById('forgotPasswordLink');
-  if (forgotPasswordLink) {
-    forgotPasswordLink.addEventListener('click', function(e) {
-      e.preventDefault();
-      alert('Password reset coming soon!');
-    });
-  }
+  // Forgot password link now handled by server-side routing
+  // No need to intercept - let it navigate to /auth/forgot-password
 }); 
