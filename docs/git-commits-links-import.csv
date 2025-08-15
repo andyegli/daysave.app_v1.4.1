@@ -1,0 +1,51 @@
+Issue Link Type,Source Issue Key,Destination Issue Key,Comment
+implements,354,140,Commit ea7c935 implements related contacts clickable functionality
+implements,355,306,Commit 37e51f0 implements JavaScript configuration security fix
+implements,356,60,Commit 73e5ada implements YouTube URL submission improvements
+implements,357,201,Commit 8a496cd implements file statistics fix
+implements,358,227,Commit 6fd6c7c implements AI usage tracking audit
+implements,359,312,Commit 0154713 implements OpenAI API usage tracking fix
+implements,360,197,Commit abd9f3d implements Google Cloud Storage standardization
+implements,361,22,Commit 0a4b731 implements WebAuthn ALLOWED_ORIGINS configuration
+implements,362,15,Commit e48acba implements passport library updates
+implements,363,22,Commit 5c2ed77 implements nginx Origin header forwarding fix
+implements,364,22,Commit abaa69d implements WebAuthn HTTPS origin fix
+implements,365,88,Commit f22ea8b implements multimedia analyzer service cleanup
+implements,366,187,Commit 68453f2 implements file type detection documentation
+implements,367,202,Commit 37a2057 implements admin UI button fix
+implements,368,346,Commit 6886f12 implements dashboard navbar fix
+implements,369,19,Commit 79ff9c7 implements passkey login JavaScript fix
+implements,370,306,Commit 2e0fd0e implements CORS domain configuration
+implements,371,324,Commit 4ee6505 implements user-facing documentation
+implements,372,324,Commit bd33c7a implements codebase documentation enhancement
+implements,373,324,Commit 30fb0d2 implements script documentation update
+implements,374,74,Commit b7ab6dc implements automatic AI analysis trigger fix
+implements,375,60,Commit dae10e1 implements URL submission title and tags fix
+implements,376,19,Commit 25de9a0 implements login redirect loop fix
+implements,377,251,Commit af0591e implements testing and SSL infrastructure
+implements,378,251,Commit e3c91e0 implements Docker proxy testing setup
+implements,379,197,Commit 14fafe2 implements GCS migration and thumbnail analysis
+implements,380,153,Commit 95ec109 implements contact routes restoration
+implements,381,136,Commit a3d31f3 implements contact function naming fix
+implements,382,202,Commit 47c49a0 implements function debugging
+implements,383,306,Commit 5bee6a3 implements JavaScript cache busting
+implements,384,202,Commit 381c670 implements error handling and testing
+implements,385,136,Commit 70136dd implements contact groups syntax fix
+implements,386,145,Commit 36bb995 implements contact loading debug logging
+implements,387,145,Commit 6b1d055 implements group contact loading debug
+implements,388,145,Commit 2f1c5ae implements contact search endpoint fix
+implements,389,145,Commit 1d9cf8a implements async syntax error fix
+implements,390,136,Commit 39f0f93 implements dynamic routes removal
+implements,391,136,Commit 6a1b07c implements route order bug fix
+implements,392,136,Commit dea4698 implements authentication middleware fix
+implements,393,19,Commit 5a7bdd1 implements session cookie debugging
+implements,394,19,Commit 86d02f6 implements AJAX authentication debugging
+implements,395,19,Commit 2e4ec39 implements session configuration revert
+implements,396,19,Commit 1032ec1 implements debug middleware cleanup
+implements,397,19,Commit 9fd0ef9 implements AJAX authentication fix for contacts
+implements,398,19,Commit 273065b implements debug middleware for contacts
+implements,399,19,Commit a342b10 implements session cookie authentication fix
+implements,400,19,Commit 92fd870 implements AJAX cookie authentication fix
+implements,401,306,Commit b07dd2f implements CSP development disable
+implements,402,306,Commit 52d6979 implements CSP upgrade-insecure-requests disable
+implements,403,19,Commit 22b1977 implements session cookie configuration fix

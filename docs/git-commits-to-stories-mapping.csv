@@ -1,0 +1,51 @@
+Work Item ID,Issue Type,Summary,Related Stories,Commit Hash,Commit Date,Commit Message,Epic,Sprint,Story Points,Labels,Components
+354,Task,Make related contacts clickable in relationship modals,140,ea7c935,2025-08-15,Make related contacts clickable in relationship modals,4,Sprint 4,2,contact-relationships ui-improvement,Contacts
+355,Task,Fix JavaScript variable conflicts by creating shared configuration,306,37e51f0,2025-08-15,Fix JavaScript variable conflicts by creating shared configuration,10,Sprint 4,3,security javascript configuration,Security
+356,Task,Fix YouTube URL submission - improve error handling and authentication,60,73e5ada,2025-08-15,Fix YouTube URL submission - improve error handling and authentication,3,Sprint 4,5,youtube error-handling authentication,AI Analysis
+357,Task,Fix file statistics not updating - add null handling and dynamic refresh,201,8a496cd,2025-08-15,Fix file statistics not updating - add null handling and dynamic refresh,6,Sprint 4,3,file-statistics error-handling,File Management
+358,Task,Complete audit and fix of AI usage and storage tracking system,227,6fd6c7c,2025-08-15,Complete audit and fix of AI usage and storage tracking system,7,Sprint 4,8,ai-usage tracking audit,Administration
+359,Task,Fix AI usage tracking for OpenAI API calls,312,0154713,2025-08-15,Fix AI usage tracking for OpenAI API calls,11,Sprint 4,5,openai api-tracking usage,Integration
+360,Task,Standardize Google Cloud Storage bucket configuration,197,abd9f3d,2025-08-15,Standardize Google Cloud Storage bucket configuration,6,Sprint 4,3,google-cloud storage configuration,File Management
+361,Task,Configure WebAuthn to use ALLOWED_ORIGINS for production domains,22,0a4b731,2025-08-15,Configure WebAuthn to use ALLOWED_ORIGINS for production domains,1,Sprint 4,5,webauthn security authentication,Authentication
+362,Task,Update passport libraries to specific versions and rebuild Docker container,15,e48acba,2025-08-15,Updated passport libraries to specific versions and rebuilt Docker container,1,Sprint 4,3,passport oauth libraries,Authentication
+363,Task,Fix nginx Origin header forwarding for WebAuthn passkey authentication,22,5c2ed77,2025-08-15,Fix nginx Origin header forwarding for WebAuthn passkey authentication,1,Sprint 4,5,nginx webauthn headers,Authentication
+364,Task,Fix WebAuthn origin mismatch for HTTPS - passkey login now works,22,abaa69d,2025-08-15,Fix WebAuthn origin mismatch for HTTPS - passkey login now works on https://localhost,1,Sprint 4,5,webauthn https authentication,Authentication
+365,Task,Comment out port 3001 exposure - multimedia analyzer service not used,88,f22ea8b,2025-08-15,Comment out port 3001 exposure - multimedia analyzer service not currently used,3,Sprint 4,2,multimedia analyzer docker,AI Analysis
+366,Task,Add comprehensive file type detection documentation,187,68453f2,2025-08-15,Add comprehensive file type detection documentation,6,Sprint 4,3,file-types documentation,File Management
+367,Task,Fix action buttons being cut off in admin user list table,202,37a2057,2025-08-15,Fix action buttons being cut off in admin user list table,7,Sprint 4,2,admin-ui buttons layout,Administration
+368,Task,Remove duplicate navbar from dashboard.ejs - fixes double navbar issue,346,6886f12,2025-08-14,Remove duplicate navbar from dashboard.ejs - fixes double navbar issue,13,Sprint 4,2,navbar ui-fix dashboard,Analytics
+369,Task,Fix passkey login: Re-enable JavaScript on login page,19,79ff9c7,2025-08-14,Fix passkey login: Re-enable JavaScript on login page,1,Sprint 4,3,passkey login javascript,Authentication
+370,Task,Configure CORS to allow daysave.local and daysave.app domains,306,2e0fd0e,2025-08-09,Configure CORS to allow daysave.local and daysave.app domains,10,Sprint 4,3,cors security domains,Security
+371,Task,Complete user-facing documentation suite,324,4ee6505,2025-08-06,Complete user-facing documentation suite,11,Sprint 3,5,documentation api user-facing,Integration
+372,Task,Comprehensive codebase documentation enhancement,324,bd33c7a,2025-08-06,Comprehensive codebase documentation enhancement,11,Sprint 3,8,documentation codebase enhancement,Integration
+373,Task,Comprehensive script documentation update,324,30fb0d2,2025-08-06,Comprehensive script documentation update,11,Sprint 3,3,documentation scripts,Integration
+374,Task,Fix automatic AI analysis trigger for URL submissions,74,b7ab6dc,2025-08-06,Fix automatic AI analysis trigger for URL submissions,3,Sprint 3,5,ai-analysis automation url-submission,AI Analysis
+375,Task,Fix URL submission missing title and tags generation,60,dae10e1,2025-08-06,Fix URL submission missing title and tags generation,3,Sprint 3,3,url-submission title tags,AI Analysis
+376,Task,Fix redirect loop on login page for local SSL,19,25de9a0,2025-08-06,Fix redirect loop on login page for local SSL,1,Sprint 3,3,login ssl redirect,Authentication
+377,Task,Complete testing and SSL setup infrastructure,251,af0591e,2025-08-06,Complete testing and SSL setup infrastructure,8,Sprint 3,8,testing ssl infrastructure,Testing
+378,Task,Docker and proxy testing setup complete,251,e3c91e0,2025-08-06,Docker and proxy testing setup complete,8,Sprint 3,5,docker proxy testing,Testing
+379,Task,Complete file migration to GCS and thumbnail analysis,197,14fafe2,2025-08-05,Complete file migration to GCS and thumbnail analysis,6,Sprint 3,8,gcs migration thumbnails,File Management
+380,Task,Restore individual contact routes at end of file,153,95ec109,2025-08-05,Restore individual contact routes at end of file,4,Sprint 3,2,contact-routes routing,Contacts
+381,Task,Fix function name conflict: rename loadAllContacts to loadAllContactsForGroups,136,a3d31f3,2025-08-05,Fix function name conflict: rename loadAllContacts to loadAllContactsForGroups,4,Sprint 3,3,contact-groups function-naming,Contacts
+382,Task,Add comprehensive function existence and execution debugging,202,47c49a0,2025-08-05,Add comprehensive function existence and execution debugging,7,Sprint 3,3,debugging function-execution,Administration
+383,Task,Force JavaScript cache refresh with new cache busting prefix,306,5bee6a3,2025-08-05,Force JavaScript cache refresh with new cache busting prefix,10,Sprint 3,2,javascript cache-busting,Security
+384,Task,Add critical error handling and function call test,202,381c670,2025-08-05,Add critical error handling and function call test,7,Sprint 3,3,error-handling testing,Administration
+385,Task,Fix critical syntax error in initializeContactGroups function,136,70136dd,2025-08-05,Fix critical syntax error in initializeContactGroups function,4,Sprint 3,2,contact-groups syntax-error,Contacts
+386,Task,Add comprehensive debug logging for contact loading,145,36bb995,2025-08-05,Add comprehensive debug logging for contact loading,4,Sprint 3,2,contact-loading debugging,Contacts
+387,Task,Add debug logging to group contact loading,145,6b1d055,2025-08-05,Add debug logging to group contact loading,4,Sprint 3,2,group-loading debugging,Contacts
+388,Task,Fix search endpoint: return all contacts for empty query,145,2f1c5ae,2025-08-05,Fix search endpoint: return all contacts for empty query,4,Sprint 3,3,contact-search endpoint,Contacts
+389,Task,Fix syntax error: remove dangling async code,145,1d9cf8a,2025-08-04|Fix syntax error: remove dangling async code,4,Sprint 3,1,syntax-error async,Contacts
+390,Task,Remove dynamic routes that intercept /groups,136,39f0f93,2025-08-04,Remove dynamic routes that intercept /groups,4,Sprint 3,2,routing groups,Contacts
+391,Task,Fix critical route order bug: move catch-all route to end,136,6a1b07c,2025-08-04,Fix critical route order bug: move catch-all route to end,4,Sprint 3,3,routing bug-fix,Contacts
+392,Task,Fix missing isAuthenticated middleware on POST /contacts/groups route,136,dea4698,2025-08-04,Fix missing isAuthenticated middleware on POST /contacts/groups route,4,Sprint 3,3,authentication middleware routing,Contacts
+393,Task,Temporarily disable httpOnly for session cookies to debug AJAX authentication,19,5a7bdd1,2025-08-04,Temporarily disable httpOnly for session cookies to debug AJAX authentication,1,Sprint 3,2,session-cookies debugging,Authentication
+394,Task,Add debug logging to AJAX requests to diagnose authentication issues,19,86d02f6,2025-08-04,Add debug logging to AJAX requests to diagnose authentication issues,1,Sprint 3,2,ajax debugging authentication,Authentication
+395,Task,Revert session configuration to secure defaults,19,2e4ec39,2025-08-04,Revert session configuration to secure defaults,1,Sprint 3,2,session-configuration security,Authentication
+396,Task,Remove debug middleware after fixing AJAX authentication issue,19,1032ec1,2025-08-04,Remove debug middleware after fixing AJAX authentication issue,1,Sprint 3,1,debug-middleware cleanup,Authentication
+397,Task,Fix AJAX authentication for POST/PUT/DELETE requests in contact groups and relationships,19,9fd0ef9,2025-08-04,Fix AJAX authentication for POST/PUT/DELETE requests in contact groups and relationships,1,Sprint 3,5,ajax authentication contacts,Authentication
+398,Task,Add debug middleware to contacts routes to diagnose AJAX authentication issues,19,273065b,2025-08-04,Add debug middleware to contacts routes to diagnose AJAX authentication issues,1,Sprint 3,2,debug-middleware contacts,Authentication
+399,Task,Fix session cookie authentication for AJAX requests,19,a342b10,2025-08-04,Fix session cookie authentication for AJAX requests,1,Sprint 3,3,session-cookies ajax,Authentication
+400,Task,Fix AJAX cookie authentication with same-origin credentials,19,92fd870,2025-08-04,Fix AJAX cookie authentication with same-origin credentials,1,Sprint 3,3,ajax cookies authentication,Authentication
+401,Task,Completely disable CSP in development to prevent upgrade-insecure-requests,306,b07dd2f,2025-08-04,Completely disable CSP in development to prevent upgrade-insecure-requests,10,Sprint 3,2,csp development security,Security
+402,Task,Explicitly disable CSP upgrade-insecure-requests in development,306,52d6979,2025-08-04,Explicitly disable CSP upgrade-insecure-requests in development,10,Sprint 3,2,csp security development,Security
+403,Task,Fix session cookie configuration for AJAX requests,19,22b1977,2025-08-04,Fix session cookie configuration for AJAX requests,1,Sprint 3,3,session-cookies ajax configuration,Authentication
