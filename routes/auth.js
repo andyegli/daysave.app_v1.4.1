@@ -1147,8 +1147,19 @@ router.post('/verify-2fa-backup', async (req, res, next) => {
       });
     }
     
-    // Check if backup code is valid and unused
-    const codeIndex = backupCodes.findIndex(code => code.code === backupCode && !code.used);
+    // Handle both old format (strings) and new format (objects)
+    let codeIndex = -1;
+    let isOldFormat = false;
+    
+    // Check if it's old format (array of strings) or new format (array of objects)
+    if (backupCodes.length > 0 && typeof backupCodes[0] === 'string') {
+      // Old format: array of strings
+      isOldFormat = true;
+      codeIndex = backupCodes.findIndex(code => code === backupCode);
+    } else {
+      // New format: array of objects with code, used, usedAt properties
+      codeIndex = backupCodes.findIndex(code => code.code === backupCode && !code.used);
+    }
     
     // Log verification attempt
     logAuthEvent(codeIndex !== -1 ? '2FA_BACKUP_VERIFY_SUCCESS' : '2FA_BACKUP_VERIFY_FAILED', {
@@ -1157,6 +1168,7 @@ router.post('/verify-2fa-backup', async (req, res, next) => {
       username: user.username,
       email: user.email,
       codeLength: backupCode.length,
+      format: isOldFormat ? 'old_string' : 'new_object',
       attemptedAt: new Date().toISOString()
     });
     
@@ -1169,8 +1181,20 @@ router.post('/verify-2fa-backup', async (req, res, next) => {
     }
     
     // Mark backup code as used
-    backupCodes[codeIndex].used = true;
-    backupCodes[codeIndex].usedAt = new Date().toISOString();
+    if (isOldFormat) {
+      // Convert old format to new format and mark as used
+      const newBackupCodes = backupCodes.map((code, index) => ({
+        code: code,
+        used: index === codeIndex,
+        usedAt: index === codeIndex ? new Date().toISOString() : null,
+        createdAt: new Date().toISOString() // Approximate creation time
+      }));
+      backupCodes = newBackupCodes;
+    } else {
+      // New format: just mark as used
+      backupCodes[codeIndex].used = true;
+      backupCodes[codeIndex].usedAt = new Date().toISOString();
+    }
     
     await user.update({
       totp_backup_codes: JSON.stringify(backupCodes)
