@@ -110,6 +110,58 @@ document.addEventListener('DOMContentLoaded', function() {
         form.parentNode.insertBefore(alertDiv, form);
     }
 
+    // Handle backup code toggle
+    const useBackupCodeBtn = document.getElementById('useBackupCodeBtn');
+    const backupCodeForm = document.getElementById('backupCodeForm');
+    const backToTotpBtn = document.getElementById('backToTotpBtn');
+    const backupCodeInput = document.getElementById('backupCode');
+    
+    if (useBackupCodeBtn && backupCodeForm && backToTotpBtn) {
+        useBackupCodeBtn.addEventListener('click', function() {
+            form.style.display = 'none';
+            backupCodeForm.style.display = 'block';
+            if (backupCodeInput) {
+                backupCodeInput.focus();
+            }
+        });
+        
+        backToTotpBtn.addEventListener('click', function() {
+            backupCodeForm.style.display = 'none';
+            form.style.display = 'block';
+            codeInput.focus();
+        });
+        
+        // Handle backup code input
+        if (backupCodeInput) {
+            backupCodeInput.addEventListener('input', function() {
+                let value = this.value.replace(/[^A-Z0-9]/g, '').toUpperCase(); // Only alphanumeric, uppercase
+                if (value.length > 8) {
+                    value = value.substring(0, 8);
+                }
+                this.value = value;
+            });
+            
+            // Handle backup code form submission
+            backupCodeForm.addEventListener('submit', function(e) {
+                const backupCode = backupCodeInput.value.trim();
+                
+                if (!backupCode || backupCode.length !== 8) {
+                    e.preventDefault();
+                    showAlert('Please enter a valid 8-character backup code.', 'danger');
+                    backupCodeInput.focus();
+                    return;
+                }
+                
+                // Show loading state
+                const verifyBackupButton = document.getElementById('verifyBackupButton');
+                if (verifyBackupButton) {
+                    verifyBackupButton.disabled = true;
+                    verifyBackupButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verifying...';
+                }
+            });
+        }
+    }
+
     // Auto-focus code input
     codeInput.focus();
     

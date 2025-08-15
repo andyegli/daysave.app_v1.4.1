@@ -1097,6 +1097,205 @@ router.post('/verify-2fa', async (req, res, next) => {
   }
 });
 
+// Handle 2FA backup code verification
+router.post('/verify-2fa-backup', async (req, res, next) => {
+  const { backupCode } = req.body;
+  
+  const clientDetails = {
+    ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+    userAgent: req.headers['user-agent'] || 'unknown'
+  };
+  
+  // Check if user has pending 2FA verification
+  if (!req.session.pendingUserId) {
+    return res.redirect('/auth/login?error=Session expired. Please log in again.');
+  }
+  
+  if (!backupCode || !/^[A-Z0-9]{8}$/.test(backupCode)) {
+    return res.render('auth/verify-2fa', {
+      title: 'Two-Factor Authentication - DaySave',
+      error: 'Please enter a valid 8-character backup code.',
+      success: null
+    });
+  }
+  
+  try {
+    const user = await User.findByPk(req.session.pendingUserId);
+    if (!user) {
+      return res.redirect('/auth/login?error=User not found. Please log in again.');
+    }
+    
+    if (!user.totp_enabled || !user.totp_backup_codes) {
+      logAuthEvent('2FA_BACKUP_VERIFY_NO_CODES', { ...clientDetails, userId: user.id });
+      return res.render('auth/verify-2fa', {
+        title: 'Two-Factor Authentication - DaySave',
+        error: 'No backup codes available. Please use your authenticator app.',
+        success: null
+      });
+    }
+    
+    // Parse backup codes
+    let backupCodes;
+    try {
+      backupCodes = JSON.parse(user.totp_backup_codes);
+    } catch (error) {
+      logAuthError('2FA_BACKUP_CODES_PARSE_ERROR', error, { ...clientDetails, userId: user.id });
+      return res.render('auth/verify-2fa', {
+        title: 'Two-Factor Authentication - DaySave',
+        error: 'Backup codes are corrupted. Please contact support.',
+        success: null
+      });
+    }
+    
+    // Check if backup code is valid and unused
+    const codeIndex = backupCodes.findIndex(code => code.code === backupCode && !code.used);
+    
+    // Log verification attempt
+    logAuthEvent(codeIndex !== -1 ? '2FA_BACKUP_VERIFY_SUCCESS' : '2FA_BACKUP_VERIFY_FAILED', {
+      ...clientDetails,
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+      codeLength: backupCode.length,
+      attemptedAt: new Date().toISOString()
+    });
+    
+    if (codeIndex === -1) {
+      return res.render('auth/verify-2fa', {
+        title: 'Two-Factor Authentication - DaySave',
+        error: 'Invalid or already used backup code. Please try another one.',
+        success: null
+      });
+    }
+    
+    // Mark backup code as used
+    backupCodes[codeIndex].used = true;
+    backupCodes[codeIndex].usedAt = new Date().toISOString();
+    
+    await user.update({
+      totp_backup_codes: JSON.stringify(backupCodes)
+    });
+    
+    // Backup code verification successful, complete login
+    req.login(user, (err) => {
+      if (err) {
+        logAuthError('2FA_BACKUP_LOGIN_SESSION_ERROR', err, { ...clientDetails, userId: user.id });
+        return next(err);
+      }
+      
+      // Clear pending session data
+      delete req.session.pendingUserId;
+      delete req.session.pendingUserEmail;
+      delete req.session.pendingUserUsername;
+      
+      logAuthEvent('LOGIN_SUCCESS_WITH_2FA_BACKUP', {
+        ...clientDetails,
+        userId: user.id,
+        username: user.username,
+        email: user.email,
+        backupCodeUsed: true
+      });
+      
+      return res.redirect('/dashboard');
+    });
+    
+  } catch (error) {
+    logAuthError('2FA_BACKUP_VERIFY_ERROR', error, {
+      ...clientDetails,
+      userId: req.session.pendingUserId
+    });
+    
+    return res.render('auth/verify-2fa', {
+      title: 'Two-Factor Authentication - DaySave',
+      error: 'An error occurred. Please try again.',
+      success: null
+    });
+  }
+});
+
+// Show 2FA reset page
+router.get('/reset-2fa', (req, res) => {
+  res.render('auth/reset-2fa', {
+    title: 'Reset Two-Factor Authentication - DaySave',
+    error: req.query.error,
+    success: req.query.success
+  });
+});
+
+// Handle 2FA reset request
+router.post('/reset-2fa', async (req, res) => {
+  const { email, reason } = req.body;
+  
+  const clientDetails = {
+    ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
+    userAgent: req.headers['user-agent'] || 'unknown'
+  };
+  
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return res.render('auth/reset-2fa', {
+      title: 'Reset Two-Factor Authentication - DaySave',
+      error: 'Please enter a valid email address.',
+      success: null
+    });
+  }
+  
+  if (!reason || reason.trim().length < 10) {
+    return res.render('auth/reset-2fa', {
+      title: 'Reset Two-Factor Authentication - DaySave',
+      error: 'Please provide a detailed reason for the 2FA reset request.',
+      success: null
+    });
+  }
+  
+  try {
+    const user = await User.findOne({ where: { email } });
+    
+    // Always show success message for security (don't reveal if email exists)
+    const successMessage = 'If an account with this email exists and has 2FA enabled, an admin will review your request. You will be contacted within 24-48 hours.';
+    
+    if (user && user.totp_enabled) {
+      // Log the reset request
+      logAuthEvent('2FA_RESET_REQUEST_SUBMITTED', {
+        ...clientDetails,
+        userId: user.id,
+        username: user.username,
+        email: user.email,
+        reason: reason.substring(0, 200), // Limit reason length in logs
+        requestedAt: new Date().toISOString()
+      });
+      
+      // Send notification email to admins (you can implement this)
+      // For now, just log it for admin review
+      console.log(`2FA Reset Request: User ${user.username} (${user.email}) requested 2FA reset. Reason: ${reason}`);
+    } else {
+      // Log attempt even if user doesn't exist or doesn't have 2FA
+      logAuthEvent('2FA_RESET_REQUEST_INVALID', {
+        ...clientDetails,
+        email: email,
+        reason: 'User not found or 2FA not enabled'
+      });
+    }
+    
+    res.render('auth/reset-2fa', {
+      title: 'Reset Two-Factor Authentication - DaySave',
+      error: null,
+      success: successMessage
+    });
+    
+  } catch (error) {
+    logAuthError('2FA_RESET_REQUEST_ERROR', error, {
+      ...clientDetails,
+      email: email
+    });
+    
+    res.render('auth/reset-2fa', {
+      title: 'Reset Two-Factor Authentication - DaySave',
+      error: 'An error occurred. Please try again.',
+      success: null
+    });
+  }
+});
+
 // Debug route to check current session user role
 router.get('/debug-session', isAuthenticated, async (req, res) => {
   try {

@@ -152,15 +152,45 @@
                         </ul>
                     </div>
 
+                    <!-- Backup Code Option -->
+                    <div class="text-center mb-4">
+                        <button type="button" class="btn btn-link text-muted" id="useBackupCodeBtn">
+                            <i class="fas fa-key me-2"></i>Use backup code instead
+                        </button>
+                    </div>
+
+                    <!-- Backup Code Form (hidden by default) -->
+                    <form action="/auth/verify-2fa-backup" method="POST" class="mb-4" id="backupCodeForm" style="display: none;">
+                        <div class="mb-4">
+                            <label for="backupCode" class="form-label text-center d-block">Backup Code</label>
+                            <input type="text" class="form-control code-input" id="backupCode" name="backupCode" 
+                                   required maxlength="8" pattern="[A-Z0-9]{8}" 
+                                   placeholder="XXXXXXXX" autocomplete="one-time-code">
+                            <small class="text-muted d-block text-center mt-2">
+                                Enter one of your 8-character backup codes
+                            </small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-verify w-100" id="verifyBackupButton">
+                            <i class="fas fa-check me-2"></i>Verify Backup Code
+                        </button>
+                        
+                        <div class="text-center mt-3">
+                            <button type="button" class="btn btn-link text-muted" id="backToTotpBtn">
+                                <i class="fas fa-mobile-alt me-2"></i>Use authenticator app instead
+                            </button>
+                        </div>
+                    </form>
+
                     <!-- Alternative Options -->
                     <div class="text-center">
-                        <p class="text-muted mb-3">Having trouble?</p>
+                        <p class="text-muted mb-3">Still having trouble?</p>
                         <div class="d-flex justify-content-center gap-3">
                             <a href="/auth/login" class="back-link">
                                 <i class="fas fa-arrow-left me-2"></i>Back to Login
                             </a>
-                            <a href="/profile" class="back-link">
-                                <i class="fas fa-cog me-2"></i>Manage 2FA
+                            <a href="/auth/reset-2fa" class="back-link text-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Reset 2FA
                             </a>
                         </div>
                     </div>
