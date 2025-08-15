@@ -188,10 +188,13 @@
                             <input type="password" class="form-control" id="disableMfaPassword" required>
                         </div>
                         <div class="mb-3">
-                            <label for="disableMfaCode" class="form-label">Verification Code</label>
+                            <label for="disableMfaCode" class="form-label">Verification Code <span class="text-muted">(Optional)</span></label>
                             <input type="text" class="form-control" id="disableMfaCode" 
-                                   placeholder="000000" maxlength="6" pattern="[0-9]{6}" required>
-                            <div class="form-text">Enter the 6-digit code from your authenticator app</div>
+                                   placeholder="000000 (leave blank if you lost your device)" maxlength="6" pattern="[0-9]{6}">
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Enter the 6-digit code from your authenticator app, or leave blank if you cannot access your device
+                            </div>
                         </div>
                     </form>
                 </div>

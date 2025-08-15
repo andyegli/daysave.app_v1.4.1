@@ -305,35 +305,47 @@ router.post('/mfa/disable', isAuthenticated, async (req, res) => {
       }
     }
     
-    // Verify TOTP code
-    if (!code) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Verification code is required' 
+    // Verify TOTP code (optional - password verification is sufficient)
+    let totpVerified = false;
+    let disableMethod = 'password_only';
+    
+    if (code) {
+      // If TOTP code is provided, verify it
+      const isValid = speakeasy.totp.verify({
+        secret: user.totp_secret,
+        encoding: 'base32',
+        token: code,
+        window: 2 // Allow for time drift
       });
-    }
-    
-    const isValid = speakeasy.totp.verify({
-      secret: user.totp_secret,
-      encoding: 'base32',
-      token: code,
-      window: 2 // Allow for time drift
-    });
-    
-    // Log TOTP verification attempt for disable
-    logAuthEvent(isValid ? 'MFA_DISABLE_TOTP_VERIFY_SUCCESS' : 'MFA_DISABLE_TOTP_VERIFY_FAILED', {
-      ...clientDetails,
-      userId,
-      userEmail: user.email,
-      codeLength: code ? code.length : 0,
-      attemptedAt: new Date().toISOString()
-    });
-    
-    if (!isValid) {
-      logAuthEvent('MFA_DISABLE_FAILED', { ...clientDetails, userId, reason: 'invalid_code' });
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid verification code' 
+      
+      // Log TOTP verification attempt for disable
+      logAuthEvent(isValid ? 'MFA_DISABLE_TOTP_VERIFY_SUCCESS' : 'MFA_DISABLE_TOTP_VERIFY_FAILED', {
+        ...clientDetails,
+        userId,
+        userEmail: user.email,
+        codeLength: code.length,
+        attemptedAt: new Date().toISOString()
+      });
+      
+      if (!isValid) {
+        logAuthEvent('MFA_DISABLE_FAILED', { ...clientDetails, userId, reason: 'invalid_totp_code' });
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid verification code. Leave blank if you cannot access your authenticator app.' 
+        });
+      }
+      
+      totpVerified = true;
+      disableMethod = 'password_and_totp';
+    } else {
+      // No TOTP code provided - password verification is sufficient
+      // This allows users who lost their 2FA device to disable MFA with just password
+      logAuthEvent('MFA_DISABLE_PASSWORD_ONLY_ATTEMPT', {
+        ...clientDetails,
+        userId,
+        userEmail: user.email,
+        reason: 'no_totp_code_provided',
+        attemptedAt: new Date().toISOString()
       });
     }
     
@@ -344,11 +356,22 @@ router.post('/mfa/disable', isAuthenticated, async (req, res) => {
       totp_backup_codes: null
     });
     
-    logAuthEvent('MFA_DISABLED_SUCCESS', { ...clientDetails, userId, userEmail: user.email });
+    logAuthEvent('MFA_DISABLED_SUCCESS', { 
+      ...clientDetails, 
+      userId, 
+      userEmail: user.email,
+      disableMethod: disableMethod,
+      totpVerified: totpVerified,
+      disabledAt: new Date().toISOString()
+    });
+    
+    const message = totpVerified 
+      ? 'Two-factor authentication disabled successfully'
+      : 'Two-factor authentication disabled successfully using password verification';
     
     res.json({
       success: true,
-      message: 'Two-factor authentication disabled successfully'
+      message: message
     });
     
   } catch (error) {

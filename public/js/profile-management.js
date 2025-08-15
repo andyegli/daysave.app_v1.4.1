@@ -272,10 +272,16 @@ function openDisableMfaModal() {
 
 async function submitDisableMfa() {
   const password = document.getElementById('disableMfaPassword').value;
-  const code = document.getElementById('disableMfaCode').value;
+  const code = document.getElementById('disableMfaCode').value.trim();
   
-  if (!code || code.length !== 6) {
-    showAlert('Please enter a 6-digit verification code', 'danger');
+  if (!password) {
+    showAlert('Please enter your password', 'danger');
+    return;
+  }
+  
+  // Verification code is optional - if provided, must be 6 digits
+  if (code && (!/^\d{6}$/.test(code))) {
+    showAlert('Verification code must be exactly 6 digits, or leave blank if you cannot access your device', 'danger');
     return;
   }
   
@@ -287,7 +293,7 @@ async function submitDisableMfa() {
   try {
     const result = await apiCall('/profile/mfa/disable', {
       method: 'POST',
-      body: JSON.stringify({ password, code })
+      body: JSON.stringify({ password, code: code || undefined })
     });
     
     if (result.success) {
