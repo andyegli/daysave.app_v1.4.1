@@ -1,17 +1,29 @@
 // Content Management JavaScript
 // This file handles all content management functionality
 
+// Detect if we're using nginx proxy vs direct access
+const IS_NGINX_PROXY = (window.location.protocol === 'https:' && window.location.hostname === 'localhost' && !window.location.port);
+console.log('🔍 Access method detected:', IS_NGINX_PROXY ? 'NGINX PROXY (https://localhost)' : 'DIRECT ACCESS');
+
 // Helper function to fix localhost SSL protocol issues
 function getCorrectUrl(path) {
+  // If using nginx proxy, always return relative URLs to maintain session cookies
+  if (IS_NGINX_PROXY) {
+    console.log('🔧 getCorrectUrl (nginx): keeping relative:', path);
+    return path;
+  }
+  
+  // Original logic for direct access
   if (window.location.hostname === 'localhost') {
     // If path is already a full URL, don't modify it
     if (path.startsWith('http://') || path.startsWith('https://')) {
-      // Convert HTTPS to HTTP for localhost
       return path.replace('https://localhost', 'http://localhost');
     }
-    // If it's a relative path, make it absolute HTTP
+    // Convert relative paths to absolute HTTP URLs
     if (path.startsWith('/')) {
-      return `http://localhost:${window.location.port || 3000}${path}`;
+      const url = `http://localhost:${window.location.port || 3000}${path}`;
+      console.log('🔧 getCorrectUrl (direct): converted to:', url);
+      return url;
     }
   }
   return path;
@@ -79,10 +91,16 @@ if (window.location.hostname === 'localhost') {
       url = newUrl;
     }
     
-    // Fix relative URLs to absolute HTTP URLs for localhost
+    // Fix relative URLs to absolute HTTP URLs for localhost - but preserve proxy routing
     if (typeof url === 'string' && url.startsWith('/') && window.location.hostname === 'localhost') {
-      url = `http://localhost:${window.location.port || 3000}${url}`;
-      console.log('🔧 Fetch Relative URL Fixed:', url);
+      if (IS_NGINX_PROXY) {
+        console.log('🔧 Fetch: Keeping relative URL for nginx proxy:', url);
+        // Don't modify the URL - keep it relative
+      } else {
+        // For direct access (localhost:3000), convert to HTTP
+        url = `http://localhost:${window.location.port || 3000}${url}`;
+        console.log('🔧 Fetch Relative URL Fixed:', url);
+      }
     }
     
     return _originalFetch.call(this, url, options);
@@ -94,7 +112,6 @@ console.log('🔍 DEBUG: hostname =', window.location.hostname, 'protocol =', wi
 if (false && window.location.hostname === 'localhost') {
   console.log('🔄 IMMEDIATE HTTPS→HTTP REDIRECT for localhost...');
   // DISABLED FOR DEBUGGING
-}
   
   // Intercept any navigation attempts to HTTPS
   const originalAssign = window.location.assign;
@@ -442,8 +459,7 @@ async function handleUrlContent(form) {
     const res = await fetch('/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-      credentials: 'include' // Ensure cookies are sent for authentication
+      body: JSON.stringify(data)
     });
     
     // Handle subscription-related errors
@@ -494,27 +510,8 @@ async function handleUrlContent(form) {
       alert.classList.remove('d-none');
     } else {
       alert.className = 'alert alert-danger mt-2';
-      let errorMessage = result.error || 'Failed to add content.';
-      
-      // Include additional error details if available
-      if (result.details) {
-        if (Array.isArray(result.details)) {
-          errorMessage += ' Details: ' + result.details.join(', ');
-        } else {
-          errorMessage += ' Details: ' + result.details;
-        }
-      }
-      
-      alert.textContent = errorMessage;
+      alert.textContent = result.error || 'Failed to add content.';
       alert.classList.remove('d-none');
-      
-      // Log detailed error for debugging
-      console.error('Content creation failed:', {
-        status: res.status,
-        error: result.error,
-        details: result.details,
-        response: result
-      });
     }
   } catch (err) {
     const alert = document.getElementById('addContentAlert');

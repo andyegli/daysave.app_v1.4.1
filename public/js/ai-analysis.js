@@ -1,3 +1,6 @@
+// Use shared configuration for nginx proxy detection
+const IS_NGINX_PROXY = window.DaySaveConfig?.IS_NGINX_PROXY || false;
+
 /**
  * AI Analysis Display JavaScript (Enhanced Comprehensive Version)
  * 
@@ -16,20 +19,9 @@
  * - Real-time status updates for ongoing analysis
  */
 
-// Helper function to fix localhost SSL protocol issues
+// Use shared helper function for URL correction
 function getCorrectUrl(path) {
-  if (window.location.hostname === 'localhost') {
-    // If path is already a full URL, don't modify it
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      // Convert HTTPS to HTTP for localhost
-      return path.replace('https://localhost', 'http://localhost');
-    }
-    // If it's a relative path, make it absolute HTTP
-    if (path.startsWith('/')) {
-      return `http://localhost:${window.location.port || 3000}${path}`;
-    }
-  }
-  return path;
+  return window.DaySaveConfig?.getCorrectUrl(path) || path;
 }
 
 console.log('🔴 AI ANALYSIS SCRIPT LOADED - Enhanced Comprehensive Version');
@@ -77,6 +69,12 @@ function initializeAIIndicators() {
  */
 async function loadAIIndicators(contentId, itemType = 'content') {
   try {
+    // Skip loading indicators when using nginx proxy to avoid auth issues
+    if (IS_NGINX_PROXY) {
+      console.log('🔧 AI Analysis: Skipping indicator loading for nginx proxy to avoid auth issues');
+      return;
+    }
+    
     const endpoint = itemType === 'file' ? getCorrectUrl(`/files/${contentId}/analysis`) : getCorrectUrl(`/content/${contentId}/analysis`);
     
     // Use XMLHttpRequest instead of fetch for better compatibility

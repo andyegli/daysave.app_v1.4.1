@@ -1,22 +1,14 @@
+// Use shared configuration for nginx proxy detection
+const IS_NGINX_PROXY = window.DaySaveConfig?.IS_NGINX_PROXY || false;
+
 /**
  * Enhanced Status Button System
  * Handles progressive status updates (waiting → processing → analysed/incomplete)
  */
 
-// Helper function to fix localhost SSL protocol issues
+// Use shared helper function for URL correction
 function getCorrectUrl(path) {
-  if (window.location.hostname === 'localhost') {
-    // If path is already a full URL, don't modify it
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      // Convert HTTPS to HTTP for localhost
-      return path.replace('https://localhost', 'http://localhost');
-    }
-    // If it's a relative path, make it absolute HTTP
-    if (path.startsWith('/')) {
-      return `http://localhost:${window.location.port || 3000}${path}`;
-    }
-  }
-  return path;
+  return window.DaySaveConfig?.getCorrectUrl(path) || path;
 }
 
 $(document).ready(function() {
@@ -51,6 +43,12 @@ function initializeStatusButtons() {
 }
 
 function updateStatusButton(contentId, itemType) {
+  // Skip status updates when using nginx proxy to avoid auth issues
+  if (IS_NGINX_PROXY) {
+    console.log('🔧 Status Buttons: Skipping status update for nginx proxy to avoid auth issues');
+    return;
+  }
+  
   const endpoint = itemType === 'file' ? `/files/${contentId}/analysis` : `/content/api/${contentId}/status`;
   
   // Use helper function to get correct URL with proper protocol

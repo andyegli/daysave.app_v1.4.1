@@ -224,23 +224,23 @@ deploy_application() {
     log "Performing blue-green deployment..."
     gcloud compute ssh $VM_NAME --zone=$ZONE --command="
         # Pull latest images
-        docker-compose pull
+        docker-compose -f docker-compose.yml --env-file .env pull
         
         # Start new containers alongside old ones
-        docker-compose up -d --no-deps --scale app=2 app
+        docker-compose -f docker-compose.yml --env-file .env up -d --no-deps --scale app=2 app
         
         # Wait for health check
         sleep 30
         
         # Check if new container is healthy
-        if docker-compose exec -T app curl -f http://localhost:3000/health; then
+        if docker-compose -f docker-compose.yml --env-file .env exec -T app curl -f http://localhost:3000/health; then
             echo 'New container is healthy, switching traffic...'
             
             # Update nginx config and reload
-            docker-compose exec nginx nginx -s reload
+            docker-compose -f docker-compose.yml --env-file .env exec nginx nginx -s reload
             
             # Remove old container
-            docker-compose up -d --scale app=1 app
+            docker-compose -f docker-compose.yml --env-file .env up -d --scale app=1 app
             
             # Clean up old images
             docker image prune -f
@@ -248,7 +248,7 @@ deploy_application() {
             echo 'Deployment completed successfully!'
         else
             echo 'New container failed health check, rolling back...'
-            docker-compose up -d --scale app=1 app
+            docker-compose -f docker-compose.yml --env-file .env up -d --scale app=1 app
             exit 1
         fi
     "
@@ -302,7 +302,7 @@ DATE=\$(date +%Y%m%d-%H%M%S)
 BACKUP_FILE=daysave_backup_\$DATE.sql
 
 # Create database backup
-docker-compose exec -T db mysqldump -u root -p\$DB_ROOT_PASSWORD daysave_v141 > \$BACKUP_FILE
+docker-compose -f docker-compose.yml --env-file .env exec -T db mysqldump -u root -p\$DB_ROOT_PASSWORD daysave_v141 > \$BACKUP_FILE
 
 # Upload to Cloud Storage
 gsutil cp \$BACKUP_FILE gs://$PROJECT_ID-backups/

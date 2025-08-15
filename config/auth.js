@@ -455,8 +455,9 @@ passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshT
   }
 }));
 
-// Microsoft OAuth Strategy
-passport.use(new MicrosoftStrategy(oauthConfig.microsoft, async (accessToken, refreshToken, profile, done) => {
+// Microsoft OAuth Strategy - only initialize if clientID is provided
+if (oauthConfig.microsoft.clientID) {
+  passport.use(new MicrosoftStrategy(oauthConfig.microsoft, async (accessToken, refreshToken, profile, done) => {
   const requestDetails = {
     provider: 'microsoft',
     providerUserId: profile.id,
@@ -541,9 +542,11 @@ passport.use(new MicrosoftStrategy(oauthConfig.microsoft, async (accessToken, re
     return done(error, null);
   }
 }));
+}
 
-// Apple OAuth Strategy
-passport.use(new AppleStrategy(oauthConfig.apple, async (accessToken, refreshToken, idToken, profile, done) => {
+// Apple OAuth Strategy - only initialize if clientID is provided
+if (oauthConfig.apple.clientID) {
+  passport.use(new AppleStrategy(oauthConfig.apple, async (accessToken, refreshToken, idToken, profile, done) => {
   // Apple doesn't always provide email, so we need to handle this
   const email = profile.email || `apple_${profile.id}@privaterelay.appleid.com`;
   
@@ -631,6 +634,7 @@ passport.use(new AppleStrategy(oauthConfig.apple, async (accessToken, refreshTok
     return done(error, null);
   }
 }));
+}
 
 module.exports = {
   passport,

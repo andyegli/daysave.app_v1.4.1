@@ -1,85 +1,23 @@
+// Use shared configuration for nginx proxy detection
+const IS_NGINX_PROXY = window.DaySaveConfig?.IS_NGINX_PROXY || false;
+
 /**
  * Content Upload Toggle JavaScript
  * Handles the toggle between URL and file upload in the Add Content modal
  */
 
-// Helper function to fix localhost SSL protocol issues
+// Use shared helper function for URL correction
 function getCorrectUrl(path) {
-  if (window.location.hostname === 'localhost') {
-    // If path is already a full URL, don't modify it
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      // Convert HTTPS to HTTP for localhost
-      return path.replace('https://localhost', 'http://localhost');
-    }
-    // If it's a relative path, make it absolute HTTP
-    if (path.startsWith('/')) {
-      return `http://localhost:${window.location.port || 3000}${path}`;
-    }
-  }
-  return path;
+  return window.DaySaveConfig?.getCorrectUrl(path) || path;
 }
 
-// SAFE REQUEST INTERCEPTION FOR LOCALHOST - No Override Conflicts
-if (window.location.hostname === 'localhost') {
-  console.log('🛡️ Localhost detected - applying safe protocol enforcement');
-  
-  // Store original methods safely
-  const _originalXHROpen = XMLHttpRequest.prototype.open;
-  const _originalFetch = window.fetch;
-  
-  // AGGRESSIVE XHR override with detailed logging
-  XMLHttpRequest.prototype.open = function(method, url, async = true, user, password) {
-    // Log ALL requests for debugging
-    console.log('🔍 XHR REQUEST:', method, url, 'from:', new Error().stack.split('\n')[2]);
-    
-    // Convert HTTPS to HTTP for localhost  
-    if (typeof url === 'string' && url.includes('https://localhost')) {
-      const newUrl = url.replace('https://localhost', 'http://localhost');
-      console.log('🔧 XHR Protocol Fix:', url, '→', newUrl);
-      url = newUrl;
-    }
-    
-    // Fix relative URLs to absolute HTTP URLs for localhost
-    if (typeof url === 'string' && url.startsWith('/') && window.location.hostname === 'localhost') {
-      url = `http://localhost:${window.location.port || 3000}${url}`;
-      console.log('🔧 XHR Relative URL Fixed:', url);
-    }
-    
-    // Handle timeout conflict for sync requests
-    if (async === false && this.timeout) {
-      this.timeout = 0; // Clear timeout for sync requests
-    }
-    
-    return _originalXHROpen.call(this, method, url, async, user, password);
-  };
-  
-  // AGGRESSIVE fetch override with detailed logging
-  window.fetch = function(url, options = {}) {
-    // Log ALL fetch requests for debugging
-    console.log('🔍 FETCH REQUEST:', url, 'from:', new Error().stack.split('\n')[2]);
-    
-    if (typeof url === 'string' && url.includes('https://localhost')) {
-      const newUrl = url.replace('https://localhost', 'http://localhost');
-      console.log('🔧 Fetch Protocol Fix:', url, '→', newUrl);
-      url = newUrl;
-    }
-    
-    // Fix relative URLs to absolute HTTP URLs for localhost
-    if (typeof url === 'string' && url.startsWith('/') && window.location.hostname === 'localhost') {
-      url = `http://localhost:${window.location.port || 3000}${url}`;
-      console.log('🔧 Fetch Relative URL Fixed:', url);
-    }
-    
-    return _originalFetch.call(this, url, options);
-  };
-}
+// Request interception is now handled by shared-config.js to avoid conflicts
 
 // PROTOCOL ENFORCEMENT - COMPLETELY DISABLED FOR DEBUGGING  
 console.log('🔍 DEBUG upload-toggle: hostname =', window.location.hostname, 'protocol =', window.location.protocol);
 if (false && window.location.hostname === 'localhost') {
   console.log('🔄 IMMEDIATE HTTPS→HTTP REDIRECT for localhost...');
   // DISABLED FOR DEBUGGING
-}
   
   // Intercept any navigation attempts to HTTPS
   const originalAssign = window.location.assign;
@@ -276,9 +214,10 @@ function initializeContentUploadToggle() {
     });
     
     if (singleUrlToggle.checked) {
-      // Let normal form submission proceed for single URL mode
-      console.log('🔗 Single URL mode - allowing normal form submission');
-      return true;
+      // Prevent form submission and let content-management.js handle it with fetch API
+      e.preventDefault();
+      console.log('🔗 Single URL mode - preventing form submission, letting content-management.js handle it');
+      return false;
     } else if (bulkUrlToggle.checked) {
       e.preventDefault();
       handleBulkUrlSubmission();
@@ -795,7 +734,6 @@ async function handleBulkUrlSubmission() {
              
              xhr.open('POST', getCorrectUrl('/content'));
              xhr.setRequestHeader('Content-Type', 'application/json');
-             xhr.withCredentials = true; // Include authentication cookies
              xhr.send(JSON.stringify({
                url: url,
                ...commonData

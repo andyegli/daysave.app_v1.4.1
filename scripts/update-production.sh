@@ -80,7 +80,7 @@ backup_current_state() {
         BACKUP_FILE=pre_update_backup_\$(date +%Y%m%d_%H%M%S).sql
         
         log 'Creating database backup...'
-        docker-compose exec -T db mysqldump -u root -p\$DB_ROOT_PASSWORD --single-transaction --routines --triggers daysave_v141 > \$BACKUP_FILE
+        docker-compose -f docker-compose.yml --env-file .env exec -T db mysqldump -u root -p\$DB_ROOT_PASSWORD --single-transaction --routines --triggers daysave_v141 > \$BACKUP_FILE
         
         # Upload backup to Cloud Storage
         if command -v gsutil &> /dev/null; then
@@ -141,13 +141,13 @@ deploy_blue_green() {
         log 'Starting new container (blue-green deployment)...'
         
         # Scale app service to 2 instances (current + new)
-        docker-compose up -d --scale app=2 --no-recreate db nginx redis
+        docker-compose -f docker-compose.yml --env-file .env up -d --scale app=2 --no-recreate db nginx redis
         
         # Wait for the new container to be ready
         sleep 45
         
         # Get the new container ID
-        NEW_CONTAINER=\$(docker-compose ps -q app | head -n 1)
+        NEW_CONTAINER=\$(docker-compose -f docker-compose.yml --env-file .env ps -q app | head -n 1)
         
         # Health check the new container directly
         log 'Checking new container health...'
@@ -155,14 +155,14 @@ deploy_blue_green() {
             log 'New container is healthy!'
             
             # Reload nginx to pick up new backend (if using load balancing)
-            docker-compose exec nginx nginx -s reload 2>/dev/null || true
+            docker-compose -f docker-compose.yml --env-file .env exec nginx nginx -s reload 2>/dev/null || true
             
             # Wait a bit more for traffic to shift
             sleep 30
             
             # Scale back to 1 instance (removes old container)
             log 'Removing old container...'
-            docker-compose up -d --scale app=1
+            docker-compose -f docker-compose.yml --env-file .env up -d --scale app=1
             
             # Clean up old images (keep last 3)
             docker images gcr.io/$PROJECT_ID/daysave --format 'table {{.Tag}}' | tail -n +2 | head -n -3 | xargs -r docker rmi gcr.io/$PROJECT_ID/daysave: 2>/dev/null || true
@@ -194,7 +194,7 @@ rollback() {
         sed -i 's|image: gcr.io/$PROJECT_ID/daysave:.*|image: $rollback_image|g' docker-compose.yml
         
         # Deploy rollback image
-        docker-compose up -d app
+        docker-compose -f docker-compose.yml --env-file .env up -d app
         
         # Wait for rollback container to be ready
         sleep 30
@@ -218,9 +218,9 @@ run_migrations() {
         cd /home/\$(whoami)
         
         # Check if there are pending migrations
-        if docker-compose exec -T app npx sequelize-cli db:migrate:status | grep -q 'down'; then
+        if docker-compose -f docker-compose.yml --env-file .env exec -T app npx sequelize-cli db:migrate:status | grep -q 'down'; then
             log 'Running database migrations...'
-            docker-compose exec -T app npx sequelize-cli db:migrate
+            docker-compose -f docker-compose.yml --env-file .env exec -T app npx sequelize-cli db:migrate
             log 'Migrations completed'
         else
             log 'No pending migrations'
@@ -242,7 +242,7 @@ post_deployment_checks() {
         cd /home/\$(whoami)
         
         log 'Checking database connectivity...'
-        if docker-compose exec -T db mysql -u root -p\$DB_ROOT_PASSWORD -e 'SELECT 1' > /dev/null 2>&1; then
+        if docker-compose -f docker-compose.yml --env-file .env exec -T db mysql -u root -p\$DB_ROOT_PASSWORD -e 'SELECT 1' > /dev/null 2>&1; then
             log '✅ Database connectivity OK'
         else
             error '❌ Database connectivity failed'
@@ -250,7 +250,7 @@ post_deployment_checks() {
         fi
         
         log 'Checking application logs for errors...'
-        if docker-compose logs app --tail=50 | grep -i error; then
+        if docker-compose -f docker-compose.yml --env-file .env logs app --tail=50 | grep -i error; then
             warn 'Errors found in application logs - please review'
         else
             log '✅ No errors in recent application logs'
@@ -314,7 +314,7 @@ main() {
             log "Fetching recent application logs..."
             gcloud compute ssh $VM_NAME --zone=$ZONE --command="
                 cd /home/\$(whoami)
-                docker-compose logs app --tail=100 -f
+                docker-compose -f docker-compose.yml --env-file .env logs app --tail=100 -f
             "
             ;;
             

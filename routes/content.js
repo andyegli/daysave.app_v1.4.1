@@ -1295,41 +1295,7 @@ router.post('/', [
       });
   } catch (error) {
     console.error('ERROR creating content:', error);
-    console.error('Error details:', {
-      message: error.message,
-      name: error.name,
-      stack: error.stack,
-      code: error.code,
-      userId: req.user?.id,
-      url: req.body?.url
-    });
-    
-    // More specific error handling
-    if (error.name === 'SequelizeValidationError') {
-      return res.status(400).json({ 
-        error: 'Validation failed',
-        details: error.errors.map(e => `${e.path}: ${e.message}`)
-      });
-    }
-    
-    if (error.name === 'SequelizeForeignKeyConstraintError') {
-      return res.status(400).json({ 
-        error: 'Invalid reference data',
-        details: error.message
-      });
-    }
-    
-    if (error.message?.includes('subscription') || error.message?.includes('usage')) {
-      return res.status(429).json({ 
-        error: 'Subscription limit reached',
-        details: error.message
-      });
-    }
-    
-    res.status(500).json({ 
-      error: 'Failed to create content.',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ error: 'Failed to create content.' });
   }
 });
 
