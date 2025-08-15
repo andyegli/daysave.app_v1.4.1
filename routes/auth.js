@@ -4,6 +4,7 @@ const router = express.Router();
 const { logAuthEvent, logAuthError, logOAuthFlow, logOAuthError } = require('../config/logger');
 const { User, Role, Sequelize, SocialAccount, SubscriptionPlan } = require('../models');
 const subscriptionService = require('../services/subscriptionService');
+const { trackLogin } = require('../utils/login-tracker');
 
 // Import middleware
 const {
@@ -106,7 +107,7 @@ router.get('/google/callback', (req, res, next) => {
       }
       
       // Explicitly save the session before redirecting
-      req.session.save((saveErr) => {
+      req.session.save(async (saveErr) => {
         logOAuthFlow('google', 'SESSION_SAVE_CALLBACK', { 
           ...clientDetails, 
           userId: user.id,
@@ -119,6 +120,10 @@ router.get('/google/callback', (req, res, next) => {
           logAuthError('SESSION_SAVE_ERROR', saveErr, { ...clientDetails, userId: user.id });
           return res.redirect('/auth/login?error=session_save_failed');
         }
+        
+        // Track login in UserDevice table
+        await trackLogin(user.id, req, { loginMethod: 'oauth_google' });
+        
         logAuthEvent('LOGIN_SUCCESS', { ...clientDetails, userId: user.id, username: user.username });
         return res.redirect('/dashboard');
       });
@@ -957,11 +962,14 @@ router.post('/login', isNotAuthenticated, async (req, res, next) => {
     }
     
     // No 2FA required, complete login
-    req.login(user, (err) => {
+    req.login(user, async (err) => {
       if (err) {
         logAuthError('LOGIN_SESSION_ERROR', err, { ...clientDetails, userId: user.id });
         return next(err);
       }
+      
+      // Track login in UserDevice table
+      await trackLogin(user.id, req, { loginMethod: 'password' });
       
       logAuthEvent('LOGIN_SUCCESS', { 
         ...clientDetails, 
@@ -1062,11 +1070,14 @@ router.post('/verify-2fa', async (req, res, next) => {
     }
     
     // 2FA verification successful, complete login
-    req.login(user, (err) => {
+    req.login(user, async (err) => {
       if (err) {
         logAuthError('2FA_LOGIN_SESSION_ERROR', err, { ...clientDetails, userId: user.id });
         return next(err);
       }
+      
+      // Track login in UserDevice table
+      await trackLogin(user.id, req, { loginMethod: '2fa_totp' });
       
       // Clear pending session data
       delete req.session.pendingUserId;
@@ -1201,11 +1212,14 @@ router.post('/verify-2fa-backup', async (req, res, next) => {
     });
     
     // Backup code verification successful, complete login
-    req.login(user, (err) => {
+    req.login(user, async (err) => {
       if (err) {
         logAuthError('2FA_BACKUP_LOGIN_SESSION_ERROR', err, { ...clientDetails, userId: user.id });
         return next(err);
       }
+      
+      // Track login in UserDevice table
+      await trackLogin(user.id, req, { loginMethod: '2fa_backup' });
       
       // Clear pending session data
       delete req.session.pendingUserId;
