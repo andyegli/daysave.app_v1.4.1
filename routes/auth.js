@@ -1101,6 +1101,7 @@ router.post('/forgot-password', isNotAuthenticated, async (req, res) => {
         </div>
       `
     });
+    });
     
     logAuthEvent('PASSWORD_RESET_EMAIL_SENT', {
       ...clientDetails,
