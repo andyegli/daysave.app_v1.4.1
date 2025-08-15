@@ -185,6 +185,62 @@ public/js/
 })();
 ```
 
+## Password Reset Security
+
+### Secure Password Reset Implementation
+
+The DaySave application implements a secure password reset functionality following security best practices:
+
+#### ✅ Security Features Implemented:
+
+1. **Secure Token Generation**
+   ```javascript
+   // Use cryptographically secure random tokens
+   const crypto = require('crypto');
+   const resetToken = crypto.randomBytes(32).toString('hex');
+   ```
+
+2. **Token Expiration**
+   - Reset tokens expire after 1 hour for security
+   - Tokens are invalidated after use
+   - Old tokens are cleaned up automatically
+
+3. **Account Enumeration Prevention**
+   ```javascript
+   // Always show same message regardless of account existence
+   const successMessage = 'If an account with this email exists, you will receive password reset instructions.';
+   ```
+
+4. **Input Validation**
+   - Accepts both email addresses and usernames
+   - Server-side validation for both input types
+   - Client-side validation with real-time feedback
+
+5. **Audit Logging**
+   ```javascript
+   // Comprehensive logging for security monitoring
+   logAuthEvent('PASSWORD_RESET_EMAIL_SENT', {
+     userId: user.id,
+     email: user.email,
+     ip: clientDetails.ip
+   });
+   ```
+
+#### 🔒 Security Measures:
+
+- **No Account Disclosure**: System never reveals if an email/username exists
+- **Rate Limiting**: Prevent brute force attacks on password reset
+- **Secure Email Delivery**: Uses authenticated SMTP with proper headers
+- **Token Storage**: Tokens stored securely in database with expiration
+- **CSRF Protection**: Maintained throughout the password reset flow
+
+#### 📧 Email Security:
+
+- **Secure Links**: Reset URLs use HTTPS in production
+- **Email Validation**: Proper email format validation
+- **Template Security**: No user input directly embedded in email templates
+- **Link Expiration**: Clear communication about 1-hour expiration
+
 ## Testing Security
 
 ### Manual Testing Checklist
