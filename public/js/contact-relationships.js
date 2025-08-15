@@ -493,7 +493,7 @@ async function showContactRelationships(contactId) {
                                     <div>
                                         <strong>${escapeHtml(contact.name)}</strong> 
                                         is the <span class="badge bg-primary">${escapeHtml(relationship.relation_type)}</span> 
-                                        of <strong>${escapeHtml(otherContact?.name || 'Unknown')}</strong>
+                                        of <strong><a href="/contacts/${otherContact?.id}" class="text-decoration-none contact-link" title="View ${escapeHtml(otherContact?.name || 'Unknown')} details">${escapeHtml(otherContact?.name || 'Unknown')}</a></strong>
                                     </div>
                                     <button class="btn btn-sm btn-outline-danger" onclick="deleteRelationship('${relationship.id}')" title="Delete">
                                         <i class="fas fa-trash"></i>

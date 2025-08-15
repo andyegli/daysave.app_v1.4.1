@@ -159,7 +159,7 @@ function displayContactRelationships(relationships, contactId) {
                     <div>
                         <small class="text-muted">${escapeHtml(relationship.relation_type)}</small>
                         <div>
-                            <strong>${escapeHtml(otherContact?.name || 'Unknown')}</strong>
+                            <strong><a href="/contacts/${otherContact?.id}" class="text-decoration-none contact-link" title="View ${escapeHtml(otherContact?.name || 'Unknown')} details">${escapeHtml(otherContact?.name || 'Unknown')}</a></strong>
                         </div>
                     </div>
                     <button class="btn btn-sm btn-outline-danger" onclick="quickDeleteRelationship('${relationship.id}')" title="Delete relationship">
