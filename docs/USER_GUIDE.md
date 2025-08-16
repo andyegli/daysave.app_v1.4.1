@@ -282,12 +282,14 @@ A: Videos (MP4, AVI, MOV), images (JPG, PNG, GIF), audio (MP3, WAV), documents (
 
 #### Admin-Only Features
 
-**🔐 Security Management:**
-- **MFA Enforcement**: Require 2FA for specific users or roles
-- **Device Monitoring**: Track and manage user devices
-- **Access Logs**: Detailed audit trails for all user actions
+**🔐 Security Management (Enhanced):**
+- **2FA Enforcement**: Require 2FA for specific users (blocks login until setup)
+- **2FA Management**: Force enable/disable, reset, and monitor user 2FA status
+- **Device Monitoring**: Track and manage user devices with last login times
+- **Access Logs**: Detailed audit trails for all user actions and 2FA events
 - **IP Restrictions**: Limit access from specific locations
 - **Session Management**: Monitor and control active user sessions
+- **Real-time Status**: Live 2FA status display in user management interface
 
 **📋 Content Moderation:**
 - **Content Review**: Monitor uploaded content for policy compliance
@@ -628,53 +630,84 @@ Search Types:
 
 **📱 TOTP Setup (Recommended):**
 ```
-1. Go to Settings > Security > Two-Factor Authentication
-2. Click "Enable 2FA"
+1. Go to Profile > Security or Settings > Two-Factor Authentication
+2. Click "Enable 2FA" or "Setup MFA"
 3. Download an authenticator app:
    - Google Authenticator (iOS/Android)
    - Microsoft Authenticator (iOS/Android)
-   - Authy (iOS/Android/Desktop)
+   - Authy (iOS/Android/Desktop) - Recommended
    - 1Password (Premium)
+   - Any TOTP-compatible authenticator
 4. Scan the QR code with your authenticator app
+   - In production: DaySave logo will appear in your app
+   - In development: Logo is skipped (localhost limitation)
 5. Enter the 6-digit code to verify setup
-6. Save your backup codes securely
+6. Save your 10 backup codes securely
+7. 2FA is now active on your account
 ```
 
-**🔐 Backup Codes:**
-- 10 single-use backup codes generated
+**🔐 Backup Codes (Enhanced):**
+- 10 single-use backup codes automatically generated
+- Each code can only be used once for login
 - Use when you can't access your authenticator app
-- Store securely (password manager, secure note)
-- Generate new codes if compromised
+- Store securely (password manager, secure note, printed copy)
+- Codes work for both login and 2FA disable
+- System tracks used codes to prevent reuse
 - Download and print for offline storage
 
-**📧 Email Backup (Optional):**
-- Receive backup codes via email
-- Additional security for account recovery
-- Not recommended as primary 2FA method
-- Use only when other methods unavailable
+**🎨 Logo Integration:**
+- **Production**: DaySave logo appears in authenticator apps
+- **Development**: Logo skipped due to localhost limitations
+- **Supported Apps**: Google Authenticator, Microsoft Authenticator, Authy, 1Password
+- **Manual Entry**: Use the provided secret key if QR code doesn't work
 
 #### Managing 2FA
 
 **✅ 2FA Best Practices:**
-- Use a reliable authenticator app
+- Use a reliable authenticator app (Authy recommended for cloud sync)
 - Keep backup codes secure and accessible
 - Don't share codes or screenshots
+- Test backup codes after setup
 - Regularly review connected devices
 - Enable 2FA on your email account too
 
-**🔄 Recovery Options:**
-- Use backup codes if app is unavailable
-- Contact support for account recovery
-- Provide identity verification for support
-- Reset 2FA with email verification
-- Account recovery process may take 24-48 hours
+**🔄 Recovery Options (Enhanced):**
+- **Backup Codes**: Use any unused backup code for login
+- **Password-Only Disable**: Lost your device? Disable 2FA with just your password
+- **2FA Reset Request**: Request admin assistance for 2FA reset
+- **Account Recovery**: Contact support with identity verification
+- **Device Recovery**: Login with backup code, then disable/re-enable 2FA
 
-**⚠️ 2FA Troubleshooting:**
-- **Clock sync issues**: Ensure device time is accurate
-- **App problems**: Try regenerating codes or different app
-- **Lost device**: Use backup codes immediately
-- **Changed phones**: Disable and re-enable 2FA
-- **Still locked out**: Contact support with verification
+**🔧 2FA Management Features:**
+- **Enable/Disable**: Toggle 2FA on/off from your profile
+- **Regenerate Codes**: Get new backup codes if needed
+- **View Status**: See if 2FA is active and when it was enabled
+- **Device Tracking**: Monitor which devices have logged in
+- **Audit Log**: Review all 2FA-related activities
+
+**⚠️ 2FA Troubleshooting (Updated):**
+- **Clock sync issues**: Ensure device time is accurate (most common issue)
+- **App problems**: Try regenerating codes or different authenticator app
+- **Lost device**: Use backup codes immediately, then disable/re-enable 2FA
+- **Changed phones**: Disable 2FA, then set up again on new device
+- **Backup codes not working**: Check for typos, ensure code hasn't been used
+- **Still locked out**: Use password-only disable option or contact support
+- **QR code won't scan**: Use manual entry with the provided secret key
+
+#### Admin 2FA Management (For Administrators)
+
+**👑 Admin Controls:**
+- **Force 2FA Requirement**: Require specific users to enable 2FA before login
+- **Monitor 2FA Status**: View which users have 2FA enabled
+- **Reset User 2FA**: Clear user's 2FA setup for fresh configuration
+- **Force Enable/Disable**: Directly control user 2FA settings
+- **Audit Tracking**: Monitor all 2FA activities across the organization
+
+**🔒 Organizational Security:**
+- Admins can enforce 2FA for high-privilege users
+- Real-time 2FA status monitoring in user management
+- Bulk 2FA operations for team security
+- Comprehensive audit trails for compliance
 
 ### Password Management
 

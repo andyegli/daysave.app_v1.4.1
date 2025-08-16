@@ -154,9 +154,11 @@ router.post('/mfa/setup', isAuthenticated, async (req, res) => {
       enhancedOtpAuthUrl = `${secret.otpauth_url}&image=${encodeURIComponent(logoUrl)}`;
       logoStatus = 'included';
     } else {
-      // For localhost/development, don't include logo as external apps can't access it
-      logoStatus = 'skipped_localhost';
-      console.log('🎨 2FA Logo: Skipped for localhost - external authenticator apps cannot access localhost URLs');
+      // TEMPORARY: Include logo for testing (will fail in external apps but shows the URL)
+      logoUrl = `${baseUrl}/images/daysave-2fa-logo.svg`;
+      enhancedOtpAuthUrl = `${secret.otpauth_url}&image=${encodeURIComponent(logoUrl)}`;
+      logoStatus = 'included_for_testing';
+      console.log('🎨 2FA Logo: Included for testing - external apps will show "no logo found" due to localhost/SSL issues');
     }
     
     // Generate QR code as data URL using enhanced URL

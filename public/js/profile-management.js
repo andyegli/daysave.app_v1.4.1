@@ -166,6 +166,11 @@ async function openEnableMfaModal() {
               <i class="fas fa-info-circle me-2"></i>
               <strong>Look for the DaySave logo!</strong> Your authenticator app should display the DaySave logo next to this entry.
             </div>
+          ` : result.data.logoStatus === 'included_for_testing' ? `
+            <div class="alert alert-warning small">
+              <i class="fas fa-flask me-2"></i>
+              <strong>Testing Mode:</strong> Logo URL is included in QR code, but external authenticator apps will show "no logo found" because they cannot access localhost URLs with self-signed certificates. This will work perfectly in production.
+            </div>
           ` : result.data.logoStatus === 'skipped_localhost' ? `
             <div class="alert alert-warning small">
               <i class="fas fa-exclamation-triangle me-2"></i>
