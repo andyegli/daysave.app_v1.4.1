@@ -94,7 +94,7 @@ async function trackLogin(userId, req, options = {}) {
       user_agent: userAgent,
       last_login_at: new Date(),
       is_trusted: options.isTrusted || false,
-      login_count: created ? 1 : undefined // Only set on creation, let DB handle increment
+      login_count: 1 // Will be incremented below if not created
     }, {
       returning: true
     });

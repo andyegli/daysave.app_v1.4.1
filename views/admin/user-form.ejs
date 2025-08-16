@@ -32,8 +32,291 @@
       <label for="confirmPassword" class="form-label">Confirm Password</label>
       <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" <%= userData.id ? '' : 'required' %>>
     </div>
+    
+    <% if (userData.id) { %>
+    <!-- 2FA Management Section (only for existing users) -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-shield-alt me-2"></i>Two-Factor Authentication
+        </h5>
+      </div>
+      <div class="card-body">
+        <div id="mfaStatusSection">
+          <div class="text-center">
+            <div class="spinner-border spinner-border-sm" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <span class="ms-2">Loading 2FA status...</span>
+          </div>
+        </div>
+        
+        <div id="mfaControlsSection" style="display: none;">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="d-grid gap-2">
+                <button type="button" id="toggleMfaRequirementBtn" class="btn btn-outline-warning" onclick="toggleMfaRequirement()">
+                  <i class="fas fa-exclamation-triangle me-2"></i>
+                  <span id="mfaRequirementText">Require 2FA</span>
+                </button>
+                <button type="button" id="resetMfaBtn" class="btn btn-outline-info" onclick="resetUserMfa()">
+                  <i class="fas fa-redo me-2"></i>Reset 2FA Setup
+                </button>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-grid gap-2">
+                <button type="button" id="forceEnableMfaBtn" class="btn btn-outline-success" onclick="forceEnableMfa()" style="display: none;">
+                  <i class="fas fa-check-circle me-2"></i>Force Enable 2FA
+                </button>
+                <button type="button" id="forceDisableMfaBtn" class="btn btn-outline-danger" onclick="forceDisableMfa()" style="display: none;">
+                  <i class="fas fa-times-circle me-2"></i>Force Disable 2FA
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-3">
+            <small class="text-muted">
+              <i class="fas fa-info-circle me-1"></i>
+              <strong>Require 2FA:</strong> User must set up 2FA before they can log in.<br>
+              <strong>Force Enable:</strong> Immediately enable 2FA if user has a secret configured.<br>
+              <strong>Force Disable:</strong> Completely disable and reset user's 2FA setup.
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <% } %>
+    
     <button type="submit" class="btn btn-success">Save</button>
     <a href="/admin/users" class="btn btn-secondary">Cancel</a>
   </form>
 </div>
+
+<% if (userData.id) { %>
+<script>
+const userId = '<%= userData.id %>';
+let currentMfaStatus = {};
+
+// Load MFA status when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  loadMfaStatus();
+});
+
+// API call helper
+async function apiCall(url, options = {}) {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    });
+    
+    const data = await response.json();
+    return {
+      success: response.ok,
+      data: data,
+      status: response.status
+    };
+  } catch (error) {
+    console.error('API call failed:', error);
+    return {
+      success: false,
+      data: { error: 'Network error occurred' },
+      status: 0
+    };
+  }
+}
+
+// Show alert message
+function showAlert(message, type = 'info') {
+  // Create alert element
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+  alertDiv.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  // Insert at top of form
+  const form = document.querySelector('form');
+  form.parentNode.insertBefore(alertDiv, form);
+  
+  // Auto-dismiss after 5 seconds
+  setTimeout(() => {
+    if (alertDiv.parentNode) {
+      alertDiv.remove();
+    }
+  }, 5000);
+}
+
+// Load MFA status
+async function loadMfaStatus() {
+  try {
+    const result = await apiCall(`/admin/users/${userId}/mfa`);
+    
+    if (result.success) {
+      currentMfaStatus = result.data;
+      updateMfaDisplay(result.data);
+    } else {
+      document.getElementById('mfaStatusSection').innerHTML = `
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Failed to load 2FA status: ${result.data.error || 'Unknown error'}
+        </div>
+      `;
+    }
+  } catch (error) {
+    document.getElementById('mfaStatusSection').innerHTML = `
+      <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Error loading 2FA status
+      </div>
+    `;
+  }
+}
+
+// Update MFA display
+function updateMfaDisplay(mfa) {
+  // Update status display
+  document.getElementById('mfaStatusSection').innerHTML = `
+    <div class="row">
+      <div class="col-md-6">
+        <div class="d-flex align-items-center mb-2">
+          <span class="badge ${mfa.enabled ? 'bg-success' : 'bg-secondary'} me-2">
+            <i class="fas ${mfa.enabled ? 'fa-check-circle' : 'fa-times-circle'} me-1"></i>
+            ${mfa.enabled ? 'Enabled' : 'Disabled'}
+          </span>
+          <span class="text-muted">2FA Status</span>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="d-flex align-items-center mb-2">
+          <span class="badge ${mfa.required ? 'bg-warning' : 'bg-light text-dark'} me-2">
+            <i class="fas ${mfa.required ? 'fa-exclamation-triangle' : 'fa-check'} me-1"></i>
+            ${mfa.required ? 'Required' : 'Optional'}
+          </span>
+          <span class="text-muted">2FA Requirement</span>
+        </div>
+      </div>
+    </div>
+    
+    ${mfa.hasSecret ? `
+      <div class="alert alert-info small">
+        <i class="fas fa-key me-2"></i>User has configured 2FA secret
+      </div>
+    ` : `
+      <div class="alert alert-warning small">
+        <i class="fas fa-exclamation-triangle me-2"></i>User has not set up 2FA yet
+      </div>
+    `}
+  `;
+  
+  // Show controls
+  document.getElementById('mfaControlsSection').style.display = 'block';
+  
+  // Update requirement button
+  const requirementBtn = document.getElementById('toggleMfaRequirementBtn');
+  const requirementText = document.getElementById('mfaRequirementText');
+  
+  if (mfa.required) {
+    requirementBtn.className = 'btn btn-outline-success';
+    requirementText.textContent = 'Remove 2FA Requirement';
+    requirementBtn.innerHTML = '<i class="fas fa-check me-2"></i>' + requirementText.textContent;
+  } else {
+    requirementBtn.className = 'btn btn-outline-warning';
+    requirementText.textContent = 'Require 2FA';
+    requirementBtn.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>' + requirementText.textContent;
+  }
+  
+  // Force enable/disable buttons
+  document.getElementById('forceEnableMfaBtn').style.display = 
+    (!mfa.enabled && mfa.hasSecret) ? 'block' : 'none';
+  document.getElementById('forceDisableMfaBtn').style.display = 
+    mfa.enabled ? 'block' : 'none';
+}
+
+// Toggle MFA requirement
+async function toggleMfaRequirement() {
+  const action = currentMfaStatus.required ? 'unrequire' : 'require';
+  const url = `/admin/users/${userId}/mfa/${action}`;
+  
+  try {
+    const result = await apiCall(url, { method: 'POST' });
+    
+    if (result.success) {
+      showAlert(result.data.message, 'success');
+      loadMfaStatus(); // Reload status
+    } else {
+      showAlert(result.data.error || 'Operation failed', 'danger');
+    }
+  } catch (error) {
+    showAlert('An error occurred', 'danger');
+  }
+}
+
+// Reset user MFA
+async function resetUserMfa() {
+  if (!confirm('Are you sure you want to reset this user\'s MFA? They will need to set it up again.')) {
+    return;
+  }
+  
+  try {
+    const result = await apiCall(`/admin/users/${userId}/mfa/reset`, { method: 'POST' });
+    
+    if (result.success) {
+      showAlert(result.data.message, 'success');
+      loadMfaStatus(); // Reload status
+    } else {
+      showAlert(result.data.error || 'Reset failed', 'danger');
+    }
+  } catch (error) {
+    showAlert('An error occurred during reset', 'danger');
+  }
+}
+
+// Force enable MFA
+async function forceEnableMfa() {
+  if (!confirm('Are you sure you want to force-enable MFA for this user?')) {
+    return;
+  }
+  
+  try {
+    const result = await apiCall(`/admin/users/${userId}/mfa/force-enable`, { method: 'POST' });
+    
+    if (result.success) {
+      showAlert(result.data.message, 'success');
+      loadMfaStatus(); // Reload status
+    } else {
+      showAlert(result.data.error || 'Force enable failed', 'danger');
+    }
+  } catch (error) {
+    showAlert('An error occurred', 'danger');
+  }
+}
+
+// Force disable MFA
+async function forceDisableMfa() {
+  if (!confirm('Are you sure you want to force-disable MFA for this user? This will completely reset their 2FA setup.')) {
+    return;
+  }
+  
+  try {
+    const result = await apiCall(`/admin/users/${userId}/mfa/force-disable`, { method: 'POST' });
+    
+    if (result.success) {
+      showAlert(result.data.message, 'success');
+      loadMfaStatus(); // Reload status
+    } else {
+      showAlert(result.data.error || 'Force disable failed', 'danger');
+    }
+  } catch (error) {
+    showAlert('An error occurred', 'danger');
+  }
+}
+</script>
+<% } %>
 <%- include('../partials/footer') %> 
