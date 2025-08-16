@@ -426,16 +426,36 @@ passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshT
       userId: user.id
     });
 
-    await SocialAccount.upsert({
-      user_id: user.id,
-      platform: 'google',
-      handle: profile.emails[0].value,
-      provider: 'google',
-      provider_user_id: profile.id,
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      profile_data: JSON.stringify(profile._json)
+    // Use findOrCreate with proper where clause to prevent duplicates
+    const [socialAccount, created] = await SocialAccount.findOrCreate({
+      where: {
+        user_id: user.id,
+        platform: 'google',
+        provider_user_id: profile.id
+      },
+      defaults: {
+        handle: profile.emails[0].value,
+        provider: 'google',
+        provider_user_id: profile.id,
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        profile_data: JSON.stringify(profile._json),
+        auth_type: 'oauth',
+        status: 'active'
+      }
     });
+
+    // If account exists, update the tokens and profile data
+    if (!created) {
+      await socialAccount.update({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        profile_data: JSON.stringify(profile._json),
+        handle: profile.emails[0].value,
+        last_used_at: new Date(),
+        status: 'active'
+      });
+    }
 
     logOAuthFlow('google', 'SOCIAL_ACCOUNT_UPDATE_SUCCESS', {
       ...requestDetails,
@@ -514,16 +534,36 @@ if (oauthConfig.microsoft.clientID) {
       userId: user.id
     });
 
-    await SocialAccount.upsert({
-      user_id: user.id,
-      platform: 'microsoft',
-      handle: profile.emails[0].value,
-      provider: 'microsoft',
-      provider_user_id: profile.id,
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      profile_data: JSON.stringify(profile._json)
+    // Use findOrCreate with proper where clause to prevent duplicates
+    const [socialAccount, created] = await SocialAccount.findOrCreate({
+      where: {
+        user_id: user.id,
+        platform: 'microsoft',
+        provider_user_id: profile.id
+      },
+      defaults: {
+        handle: profile.emails[0].value,
+        provider: 'microsoft',
+        provider_user_id: profile.id,
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        profile_data: JSON.stringify(profile._json || profile),
+        auth_type: 'oauth',
+        status: 'active'
+      }
     });
+
+    // If account exists, update the tokens and profile data
+    if (!created) {
+      await socialAccount.update({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        profile_data: JSON.stringify(profile._json || profile),
+        handle: profile.emails[0].value,
+        last_used_at: new Date(),
+        status: 'active'
+      });
+    }
 
     logOAuthFlow('microsoft', 'SOCIAL_ACCOUNT_UPDATE_SUCCESS', {
       ...requestDetails,
@@ -606,16 +646,36 @@ if (oauthConfig.apple.clientID) {
       userId: user.id
     });
 
-    await SocialAccount.upsert({
-      user_id: user.id,
-      platform: 'apple',
-      handle: email,
-      provider: 'apple',
-      provider_user_id: profile.id,
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      profile_data: JSON.stringify(profile)
+    // Use findOrCreate with proper where clause to prevent duplicates
+    const [socialAccount, created] = await SocialAccount.findOrCreate({
+      where: {
+        user_id: user.id,
+        platform: 'apple',
+        provider_user_id: profile.id
+      },
+      defaults: {
+        handle: email,
+        provider: 'apple',
+        provider_user_id: profile.id,
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        profile_data: JSON.stringify(profile),
+        auth_type: 'oauth',
+        status: 'active'
+      }
     });
+
+    // If account exists, update the tokens and profile data
+    if (!created) {
+      await socialAccount.update({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        profile_data: JSON.stringify(profile),
+        handle: email,
+        last_used_at: new Date(),
+        status: 'active'
+      });
+    }
 
     logOAuthFlow('apple', 'SOCIAL_ACCOUNT_UPDATE_SUCCESS', {
       ...requestDetails,
