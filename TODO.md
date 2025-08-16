@@ -1,6 +1,15 @@
 # TODO
 
-## ✅ **RECENTLY COMPLETED** (2025-01-31)
+## ✅ **RECENTLY COMPLETED** (2025-08-16)
+
+### **OAuth Duplicate Social Accounts Fix - COMPLETED**
+- [x] **OAuth Account Management System**
+  - [x] **Database Cleanup**: Removed 142 duplicate social account entries, keeping most recent for each user+platform
+  - [x] **OAuth Logic Fixes**: Replaced broken `SocialAccount.upsert()` with proper `findOrCreate()` logic
+  - [x] **Database Constraints**: Added unique constraint on `user_id + platform + provider_user_id`
+  - [x] **Microsoft OAuth Documentation**: Created comprehensive setup guide with Azure instructions
+  - [x] **Consistent OAuth Strategies**: Fixed Google, Microsoft, and Apple OAuth with unified logic
+  - [x] **Token Management**: Proper token refresh and profile data updates for existing accounts
 
 ### **Forgot Password Functionality - COMPLETED**
 - [x] **Complete Forgot Password Implementation**

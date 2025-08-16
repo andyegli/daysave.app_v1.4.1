@@ -1,3 +1,30 @@
+## ✅ **OAuth Duplicate Social Accounts Fix** (2025-08-16)
+- [x] **OAuth Account Management System**
+  - [x] **Database Cleanup**
+    - [x] Removed 142 duplicate social account entries from database
+    - [x] Kept most recent entry for each user+platform combination
+    - [x] Reduced total social accounts from 145 to 3 clean entries
+    - [x] Created automated cleanup script for future maintenance
+    
+  - [x] **OAuth Logic Fixes**
+    - [x] Replaced broken `SocialAccount.upsert()` with proper `findOrCreate()` logic
+    - [x] Added unique identifier using `user_id + platform + provider_user_id`
+    - [x] Implemented token refresh and profile data updates for existing accounts
+    - [x] Fixed Google, Microsoft, and Apple OAuth strategies consistently
+    
+  - [x] **Database Constraints**
+    - [x] Added unique constraint: `user_id + platform + provider_user_id`
+    - [x] Created migration to prevent future duplicate social accounts
+    - [x] Database-level protection against duplicate entries
+    - [x] Proper error handling for constraint violations
+    
+  - [x] **Microsoft OAuth Documentation**
+    - [x] Created comprehensive `Microsoft_OAuth.md` setup guide
+    - [x] Step-by-step Azure App Registration instructions
+    - [x] Environment variable configuration documentation
+    - [x] Troubleshooting section with common issues and solutions
+    - [x] Security best practices and credential management
+
 ## ✅ **Two-Factor Authentication (2FA) Complete Implementation** (2025-08-16)
 - [x] **Complete 2FA System with Admin Controls**
   - [x] **2FA Setup & Management**
