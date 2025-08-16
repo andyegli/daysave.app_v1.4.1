@@ -52,6 +52,15 @@ router.get('/google', (req, res, next) => {
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
+  // Check if this is a manual linking request
+  if (req.query.manual_link === 'true' && req.isAuthenticated()) {
+    req.session.manualLinkRequest = {
+      provider: 'google',
+      userId: req.user.id,
+      timestamp: Date.now()
+    };
+  }
+  
   logOAuthFlow('google', 'INITIATE', clientDetails);
   
   passport.authenticate('google', {
@@ -65,10 +74,14 @@ router.get('/google/callback', (req, res, next) => {
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
+  // Check if this is a manual linking request
+  const isManualLink = req.session.manualLinkRequest;
+  
   logOAuthFlow('google', 'CALLBACK_RECEIVED', {
     ...clientDetails,
     query: req.query,
-    session: req.session
+    session: req.session,
+    isManualLink: isManualLink
   });
   
   passport.authenticate('google', (err, user, info) => {
@@ -77,13 +90,20 @@ router.get('/google/callback', (req, res, next) => {
       userId: user ? user.id : 'No User', 
       error: err ? err.message : 'No Error', 
       info: info,
-      session: req.session
+      session: req.session,
+      isManualLink: isManualLink
     });
 
     if (err) {
       logOAuthError('google', 'AUTHENTICATION_ERROR', err, clientDetails);
       return res.redirect('/auth/login?error=authentication_failed');
     }
+    
+    // Handle manual linking from profile page
+    if (isManualLink && req.isAuthenticated()) {
+      return handleManualOAuthLink(req, res, 'google', user, info);
+    }
+    
     if (info && info.linkAccount && info.linkProfile) {
       req.session.linkProfile = info.linkProfile;
       return res.redirect('/auth/link-account');
@@ -138,6 +158,15 @@ router.get('/microsoft', (req, res, next) => {
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
+  // Check if this is a manual linking request
+  if (req.query.manual_link === 'true' && req.isAuthenticated()) {
+    req.session.manualLinkRequest = {
+      provider: 'microsoft',
+      userId: req.user.id,
+      timestamp: Date.now()
+    };
+  }
+  
   logOAuthFlow('microsoft', 'INITIATE', clientDetails);
   
   passport.authenticate('microsoft', {
@@ -151,18 +180,28 @@ router.get('/microsoft/callback', (req, res, next) => {
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
+  // Check if this is a manual linking request
+  const isManualLink = req.session.manualLinkRequest;
+  
   logOAuthFlow('microsoft', 'CALLBACK_RECEIVED', {
     ...clientDetails,
-    query: req.query
+    query: req.query,
+    isManualLink: isManualLink
   });
   
   passport.authenticate('microsoft', (err, user, info) => {
-    logOAuthFlow('microsoft', 'CALLBACK_PROCESSING', { ...clientDetails, userId: user ? user.id : null, error: err, info: info });
+    logOAuthFlow('microsoft', 'CALLBACK_PROCESSING', { ...clientDetails, userId: user ? user.id : null, error: err, info: info, isManualLink: isManualLink });
 
     if (err) {
       logOAuthError('microsoft', 'AUTHENTICATION_ERROR', err, clientDetails);
       return res.redirect('/auth/login?error=authentication_failed');
     }
+    
+    // Handle manual linking from profile page
+    if (isManualLink && req.isAuthenticated()) {
+      return handleManualOAuthLink(req, res, 'microsoft', user, info);
+    }
+    
     if (info && info.linkAccount && info.linkProfile) {
       req.session.linkProfile = info.linkProfile;
       return res.redirect('/auth/link-account');
@@ -196,6 +235,15 @@ router.get('/apple', (req, res, next) => {
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
+  // Check if this is a manual linking request
+  if (req.query.manual_link === 'true' && req.isAuthenticated()) {
+    req.session.manualLinkRequest = {
+      provider: 'apple',
+      userId: req.user.id,
+      timestamp: Date.now()
+    };
+  }
+  
   logOAuthFlow('apple', 'INITIATE', clientDetails);
   
   passport.authenticate('apple', {
@@ -209,18 +257,28 @@ router.get('/apple/callback', (req, res, next) => {
     userAgent: req.headers['user-agent'] || 'unknown'
   };
   
+  // Check if this is a manual linking request
+  const isManualLink = req.session.manualLinkRequest;
+  
   logOAuthFlow('apple', 'CALLBACK_RECEIVED', {
     ...clientDetails,
-    query: req.query
+    query: req.query,
+    isManualLink: isManualLink
   });
   
   passport.authenticate('apple', (err, user, info) => {
-    logOAuthFlow('apple', 'CALLBACK_PROCESSING', { ...clientDetails, userId: user ? user.id : null, error: err, info: info });
+    logOAuthFlow('apple', 'CALLBACK_PROCESSING', { ...clientDetails, userId: user ? user.id : null, error: err, info: info, isManualLink: isManualLink });
 
     if (err) {
       logOAuthError('apple', 'AUTHENTICATION_ERROR', err, clientDetails);
       return res.redirect('/auth/login?error=authentication_failed');
     }
+    
+    // Handle manual linking from profile page
+    if (isManualLink && req.isAuthenticated()) {
+      return handleManualOAuthLink(req, res, 'apple', user, info);
+    }
+    
     if (info && info.linkAccount && info.linkProfile) {
       req.session.linkProfile = info.linkProfile;
       return res.redirect('/auth/link-account');
@@ -1671,5 +1729,134 @@ router.post('/reset-password', isNotAuthenticated, async (req, res) => {
     });
   }
 });
+
+// ===== MANUAL OAUTH LINKING HANDLER =====
+
+// Handle manual OAuth linking from profile page
+async function handleManualOAuthLink(req, res, provider, oauthUser, info) {
+  const currentUser = req.user;
+  const { SocialAccount } = require('../models');
+  
+  const clientDetails = {
+    ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
+    userAgent: req.headers['user-agent'] || 'unknown'
+  };
+  
+  try {
+    // Clear the manual link request from session
+    const linkRequest = req.session.manualLinkRequest;
+    req.session.manualLinkRequest = null;
+    
+    if (!linkRequest || linkRequest.provider !== provider || linkRequest.userId !== currentUser.id) {
+      logAuthError('MANUAL_OAUTH_LINK_INVALID_SESSION', new Error('Invalid link request'), {
+        ...clientDetails,
+        currentUserId: currentUser.id,
+        provider: provider,
+        linkRequest: linkRequest
+      });
+      return res.redirect('/profile?error=Invalid linking session. Please try again.');
+    }
+    
+    // Get OAuth profile data
+    let oauthProfile;
+    if (oauthUser) {
+      // User already exists with this OAuth account
+      const existingSocial = await SocialAccount.findOne({
+        where: { user_id: oauthUser.id, provider: provider }
+      });
+      
+      if (existingSocial) {
+        oauthProfile = {
+          email: existingSocial.handle,
+          provider: provider,
+          providerUserId: existingSocial.provider_user_id
+        };
+      }
+    } else if (info && info.linkProfile) {
+      // OAuth returned profile data for linking
+      oauthProfile = info.linkProfile;
+    } else {
+      // This shouldn't happen, but handle gracefully
+      logAuthError('MANUAL_OAUTH_LINK_NO_PROFILE', new Error('No OAuth profile data'), {
+        ...clientDetails,
+        currentUserId: currentUser.id,
+        provider: provider,
+        oauthUser: oauthUser ? oauthUser.id : null,
+        info: info
+      });
+      return res.redirect('/profile?error=OAuth profile data not available. Please try again.');
+    }
+    
+    // Check if this OAuth account is already linked to the current user
+    const existingLink = await SocialAccount.findOne({
+      where: { 
+        user_id: currentUser.id, 
+        provider: provider 
+      }
+    });
+    
+    if (existingLink) {
+      logAuthEvent('MANUAL_OAUTH_LINK_ALREADY_EXISTS', {
+        ...clientDetails,
+        currentUserId: currentUser.id,
+        provider: provider,
+        existingAccountId: existingLink.id
+      });
+      return res.redirect('/profile?info=This account is already linked to your profile.');
+    }
+    
+    // Check if this OAuth account is linked to a different user
+    const conflictingLink = await SocialAccount.findOne({
+      where: { 
+        provider: provider,
+        provider_user_id: oauthProfile.providerUserId
+      }
+    });
+    
+    if (conflictingLink && conflictingLink.user_id !== currentUser.id) {
+      logAuthEvent('MANUAL_OAUTH_LINK_CONFLICT', {
+        ...clientDetails,
+        currentUserId: currentUser.id,
+        conflictingUserId: conflictingLink.user_id,
+        provider: provider,
+        providerUserId: oauthProfile.providerUserId
+      });
+      return res.redirect('/profile?error=This account is already linked to another user.');
+    }
+    
+    // Create the social account link
+    const newSocialAccount = await SocialAccount.create({
+      user_id: currentUser.id,
+      platform: provider,
+      handle: oauthProfile.email,
+      provider: provider,
+      provider_user_id: oauthProfile.providerUserId,
+      access_token: oauthProfile.accessToken || null,
+      refresh_token: oauthProfile.refreshToken || null,
+      profile_data: JSON.stringify(oauthProfile.profileData || {})
+    });
+    
+    logAuthEvent('MANUAL_OAUTH_LINK_SUCCESS', {
+      ...clientDetails,
+      currentUserId: currentUser.id,
+      provider: provider,
+      linkedAccountId: newSocialAccount.id,
+      oauthEmail: oauthProfile.email,
+      currentUserEmail: currentUser.email
+    });
+    
+    const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+    return res.redirect(`/profile?success=${providerName} account linked successfully! You can now sign in using ${providerName}.`);
+    
+  } catch (error) {
+    logAuthError('MANUAL_OAUTH_LINK_ERROR', error, {
+      ...clientDetails,
+      currentUserId: currentUser.id,
+      provider: provider
+    });
+    
+    return res.redirect('/profile?error=Failed to link account. Please try again.');
+  }
+}
 
 module.exports = router; 

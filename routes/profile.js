@@ -418,4 +418,119 @@ router.get('/mfa/status', isAuthenticated, async (req, res) => {
   }
 });
 
+// ===== CONNECTED ACCOUNTS MANAGEMENT =====
+
+// Get user's connected accounts
+router.get('/connected-accounts', isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { SocialAccount } = require('../models');
+    
+    const accounts = await SocialAccount.findAll({
+      where: { user_id: userId },
+      attributes: ['id', 'platform', 'provider', 'handle', 'createdAt'],
+      order: [['createdAt', 'DESC']]
+    });
+    
+    logAuthEvent('CONNECTED_ACCOUNTS_VIEWED', {
+      userId,
+      accountCount: accounts.length,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.json({
+      success: true,
+      accounts: accounts
+    });
+    
+  } catch (error) {
+    logAuthError('CONNECTED_ACCOUNTS_VIEW_ERROR', error, {
+      userId: req.user.id,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load connected accounts'
+    });
+  }
+});
+
+// Unlink a connected account
+router.delete('/connected-accounts/:accountId', isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const accountId = req.params.accountId;
+    const { SocialAccount } = require('../models');
+    
+    // Find the account to ensure it belongs to the user
+    const account = await SocialAccount.findOne({
+      where: { 
+        id: accountId, 
+        user_id: userId 
+      }
+    });
+    
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        error: 'Connected account not found'
+      });
+    }
+    
+    // Check if this is the user's only login method
+    const user = await User.findByPk(userId);
+    const totalAccounts = await SocialAccount.count({
+      where: { user_id: userId }
+    });
+    
+    // Prevent unlinking if it's the only login method and no password is set
+    if (totalAccounts === 1 && user.password_hash === 'oauth_user') {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot unlink your only login method. Please set a password first or link another account.'
+      });
+    }
+    
+    // Store account info for logging before deletion
+    const accountInfo = {
+      provider: account.provider,
+      platform: account.platform,
+      handle: account.handle
+    };
+    
+    // Delete the account
+    await account.destroy();
+    
+    logAuthEvent('CONNECTED_ACCOUNT_UNLINKED', {
+      userId,
+      accountId,
+      ...accountInfo,
+      remainingAccounts: totalAccounts - 1,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.json({
+      success: true,
+      message: `${accountInfo.provider} account unlinked successfully`
+    });
+    
+  } catch (error) {
+    logAuthError('CONNECTED_ACCOUNT_UNLINK_ERROR', error, {
+      userId: req.user.id,
+      accountId: req.params.accountId,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to unlink account'
+    });
+  }
+});
+
 module.exports = router;

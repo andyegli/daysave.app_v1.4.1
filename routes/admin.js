@@ -154,6 +154,7 @@ router.get('/users', isAuthenticated, isAdmin, async (req, res) => {
         {
           model: require('../models').UserDevice,
           required: false,
+          separate: true, // Use separate query to avoid issues with limit
           limit: 1,
           order: [['last_login_at', 'DESC']]
         },
@@ -161,13 +162,15 @@ router.get('/users', isAuthenticated, isAdmin, async (req, res) => {
           model: require('../models').UserSubscription,
           as: 'UserSubscriptions',
           required: false,
+          separate: true, // Use separate query to avoid issues with limit
           limit: 1,
           order: [['created_at', 'DESC']]
         }
       ],
       limit,
       offset,
-      order: [['createdAt', 'DESC']]
+      order: [['createdAt', 'DESC']],
+      distinct: true // Ensure proper counting with includes
     });
     
     const totalPages = Math.ceil(count / limit) || 1;

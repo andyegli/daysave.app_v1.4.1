@@ -1,5 +1,5 @@
 // Profile Management JavaScript
-// Handles change password and MFA functionality
+// Handles change password, MFA functionality, and connected accounts management
 
 // Utility function to show alerts
 function showAlert(message, type = 'info') {
@@ -391,3 +391,136 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
+
+// ===== CONNECTED ACCOUNTS MANAGEMENT =====
+
+// Load connected accounts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  loadConnectedAccounts();
+});
+
+// Load and display connected accounts
+async function loadConnectedAccounts() {
+  try {
+    const result = await apiCall('/profile/connected-accounts');
+    
+    if (result.success) {
+      displayConnectedAccounts(result.data.accounts);
+    } else {
+      document.getElementById('connectedAccountsSection').innerHTML = `
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          Failed to load connected accounts: ${result.data?.error || 'Unknown error'}
+        </div>
+      `;
+    }
+  } catch (error) {
+    document.getElementById('connectedAccountsSection').innerHTML = `
+      <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Error loading connected accounts
+      </div>
+    `;
+  }
+}
+
+// Display connected accounts in the UI
+function displayConnectedAccounts(accounts) {
+  const container = document.getElementById('connectedAccountsSection');
+  
+  if (!accounts || accounts.length === 0) {
+    container.innerHTML = `
+      <div class="text-center text-muted">
+        <i class="fas fa-unlink me-2"></i>
+        No connected accounts yet. Link your social accounts below for easier login.
+      </div>
+    `;
+    return;
+  }
+  
+  const accountsHtml = accounts.map(account => {
+    const providerIcon = getProviderIcon(account.provider);
+    const providerName = getProviderName(account.provider);
+    const connectedDate = new Date(account.createdAt).toLocaleDateString();
+    
+    return `
+      <div class="d-flex justify-content-between align-items-center p-3 border rounded mb-2">
+        <div class="d-flex align-items-center">
+          <i class="${providerIcon} me-3" style="font-size: 1.2em;"></i>
+          <div>
+            <strong>${providerName}</strong>
+            <br>
+            <small class="text-muted">${account.handle || 'Connected'}</small>
+            <br>
+            <small class="text-muted">Connected: ${connectedDate}</small>
+          </div>
+        </div>
+        <button type="button" class="btn btn-outline-danger btn-sm" 
+                onclick="unlinkAccount('${account.id}', '${providerName}')"
+                title="Unlink ${providerName} account">
+          <i class="fas fa-unlink"></i> Unlink
+        </button>
+      </div>
+    `;
+  }).join('');
+  
+  container.innerHTML = `
+    <div class="connected-accounts-list">
+      ${accountsHtml}
+    </div>
+  `;
+}
+
+// Get provider icon class
+function getProviderIcon(provider) {
+  const icons = {
+    'google': 'fab fa-google text-danger',
+    'microsoft': 'fab fa-microsoft text-info',
+    'apple': 'fab fa-apple text-dark'
+  };
+  return icons[provider] || 'fas fa-link';
+}
+
+// Get provider display name
+function getProviderName(provider) {
+  const names = {
+    'google': 'Google',
+    'microsoft': 'Microsoft',
+    'apple': 'Apple'
+  };
+  return names[provider] || provider.charAt(0).toUpperCase() + provider.slice(1);
+}
+
+// Link OAuth account - redirect to OAuth flow with manual linking flag
+function linkOAuthAccount(provider) {
+  // Add a flag to indicate this is manual linking from profile
+  const linkUrl = `/auth/${provider}?manual_link=true`;
+  
+  // Show loading state
+  showAlert(`Redirecting to ${getProviderName(provider)} for account linking...`, 'info');
+  
+  // Redirect to OAuth provider
+  window.location.href = linkUrl;
+}
+
+// Unlink OAuth account
+async function unlinkAccount(accountId, providerName) {
+  if (!confirm(`Are you sure you want to unlink your ${providerName} account? You will no longer be able to sign in using ${providerName}.`)) {
+    return;
+  }
+  
+  try {
+    const result = await apiCall(`/profile/connected-accounts/${accountId}`, {
+      method: 'DELETE'
+    });
+    
+    if (result.success) {
+      showAlert(`${providerName} account unlinked successfully`, 'success');
+      loadConnectedAccounts(); // Reload the list
+    } else {
+      showAlert(`Failed to unlink ${providerName} account: ${result.data?.error || 'Unknown error'}`, 'danger');
+    }
+  } catch (error) {
+    showAlert(`Error unlinking ${providerName} account`, 'danger');
+  }
+}
