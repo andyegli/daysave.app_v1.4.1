@@ -439,8 +439,8 @@ function displayConnectedAccounts(accounts) {
   }
   
   const accountsHtml = accounts.map(account => {
-    const providerIcon = getProviderIcon(account.provider);
-    const providerName = getProviderName(account.provider);
+    const providerIcon = getProviderIcon(account.platform);
+    const providerName = getProviderName(account.platform);
     const connectedDate = new Date(account.createdAt).toLocaleDateString();
     
     return `

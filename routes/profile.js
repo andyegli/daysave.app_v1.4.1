@@ -428,7 +428,7 @@ router.get('/connected-accounts', isAuthenticated, async (req, res) => {
     
     const accounts = await SocialAccount.findAll({
       where: { user_id: userId },
-      attributes: ['id', 'platform', 'provider', 'handle', 'createdAt'],
+      attributes: ['id', 'platform', 'handle', 'createdAt'],
       order: [['createdAt', 'DESC']]
     });
     
