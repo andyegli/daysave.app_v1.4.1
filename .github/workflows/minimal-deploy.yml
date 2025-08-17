@@ -102,16 +102,14 @@ jobs:
           cd daysave_v1.4.1
           
           # Create basic environment file
-          cat > .env << EOF
-NODE_ENV=development
-APP_PORT=3000
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=daysave_dev
-DB_USER=root
-DB_USER_PASSWORD=password
-SESSION_SECRET=development-secret-key-change-in-production
-EOF
+          echo 'NODE_ENV=development' > .env
+          echo 'APP_PORT=3000' >> .env
+          echo 'DB_HOST=localhost' >> .env
+          echo 'DB_PORT=3306' >> .env
+          echo 'DB_NAME=daysave_dev' >> .env
+          echo 'DB_USER=root' >> .env
+          echo 'DB_USER_PASSWORD=password' >> .env
+          echo 'SESSION_SECRET=development-secret-key-change-in-production' >> .env
           
           echo '✅ Application files deployed'
           echo '📋 Application ready for container setup'
