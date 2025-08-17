@@ -52,7 +52,7 @@ services:
 
   # ===== APPLICATION CONTAINER =====
   app:
-    image: gcr.io/daysave-v1412/daysave:latest
+    image: gcr.io/daysave/daysave:latest
     container_name: daysave-app
     build:
       context: .

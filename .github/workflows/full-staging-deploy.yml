@@ -31,9 +31,21 @@ jobs:
       
     - name: Create fresh staging VM with reserved IP
       run: |
-        echo "🚀 Creating fresh staging VM with reserved static IP..."
+        echo "🚀 Setting up fresh staging VM with reserved static IP..."
+        
+        # Delete existing VM if it exists
+        if gcloud compute instances describe ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} &>/dev/null; then
+          echo "🗑️ Deleting existing VM for fresh start..."
+          gcloud compute instances delete ${{ env.VM_NAME }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --project=${{ env.PROJECT_ID }} \
+            --quiet
+          echo "⏳ Waiting for deletion to complete..."
+          sleep 30
+        fi
         
         # Create VM with reserved static IP
+        echo "📦 Creating fresh VM..."
         gcloud compute instances create ${{ env.VM_NAME }} \
           --project=${{ env.PROJECT_ID }} \
           --zone=${{ env.GCP_ZONE }} \
