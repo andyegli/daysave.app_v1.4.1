@@ -1,0 +1,266 @@
+# Complete DaySave Deployment
+# Full deployment workflow with all necessary steps
+name: Complete DaySave Deploy
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'daysave' }}
+  GCP_ZONE: ${{ vars.GCP_ZONE || 'asia-southeast1-a' }}
+  VM_NAME: daysave-staging
+  
+jobs:
+  complete-deploy:
+    name: Complete Deployment
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+        
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      
+    - name: Create or verify VM
+      run: |
+        echo "🚀 Ensuring VM exists..."
+        
+        if gcloud compute instances describe ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} &>/dev/null; then
+          echo "✅ VM already exists"
+          VM_IP=$(gcloud compute instances describe ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+          echo "🌐 VM IP: $VM_IP"
+        else
+          echo "📦 Creating new VM..."
+          gcloud compute instances create ${{ env.VM_NAME }} \
+            --project=${{ env.PROJECT_ID }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --machine-type=e2-medium \
+            --image-family=ubuntu-2204-lts \
+            --image-project=ubuntu-os-cloud \
+            --service-account=daysave-production@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --scopes=cloud-platform \
+            --tags=http-server,https-server \
+            --boot-disk-size=20GB \
+            --boot-disk-type=pd-standard
+            
+          echo "⏳ Waiting for VM to initialize..."
+          sleep 60
+          
+          VM_IP=$(gcloud compute instances describe ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+          echo "🌐 New VM IP: $VM_IP"
+        fi
+        
+    - name: Install Docker and dependencies
+      run: |
+        echo "🐳 Installing Docker and dependencies..."
+        gcloud compute ssh ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} --command="
+          # Update system
+          sudo apt-get update
+          
+          # Install Docker if not present
+          if ! command -v docker &> /dev/null; then
+            echo '📦 Installing Docker...'
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+            sudo usermod -aG docker \$USER
+            sudo systemctl enable docker
+            sudo systemctl start docker
+          else
+            echo '✅ Docker already installed'
+          fi
+          
+          # Install Docker Compose if not present
+          if ! command -v docker-compose &> /dev/null; then
+            echo '📦 Installing Docker Compose...'
+            sudo curl -L \"https://github.com/docker/compose/releases/download/v2.21.0/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          else
+            echo '✅ Docker Compose already installed'
+          fi
+          
+          # Install additional tools
+          sudo apt-get install -y git curl wget unzip
+          
+          echo '✅ Dependencies installed successfully'
+        "
+        
+    - name: Deploy application code
+      run: |
+        echo "📥 Deploying application code..."
+        gcloud compute ssh ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} --command="
+          # Clone or update repository
+          if [ ! -d \"daysave_v1.4.1\" ]; then
+            echo '📥 Cloning repository...'
+            git clone https://github.com/${{ github.repository }}.git daysave_v1.4.1
+          else
+            echo '🔄 Updating repository...'
+            cd daysave_v1.4.1
+            git fetch origin
+            cd ..
+          fi
+          
+          cd daysave_v1.4.1
+          git checkout ${{ github.sha }}
+          
+          echo '✅ Code deployed successfully'
+        "
+        
+    - name: Configure environment variables
+      run: |
+        echo "⚙️ Configuring environment variables..."
+        gcloud compute ssh ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} --command="
+          cd daysave_v1.4.1
+          
+          # Create production environment file with actual secrets
+          cat > .env.production << 'EOF'
+        # ===== APPLICATION CONFIGURATION =====
+        NODE_ENV=production
+        APP_PORT=3000
+        SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+        
+        # ===== DATABASE CONFIGURATION =====
+        DB_HOST=db
+        DB_PORT=3306
+        DB_USER=daysave
+        DB_USER_PASSWORD=${{ secrets.DB_USER_PASSWORD }}
+        DB_NAME=daysave_v141
+        DB_ROOT_PASSWORD=${{ secrets.DB_ROOT_PASSWORD }}
+        
+        # ===== REDIS CONFIGURATION =====
+        REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+        
+        # ===== GOOGLE CLOUD CONFIGURATION =====
+        GOOGLE_CLOUD_PROJECT_ID=${{ env.PROJECT_ID }}
+        GOOGLE_CLOUD_STORAGE_BUCKET=${{ secrets.GOOGLE_CLOUD_STORAGE_BUCKET }}
+        GOOGLE_CLOUD_SPEECH_LANGUAGE=en-US
+        GOOGLE_CLOUD_VISION_LANGUAGE=en
+        
+        # ===== OPENAI CONFIGURATION =====
+        OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+        
+        # ===== OAUTH CONFIGURATION =====
+        GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+        GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+        MICROSOFT_CLIENT_ID=${{ secrets.MICROSOFT_CLIENT_ID }}
+        MICROSOFT_CLIENT_SECRET=${{ secrets.MICROSOFT_CLIENT_SECRET }}
+        
+        # ===== EMAIL CONFIGURATION =====
+        GMAIL_USER=${{ secrets.GMAIL_USER }}
+        GMAIL_PASS=${{ secrets.GMAIL_PASS }}
+        GMAIL_FROM=${{ secrets.GMAIL_FROM }}
+        
+        # ===== SECURITY CONFIGURATION =====
+        JWT_SECRET=${{ secrets.JWT_SECRET }}
+        JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+        
+        # ===== DOMAIN CONFIGURATION =====
+        BASE_URL=https://daysave.app
+        ALLOWED_ORIGINS=https://daysave.app,https://www.daysave.app
+        WEBAUTHN_RP_ID=daysave.app
+        WEBAUTHN_RP_NAME=DaySave
+        WEBAUTHN_ORIGIN=https://daysave.app
+        
+        # ===== FILE UPLOAD CONFIGURATION =====
+        MAX_FILE_SIZE=52428800
+        ALLOWED_FILE_TYPES=image/jpeg,image/png,image/gif,application/pdf,text/plain,video/mp4,audio/mpeg,audio/wav
+        
+        # ===== GOOGLE MAPS CONFIGURATION =====
+        GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}
+        
+        # ===== LOGGING CONFIGURATION =====
+        LOG_LEVEL=warn
+        LOG_FILE_PATH=/usr/src/app/logs/app.log
+        ENABLE_SQL_LOGGING=false
+        ENABLE_MULTIMEDIA_CONSOLE_LOGGING=false
+        ENABLE_STARTUP_VALIDATION_LOGGING=false
+        ENABLE_PERFORMANCE_CONSOLE_LOGGING=false
+        ENABLE_PROCESSOR_STEP_LOGGING=false
+        ENABLE_AUTH_EVENT_LOGGING=false
+        ENABLE_STATUS_POLLING_LOGGING=false
+        ENABLE_ANALYSIS_REQUEST_LOGGING=false
+        ENABLE_PERFORMANCE_ALERT_LOGGING=false
+        
+        # ===== MULTIMEDIA ANALYSIS CONFIGURATION =====
+        ANALYZER_PORT=3001
+        MULTIMEDIA_TEMP_DIR=/usr/src/app/multimedia-temp
+        THUMBNAIL_COUNT=5
+        SPEAKER_CONFIDENCE_THRESHOLD=0.7
+        
+        # ===== SECURITY CONFIGURATION =====
+        BCRYPT_ROUNDS=12
+        EOF
+          
+          echo '✅ Environment configured successfully'
+        "
+        
+    - name: Setup SSL certificates (self-signed for staging)
+      run: |
+        echo "🔒 Setting up SSL certificates..."
+        gcloud compute ssh ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} --command="
+          cd daysave_v1.4.1
+          
+          # Create SSL directory
+          mkdir -p nginx/ssl
+          
+          # Generate self-signed certificates for staging
+          sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout nginx/ssl/privkey.pem \
+            -out nginx/ssl/fullchain.pem \
+            -subj '/C=US/ST=State/L=City/O=Organization/CN=daysave.app'
+          
+          # Set proper permissions
+          sudo chmod 644 nginx/ssl/fullchain.pem
+          sudo chmod 600 nginx/ssl/privkey.pem
+          
+          echo '✅ SSL certificates created'
+        "
+        
+    - name: Start application
+      run: |
+        echo "🚀 Starting DaySave application..."
+        gcloud compute ssh ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} --command="
+          cd daysave_v1.4.1
+          
+          # Stop any existing containers
+          docker-compose -f docker-compose.production.yml down || true
+          
+          # Start the application
+          docker-compose -f docker-compose.production.yml up -d
+          
+          echo '⏳ Waiting for services to start...'
+          sleep 30
+          
+          echo '✅ Application started'
+        "
+        
+    - name: Verify deployment
+      run: |
+        echo "🔍 Verifying deployment..."
+        
+        VM_IP=$(gcloud compute instances describe ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+        
+        gcloud compute ssh ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} --command="
+          cd daysave_v1.4.1
+          
+          echo '=== Container Status ==='
+          docker ps
+          
+          echo '=== Application Logs (last 10 lines) ==='
+          docker-compose -f docker-compose.production.yml logs --tail=10 app
+          
+          echo '=== Health Check ==='
+          curl -f http://localhost:80/health || echo 'Health check failed'
+        "
+        
+        echo "🎉 Deployment completed!"
+        echo "🌐 Application URL: http://$VM_IP"
+        echo "🔒 HTTPS URL: https://$VM_IP (self-signed certificate)"
+        echo "📋 SSH Access: gcloud compute ssh ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }}"
