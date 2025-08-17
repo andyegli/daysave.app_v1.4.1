@@ -1,0 +1,125 @@
+# Debug DaySave Deployment
+# Simple workflow with detailed logging to identify issues
+name: Debug DaySave Deploy
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'daysave' }}
+  GCP_ZONE: ${{ vars.GCP_ZONE || 'asia-southeast1-a' }}
+  
+jobs:
+  debug-deploy:
+    name: Debug Deployment
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Test GCP authentication
+      run: |
+        echo "🔐 Testing GCP authentication..."
+        if [ -z "${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}" ]; then
+          echo "❌ GOOGLE_APPLICATION_CREDENTIALS secret is missing"
+          exit 1
+        else
+          echo "✅ GOOGLE_APPLICATION_CREDENTIALS secret is present"
+        fi
+        
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+        
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      
+    - name: Verify GCP setup
+      run: |
+        echo "🔍 Verifying GCP setup..."
+        echo "Project ID: ${{ env.PROJECT_ID }}"
+        echo "Zone: ${{ env.GCP_ZONE }}"
+        
+        echo "📋 Current gcloud configuration:"
+        gcloud config list
+        
+        echo "🔐 Authentication status:"
+        gcloud auth list
+        
+        echo "📦 Available projects:"
+        gcloud projects list || echo "Cannot list projects"
+        
+        echo "🌐 Testing project access:"
+        gcloud compute zones list --project=${{ env.PROJECT_ID }} --limit=5 || echo "Cannot access compute zones"
+        
+    - name: Check existing VMs
+      run: |
+        echo "🔍 Checking existing VMs..."
+        gcloud compute instances list --project=${{ env.PROJECT_ID }} || echo "Cannot list instances"
+        
+    - name: Test VM creation (dry run)
+      run: |
+        echo "🧪 Testing VM creation parameters..."
+        echo "VM Name: daysave-staging"
+        echo "Zone: ${{ env.GCP_ZONE }}"
+        echo "Project: ${{ env.PROJECT_ID }}"
+        echo "Service Account: daysave-production@${{ env.PROJECT_ID }}.iam.gserviceaccount.com"
+        
+        echo "🔍 Checking if service account exists:"
+        gcloud iam service-accounts describe daysave-production@${{ env.PROJECT_ID }}.iam.gserviceaccount.com --project=${{ env.PROJECT_ID }} || echo "Service account not found or no access"
+        
+        echo "🔍 Checking zone availability:"
+        gcloud compute zones describe ${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} || echo "Zone not accessible"
+        
+    - name: Attempt VM creation
+      run: |
+        echo "🚀 Attempting to create staging VM..."
+        
+        if gcloud compute instances describe daysave-staging --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} &>/dev/null; then
+          echo "✅ VM daysave-staging already exists"
+          VM_IP=$(gcloud compute instances describe daysave-staging --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+          echo "🌐 Existing VM IP: $VM_IP"
+        else
+          echo "📦 Creating new staging VM..."
+          
+          gcloud compute instances create daysave-staging \
+            --project=${{ env.PROJECT_ID }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --machine-type=e2-medium \
+            --image-family=ubuntu-2004-lts \
+            --image-project=ubuntu-os-cloud \
+            --service-account=daysave-production@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --scopes=cloud-platform \
+            --tags=http-server,https-server \
+            --boot-disk-size=20GB \
+            --boot-disk-type=pd-standard
+            
+          if [ $? -eq 0 ]; then
+            echo "✅ VM created successfully"
+            sleep 30
+            VM_IP=$(gcloud compute instances describe daysave-staging --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+            echo "🌐 New VM IP: $VM_IP"
+          else
+            echo "❌ VM creation failed"
+            exit 1
+          fi
+        fi
+        
+    - name: Display final status
+      run: |
+        echo "🎉 Deployment Status Summary:"
+        echo "Project: ${{ env.PROJECT_ID }}"
+        echo "Zone: ${{ env.GCP_ZONE }}"
+        
+        if gcloud compute instances describe daysave-staging --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} &>/dev/null; then
+          VM_IP=$(gcloud compute instances describe daysave-staging --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }} --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+          echo "✅ VM Status: Running"
+          echo "🌐 IP Address: $VM_IP"
+          echo "🔗 SSH Command: gcloud compute ssh daysave-staging --zone=${{ env.GCP_ZONE }} --project=${{ env.PROJECT_ID }}"
+        else
+          echo "❌ VM Status: Not found or failed to create"
+        fi
