@@ -90,7 +90,7 @@ jobs:
             --project=${{ env.PROJECT_ID }} \
             --zone=${{ env.GCP_ZONE }} \
             --machine-type=e2-medium \
-            --image-family=ubuntu-2004-lts \
+            --image-family=ubuntu-2204-lts \
             --image-project=ubuntu-os-cloud \
             --service-account=daysave-production@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
             --scopes=cloud-platform \
