@@ -38,7 +38,7 @@ package "GitHub Actions Runners" <<GITHUB_COLOR>> {
 
 package "Google Cloud Platform" <<GCP_COLOR>> {
     package "Container Registry" <<DOCKER_COLOR>> {
-        component "gcr.io/daysaave/daysave" as gcr
+        component "gcr.io/daysave/daysave" as gcr
     }
     
     package "Compute Engine" {
@@ -61,7 +61,7 @@ package "Google Cloud Platform" <<GCP_COLOR>> {
         }
     }
     
-    component "Service Account\ndaysave-cicd@daysaave.iam" as service_account
+    component "Service Account\ndaysave-cicd@daysave.iam" as service_account
     
     package "Cloud Storage" {
         component "File Uploads Bucket" as storage_bucket

@@ -10,7 +10,7 @@ on:
   workflow_dispatch:  # Allow manual triggering
 
 env:
-  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'daysaave' }}
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'daysave' }}
   GCP_REGION: ${{ vars.GCP_REGION || 'asia-southeast1' }}
   GCP_ZONE: ${{ vars.GCP_ZONE || 'asia-southeast1-a' }}
   VM_NAME: daysave-production
