@@ -164,13 +164,13 @@ echo "✅ All required APIs enabled"
 
 ```bash
 # Create file uploads bucket
-gsutil mb -p $PROJECT_ID -c STANDARD -l asia-southeast1 gs://daysave-uploads
+gsutil mb -p $PROJECT_ID -c STANDARD -l asia-southeast1 gs://daysave-v141-2-uploads
 
 # Create backups bucket
 gsutil mb -p $PROJECT_ID -c STANDARD -l asia-southeast1 gs://daysave-backups
 
 # Set bucket permissions
-gsutil iam ch serviceAccount:daysave-production@$PROJECT_ID.iam.gserviceaccount.com:objectAdmin gs://daysave-uploads
+gsutil iam ch serviceAccount:daysave-production@$PROJECT_ID.iam.gserviceaccount.com:objectAdmin gs://daysave-v141-2-uploads
 gsutil iam ch serviceAccount:daysave-production@$PROJECT_ID.iam.gserviceaccount.com:objectAdmin gs://daysave-backups
 
 echo "✅ Storage buckets created and configured"
