@@ -163,17 +163,6 @@ passport.deserializeUser(async (id, done) => {
           logAuthError('USER_ROLE_LOAD_FALLBACK', roleError, { userId: id, roleId: user.role_id });
         }
       }
-      
-      // Log successful deserialization with role info (only when enabled)
-      const { logging } = require('./config');
-      if (logging.enableAuthEventLogging) {
-        logAuthEvent('USER_DESERIALIZE_SUCCESS', { 
-          userId: id, 
-          username: user.username,
-          hasRole: !!user.Role,
-          roleName: user.Role ? user.Role.name : 'none'
-        });
-      }
     } else {
       logAuthEvent('USER_DESERIALIZE_NOT_FOUND', { userId: id });
     }
