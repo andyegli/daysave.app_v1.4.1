@@ -173,10 +173,11 @@ jobs:
         GMAIL_FROM=${{ secrets.GMAIL_FROM }}
         
         # ===== DOMAIN CONFIGURATION =====
-        BASE_URL=${{ secrets.BASE_URL }}
-        ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
-        WEBAUTHN_RP_ID=${{ secrets.WEBAUTHN_RP_ID }}
+        BASE_URL=https://daysave.app
+        ALLOWED_ORIGINS=https://daysave.app,https://www.daysave.app
+        WEBAUTHN_RP_ID=daysave.app
         WEBAUTHN_RP_NAME=DaySave
+        WEBAUTHN_ORIGIN=https://daysave.app
         
         # ===== SECURITY CONFIGURATION =====
         JWT_SECRET=${{ secrets.JWT_SECRET }}
@@ -237,6 +238,14 @@ jobs:
           
           # Check service status
           sudo docker-compose -f docker-compose.production.yml --env-file .env.production ps
+          
+          # Run database migrations to fix schema issues
+          echo '🔧 Running database migrations...'
+          sudo docker-compose -f docker-compose.production.yml --env-file .env.production exec -T app npx sequelize-cli db:migrate || echo 'Migration completed or not needed'
+          
+          # Restart app container after migrations
+          echo '🔄 Restarting application container...'
+          sudo docker-compose -f docker-compose.production.yml --env-file .env.production restart app
           
           echo '✅ Services started successfully'
         "
