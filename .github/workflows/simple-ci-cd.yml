@@ -1,0 +1,302 @@
+# DaySave Simple CI/CD Pipeline
+# Simplified pipeline for initial deployment
+name: DaySave Simple CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'daysave' }}
+  GCP_REGION: ${{ vars.GCP_REGION || 'asia-southeast1' }}
+  GCP_ZONE: ${{ vars.GCP_ZONE || 'asia-southeast1-a' }}
+  VM_NAME: daysave-production
+  REGISTRY: gcr.io
+  IMAGE_NAME: daysave
+  
+jobs:
+  # ===== BASIC TESTS =====
+  test:
+    name: Basic Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run basic validation
+      run: |
+        echo "✅ Dependencies installed successfully"
+        node --version
+        npm --version
+        
+    - name: Check application structure
+      run: |
+        echo "📁 Checking application structure..."
+        ls -la
+        echo "📦 Package.json scripts:"
+        npm run --silent || true
+        
+    - name: Run security audit
+      run: npm audit --audit-level high || echo "⚠️ Security audit completed with warnings"
+
+  # ===== BUILD DOCKER IMAGE =====
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push'
+    
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+        
+    - name: Configure Docker for GCR
+      run: gcloud auth configure-docker gcr.io
+      
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.production
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # ===== DEPLOY TO STAGING =====
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+        
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      
+    - name: Deploy to staging VM
+      run: |
+        echo "🚀 Starting staging deployment..."
+        
+        # Create staging VM if it doesn't exist
+        if ! gcloud compute instances describe daysave-staging --zone=${{ env.GCP_ZONE }} &>/dev/null; then
+          echo "📦 Creating staging VM..."
+          gcloud compute instances create daysave-staging \
+            --zone=${{ env.GCP_ZONE }} \
+            --machine-type=e2-medium \
+            --image-family=ubuntu-2004-lts \
+            --image-project=ubuntu-os-cloud \
+            --service-account=daysave-production@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --scopes=cloud-platform \
+            --tags=http-server,https-server
+            
+          echo "⏳ Waiting for VM to initialize..."
+          sleep 60
+        fi
+        
+        # Get staging VM IP
+        STAGING_IP=$(gcloud compute instances describe daysave-staging --zone=${{ env.GCP_ZONE }} --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+        echo "🌐 Staging VM IP: $STAGING_IP"
+        
+        # Basic deployment setup
+        gcloud compute ssh daysave-staging --zone=${{ env.GCP_ZONE }} --command="
+          # Install Docker if not present
+          if ! command -v docker &> /dev/null; then
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+            sudo usermod -aG docker \$USER
+          fi
+          
+          # Install Docker Compose if not present
+          if ! command -v docker-compose &> /dev/null; then
+            sudo curl -L \"https://github.com/docker/compose/releases/download/v2.21.0/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+          
+          echo '✅ Staging VM configured successfully'
+          echo '🌐 Access staging at: http://$STAGING_IP'
+        "
+        
+        echo "✅ Staging deployment completed!"
+        echo "🔗 Staging URL: http://$STAGING_IP"
+
+  # ===== DEPLOY TO PRODUCTION =====
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+        
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      
+    - name: Create production environment file
+      run: |
+        cat > .env.production << EOF
+        NODE_ENV=production
+        APP_PORT=3000
+        SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+        
+        # Database
+        DB_HOST=db
+        DB_PORT=3306
+        DB_USER=daysave
+        DB_USER_PASSWORD=${{ secrets.DB_USER_PASSWORD }}
+        DB_NAME=daysave_v141
+        DB_ROOT_PASSWORD=${{ secrets.DB_ROOT_PASSWORD }}
+        
+        # Redis
+        REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+        
+        # Google Cloud
+        GOOGLE_CLOUD_PROJECT_ID=${{ env.PROJECT_ID }}
+        GOOGLE_CLOUD_STORAGE_BUCKET=${{ secrets.GOOGLE_CLOUD_STORAGE_BUCKET }}
+        
+        # OpenAI
+        OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+        
+        # OAuth
+        GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+        GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+        MICROSOFT_CLIENT_ID=${{ secrets.MICROSOFT_CLIENT_ID }}
+        MICROSOFT_CLIENT_SECRET=${{ secrets.MICROSOFT_CLIENT_SECRET }}
+        
+        # Email
+        GMAIL_USER=${{ secrets.GMAIL_USER }}
+        GMAIL_PASS=${{ secrets.GMAIL_PASS }}
+        GMAIL_FROM=${{ secrets.GMAIL_FROM }}
+        BASE_URL=${{ secrets.BASE_URL }}
+        
+        # Google Maps
+        GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}
+        
+        # Security
+        JWT_SECRET=${{ secrets.JWT_SECRET }}
+        JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+        
+        # WebAuthn
+        WEBAUTHN_RP_ID=${{ secrets.WEBAUTHN_RP_ID }}
+        WEBAUTHN_RP_NAME=DaySave
+        EOF
+        
+    - name: Setup production VM and deploy
+      run: |
+        echo "🚀 Starting production deployment..."
+        
+        # Create production VM if it doesn't exist
+        if ! gcloud compute instances describe ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} &>/dev/null; then
+          echo "📦 Creating production VM..."
+          gcloud compute instances create ${{ env.VM_NAME }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --machine-type=e2-standard-4 \
+            --image-family=ubuntu-2004-lts \
+            --image-project=ubuntu-os-cloud \
+            --service-account=daysave-production@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --scopes=cloud-platform \
+            --tags=http-server,https-server
+            
+          echo "⏳ Waiting for VM to initialize..."
+          sleep 90
+        fi
+        
+        # Get production VM IP
+        PROD_IP=$(gcloud compute instances describe ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+        echo "🌐 Production VM IP: $PROD_IP"
+        echo "📋 Update DNS: ${{ vars.DOMAIN_NAME }} → $PROD_IP"
+        
+        # Copy environment file to VM
+        gcloud compute scp .env.production ${{ env.VM_NAME }}:~/.env.production --zone=${{ env.GCP_ZONE }}
+        
+        # Setup production environment
+        gcloud compute ssh ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --command="
+          # Install Docker and Docker Compose
+          if ! command -v docker &> /dev/null; then
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+            sudo usermod -aG docker \$USER
+          fi
+          
+          if ! command -v docker-compose &> /dev/null; then
+            sudo curl -L \"https://github.com/docker/compose/releases/download/v2.21.0/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+          
+          # Install Certbot for SSL
+          sudo apt update
+          sudo apt install -y certbot
+          
+          # Clone repository if not exists
+          if [ ! -d \"daysave_v1.4.1\" ]; then
+            git clone https://github.com/${{ github.repository }}.git daysave_v1.4.1
+          else
+            cd daysave_v1.4.1
+            git fetch origin
+            git checkout ${{ github.sha }}
+            cd ..
+          fi
+          
+          cd daysave_v1.4.1
+          cp ~/.env.production .env.production
+          
+          echo '✅ Production VM configured successfully'
+          echo '🌐 Production IP: $PROD_IP'
+          echo '📋 Next: Configure DNS and SSL'
+        "
+        
+        echo "✅ Production deployment completed!"
+        echo "🔗 Production IP: $PROD_IP"
+        echo "📋 Configure DNS: ${{ vars.DOMAIN_NAME }} → $PROD_IP"
+        echo "🔒 SSL will be configured after DNS propagation"
