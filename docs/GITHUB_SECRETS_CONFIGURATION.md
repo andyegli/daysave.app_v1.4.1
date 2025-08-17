@@ -21,7 +21,7 @@ These are visible in workflow logs but useful for configuration.
 Add these as **Repository Variables**:
 
 ```
-GCP_PROJECT_ID=daysaave
+GCP_PROJECT_ID=daysave
 GCP_REGION=asia-southeast1
 GCP_ZONE=asia-southeast1-a
 DOMAIN_NAME=daysave.app
@@ -235,7 +235,7 @@ echo "Domain: ${{ vars.DOMAIN_NAME }}"
 Copy this checklist and verify each item:
 
 ### **Repository Variables (4 items)**
-- [ ] `GCP_PROJECT_ID=daysaave`
+- [ ] `GCP_PROJECT_ID=daysave`
 - [ ] `GCP_REGION=asia-southeast1`  
 - [ ] `GCP_ZONE=asia-southeast1-a`
 - [ ] `DOMAIN_NAME=daysave.app`

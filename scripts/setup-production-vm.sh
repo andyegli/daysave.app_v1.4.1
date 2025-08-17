@@ -9,7 +9,7 @@ set -e  # Exit on any error
 # CONFIGURATION
 # =============================================================================
 
-PROJECT_ID="${GCP_PROJECT_ID:-daysaave}"
+PROJECT_ID="${GCP_PROJECT_ID:-daysave}"
 VM_NAME="daysave-production"
 ZONE="${GCP_ZONE:-asia-southeast1-a}"
 MACHINE_TYPE="e2-standard-4"

@@ -9,7 +9,7 @@ This guide covers setting up the Google Cloud service account with all required 
 ### **Create the Service Account**
 ```bash
 # Set your project ID
-export PROJECT_ID="daysaave"
+export PROJECT_ID="daysave"
 
 # Create the CI/CD service account
 gcloud iam service-accounts create daysave-cicd \
@@ -262,7 +262,7 @@ Save this as `setup-gcp-service-account.sh`:
 #!/bin/bash
 set -e
 
-PROJECT_ID="daysaave"
+PROJECT_ID="daysave"
 echo "Setting up GCP service accounts for project: $PROJECT_ID"
 
 # Create CI/CD service account
