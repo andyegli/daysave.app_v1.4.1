@@ -1,0 +1,146 @@
+@startuml GitHub Actions Architecture for DaySave
+!theme plain
+skinparam backgroundColor #f8f9fa
+skinparam defaultFontName "Arial"
+skinparam defaultFontSize 11
+
+title DaySave GitHub Actions CI/CD Architecture
+
+!define GITHUB_COLOR #24292e
+!define GCP_COLOR #4285f4
+!define DOCKER_COLOR #2496ed
+!define STAGING_COLOR #ffc107
+!define PROD_COLOR #28a745
+
+package "GitHub Repository" <<GITHUB_COLOR>> {
+    component ".github/workflows/\nci-cd-pipeline.yml" as workflow
+    component "Source Code" as code
+    component "Dockerfile.production" as dockerfile
+    component "docker-compose.production.yml" as compose
+    
+    database "Repository Secrets" as secrets {
+        note right
+            • GOOGLE_APPLICATION_CREDENTIALS
+            • Database passwords
+            • API keys (OpenAI, Google Maps)
+            • OAuth credentials
+            • Domain configuration
+        end note
+    }
+}
+
+package "GitHub Actions Runners" <<GITHUB_COLOR>> {
+    component "CI Job\n(Test & Build)" as ci_job
+    component "Staging Deploy Job" as staging_job
+    component "Production Deploy Job" as prod_job
+    component "Security Scan Job" as security_job
+}
+
+package "Google Cloud Platform" <<GCP_COLOR>> {
+    package "Container Registry" <<DOCKER_COLOR>> {
+        component "gcr.io/daysaave/daysave" as gcr
+    }
+    
+    package "Compute Engine" {
+        package "Staging Environment" <<STAGING_COLOR>> {
+            node "staging-vm\n(Public IP)" as staging_vm {
+                component "Docker Compose" as staging_compose
+                component "App Container" as staging_app
+                component "MySQL Container" as staging_db
+                component "Nginx Container" as staging_nginx
+            }
+        }
+        
+        package "Production Environment" <<PROD_COLOR>> {
+            node "production-vm\n(daysave.app)" as prod_vm {
+                component "Docker Compose" as prod_compose
+                component "App Container" as prod_app
+                component "MySQL Container" as prod_db
+                component "Nginx + SSL" as prod_nginx
+            }
+        }
+    }
+    
+    component "Service Account\ndaysave-cicd@daysaave.iam" as service_account
+    
+    package "Cloud Storage" {
+        component "File Uploads Bucket" as storage_bucket
+        component "Database Backups" as backup_bucket
+    }
+}
+
+package "External Services" {
+    component "Let's Encrypt\nSSL Certificates" as letsencrypt
+    component "OpenAI API" as openai
+    component "Google Maps API" as gmaps
+    component "OAuth Providers\n(Google, Microsoft)" as oauth
+}
+
+package "DNS & Domain" {
+    component "daysave.app\nDNS Records" as dns
+}
+
+' Workflow connections
+workflow --> ci_job : Trigger on push/PR
+workflow --> staging_job : Trigger on develop
+workflow --> prod_job : Trigger on main
+workflow --> security_job : Trigger on build
+
+' CI/CD flow
+ci_job --> gcr : Push Docker image
+secrets --> ci_job : Provide credentials
+secrets --> staging_job : Provide secrets
+secrets --> prod_job : Provide secrets
+
+' Staging deployment
+staging_job --> staging_vm : Deploy via SSH
+gcr --> staging_compose : Pull images
+staging_compose --> staging_app : Start application
+staging_compose --> staging_db : Start database
+staging_compose --> staging_nginx : Start proxy
+
+' Production deployment
+prod_job --> prod_vm : Blue-green deploy
+gcr --> prod_compose : Pull images
+prod_compose --> prod_app : Start application
+prod_compose --> prod_db : Start database
+prod_compose --> prod_nginx : Start proxy + SSL
+letsencrypt --> prod_nginx : SSL certificates
+dns --> prod_nginx : Route traffic
+
+' Service integrations
+service_account --> staging_vm : VM management
+service_account --> prod_vm : VM management
+service_account --> gcr : Image registry access
+service_account --> storage_bucket : File storage
+service_account --> backup_bucket : Backup storage
+
+prod_app --> openai : AI processing
+prod_app --> gmaps : Maps integration
+prod_app --> oauth : Authentication
+prod_app --> storage_bucket : File uploads
+prod_db --> backup_bucket : Automated backups
+
+' Security and monitoring
+security_job --> gcr : Scan images
+workflow --> secrets : Secure access
+
+note top of service_account
+    Required IAM Roles:
+    • Compute Admin
+    • Container Registry Service Agent
+    • Storage Admin
+    • Service Account User
+    • Cloud SQL Admin (if using Cloud SQL)
+end note
+
+note bottom of prod_vm
+    Blue-Green Deployment:
+    1. Start new containers
+    2. Health check validation
+    3. Traffic switch
+    4. Remove old containers
+    5. Automatic rollback on failure
+end note
+
+@enduml

@@ -1,0 +1,83 @@
+@startuml GitHub Actions CI/CD Pipeline Flow
+!theme plain
+skinparam backgroundColor #f8f9fa
+skinparam defaultFontName "Arial"
+skinparam defaultFontSize 11
+
+title GitHub Actions CI/CD Pipeline for DaySave
+
+actor Developer as dev
+participant "GitHub Repository" as github
+participant "GitHub Actions" as actions
+participant "Docker Registry\n(GCR)" as gcr
+participant "Staging VM\n(Public IP)" as staging
+participant "Production VM\n(daysave.app)" as prod
+database "MySQL Database" as db
+participant "Let's Encrypt" as ssl
+
+== Continuous Integration ==
+dev -> github : Push code to branch
+github -> actions : Trigger CI workflow
+actions -> actions : Checkout code
+actions -> actions : Setup Node.js 18
+actions -> actions : Install dependencies
+actions -> actions : Start MySQL service
+actions -> actions : Run database migrations
+actions -> actions : Execute test suite\n• Health checks\n• Content type tests\n• Security audit\n• Comprehensive URL tests
+alt Tests Pass
+    actions -> actions : ✅ Tests successful
+else Tests Fail
+    actions -> dev : ❌ Notify failure
+    stop
+end
+
+== Docker Build & Push ==
+actions -> actions : Build production Docker image\n• Multi-stage build\n• Security hardening\n• Non-root user
+actions -> actions : Run security scan (Trivy)
+actions -> gcr : Push image to\ngcr.io/daysaave/daysave:tag
+
+== Staging Deployment (develop branch) ==
+alt Branch is 'develop'
+    actions -> staging : Deploy to staging VM
+    actions -> staging : Pull latest Docker images
+    actions -> staging : Start containers:\n• App (Node.js)\n• MySQL\n• Nginx proxy
+    staging -> staging : Run health checks
+    actions -> staging : Execute integration tests
+    actions -> dev : ✅ Staging deployment complete\nPublic IP available for testing
+end
+
+== Production Deployment (main branch) ==
+alt Branch is 'main'
+    actions -> actions : Wait for manual approval
+    dev -> actions : Approve production deployment
+    
+    actions -> prod : Create VM if not exists
+    actions -> ssl : Request SSL certificates\nfor daysave.app
+    ssl -> prod : Install certificates
+    
+    actions -> prod : Blue-green deployment:
+    note right
+        1. Start new containers alongside old
+        2. Run health checks on new containers
+        3. Switch traffic to new containers
+        4. Remove old containers
+        5. Clean up old images
+    end note
+    
+    prod -> db : Run database migrations
+    prod -> prod : Comprehensive health checks:\n• Application health\n• Database connectivity\n• File upload functionality\n• OAuth endpoints
+    
+    alt Health checks pass
+        actions -> dev : ✅ Production deployment successful\ndaysave.app is live
+    else Health checks fail
+        prod -> prod : Automatic rollback to previous version
+        actions -> dev : ❌ Deployment failed, rolled back
+    end
+end
+
+== Monitoring & Notifications ==
+actions -> dev : Send deployment notifications
+actions -> actions : Upload deployment artifacts
+actions -> actions : Generate security reports
+
+@enduml
