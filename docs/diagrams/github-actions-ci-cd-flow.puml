@@ -34,7 +34,7 @@ end
 == Docker Build & Push ==
 actions -> actions : Build production Docker image\n• Multi-stage build\n• Security hardening\n• Non-root user
 actions -> actions : Run security scan (Trivy)
-actions -> gcr : Push image to\ngcr.io/daysaave/daysave:tag
+actions -> gcr : Push image to\ngcr.io/daysave/daysave:tag
 
 == Staging Deployment (develop branch) ==
 alt Branch is 'develop'
