@@ -83,7 +83,7 @@ WEBAUTHN_RP_ID=daysave.app
 
 ### **☁️ Google Cloud Configuration**
 ```
-GOOGLE_CLOUD_STORAGE_BUCKET=daysave-uploads
+GOOGLE_CLOUD_STORAGE_BUCKET=daysave-v141-2-uploads
 ```
 
 ## **3. Step-by-Step Setup Instructions**
