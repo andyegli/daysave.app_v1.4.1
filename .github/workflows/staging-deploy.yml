@@ -3,6 +3,9 @@ name: Staging Deploy
 on:
   workflow_dispatch:
     inputs:
+  push:
+    branches: [ main ]
+    paths: [ '.github/workflows/staging-deploy.yml' ]
       vm_action:
         description: 'VM Action'
         required: true
