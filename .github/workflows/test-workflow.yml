@@ -1,4 +1,4 @@
-name: 🧪 Test Workflow - Manual Trigger
+name: Test Workflow
 
 on:
   workflow_dispatch:
