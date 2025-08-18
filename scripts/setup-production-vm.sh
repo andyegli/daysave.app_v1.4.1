@@ -64,7 +64,7 @@ create_production_vm() {
         --service-account=daysave-production@$PROJECT_ID.iam.gserviceaccount.com \
         --scopes=https://www.googleapis.com/auth/cloud-platform \
         --tags=http-server,https-server \
-        --create-disk=auto-delete=yes,boot=yes,device-name=$VM_NAME,image=projects/ubuntu-os-cloud/global/images/family/ubuntu-2004-lts,mode=rw,size=50,type=projects/$PROJECT_ID/zones/$ZONE/diskTypes/pd-standard \
+        --create-disk=auto-delete=no,boot=yes,device-name=$VM_NAME,image=projects/ubuntu-os-cloud/global/images/family/ubuntu-2004-lts,mode=rw,size=50,type=projects/$PROJECT_ID/zones/$ZONE/diskTypes/pd-standard \
         --no-shielded-secure-boot \
         --shielded-vtpm \
         --shielded-integrity-monitoring \

@@ -356,33 +356,38 @@ jobs:
         WEBAUTHN_RP_NAME=DaySave
         EOF
         
-    - name: Setup production VM and SSL certificates
+    - name: Setup production VM with persistent storage
       run: |
-        # Make setup script executable
+        # Make setup scripts executable
         chmod +x scripts/setup-production-vm.sh
+        chmod +x scripts/setup-persistent-storage.sh
         
-        # Set environment variables for the script
+        # Set environment variables for the scripts
         export GCP_PROJECT_ID=${{ env.PROJECT_ID }}
         export GCP_ZONE=${{ env.GCP_ZONE }}
+        export VM_NAME=${{ env.VM_NAME }}
         export DOMAIN_NAME=${{ vars.DOMAIN_NAME }}
         export ADMIN_EMAIL=${{ secrets.GMAIL_USER }}
         export GITHUB_REPOSITORY=${{ github.repository }}
         
-        # Run VM setup (creates VM if not exists, configures SSL)
+        # Run VM setup (creates VM if not exists)
         ./scripts/setup-production-vm.sh vm-only
         
         # Wait for VM to be fully ready
         sleep 60
         
+        # Setup persistent storage (disk, volumes, SSL, backups)
+        ./scripts/setup-persistent-storage.sh all
+        
         # Try SSL setup (may skip if DNS not ready)
         ./scripts/setup-production-vm.sh ssl-only || echo "SSL setup will be retried during deployment"
         
-    - name: Deploy to production with blue-green strategy
+    - name: Deploy to production with persistent blue-green strategy
       run: |
         # Copy environment file to VM
         gcloud compute scp .env.production ${{ env.VM_NAME }}:~/.env.production --zone=${{ env.GCP_ZONE }}
         
-        # Execute blue-green deployment with SSL retry
+        # Execute persistent blue-green deployment
         gcloud compute ssh ${{ env.VM_NAME }} --zone=${{ env.GCP_ZONE }} --command="
           cd daysave_v1.4.1
           
@@ -393,23 +398,51 @@ jobs:
           # Copy environment file
           cp ~/.env.production .env.production
           
+          # Ensure persistent disk is mounted
+          if ! mount | grep -q '/mnt/app-data'; then
+            echo 'Mounting persistent disk...'
+            sudo mount /dev/sdb /mnt/app-data
+          fi
+          
           # Retry SSL setup if certificates don't exist
           if [ ! -f /etc/letsencrypt/live/${{ vars.DOMAIN_NAME }}/fullchain.pem ]; then
             echo 'Retrying SSL certificate setup...'
             sudo certbot certonly --standalone --non-interactive --agree-tos --email ${{ secrets.GMAIL_USER }} -d ${{ vars.DOMAIN_NAME }} -d www.${{ vars.DOMAIN_NAME }} || echo 'SSL setup failed, will use HTTP'
           fi
           
-          # Create database backup
-          echo 'Creating database backup...'
+          # Create comprehensive backup before deployment
+          echo 'Creating comprehensive backup...'
+          BACKUP_TIMESTAMP=\$(date +%Y%m%d-%H%M%S)
+          BACKUP_DIR=\"/mnt/app-data/backups/pre-deploy-\$BACKUP_TIMESTAMP\"
+          mkdir -p \$BACKUP_DIR
+          
+          # Database backup
           if docker-compose -f docker-compose.production.yml --env-file .env.production ps db | grep -q Up; then
-            docker-compose -f docker-compose.production.yml --env-file .env.production exec -T db mysqldump -u root -p\$DB_ROOT_PASSWORD --all-databases > backup-\$(date +%Y%m%d-%H%M%S).sql
+            echo 'Backing up database...'
+            docker-compose -f docker-compose.production.yml --env-file .env.production exec -T db mysqldump -u root -p\$DB_ROOT_PASSWORD --single-transaction --routines --triggers --all-databases > \$BACKUP_DIR/database.sql
+          fi
+          
+          # Docker volumes backup
+          echo 'Backing up Docker volumes...'
+          sudo tar -czf \$BACKUP_DIR/docker-volumes.tar.gz -C /mnt/app-data/docker-volumes .
+          
+          # Application uploads backup
+          if [ -d uploads ]; then
+            echo 'Backing up application uploads...'
+            sudo tar -czf \$BACKUP_DIR/uploads.tar.gz uploads/
+          fi
+          
+          # Upload backup to Cloud Storage
+          if command -v gsutil &> /dev/null; then
+            echo 'Uploading backup to Cloud Storage...'
+            gsutil -m cp -r \$BACKUP_DIR gs://${{ env.PROJECT_ID }}-backups/automated/
           fi
           
           # Pull latest images
           docker-compose -f docker-compose.production.yml --env-file .env.production pull
           
-          # Blue-green deployment
-          echo 'Starting blue-green deployment...'
+          # Blue-green deployment with persistent storage
+          echo 'Starting persistent blue-green deployment...'
           
           # Start new containers alongside old ones (scale up)
           docker-compose -f docker-compose.production.yml --env-file .env.production up -d --no-deps --scale app=2 app
@@ -428,13 +461,19 @@ jobs:
             # Run database migrations
             docker-compose -f docker-compose.production.yml --env-file .env.production exec -T app npm run migrate
             
-            # Clean up old images
-            docker image prune -f
+            # Clean up old images but keep recent ones
+            docker image prune -f --filter 'until=24h'
             
-            echo 'Deployment completed successfully!'
+            # Clean up old backups (keep last 7 days locally)
+            find /mnt/app-data/backups -type d -name 'pre-deploy-*' -mtime +7 -exec rm -rf {} + 2>/dev/null || true
+            
+            echo 'Persistent deployment completed successfully!'
           else
             echo 'New container failed health check, rolling back...'
             docker-compose -f docker-compose.production.yml --env-file .env.production up -d --scale app=1 app
+            
+            # Log rollback event
+            echo \"Deployment rollback at \$(date): Health check failed for new container\" >> /mnt/app-data/backups/rollback.log
             exit 1
           fi
         "
