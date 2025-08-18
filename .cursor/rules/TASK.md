@@ -68,31 +68,31 @@
   - [x] Content Security Policy implementation
 
 ## 4. User Management
-- [ ] Registration, login, and profile config pages
+- [x] Registration, login, and profile config pages
 - [ ] Language selection and preference storage
-- [ ] Subscription plans (trial, paid, Stripe integration)
+- [x] Subscription plans (trial, paid, Stripe integration)
 - [ ] Admin CRUD for users, backup/restore
 - [ ] DEV mode: fake login dropdown for test users/admins
 
 ## 5. Social Media Integration
-- [ ] OAuth flows for all 11 platforms
+- [ ] OAuth flows for all platforms
 - [ ] Token refresh and secure storage (crypto)
 - [ ] Metadata extraction from DMs/mentions
 - [ ] Business APIs for WhatsApp/WeChat
 
 ## 6. File & URL Processing
-- [ ] File upload (type/size validation, Google Cloud Storage integration)
-- [ ] URL submission and validation
-- [ ] Metadata extraction, AI summary, sentiment, transcription, tagging, object detection (OpenAI, Google APIs)
-- [ ] CRUD APIs for files and URLs
+- [x] File upload (type/size validation, Google Cloud Storage integration)
+- [x] URL submission and validation
+- [x] Metadata extraction, AI summary, sentiment, transcription, tagging, object detection (OpenAI, Google APIs)
+- [x] CRUD APIs for files and URLs
 - [ ] Sharing and grouping features
 - [ ] Bulk actions (add to group, archive, delete)
 
 ## 7. Contacts Management
-- [ ] Apple schema contacts CRUD (all fields, multiples)
+- [x] Apple schema contacts CRUD (all fields, multiples)
 - [ ] Phone/email validation (libphonenumber-js)
-- [ ] Google Maps API for address lookup
-- [ ] Groups and relationships management (graph view, vis.js)
+- [x] Google Maps API for address lookup
+- [x] Groups and relationships management (graph view, vis.js)
 - [ ] vCard import/export (with relationships)
 
 ## 8. Multilingual & Accessibility
@@ -102,8 +102,8 @@
 - [ ] RTL compatibility for future expansion
 
 ## 9. UI/UX
-- [ ] EJS views for all pages (landing, terms, privacy, contact, dashboard, admin, etc.)
-- [ ] Bootstrap 5 styling and custom color scheme
+- [x] EJS views for all pages (landing, terms, privacy, contact, dashboard, admin, etc.)
+- [x] Bootstrap 5 styling and custom color scheme
 - [ ] Responsive, accessible (WCAG 2.1 AA), SEO-optimized
 - [ ] Add meta tags, sitemap, and localized URLs
 
@@ -122,9 +122,9 @@
   - [x] Error logging middleware
 
 ## 11. Admin & Monitoring
-- [ ] Admin dashboard (stats, logs, config, locked accounts)
-- [ ] Security config UI and user management
-- [ ] View/manage locked accounts, alerts for new users, trial endings, subscribers
+- [x] Admin dashboard (stats, logs, config, locked accounts)
+- [x] Security config UI and user management
+- [x] View/manage locked accounts, alerts for new users, trial endings, subscribers
 
 ## 12. DevOps & Deployment
 - [x] Dockerize app and setup Docker Compose ✅ **COMPLETED**

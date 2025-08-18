@@ -1,0 +1,341 @@
+Use Case ID,Use Case Description,Status,Test Case ID,Priority,Category,Notes
+UC-001,Register with email/password authentication,1,AUTH-101,HIGH,Authentication,Email/password registration
+UC-002,Register using Google OAuth 2.0,1,AUTH-001,HIGH,Authentication,Ready to test
+UC-003,Register using Microsoft OAuth 2.0,1,AUTH-002,HIGH,Authentication,Ready to test
+UC-004,Register using Apple OAuth 2.0,0,AUTH-003,HIGH,Authentication,Ready to test
+UC-005,Email verification after registration,0,AUTH-102,HIGH,Authentication,Depends on email/password
+UC-006,Login with username/password,0,AUTH-103,HIGH,Authentication,Not implemented
+UC-007,Login with social media accounts,1,AUTH-004,HIGH,Authentication,Ready to test
+UC-008,Password reset via email,0,AUTH-104,MEDIUM,Authentication,Not implemented
+UC-009,Enable/disable Two-Factor Authentication,0,AUTH-105,HIGH,Authentication,Not implemented
+UC-010,Link additional OAuth accounts to existing user,0,AUTH-106,MEDIUM,Authentication,Partial implementation
+UC-011,Unlink OAuth accounts from profile,0,AUTH-107,MEDIUM,Authentication,Partial implementation
+UC-012,Account closure and data deletion,0,AUTH-108,HIGH,Authentication,GDPR requirement
+UC-013,Update profile information,1,USER-002,MEDIUM,User Management,Ready to test
+UC-014,Change password with current password verification,0,USER-101,MEDIUM,User Management,Needs password auth
+UC-015,Select preferred language,0,USER-102,LOW,User Management,i18n not implemented
+UC-016,Manage subscription plans,1,USER-003,MEDIUM,User Management,Ready to test
+UC-017,View account usage statistics and limits,0,USER-103,LOW,User Management,Basic stats available
+UC-018,Download account data (GDPR compliance),0,USER-104,HIGH,User Management,GDPR compliance
+UC-019,Device fingerprinting and trusted device management,0,SEC-101,MEDIUM,Security,Not implemented
+UC-020,Login attempt tracking and account lockout,1,SEC-001,HIGH,Security,Rate limiting ready
+UC-021,IP address whitelisting/blacklisting,0,SEC-102,MEDIUM,Security,Admin feature needed
+UC-022,VPN and TOR detection,0,SEC-103,MEDIUM,Security,Not implemented
+UC-023,Security audit log viewing,1,LOG-001,MEDIUM,Security,Winston logging ready
+UC-024,Session management and logout from all devices,0,SEC-104,HIGH,Security,Basic session handling
+UC-025,Link Facebook account for content access,0,SOCIAL-101,HIGH,Social Media,Not implemented
+UC-026,Link YouTube account for video analysis,0,SOCIAL-102,HIGH,Social Media,Not implemented
+UC-027,Link Instagram account for photo/story analysis,0,SOCIAL-103,HIGH,Social Media,Not implemented
+UC-028,Link TikTok account for video content,0,SOCIAL-104,HIGH,Social Media,Not implemented
+UC-029,Link WeChat account for messaging,0,SOCIAL-105,MEDIUM,Social Media,Business API needed
+UC-030,Link Facebook Messenger for chat analysis,0,SOCIAL-106,MEDIUM,Social Media,Not implemented
+UC-031,Link Telegram account via bot token,0,SOCIAL-107,MEDIUM,Social Media,Bot token needed
+UC-032,Link Snapchat account for media,0,SOCIAL-108,LOW,Social Media,Not implemented
+UC-033,Link Pinterest account for image boards,0,SOCIAL-109,LOW,Social Media,Not implemented
+UC-034,Link Twitter/X account for tweets and media,0,SOCIAL-110,HIGH,Social Media,Not implemented
+UC-035,Link WhatsApp Business account,0,SOCIAL-111,MEDIUM,Social Media,Business API needed
+UC-036,View linked social accounts status,0,SOCIAL-112,MEDIUM,Social Media,Dashboard feature
+UC-037,Refresh OAuth tokens automatically,0,SOCIAL-113,HIGH,Social Media,Token management
+UC-038,Manage account permissions and scopes,0,SOCIAL-114,MEDIUM,Social Media,Permission system
+UC-039,Extract mentions from connected social accounts,0,EXTRACT-101,HIGH,Content Extraction,Social integration needed
+UC-040,Extract direct messages from platforms,0,EXTRACT-102,HIGH,Content Extraction,Privacy considerations
+UC-041,Extract public posts and media,0,EXTRACT-103,HIGH,Content Extraction,API access needed
+UC-042,Filter relevant content vs spam/unrelated,0,EXTRACT-104,MEDIUM,Content Extraction,AI filtering
+UC-043,Extract metadata (title description thumbnails),0,EXTRACT-105,HIGH,Content Extraction,Basic metadata extraction
+UC-044,Extract location data from posts,0,EXTRACT-106,MEDIUM,Content Extraction,Geolocation features
+UC-045,Extract hashtags and mentions,0,EXTRACT-107,MEDIUM,Content Extraction,Text processing
+UC-046,Extract engagement metrics (likes shares comments),0,EXTRACT-108,LOW,Content Extraction,Analytics features
+UC-047,Submit YouTube video URL for analysis,0,CONTENT-101,HIGH,Content Submission,URL validation ready
+UC-048,Submit Instagram post/story URL,0,CONTENT-102,HIGH,Content Submission,URL validation ready
+UC-049,Submit TikTok video URL,0,CONTENT-103,HIGH,Content Submission,URL validation ready
+UC-050,Submit Facebook post/video URL,0,CONTENT-104,HIGH,Content Submission,URL validation ready
+UC-051,Submit Twitter/X tweet URL,0,CONTENT-105,HIGH,Content Submission,URL validation ready
+UC-052,Submit Vimeo video URL,0,CONTENT-106,MEDIUM,Content Submission,URL validation ready
+UC-053,Submit Twitch stream/clip URL,0,CONTENT-107,MEDIUM,Content Submission,URL validation ready
+UC-054,Submit SoundCloud audio URL,0,CONTENT-108,MEDIUM,Content Submission,URL validation ready
+UC-055,Submit Spotify track URL,0,CONTENT-109,LOW,Content Submission,URL validation ready
+UC-056,Submit direct image URLs,1,FILE-001,HIGH,Content Submission,Ready to test
+UC-057,Submit direct audio URLs,1,FILE-003,HIGH,Content Submission,Ready to test
+UC-058,Submit direct video URLs,1,FILE-002,HIGH,Content Submission,Ready to test
+UC-059,Upload files directly from device,1,FILE-001,HIGH,Content Submission,Ready to test
+UC-060,Bulk content submission,0,CONTENT-110,MEDIUM,Content Submission,Not implemented
+UC-061,Schedule content processing,0,CONTENT-111,LOW,Content Submission,Scheduling system needed
+UC-062,Object Detection: Identify objects in images and video frames,1,AI-001,HIGH,AI Analysis,Ready to test
+UC-063,Audio Transcription: Convert speech to text with speaker identification,1,AI-002,HIGH,AI Analysis,Ready to test
+UC-064,Speaker Diarization: Identify different speakers in audio/video,1,AI-003,HIGH,AI Analysis,Ready to test
+UC-065,Voice Print Recognition: Identify speakers by voice characteristics,0,AI-013,MEDIUM,AI Analysis,Advanced feature
+UC-066,Sentiment Analysis: Analyze emotional tone and mood,1,AI-004,HIGH,AI Analysis,Ready to test
+UC-067,Content Summarization: Generate AI summaries of content,1,AI-005,HIGH,AI Analysis,Ready to test
+UC-068,Thumbnail Generation: Create thumbnails and key moment previews,1,AI-007,MEDIUM,AI Analysis,Ready to test
+UC-069,OCR Text Extraction: Extract text from images and video frames,1,AI-006,HIGH,AI Analysis,Ready to test
+UC-070,Content Categorization: Automatically categorize content by type,1,AI-008,MEDIUM,AI Analysis,Ready to test
+UC-071,Named Entity Recognition: Identify people places organizations,1,AI-009,MEDIUM,AI Analysis,Ready to test
+UC-072,Profanity Detection: Filter inappropriate content,1,AI-010,HIGH,AI Analysis,Ready to test
+UC-073,Keyword Detection: Identify important keywords and topics,1,AI-011,MEDIUM,AI Analysis,Ready to test
+UC-074,Image Description: Generate natural language descriptions for images,0,AI-014,MEDIUM,AI Analysis,Advanced AI feature
+UC-075,Video Analysis: Comprehensive video processing with metadata,0,AI-015,HIGH,AI Analysis,Comprehensive analysis
+UC-076,Language Detection: Identify content language automatically,1,AI-012,MEDIUM,AI Analysis,Ready to test
+UC-077,Add user-defined tags to content,0,ORG-101,HIGH,Content Organization,Tagging system needed
+UC-078,Add comments and notes to content,0,ORG-102,MEDIUM,Content Organization,Comments system
+UC-079,Create content groups and collections,0,ORG-103,HIGH,Content Organization,Grouping features
+UC-080,Assign content to groups,0,ORG-104,HIGH,Content Organization,Group management
+UC-081,Archive and restore content,0,ORG-105,MEDIUM,Content Organization,Archive system
+UC-082,Delete content permanently,0,ORG-106,HIGH,Content Organization,Basic delete available
+UC-083,Bulk content operations (tag group archive delete),0,ORG-107,MEDIUM,Content Organization,Bulk actions UI
+UC-084,Content relationships and linking,0,ORG-108,LOW,Content Organization,Relationship mapping
+UC-085,Content versioning and history,0,ORG-109,LOW,Content Organization,Version control
+UC-086,Full-text search across all content,0,SEARCH-101,HIGH,Content Search,Search engine needed
+UC-087,Filter by content type (image audio video text),0,SEARCH-102,HIGH,Content Search,Filtering system
+UC-088,Filter by source platform,0,SEARCH-103,HIGH,Content Search,Platform filtering
+UC-089,Filter by tags (user-defined and AI-generated),0,SEARCH-104,HIGH,Content Search,Tag-based filtering
+UC-090,Filter by date range,0,SEARCH-105,MEDIUM,Content Search,Date filtering
+UC-091,Filter by sentiment score,0,SEARCH-106,MEDIUM,Content Search,Sentiment filtering
+UC-092,Filter by processing status,0,SEARCH-107,MEDIUM,Content Search,Status filtering
+UC-093,Advanced search with field-specific queries,0,SEARCH-108,MEDIUM,Content Search,Query builder
+UC-094,Search autocomplete and suggestions,0,SEARCH-109,LOW,Content Search,Autocomplete UI
+UC-095,Saved search queries,0,SEARCH-110,LOW,Content Search,Search persistence
+UC-096,Real-time search results with highlighting,0,SEARCH-111,LOW,Content Search,Live search
+UC-097,View content in card layout with thumbnails,0,VIEW-101,HIGH,Content Viewing,Card UI needed
+UC-098,View content in detailed list view,0,VIEW-102,HIGH,Content Viewing,List UI needed
+UC-099,View individual content details page,0,VIEW-103,HIGH,Content Viewing,Basic details view
+UC-100,Edit content metadata (title description tags),0,VIEW-104,MEDIUM,Content Viewing,Metadata editing
+UC-101,View AI analysis results in modal,0,VIEW-105,HIGH,Content Viewing,Modal display
+UC-102,Copy transcriptions and summaries to clipboard,0,VIEW-106,MEDIUM,Content Viewing,Clipboard integration
+UC-103,Edit AI-generated summaries inline,0,VIEW-107,MEDIUM,Content Viewing,Inline editing
+UC-104,Play audio/video content with integrated player,0,VIEW-108,HIGH,Content Viewing,Media player
+UC-105,Navigate video using clickable transcription timestamps,0,VIEW-109,MEDIUM,Content Viewing,Interactive transcripts
+UC-106,View video thumbnails and key moments,0,VIEW-110,MEDIUM,Content Viewing,Thumbnail display
+UC-107,View OCR text regions with timing,0,VIEW-111,MEDIUM,Content Viewing,OCR visualization
+UC-108,View speaker identification results,0,VIEW-112,MEDIUM,Content Viewing,Speaker display
+UC-109,Export content data to various formats,0,VIEW-113,LOW,Content Viewing,Export functionality
+UC-110,Create new contact with basic information,1,CONTACT-001,MEDIUM,Contacts,Ready to test
+UC-111,Add multiple phone numbers with custom labels,1,CONTACT-001,MEDIUM,Contacts,Ready to test
+UC-112,Add multiple email addresses with custom labels,1,CONTACT-001,MEDIUM,Contacts,Ready to test
+UC-113,Add multiple addresses with Google Maps integration,1,CONTACT-002,MEDIUM,Contacts,Ready to test
+UC-114,Add social media profiles and handles,1,CONTACT-001,MEDIUM,Contacts,Ready to test
+UC-115,Add instant messaging accounts,1,CONTACT-001,MEDIUM,Contacts,Ready to test
+UC-116,Add websites and URLs,1,CONTACT-001,MEDIUM,Contacts,Ready to test
+UC-117,Add important dates (birthday anniversary),1,CONTACT-001,MEDIUM,Contacts,Ready to test
+UC-118,Add notes and custom fields,1,CONTACT-001,MEDIUM,Contacts,Ready to test
+UC-119,Add profile photos and avatars,1,CONTACT-001,MEDIUM,Contacts,Ready to test
+UC-120,Phone number validation with international formats,0,CONTACT-101,MEDIUM,Contacts,libphonenumber needed
+UC-121,Email address validation,1,CONTACT-001,MEDIUM,Contacts,Ready to test
+UC-122,Address autocomplete with Google Maps Places API,1,CONTACT-002,MEDIUM,Contacts,Google Maps ready
+UC-123,Create contact groups (Friends Work Family etc),1,CONTACT-003,MEDIUM,Contacts,Ready to test
+UC-124,Assign contacts to multiple groups,1,CONTACT-003,MEDIUM,Contacts,Ready to test
+UC-125,Define relationships between contacts,1,CONTACT-003,MEDIUM,Contacts,Ready to test
+UC-126,Create custom relationship types,1,CONTACT-003,MEDIUM,Contacts,Ready to test
+UC-127,View relationship graphs and connections,1,CONTACT-003,MEDIUM,Contacts,vis.js ready
+UC-128,Import contacts from CSV files,0,CONTACT-102,LOW,Contacts,Import feature needed
+UC-129,Export contacts to vCard format,0,CONTACT-103,LOW,Contacts,vCard export needed
+UC-130,Export contacts to CSV format,0,CONTACT-104,LOW,Contacts,CSV export needed
+UC-131,Bulk contact operations,0,CONTACT-105,MEDIUM,Contacts,Bulk actions needed
+UC-132,Live search across all contact fields,0,CONTACT-106,MEDIUM,Contacts,Search functionality
+UC-133,Advanced search with field-specific queries,0,CONTACT-107,MEDIUM,Contacts,Advanced search
+UC-134,Search autocomplete for contact fields,0,CONTACT-108,LOW,Contacts,Autocomplete UI
+UC-135,Filter contacts by group membership,0,CONTACT-109,MEDIUM,Contacts,Group filtering
+UC-136,Filter contacts by relationship type,0,CONTACT-110,MEDIUM,Contacts,Relationship filtering
+UC-137,Filter contacts by location,0,CONTACT-111,LOW,Contacts,Location filtering
+UC-138,Filter contacts by date added,0,CONTACT-112,LOW,Contacts,Date filtering
+UC-139,Search highlighting and result ranking,0,CONTACT-113,LOW,Contacts,UI enhancement
+UC-140,View contact details with all information,1,CONTACT-001,MEDIUM,Contacts,Ready to test
+UC-141,Edit contact information,1,CONTACT-001,MEDIUM,Contacts,Ready to test
+UC-142,Delete contacts with confirmation,1,CONTACT-001,MEDIUM,Contacts,Ready to test
+UC-143,View contact's shared content history,0,CONTACT-114,LOW,Contacts,Content sharing needed
+UC-144,Send content to contacts via email,0,CONTACT-115,MEDIUM,Contacts,Email integration
+UC-145,Share content with contact groups,0,CONTACT-116,MEDIUM,Contacts,Group sharing
+UC-146,View contact interaction statistics,0,CONTACT-117,LOW,Contacts,Analytics needed
+UC-147,Google Maps integration for contact addresses,1,CONTACT-002,MEDIUM,Contacts,Ready to test
+UC-148,Click-to-call phone numbers,0,CONTACT-118,LOW,Contacts,Tel: links
+UC-149,Click-to-email addresses,0,CONTACT-119,LOW,Contacts,Mailto: links
+UC-150,Share individual content items with specific contacts,0,SHARE-101,HIGH,Content Sharing,Sharing system needed
+UC-151,Share content with contact groups,0,SHARE-102,HIGH,Content Sharing,Group sharing
+UC-152,Share content via email with custom message,0,SHARE-103,MEDIUM,Content Sharing,Email integration
+UC-153,Share content via in-app notifications,0,SHARE-104,MEDIUM,Content Sharing,Notification system
+UC-154,Generate shareable links for content,0,SHARE-105,HIGH,Content Sharing,Link generation
+UC-155,Set sharing permissions and expiration,0,SHARE-106,HIGH,Content Sharing,Permission system
+UC-156,Track content sharing history,0,SHARE-107,MEDIUM,Content Sharing,History tracking
+UC-157,View who accessed shared content,0,SHARE-108,LOW,Content Sharing,Access analytics
+UC-158,Revoke sharing access,0,SHARE-109,HIGH,Content Sharing,Access control
+UC-159,Bulk sharing operations,0,SHARE-110,MEDIUM,Content Sharing,Bulk actions
+UC-160,Collaborative content tagging,0,COLLAB-101,MEDIUM,Collaboration,Collaboration features
+UC-161,Comments on shared content,0,COLLAB-102,MEDIUM,Collaboration,Comment system
+UC-162,Content discussion threads,0,COLLAB-103,LOW,Collaboration,Discussion features
+UC-163,Shared content groups,0,COLLAB-104,MEDIUM,Collaboration,Shared groups
+UC-164,Team content management,0,COLLAB-105,LOW,Collaboration,Team features
+UC-165,Content approval workflows,0,COLLAB-106,LOW,Collaboration,Workflow system
+UC-166,Version control for shared content,0,COLLAB-107,LOW,Collaboration,Version management
+UC-167,Collaborative content analysis,0,COLLAB-108,LOW,Collaboration,Shared analysis
+UC-168,Upload images (JPG JPEG PNG GIF BMP WebP SVG TIFF),1,FILE-001,HIGH,File Management,Ready to test
+UC-169,Upload audio files (MP3 WAV M4A AAC OGG FLAC WMA),1,FILE-003,HIGH,File Management,Ready to test
+UC-170,Upload video files (MP4 AVI MOV WMV FLV WebM MKV),1,FILE-002,HIGH,File Management,Ready to test
+UC-171,Upload document files (PDF TXT DOC DOCX),0,FILE-004,MEDIUM,File Management,Basic document support
+UC-172,Drag and drop file upload,0,FILE-101,MEDIUM,File Management,UI enhancement needed
+UC-173,Bulk file upload,0,FILE-102,MEDIUM,File Management,Bulk upload UI
+UC-174,File type validation,1,FILE-001,HIGH,File Management,Ready to test
+UC-175,File size validation (admin-configurable),1,FILE-001,HIGH,File Management,Ready to test
+UC-176,File virus scanning,0,FILE-103,HIGH,File Management,Security feature
+UC-177,File duplicate detection,0,FILE-104,MEDIUM,File Management,Duplicate checking
+UC-178,File compression and optimization,0,FILE-105,LOW,File Management,Optimization feature
+UC-179,Organize files in folders and collections,0,STORAGE-101,MEDIUM,File Storage,Folder system
+UC-180,File tagging and metadata,0,STORAGE-102,MEDIUM,File Storage,Metadata system
+UC-181,File search and filtering,0,STORAGE-103,MEDIUM,File Storage,File search
+UC-182,File versioning and history,0,STORAGE-104,LOW,File Storage,Version control
+UC-183,File backup and recovery,0,STORAGE-105,HIGH,File Storage,Backup system
+UC-184,Cloud storage integration (Google Cloud Storage),1,FILE-001,HIGH,File Storage,Google Cloud ready
+UC-185,File sharing and permissions,0,STORAGE-106,HIGH,File Storage,Permission system
+UC-186,File preview and thumbnails,0,STORAGE-107,MEDIUM,File Storage,Basic preview
+UC-187,File download and export,0,STORAGE-108,MEDIUM,File Storage,Download system
+UC-188,File statistics and usage reports,0,STORAGE-109,LOW,File Storage,Analytics
+UC-189,View all users with pagination and search,1,ADMIN-001,HIGH,Administration,Ready to test
+UC-190,Create new user accounts,0,ADMIN-101,MEDIUM,Administration,Admin user creation
+UC-191,Edit user profiles and settings,1,ADMIN-001,HIGH,Administration,Ready to test
+UC-192,Disable/enable user accounts,0,ADMIN-102,HIGH,Administration,Account management
+UC-193,Delete user accounts (with data preservation),0,ADMIN-103,HIGH,Administration,Data preservation
+UC-194,Reset user passwords,0,ADMIN-104,MEDIUM,Administration,Password management
+UC-195,Assign roles and permissions,0,ADMIN-105,HIGH,Administration,Role management
+UC-196,View user activity logs,1,ADMIN-001,MEDIUM,Administration,Ready to test
+UC-197,View user content and files,1,ADMIN-001,MEDIUM,Administration,Ready to test
+UC-198,Manage user subscriptions,1,ADMIN-001,MEDIUM,Administration,Ready to test
+UC-199,Generate user statistics and reports,1,ADMIN-002,MEDIUM,Administration,Ready to test
+UC-200,Export user data for compliance,0,ADMIN-106,HIGH,Administration,GDPR compliance
+UC-201,Configure login attempt limits,0,ADMIN-107,HIGH,System Config,Security config
+UC-202,Configure account lockout duration,0,ADMIN-108,HIGH,System Config,Security config
+UC-203,Configure auto-unlock settings,0,ADMIN-109,MEDIUM,System Config,Security config
+UC-204,Configure allowed file types,1,ADMIN-003,HIGH,System Config,Ready to test
+UC-205,Configure maximum file sizes,1,ADMIN-003,HIGH,System Config,Ready to test
+UC-206,Configure IP whitelisting/blacklisting,0,ADMIN-110,MEDIUM,System Config,IP management
+UC-207,Configure VPN detection settings,0,ADMIN-111,MEDIUM,System Config,VPN settings
+UC-208,Configure email settings and templates,0,ADMIN-112,MEDIUM,System Config,Email config
+UC-209,Configure API rate limits,1,ADMIN-003,HIGH,System Config,Ready to test
+UC-210,Configure storage settings,0,ADMIN-113,MEDIUM,System Config,Storage config
+UC-211,Configure backup schedules,0,ADMIN-114,HIGH,System Config,Backup config
+UC-212,Configure security policies,0,ADMIN-115,HIGH,System Config,Security policies
+UC-213,View system logs and events,1,LOG-001,MEDIUM,System Monitoring,Winston logs ready
+UC-214,Monitor API usage and quotas,0,MONITOR-101,MEDIUM,System Monitoring,API monitoring
+UC-215,Monitor storage usage,0,MONITOR-102,MEDIUM,System Monitoring,Storage monitoring
+UC-216,Monitor performance metrics,0,MONITOR-103,MEDIUM,System Monitoring,Performance metrics
+UC-217,Set up alerts and notifications,0,MONITOR-104,MEDIUM,System Monitoring,Alert system
+UC-218,View error logs and debugging info,1,LOG-002,HIGH,System Monitoring,Error logging ready
+UC-219,Monitor security events,1,LOG-001,HIGH,System Monitoring,Security logging ready
+UC-220,Generate system reports,0,MONITOR-105,LOW,System Monitoring,Reporting system
+UC-221,Database maintenance and optimization,0,MONITOR-106,HIGH,System Monitoring,DB maintenance
+UC-222,System health checks,0,MONITOR-107,HIGH,System Monitoring,Health monitoring
+UC-223,View all contacts across all users,0,ADMIN-116,MEDIUM,Admin Contacts,Admin contact view
+UC-224,Filter contacts by owner,0,ADMIN-117,MEDIUM,Admin Contacts,Contact filtering
+UC-225,Edit any contact (admin override),0,ADMIN-118,MEDIUM,Admin Contacts,Admin override
+UC-226,Delete any contact (admin override),0,ADMIN-119,MEDIUM,Admin Contacts,Admin override
+UC-227,View contact statistics,0,ADMIN-120,LOW,Admin Contacts,Contact analytics
+UC-228,Export contact data,0,ADMIN-121,MEDIUM,Admin Contacts,Data export
+UC-229,Contact data validation and cleanup,0,ADMIN-122,MEDIUM,Admin Contacts,Data cleanup
+UC-230,Contact relationship analysis,0,ADMIN-123,LOW,Admin Contacts,Relationship analytics
+UC-231,Select test files from organized directory structure,0,TEST-101,HIGH,Testing System,Testing system needed
+UC-232,Select test URLs from configured streaming platforms,0,TEST-102,HIGH,Testing System,URL testing
+UC-233,Select AI jobs for testing (all 12 supported types),0,TEST-103,HIGH,Testing System,AI job selection
+UC-234,Configure test parameters and settings,0,TEST-104,MEDIUM,Testing System,Test configuration
+UC-235,Save and load test configurations,0,TEST-105,MEDIUM,Testing System,Config management
+UC-236,Schedule automated testing,0,TEST-106,LOW,Testing System,Test scheduling
+UC-237,Set up test alerts and notifications,0,TEST-107,LOW,Testing System,Test notifications
+UC-238,Execute comprehensive multimedia testing workflow,0,TEST-108,HIGH,Testing System,Test execution
+UC-239,Real-time progress monitoring with percentage completion,0,TEST-109,HIGH,Testing System,Progress tracking
+UC-240,Live status updates every 2 seconds,0,TEST-110,MEDIUM,Testing System,Status updates
+UC-241,Pass/fail determination for each test,0,TEST-111,HIGH,Testing System,Test results
+UC-242,Performance metrics collection during testing,0,TEST-112,MEDIUM,Testing System,Performance tracking
+UC-243,Error handling and logging during tests,0,TEST-113,HIGH,Testing System,Error management
+UC-244,Background test execution with form management,0,TEST-114,MEDIUM,Testing System,Background processing
+UC-245,Test interruption and resumption,0,TEST-115,MEDIUM,Testing System,Test control
+UC-246,View detailed test results with summaries,0,TEST-116,HIGH,Testing System,Results display
+UC-247,View individual test outcomes and reasons,0,TEST-117,HIGH,Testing System,Outcome analysis
+UC-248,View performance metrics and statistics,0,TEST-118,MEDIUM,Testing System,Performance analysis
+UC-249,Export test results to JSON format,0,TEST-119,MEDIUM,Testing System,Data export
+UC-250,Compare test results across runs,0,TEST-120,LOW,Testing System,Result comparison
+UC-251,Generate test reports and analytics,0,TEST-121,MEDIUM,Testing System,Report generation
+UC-252,Test result visualization and charts,0,TEST-122,LOW,Testing System,Data visualization
+UC-253,Test history and trend analysis,0,TEST-123,LOW,Testing System,Historical analysis
+UC-254,Test failure analysis and debugging,0,TEST-124,HIGH,Testing System,Failure debugging
+UC-255,Manage test file repository,0,TEST-125,MEDIUM,Testing System,File management
+UC-256,Update test URL configurations,0,TEST-126,MEDIUM,Testing System,URL management
+UC-257,Test data cleanup and archival,0,TEST-127,LOW,Testing System,Data maintenance
+UC-258,Test result storage and retrieval,0,TEST-128,MEDIUM,Testing System,Result persistence
+UC-259,Test metrics database management,0,TEST-129,MEDIUM,Testing System,Metrics storage
+UC-260,Test configuration version control,0,TEST-130,LOW,Testing System,Version management
+UC-261,Switch interface language to English,0,I18N-101,MEDIUM,Multilingual,i18n not implemented
+UC-262,Switch interface language to German,0,I18N-102,MEDIUM,Multilingual,i18n not implemented
+UC-263,Switch interface language to French,0,I18N-103,MEDIUM,Multilingual,i18n not implemented
+UC-264,Switch interface language to Italian,0,I18N-104,MEDIUM,Multilingual,i18n not implemented
+UC-265,Switch interface language to Spanish,0,I18N-105,MEDIUM,Multilingual,i18n not implemented
+UC-266,Auto-detect browser language preference,0,I18N-106,LOW,Multilingual,Browser detection
+UC-267,Localized email notifications,0,I18N-107,MEDIUM,Multilingual,Email localization
+UC-268,Localized error messages,0,I18N-108,MEDIUM,Multilingual,Error localization
+UC-269,Localized content and labels,0,I18N-109,MEDIUM,Multilingual,Content localization
+UC-270,RTL language support preparation,0,I18N-110,LOW,Multilingual,RTL support
+UC-271,WCAG 2.1 AA compliance,0,A11Y-101,HIGH,Accessibility,Accessibility audit
+UC-272,Keyboard navigation support,0,A11Y-102,HIGH,Accessibility,Keyboard support
+UC-273,Screen reader compatibility,0,A11Y-103,HIGH,Accessibility,Screen reader testing
+UC-274,High contrast mode support,0,A11Y-104,MEDIUM,Accessibility,Contrast support
+UC-275,Font size adjustment,0,A11Y-105,MEDIUM,Accessibility,Font scaling
+UC-276,Color blind friendly design,0,A11Y-106,MEDIUM,Accessibility,Color accessibility
+UC-277,Mobile and tablet accessibility,0,A11Y-107,MEDIUM,Accessibility,Mobile a11y
+UC-278,Voice command support preparation,0,A11Y-108,LOW,Accessibility,Voice interface
+UC-279,GDPR compliance with data export,0,GDPR-101,HIGH,Data Protection,Data export/deletion
+UC-280,CCPA compliance with data deletion,0,GDPR-102,HIGH,Data Protection,Privacy compliance
+UC-281,Data encryption at rest and in transit,0,SEC-105,HIGH,Data Protection,Basic encryption
+UC-282,Personal data anonymization,0,GDPR-103,HIGH,Data Protection,Privacy protection
+UC-283,Data retention policy enforcement,0,GDPR-104,HIGH,Data Protection,Retention management
+UC-284,Data breach notification system,0,GDPR-105,HIGH,Data Protection,Breach response
+UC-285,Privacy policy management,0,GDPR-106,MEDIUM,Data Protection,Policy management
+UC-286,Terms of service acceptance tracking,0,GDPR-107,MEDIUM,Data Protection,Consent tracking
+UC-287,Real-time security threat detection,0,SEC-106,HIGH,Security Monitoring,Threat monitoring
+UC-288,Suspicious activity monitoring,0,SEC-107,HIGH,Security Monitoring,Activity monitoring
+UC-289,Brute force attack prevention,1,SEC-001,HIGH,Security Monitoring,Rate limiting ready
+UC-290,SQL injection protection,1,SEC-003,HIGH,Security Monitoring,Input validation ready
+UC-291,XSS attack prevention,1,SEC-003,HIGH,Security Monitoring,Input sanitization ready
+UC-292,CSRF protection,1,SEC-002,HIGH,Security Monitoring,CSRF tokens ready
+UC-293,Content Security Policy enforcement,1,SEC-004,HIGH,Security Monitoring,Security headers ready
+UC-294,Security audit logging,1,LOG-001,HIGH,Security Monitoring,Security logging ready
+UC-295,Security incident response,0,SEC-108,HIGH,Security Monitoring,Incident response
+UC-296,Google Cloud Speech-to-Text integration,1,AI-002,HIGH,External Integration,Ready to test
+UC-297,Google Cloud Vision API integration,1,AI-001,HIGH,External Integration,Ready to test
+UC-298,Google Maps API integration,1,CONTACT-002,MEDIUM,External Integration,Ready to test
+UC-299,OpenAI API integration,0,AI-016,HIGH,External Integration,Some AI features
+UC-300,SendGrid email service integration,0,EMAIL-101,MEDIUM,External Integration,Email not implemented
+UC-301,Stripe payment processing integration,0,PAY-101,MEDIUM,External Integration,Basic Stripe setup
+UC-302,Twilio SMS service integration,0,SMS-101,LOW,External Integration,SMS not implemented
+UC-303,Social media platform APIs,0,SOCIAL-201,HIGH,External Integration,Platform APIs needed
+UC-304,Cloud storage provider integration,1,FILE-001,HIGH,External Integration,Google Cloud ready
+UC-305,RESTful API for content management,0,API-101,HIGH,API Endpoints,Basic CRUD APIs
+UC-306,RESTful API for contact management,0,API-102,MEDIUM,API Endpoints,Basic contact APIs
+UC-307,RESTful API for user management,0,API-103,MEDIUM,API Endpoints,Basic user APIs
+UC-308,RESTful API for multimedia analysis,0,API-104,HIGH,API Endpoints,Basic multimedia APIs
+UC-309,API authentication and authorization,0,API-105,HIGH,API Endpoints,API key system needed
+UC-310,API rate limiting and throttling,1,SEC-001,HIGH,API Endpoints,Rate limiting ready
+UC-311,API documentation and OpenAPI specs,0,API-106,MEDIUM,API Endpoints,OpenAPI specs needed
+UC-312,API versioning and backward compatibility,0,API-107,MEDIUM,API Endpoints,Version management
+UC-313,API monitoring and analytics,0,API-108,MEDIUM,API Endpoints,API analytics
+UC-314,API key management,0,API-109,HIGH,API Endpoints,Key management system
+UC-315,Responsive design for smartphones,0,MOBILE-101,HIGH,Mobile Design,Bootstrap responsive
+UC-316,Responsive design for tablets,0,MOBILE-102,HIGH,Mobile Design,Bootstrap responsive
+UC-317,Touch-friendly interface elements,0,MOBILE-103,MEDIUM,Mobile Design,Touch optimization
+UC-318,Mobile-optimized content viewing,0,MOBILE-104,MEDIUM,Mobile Design,Mobile UI optimization
+UC-319,Mobile file upload functionality,0,MOBILE-105,MEDIUM,Mobile Design,Mobile upload UI
+UC-320,Mobile contact management,0,MOBILE-106,MEDIUM,Mobile Design,Mobile contact UI
+UC-321,Mobile content sharing,0,MOBILE-107,MEDIUM,Mobile Design,Mobile sharing
+UC-322,Mobile notification support,0,MOBILE-108,LOW,Mobile Design,Push notifications
+UC-323,Mobile performance optimization,0,MOBILE-109,MEDIUM,Mobile Design,Performance optimization
+UC-324,Mobile offline capabilities preparation,0,MOBILE-110,LOW,Mobile Design,Offline support
+UC-325,User engagement tracking,0,ANALYTICS-101,MEDIUM,User Analytics,Analytics system needed
+UC-326,Content usage statistics,0,ANALYTICS-102,MEDIUM,User Analytics,Usage tracking
+UC-327,Feature adoption metrics,0,ANALYTICS-103,LOW,User Analytics,Feature analytics
+UC-328,User retention analysis,0,ANALYTICS-104,MEDIUM,User Analytics,Retention tracking
+UC-329,User behavior insights,0,ANALYTICS-105,LOW,User Analytics,Behavior analysis
+UC-330,Performance metrics tracking,0,ANALYTICS-106,MEDIUM,User Analytics,Performance analytics
+UC-331,Error rate monitoring,0,LOG-002,MEDIUM,User Analytics,Basic error tracking
+UC-332,API usage analytics,0,ANALYTICS-107,MEDIUM,User Analytics,API analytics
+UC-333,Dashboard with key metrics,0,ADMIN-002,MEDIUM,Business Intelligence,Basic admin dashboard
+UC-334,Custom report generation,0,REPORTS-101,LOW,Business Intelligence,Report system
+UC-335,Data visualization charts,0,REPORTS-102,LOW,Business Intelligence,Chart generation
+UC-336,Export reports to various formats,0,REPORTS-103,LOW,Business Intelligence,Report export
+UC-337,Automated report scheduling,0,REPORTS-104,LOW,Business Intelligence,Report automation
+UC-338,Real-time analytics updates,0,REPORTS-105,LOW,Business Intelligence,Real-time data
+UC-339,Predictive analytics preparation,0,REPORTS-106,LOW,Business Intelligence,ML analytics
+UC-340,Cost analysis and optimization,0,REPORTS-107,LOW,Business Intelligence,Cost tracking

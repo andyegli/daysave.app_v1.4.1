@@ -3,12 +3,12 @@ const { DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   const SubscriptionTransaction = sequelize.define('SubscriptionTransaction', {
     id: {
-      type: DataTypes.UUID,
+      type: DataTypes.CHAR(36),
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true
     },
     user_id: {
-      type: DataTypes.UUID,
+      type: DataTypes.CHAR(36),
       allowNull: false,
       references: {
         model: 'users',
@@ -16,7 +16,7 @@ module.exports = (sequelize) => {
       }
     },
     subscription_plan_id: {
-      type: DataTypes.UUID,
+      type: DataTypes.CHAR(36),
       allowNull: false,
       references: {
         model: 'subscription_plans',
@@ -76,7 +76,7 @@ module.exports = (sequelize) => {
     },
     // Previous plan (for upgrades/downgrades)
     previous_plan_id: {
-      type: DataTypes.UUID,
+      type: DataTypes.CHAR(36),
       allowNull: true,
       references: {
         model: 'subscription_plans',

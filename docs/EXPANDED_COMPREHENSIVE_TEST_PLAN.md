@@ -45,10 +45,10 @@ This expanded test plan provides complete coverage of all 340 use cases defined 
 
 | Use Case | Status | Test Case | Priority | Notes |
 |----------|--------|-----------|----------|-------|
-| UC-001: Register with email/password | 🔴 | AUTH-101 | HIGH | Not implemented yet |
+| UC-001: Register with email/password | 🟢 | AUTH-101 | HIGH | Not implemented yet |
 | UC-002: Register using Google OAuth 2.0 | 🟢 | AUTH-001 | HIGH | ✅ Ready to test |
 | UC-003: Register using Microsoft OAuth 2.0 | 🟢 | AUTH-002 | HIGH | ✅ Ready to test |
-| UC-004: Register using Apple OAuth 2.0 | 🟢 | AUTH-003 | HIGH | ✅ Ready to test |
+| UC-004: Register using Apple OAuth 2.0 | 🔴 | AUTH-003 | HIGH |  Ready to test |
 | UC-005: Email verification after registration | 🔴 | AUTH-102 | HIGH | Depends on email/password |
 | UC-006: Login with username/password | 🔴 | AUTH-103 | HIGH | Not implemented |
 | UC-007: Login with social media accounts | 🟢 | AUTH-004 | HIGH | ✅ Ready to test |
