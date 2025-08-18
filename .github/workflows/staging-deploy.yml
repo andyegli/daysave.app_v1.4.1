@@ -366,39 +366,39 @@ jobs:
             sudo docker exec daysave-db mysql -u root -p\$DB_ROOT_PASS -e \"DROP TABLE IF EXISTS daysave_v141.SequelizeMeta;\" || true
             
             echo '🔧 Building professional migration container...'
-            cat > Dockerfile.migration << 'DOCKERFILE_EOF'
-FROM node:18-alpine
-WORKDIR /app
-
-# Install dependencies
-COPY package*.json ./
-RUN npm ci --only=production
-RUN npm install -g sequelize-cli
-
-# Copy application code
-COPY . .
-
-# Set proper permissions
-RUN chown -R node:node /app
-USER node
-
-# Default command
-CMD [\"npx\", \"sequelize-cli\", \"db:migrate\"]
-DOCKERFILE_EOF
+            cat > Dockerfile.migration << 'EOF'
+            FROM node:18-alpine
+            WORKDIR /app
+            
+            # Install dependencies
+            COPY package*.json ./
+            RUN npm ci --only=production
+            RUN npm install -g sequelize-cli
+            
+            # Copy application code
+            COPY . .
+            
+            # Set proper permissions
+            RUN chown -R node:node /app
+            USER node
+            
+            # Default command
+            CMD [\"npx\", \"sequelize-cli\", \"db:migrate\"]
+            EOF
             
             sudo docker build -t daysave-migration:latest -f Dockerfile.migration .
             
             echo '🔄 Running migrations with proper environment...'
             # Create production environment for migrations
-            cat > .env.migration << ENV_EOF
-NODE_ENV=production
-DB_HOST=daysave-db
-DB_USER=daysave
-DB_USER_PASSWORD=\$DB_USER_PASS
-DB_ROOT_PASSWORD=\$DB_ROOT_PASS
-DB_NAME=daysave_v141
-DB_PORT=3306
-ENV_EOF
+            cat > .env.migration << 'EOF'
+            NODE_ENV=production
+            DB_HOST=daysave-db
+            DB_USER=daysave
+            DB_USER_PASSWORD=\$DB_USER_PASS
+            DB_ROOT_PASSWORD=\$DB_ROOT_PASS
+            DB_NAME=daysave_v141
+            DB_PORT=3306
+            EOF
             
             # Run migrations in isolated container
             if sudo docker run --rm --network daysave_v141_daysave-internal --env-file .env.migration daysave-migration:latest; then
