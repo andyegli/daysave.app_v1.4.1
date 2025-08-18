@@ -1,0 +1,217 @@
+@startuml DaySave Authentication System
+!theme plain
+title DaySave Authentication System - Comprehensive Flow Diagram
+
+' Define colors and styles
+skinparam packageStyle rectangle
+skinparam backgroundColor #F8F9FA
+skinparam component {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontColor #0D47A1
+}
+skinparam rectangle {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #E65100
+}
+skinparam actor {
+    BackgroundColor #E8F5E8
+    BorderColor #4CAF50
+    FontColor #2E7D32
+}
+
+' Actors
+actor "User" as User
+actor "Admin" as Admin
+actor "System" as System
+
+' Authentication Methods
+rectangle "Authentication Methods" {
+    component "Email/Password Login" as EmailLogin
+    component "WebAuthn/FIDO2 Passkeys" as PasskeyAuth
+    component "Google OAuth 2.0" as GoogleOAuth
+    component "Microsoft OAuth" as MicrosoftOAuth
+    component "Apple Sign In" as AppleSignIn
+    component "Multi-Factor Authentication" as MFA
+    component "TOTP (Google Authenticator)" as TOTP
+    component "Backup Codes" as BackupCodes
+}
+
+' Authentication Flow Components
+rectangle "Authentication Flow" {
+    component "Login Request Handler" as LoginHandler
+    component "Credential Validation" as CredentialValidation
+    component "Password Hash Verification" as PasswordVerification
+    component "Email Verification Check" as EmailVerification
+    component "Account Status Check" as AccountStatus
+    component "Rate Limiting Check" as RateLimit
+    component "Device Fingerprinting" as DeviceFingerprint
+    component "Session Creation" as SessionCreation
+    component "Authentication Success" as AuthSuccess
+}
+
+' Security Middleware
+rectangle "Security Middleware" {
+    component "Authentication Middleware" as AuthMiddleware
+    component "Role-Based Access Control" as RBAC
+    component "Permission Verification" as PermissionCheck
+    component "Session Management" as SessionMgmt
+    component "CSRF Protection" as CSRFProtection
+    component "Security Headers" as SecurityHeaders
+    component "Audit Logging" as AuditLog
+}
+
+' Multi-Factor Authentication Flow
+rectangle "MFA Flow" {
+    component "MFA Status Check" as MFACheck
+    component "TOTP Generation" as TOTPGeneration
+    component "QR Code Display" as QRCode
+    component "TOTP Verification" as TOTPVerification
+    component "Backup Code Generation" as BackupGeneration
+    component "Backup Code Verification" as BackupVerification
+    component "MFA Enforcement (Admin)" as MFAEnforcement
+}
+
+' Passkey Authentication
+rectangle "Passkey Authentication" {
+    component "WebAuthn Registration" as PasskeyRegistration
+    component "Challenge Generation" as ChallengeGeneration
+    component "Credential Creation" as CredentialCreation
+    component "Public Key Storage" as PublicKeyStorage
+    component "Authentication Challenge" as AuthChallenge
+    component "Signature Verification" as SignatureVerification
+    component "Biometric Authentication" as BiometricAuth
+}
+
+' OAuth Integration
+rectangle "OAuth Integration" {
+    component "OAuth Provider Selection" as OAuthProvider
+    component "Authorization Request" as AuthRequest
+    component "Authorization Code Exchange" as CodeExchange
+    component "Access Token Retrieval" as TokenRetrieval
+    component "User Profile Retrieval" as ProfileRetrieval
+    component "Account Linking" as AccountLinking
+    component "Social Account Creation" as SocialAccountCreation
+}
+
+' Security Features
+rectangle "Security Features" {
+    component "Brute Force Protection" as BruteForceProtection
+    component "Account Lockout" as AccountLockout
+    component "IP Whitelisting/Blacklisting" as IPFiltering
+    component "VPN/TOR Detection" as VPNDetection
+    component "Suspicious Activity Detection" as SuspiciousActivity
+    component "Real-time Security Monitoring" as SecurityMonitoring
+    component "Failed Login Tracking" as FailedLoginTracking
+}
+
+' Database Models
+rectangle "Database Models" {
+    component "User Model" as UserModel
+    component "UserPasskey Model" as PasskeyModel
+    component "SocialAccount Model" as SocialAccountModel
+    component "UserDevice Model" as DeviceModel
+    component "LoginAttempt Model" as LoginAttemptModel
+    component "AuditLog Model" as AuditLogModel
+    component "Session Model" as SessionModel
+    component "Role Model" as RoleModel
+    component "Permission Model" as PermissionModel
+}
+
+' Authentication Flows
+User --> LoginHandler : Login Request
+LoginHandler --> RateLimit : Check Rate Limits
+RateLimit --> CredentialValidation : Validate Credentials
+CredentialValidation --> EmailLogin : Email/Password
+CredentialValidation --> PasskeyAuth : Passkey Authentication
+CredentialValidation --> GoogleOAuth : Google OAuth
+CredentialValidation --> MicrosoftOAuth : Microsoft OAuth
+CredentialValidation --> AppleSignIn : Apple Sign In
+
+' Email/Password Flow
+EmailLogin --> PasswordVerification : Verify Password Hash
+PasswordVerification --> EmailVerification : Check Email Verified
+EmailVerification --> AccountStatus : Check Account Status
+AccountStatus --> MFACheck : Check MFA Required
+MFACheck --> MFA : MFA Required
+MFACheck --> SessionCreation : No MFA Required
+
+' MFA Flow
+MFA --> TOTPVerification : TOTP Token
+MFA --> BackupVerification : Backup Code
+TOTPVerification --> SessionCreation : MFA Success
+BackupVerification --> SessionCreation : Backup Code Valid
+
+' Passkey Flow
+PasskeyAuth --> ChallengeGeneration : Generate Challenge
+ChallengeGeneration --> AuthChallenge : Send Challenge
+AuthChallenge --> BiometricAuth : Biometric Verification
+BiometricAuth --> SignatureVerification : Verify Signature
+SignatureVerification --> SessionCreation : Passkey Valid
+
+' OAuth Flow
+GoogleOAuth --> AuthRequest : Authorization Request
+AuthRequest --> CodeExchange : Exchange Code
+CodeExchange --> TokenRetrieval : Get Access Token
+TokenRetrieval --> ProfileRetrieval : Get User Profile
+ProfileRetrieval --> AccountLinking : Link/Create Account
+AccountLinking --> SessionCreation : OAuth Success
+
+' Session and Security
+SessionCreation --> DeviceFingerprint : Record Device
+DeviceFingerprint --> AuthSuccess : Authentication Complete
+AuthSuccess --> SessionMgmt : Create Session
+SessionMgmt --> AuditLog : Log Authentication Event
+
+' Middleware Protection
+AuthMiddleware --> RBAC : Check User Role
+RBAC --> PermissionCheck : Verify Permissions
+PermissionCheck --> CSRFProtection : CSRF Validation
+CSRFProtection --> SecurityHeaders : Apply Security Headers
+
+' Security Monitoring
+System --> SecurityMonitoring : Monitor Authentication
+SecurityMonitoring --> SuspiciousActivity : Detect Anomalies
+SuspiciousActivity --> BruteForceProtection : Block Attacks
+BruteForceProtection --> AccountLockout : Lock Suspicious Accounts
+AccountLockout --> FailedLoginTracking : Track Failed Attempts
+
+' Admin Features
+Admin --> MFAEnforcement : Enforce MFA for Users
+Admin --> IPFiltering : Configure IP Restrictions
+Admin --> VPNDetection : Configure VPN Detection
+Admin --> SecurityMonitoring : Monitor Security Events
+
+' Database Interactions
+LoginHandler --> UserModel : Query User
+PasskeyAuth --> PasskeyModel : Query Passkeys
+GoogleOAuth --> SocialAccountModel : Store Social Account
+DeviceFingerprint --> DeviceModel : Store Device Info
+FailedLoginTracking --> LoginAttemptModel : Log Attempts
+AuditLog --> AuditLogModel : Store Audit Events
+SessionMgmt --> SessionModel : Manage Sessions
+RBAC --> RoleModel : Query Roles
+PermissionCheck --> PermissionModel : Query Permissions
+
+' Registration Flow
+rectangle "User Registration" {
+    component "Registration Form" as RegForm
+    component "Email Validation" as EmailValidation
+    component "Password Strength Check" as PasswordStrength
+    component "Account Creation" as AccountCreation
+    component "Email Verification" as EmailVerificationSend
+    component "Welcome Email" as WelcomeEmail
+}
+
+User --> RegForm : Register Account
+RegForm --> EmailValidation : Validate Email
+EmailValidation --> PasswordStrength : Check Password
+PasswordStrength --> AccountCreation : Create Account
+AccountCreation --> EmailVerificationSend : Send Verification
+EmailVerificationSend --> WelcomeEmail : Send Welcome Email
+AccountCreation --> UserModel : Store User Data
+
+note bottom : Comprehensive authentication system with multiple methods\nWebAuthn/FIDO2 passkey support with biometric authentication\nMulti-factor authentication with TOTP and backup codes\nOAuth integration with Google, Microsoft, and Apple\nAdvanced security features and real-time monitoring\nRole-based access control with granular permissions\nAudit logging and compliance features
+
+@enduml

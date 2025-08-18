@@ -10,14 +10,15 @@ skinparam component {
     BorderColor #4CAF50
     FontColor #2E7D32
 }
-skinparam rectangle {
+skinparam package {
     BackgroundColor #FFF3E0
     BorderColor #F57C00
     FontColor #E65100
+    FontStyle bold
 }
 
 ' Core Models
-rectangle "Core User Models" {
+package "Core User Models" {
     component User
     component Role
     component Permission
@@ -29,7 +30,7 @@ rectangle "Core User Models" {
 }
 
 ' Content Models
-rectangle "Content Management" {
+package "Content Management" {
     component Content
     component File
     component Comment
@@ -39,7 +40,7 @@ rectangle "Content Management" {
 }
 
 ' Contact Models  
-rectangle "Contact System" {
+package "Contact System" {
     component Contact
     component ContactGroup
     component ContactGroupMember
@@ -50,7 +51,7 @@ rectangle "Contact System" {
 }
 
 ' AI Analysis Models
-rectangle "AI Analysis Results" {
+package "AI Analysis Results" {
     component VideoAnalysis
     component AudioAnalysis
     component ImageAnalysis
@@ -63,7 +64,7 @@ rectangle "AI Analysis Results" {
 }
 
 ' Administrative Models
-rectangle "System Administration" {
+package "System Administration" {
     component AuditLog
     component AuditArchive
     component ApiKey
@@ -74,7 +75,7 @@ rectangle "System Administration" {
 }
 
 ' Subscription Models
-rectangle "Billing & Usage" {
+package "Billing & Usage" {
     component Subscription
     component UsageTracking
     component CostConfiguration
@@ -84,14 +85,14 @@ rectangle "Billing & Usage" {
 }
 
 ' Key Relationships
-User ||--o{ Content : creates
-User ||--o{ Contact : owns
-User ||--o{ Subscription : has
-Content ||--o{ File : contains
-Content ||--o{ VideoAnalysis : analyzed_by
-File ||--o{ ProcessingJob : processed_by
-Speaker ||--o{ VoicePrint : identified_by
+User --> Content : creates
+User --> Contact : owns
+User --> Subscription : has
+Content --> File : contains
+Content --> VideoAnalysis : analyzed_by
+File --> ProcessingJob : processed_by
+Speaker --> VoicePrint : identified_by
 
-note bottom : 75 total models with comprehensive relationships\nMySQL database with 67+ migration files\nUUID primary keys throughout
+note bottom : Comprehensive models with extensive relationships\nMySQL database with migration files\nUUID primary keys throughout
 
 @enduml

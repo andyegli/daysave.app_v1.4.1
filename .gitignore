@@ -76,7 +76,7 @@ uploads/
 temp/
 tmp/
 
-# Google Cloud and OAuth credentials
+# Google Cloud and OAuth credentials - CRITICAL SECURITY
 config/credentials/
 config/credentials/*
 *.json
@@ -85,6 +85,19 @@ credentials.json
 google-credentials.json
 *service-account*.json
 *storage*.json
+*-key.json
+*-key-*.json
+daysave-*.json
+gcp-*.json
+
+# GitHub Secrets and sensitive files - CRITICAL SECURITY
+github-secrets-template.txt
+*secrets*.txt
+*credentials*.txt
+*-key-base64*.txt
+*-base64*.txt
+daysave-cicd-key*.txt
+*service-account*.txt
 
 # Database
 *.sqlite

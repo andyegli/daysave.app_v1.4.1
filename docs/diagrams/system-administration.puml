@@ -1,0 +1,307 @@
+@startuml DaySave System Administration
+!theme plain
+title DaySave System Administration - Comprehensive Management Diagram
+
+' Define colors and styles
+skinparam packageStyle rectangle
+skinparam backgroundColor #F8F9FA
+skinparam component {
+    BackgroundColor #FFEBEE
+    BorderColor #D32F2F
+    FontColor #B71C1C
+}
+skinparam rectangle {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #E65100
+}
+skinparam actor {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontColor #0D47A1
+}
+
+' Actors
+actor "Admin User" as Admin
+actor "System" as System
+actor "External Services" as External
+
+' User Administration
+rectangle "User Administration" {
+    component "User Management Dashboard" as UserDashboard
+    component "User List & Pagination" as UserList
+    component "User Search & Filtering" as UserSearch
+    component "User Profile Management" as UserProfile
+    component "Account Creation" as AccountCreation
+    component "Account Status Management" as AccountStatus
+    component "Password Reset Management" as PasswordReset
+    component "Role Assignment" as RoleAssignment
+    component "Permission Management" as PermissionMgmt
+    component "User Activity Monitoring" as ActivityMonitoring
+    component "User Content Review" as ContentReview
+    component "User Data Export" as DataExport
+}
+
+' Security Administration
+rectangle "Security Administration" {
+    component "2FA Management" as MFAManagement
+    component "2FA Enforcement" as MFAEnforcement
+    component "2FA Status Monitoring" as MFAStatus
+    component "Device Management" as DeviceManagement
+    component "Session Management" as SessionManagement
+    component "Access Control Lists" as AccessControl
+    component "IP Whitelisting/Blacklisting" as IPControl
+    component "VPN/TOR Detection Config" as VPNConfig
+    component "Security Event Monitoring" as SecurityMonitoring
+    component "Audit Log Review" as AuditReview
+    component "Failed Login Analysis" as LoginAnalysis
+    component "Suspicious Activity Alerts" as SuspiciousAlerts
+}
+
+' System Configuration
+rectangle "System Configuration" {
+    component "Admin Settings Panel" as AdminSettings
+    component "Login Attempt Limits" as LoginLimits
+    component "Account Lockout Settings" as LockoutSettings
+    component "File Upload Configuration" as FileUploadConfig
+    component "File Type Restrictions" as FileTypeConfig
+    component "File Size Limits" as FileSizeConfig
+    component "API Rate Limiting" as APIRateConfig
+    component "Storage Configuration" as StorageConfig
+    component "Email Settings" as EmailConfig
+    component "Backup Configuration" as BackupConfig
+    component "Security Policy Settings" as SecurityPolicyConfig
+}
+
+' System Monitoring
+rectangle "System Monitoring" {
+    component "System Health Dashboard" as HealthDashboard
+    component "Performance Metrics" as PerformanceMetrics
+    component "API Usage Monitoring" as APIUsageMonitoring
+    component "Storage Usage Tracking" as StorageUsage
+    component "AI Processing Monitoring" as AIProcessingMonitor
+    component "Error Log Analysis" as ErrorLogAnalysis
+    component "System Log Viewer" as LogViewer
+    component "Real-time Alerts" as RealTimeAlerts
+    component "Uptime Monitoring" as UptimeMonitoring
+    component "Database Performance" as DatabasePerformance
+    component "Queue Status Monitoring" as QueueMonitoring
+}
+
+' Content Moderation
+rectangle "Content Moderation" {
+    component "Content Review Dashboard" as ContentDashboard
+    component "Automated Content Flagging" as AutoFlagging
+    component "Manual Content Review" as ManualReview
+    component "Content Policy Enforcement" as PolicyEnforcement
+    component "Bulk Content Management" as BulkContentMgmt
+    component "Content Usage Analytics" as ContentAnalytics
+    component "Content Approval Workflow" as ApprovalWorkflow
+    component "Content Deletion Management" as ContentDeletion
+    component "DMCA Compliance" as DMCACompliance
+}
+
+' Subscription Administration
+rectangle "Subscription Administration" {
+    component "Subscription Dashboard" as SubscriptionDashboard
+    component "Plan Management" as PlanManagement
+    component "Billing Oversight" as BillingOversight
+    component "Usage Limit Management" as UsageLimitMgmt
+    component "Subscription Analytics" as SubscriptionAnalytics
+    component "Payment Processing Monitor" as PaymentMonitor
+    component "Upgrade/Downgrade Workflows" as PlanWorkflows
+    component "Subscription Enforcement" as SubscriptionEnforcement
+    component "Trial Management" as TrialManagement
+}
+
+' Analytics & Reporting
+rectangle "Analytics & Reporting" {
+    component "Administrative Reports" as AdminReports
+    component "User Activity Reports" as UserActivityReports
+    component "System Performance Reports" as PerformanceReports
+    component "Security Incident Reports" as SecurityReports
+    component "Usage Statistics Reports" as UsageReports
+    component "Financial Reports" as FinancialReports
+    component "Compliance Reports" as ComplianceReports
+    component "Custom Report Builder" as CustomReports
+    component "Automated Report Generation" as AutoReports
+    component "Report Scheduling" as ReportScheduling
+}
+
+' System Maintenance
+rectangle "System Maintenance" {
+    component "Database Maintenance" as DatabaseMaintenance
+    component "Backup Management" as BackupManagement
+    component "System Updates" as SystemUpdates
+    component "Performance Optimization" as PerformanceOptimization
+    component "Cache Management" as CacheManagement
+    component "Log Rotation" as LogRotation
+    component "Cleanup Operations" as CleanupOperations
+    component "Migration Management" as MigrationManagement
+    component "Scheduled Tasks" as ScheduledTasks
+}
+
+' Integration Management
+rectangle "Integration Management" {
+    component "API Key Management" as APIKeyManagement
+    component "External Service Configuration" as ExternalServiceConfig
+    component "OAuth Provider Management" as OAuthProviderMgmt
+    component "Webhook Configuration" as WebhookConfig
+    component "Third-Party Integration Monitor" as IntegrationMonitor
+    component "Service Health Checks" as ServiceHealthChecks
+    component "Integration Error Handling" as IntegrationErrorHandling
+}
+
+' Database Models
+rectangle "Database Models" {
+    component "User Model" as UserModel
+    component "Role Model" as RoleModel
+    component "Permission Model" as PermissionModel
+    component "AdminSetting Model" as AdminSettingModel
+    component "AuditLog Model" as AuditLogModel
+    component "LoginAttempt Model" as LoginAttemptModel
+    component "UserDevice Model" as UserDeviceModel
+    component "ApiKey Model" as ApiKeyModel
+    component "Subscription Model" as SubscriptionModel
+    component "UsageTracking Model" as UsageTrackingModel
+}
+
+' User Administration Flow
+Admin --> UserDashboard : Access Admin Dashboard
+UserDashboard --> UserList : View All Users
+UserList --> UserSearch : Search & Filter Users
+UserSearch --> UserProfile : Manage User Profiles
+UserProfile --> AccountCreation : Create New Accounts
+UserProfile --> AccountStatus : Enable/Disable Accounts
+UserProfile --> PasswordReset : Reset User Passwords
+UserProfile --> RoleAssignment : Assign User Roles
+RoleAssignment --> PermissionMgmt : Manage Permissions
+UserProfile --> ActivityMonitoring : Monitor User Activity
+ActivityMonitoring --> ContentReview : Review User Content
+ContentReview --> DataExport : Export User Data
+
+' Security Administration Flow
+Admin --> MFAManagement : Manage 2FA Settings
+MFAManagement --> MFAEnforcement : Enforce 2FA for Users
+MFAEnforcement --> MFAStatus : Monitor 2FA Status
+MFAStatus --> DeviceManagement : Manage User Devices
+DeviceManagement --> SessionManagement : Manage User Sessions
+SessionManagement --> AccessControl : Configure Access Control
+AccessControl --> IPControl : Manage IP Restrictions
+IPControl --> VPNConfig : Configure VPN Detection
+VPNConfig --> SecurityMonitoring : Monitor Security Events
+SecurityMonitoring --> AuditReview : Review Audit Logs
+AuditReview --> LoginAnalysis : Analyze Failed Logins
+LoginAnalysis --> SuspiciousAlerts : Handle Suspicious Activity
+
+' System Configuration Flow
+Admin --> AdminSettings : Access Admin Settings
+AdminSettings --> LoginLimits : Configure Login Limits
+LoginLimits --> LockoutSettings : Set Lockout Duration
+LockoutSettings --> FileUploadConfig : Configure File Uploads
+FileUploadConfig --> FileTypeConfig : Set File Type Restrictions
+FileTypeConfig --> FileSizeConfig : Set File Size Limits
+FileSizeConfig --> APIRateConfig : Configure API Rate Limits
+APIRateConfig --> StorageConfig : Configure Storage Settings
+StorageConfig --> EmailConfig : Configure Email Settings
+EmailConfig --> BackupConfig : Configure Backup Settings
+BackupConfig --> SecurityPolicyConfig : Set Security Policies
+
+' System Monitoring Flow
+Admin --> HealthDashboard : View System Health
+HealthDashboard --> PerformanceMetrics : Monitor Performance
+PerformanceMetrics --> APIUsageMonitoring : Monitor API Usage
+APIUsageMonitoring --> StorageUsage : Track Storage Usage
+StorageUsage --> AIProcessingMonitor : Monitor AI Processing
+AIProcessingMonitor --> ErrorLogAnalysis : Analyze Error Logs
+ErrorLogAnalysis --> LogViewer : View System Logs
+LogViewer --> RealTimeAlerts : Configure Alerts
+RealTimeAlerts --> UptimeMonitoring : Monitor Uptime
+UptimeMonitoring --> DatabasePerformance : Monitor Database
+DatabasePerformance --> QueueMonitoring : Monitor Job Queues
+
+' Content Moderation Flow
+Admin --> ContentDashboard : Access Content Dashboard
+ContentDashboard --> AutoFlagging : Configure Auto-Flagging
+AutoFlagging --> ManualReview : Manual Content Review
+ManualReview --> PolicyEnforcement : Enforce Content Policies
+PolicyEnforcement --> BulkContentMgmt : Bulk Content Operations
+BulkContentMgmt --> ContentAnalytics : Analyze Content Usage
+ContentAnalytics --> ApprovalWorkflow : Manage Approval Workflow
+ApprovalWorkflow --> ContentDeletion : Manage Content Deletion
+ContentDeletion --> DMCACompliance : Handle DMCA Requests
+
+' Subscription Administration Flow
+Admin --> SubscriptionDashboard : View Subscription Dashboard
+SubscriptionDashboard --> PlanManagement : Manage Subscription Plans
+PlanManagement --> BillingOversight : Oversee Billing
+BillingOversight --> UsageLimitMgmt : Manage Usage Limits
+UsageLimitMgmt --> SubscriptionAnalytics : Analyze Subscriptions
+SubscriptionAnalytics --> PaymentMonitor : Monitor Payments
+PaymentMonitor --> PlanWorkflows : Manage Plan Changes
+PlanWorkflows --> SubscriptionEnforcement : Enforce Limits
+SubscriptionEnforcement --> TrialManagement : Manage Trials
+
+' Analytics & Reporting Flow
+Admin --> AdminReports : Generate Admin Reports
+AdminReports --> UserActivityReports : User Activity Reports
+UserActivityReports --> PerformanceReports : Performance Reports
+PerformanceReports --> SecurityReports : Security Reports
+SecurityReports --> UsageReports : Usage Statistics
+UsageReports --> FinancialReports : Financial Reports
+FinancialReports --> ComplianceReports : Compliance Reports
+ComplianceReports --> CustomReports : Custom Report Builder
+CustomReports --> AutoReports : Automated Reports
+AutoReports --> ReportScheduling : Schedule Reports
+
+' System Maintenance Flow
+Admin --> DatabaseMaintenance : Database Maintenance
+DatabaseMaintenance --> BackupManagement : Backup Management
+BackupManagement --> SystemUpdates : System Updates
+SystemUpdates --> PerformanceOptimization : Performance Optimization
+PerformanceOptimization --> CacheManagement : Cache Management
+CacheManagement --> LogRotation : Log Rotation
+LogRotation --> CleanupOperations : Cleanup Operations
+CleanupOperations --> MigrationManagement : Migration Management
+MigrationManagement --> ScheduledTasks : Scheduled Tasks
+
+' Integration Management Flow
+Admin --> APIKeyManagement : Manage API Keys
+APIKeyManagement --> ExternalServiceConfig : Configure External Services
+ExternalServiceConfig --> OAuthProviderMgmt : Manage OAuth Providers
+OAuthProviderMgmt --> WebhookConfig : Configure Webhooks
+WebhookConfig --> IntegrationMonitor : Monitor Integrations
+IntegrationMonitor --> ServiceHealthChecks : Service Health Checks
+ServiceHealthChecks --> IntegrationErrorHandling : Handle Integration Errors
+
+' Database Interactions
+UserDashboard --> UserModel : Query Users
+RoleAssignment --> RoleModel : Manage Roles
+PermissionMgmt --> PermissionModel : Manage Permissions
+AdminSettings --> AdminSettingModel : Store Settings
+SecurityMonitoring --> AuditLogModel : Query Audit Logs
+LoginAnalysis --> LoginAttemptModel : Analyze Login Attempts
+DeviceManagement --> UserDeviceModel : Manage Devices
+APIKeyManagement --> ApiKeyModel : Manage API Keys
+SubscriptionDashboard --> SubscriptionModel : Query Subscriptions
+StorageUsage --> UsageTrackingModel : Track Usage
+
+' External Service Integration
+EmailConfig --> External : Email Service Configuration
+BackupConfig --> External : Backup Service Configuration
+IntegrationMonitor --> External : Monitor External Services
+ServiceHealthChecks --> External : Check Service Health
+PaymentMonitor --> External : Payment Service Integration
+
+' System Operations
+System --> RealTimeAlerts : Generate System Alerts
+System --> AutoReports : Generate Automated Reports
+System --> ScheduledTasks : Execute Scheduled Tasks
+System --> CleanupOperations : Perform Cleanup
+System --> DatabaseMaintenance : Automated Maintenance
+System --> BackupManagement : Automated Backups
+System --> LogRotation : Rotate System Logs
+
+note bottom : Comprehensive system administration with full control\nUser management with role-based access control\nAdvanced security features and monitoring\nSystem configuration and performance monitoring\nContent moderation and policy enforcement\nSubscription and billing administration\nDetailed analytics and reporting capabilities\nSystem maintenance and optimization tools\nIntegration management for external services\nReal-time monitoring and automated alerts\nCompliance and audit trail management
+
+@enduml

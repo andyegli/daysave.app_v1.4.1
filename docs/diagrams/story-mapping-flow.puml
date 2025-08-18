@@ -1,0 +1,163 @@
+@startuml DaySave Story Mapping Flow
+!theme plain
+title DaySave v1.4.1 - Story Mapping User Journey Flow
+
+skinparam backgroundColor #FAFAFA
+skinparam roundcorner 10
+skinparam shadowing false
+
+skinparam activity {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontSize 10
+    FontColor #0D47A1
+}
+
+skinparam activityDiamond {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #E65100
+}
+
+skinparam note {
+    BackgroundColor #F3E5F5
+    BorderColor #7B1FA2
+    FontColor #4A148C
+}
+
+start
+
+partition "DISCOVER & JOIN" {
+    :👤 Email Registration
+    US-001 (3 pts);
+    note right: Must-have MVP feature
+    
+    :🔐 OAuth Login
+    US-002-004 (13 pts);
+    note right: Google, Microsoft, Apple
+    
+    :📧 Email Verification
+    US-005 (3 pts);
+    
+    :⚙️ Profile Setup
+    US-006 (3 pts);
+    
+    if (Enhanced Features?) then (yes)
+        :🔒 2FA/MFA Setup
+        US-008 (8 pts);
+        note right: Enhanced security
+    endif
+}
+
+partition "CONNECT & SETUP" {
+    :📱 Social Media Connect
+    US-011 (15 pts);
+    note right: 11 platforms supported
+    
+    :🔄 Token Management
+    Auto-refresh (3 pts);
+    
+    :📊 Platform Status
+    Health monitoring (3 pts);
+    
+    :🎯 Content Extraction
+    US-012 (10 pts);
+    note right: Automated content discovery
+}
+
+partition "CREATE & ANALYZE" {
+    :📤 Content Upload
+    US-013 (8 pts);
+    note right: Multi-format support
+    
+    :🤖 AI Analysis Pipeline
+    US-014-017 (34 pts);
+    note right
+        • Object Detection
+        • Audio Transcription
+        • Sentiment Analysis
+        • Content Summarization
+    end note
+    
+    :🏷️ Auto Tagging
+    US-018 (5 pts);
+    
+    if (Advanced Search?) then (yes)
+        :🔍 Smart Search
+        US-019 (8 pts);
+        note right: Enhanced feature
+    endif
+}
+
+partition "ORGANIZE & MANAGE" {
+    :👥 Contact Creation
+    US-020 (8 pts);
+    note right: Comprehensive profiles
+    
+    :🔗 Contact Relationships
+    US-021 (5 pts);
+    
+    :📁 Content Groups
+    Organization (5 pts);
+    
+    if (Data Management?) then (yes)
+        :📥 Import/Export
+        US-023 (8 pts);
+        note right: Enhanced feature
+    endif
+}
+
+partition "SHARE & COLLABORATE" {
+    :🤝 Secure Sharing
+    US-024 (8 pts);
+    note right: Permission-based
+    
+    if (Team Features?) then (yes)
+        :💬 Collaboration
+        US-025 (13 pts);
+        note right: Enhanced teamwork
+        
+        :🔐 Access Control
+        Advanced permissions (5 pts);
+        
+        :📈 Share Analytics
+        Usage tracking (3 pts);
+    endif
+}
+
+partition "MONITOR & OPTIMIZE" {
+    :📊 User Dashboard
+    US-039 (8 pts);
+    note right: Key metrics display
+    
+    if (Advanced Analytics?) then (yes)
+        :📈 Business Intelligence
+        US-040 (13 pts);
+        note right: Enhanced reporting
+        
+        :⚙️ Admin Panel
+        US-028-029 (21 pts);
+        note right: System management
+        
+        :🔧 System Health
+        Monitoring (5 pts);
+    endif
+}
+
+stop
+
+legend right
+    |Color| Priority Level |
+    |<#E3F2FD>| MVP (Must Have) |
+    |<#F3E5F5>| Enhanced (Should Have) |
+    |<#FFF3E0>| Advanced (Could Have) |
+endlegend
+
+note bottom
+    **DaySave v1.4.1 Story Mapping**
+    Total Story Points: 787
+    Completion: 79.2% (623/787)
+    User Journey: Discovery → Analysis → Organization → Collaboration
+end note
+
+@enduml

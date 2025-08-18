@@ -37,8 +37,8 @@ services:
       - multimedia_temp:/usr/src/app/multimedia-temp
       # FIXED: Bind mount uploads directory to sync thumbnails between host and container
       - ./uploads:/usr/src/app/uploads
-      # Google Cloud credentials (mount your existing service account file)
-      - ./config/credentials/daysave-v1412-storage-a1e112ca7a82.json:/usr/src/app/gcp-credentials/service-account.json:ro
+      # Google Cloud credentials (mount your service account file - NEVER commit the actual file!)
+      # - ./config/credentials/service-account.json:/usr/src/app/gcp-credentials/service-account.json:ro
       # Optional: Mount test files for development
       - ./testfiles:/usr/src/app/testfiles:ro
     networks:

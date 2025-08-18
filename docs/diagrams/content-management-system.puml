@@ -1,0 +1,278 @@
+@startuml DaySave Content Management System
+!theme plain
+title DaySave Content Management System - Comprehensive Workflow Diagram
+
+' Define colors and styles
+skinparam packageStyle rectangle
+skinparam backgroundColor #F8F9FA
+skinparam component {
+    BackgroundColor #E8F5E8
+    BorderColor #4CAF50
+    FontColor #2E7D32
+}
+skinparam rectangle {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #E65100
+}
+skinparam actor {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontColor #0D47A1
+}
+
+' Actors
+actor "User" as User
+actor "AI Services" as AI
+actor "Cloud Storage" as Storage
+
+' Content Input Methods
+rectangle "Content Input Methods" {
+    component "URL Submission" as URLSubmission
+    component "File Upload" as FileUpload
+    component "Bulk URL Import" as BulkImport
+    component "Social Media Links" as SocialLinks
+    component "Direct Media URLs" as DirectURLs
+    component "Platform Integration" as PlatformIntegration
+}
+
+' Content Type Detection
+rectangle "Content Type Detection" {
+    component "URL Pattern Analysis" as URLAnalysis
+    component "MIME Type Detection" as MIMEDetection
+    component "File Extension Analysis" as ExtensionAnalysis
+    component "Content Header Inspection" as HeaderInspection
+    component "Platform-Specific Detection" as PlatformDetection
+    component "Content Type Classifier" as ContentClassifier
+}
+
+' File Processing Pipeline
+rectangle "File Processing Pipeline" {
+    component "File Validation" as FileValidation
+    component "File Size Check" as SizeCheck
+    component "Security Scanning" as SecurityScan
+    component "Virus Detection" as VirusDetection
+    component "Cloud Storage Upload" as CloudUpload
+    component "Metadata Extraction" as MetadataExtraction
+    component "Thumbnail Generation" as ThumbnailGen
+}
+
+' Content Download & Processing
+rectangle "Content Download & Processing" {
+    component "URL Content Fetcher" as ContentFetcher
+    component "Platform-Specific Downloaders" as PlatformDownloaders
+    component "YouTube Downloader" as YouTubeDownloader
+    component "Social Media Extractors" as SocialExtractors
+    component "Direct Media Downloader" as DirectDownloader
+    component "Content Validation" as ContentValidation
+}
+
+' AI Analysis Pipeline
+rectangle "AI Analysis Pipeline" {
+    component "Processing Job Queue" as JobQueue
+    component "Content Type Router" as ContentRouter
+    component "Video Analysis Pipeline" as VideoAnalysis
+    component "Audio Analysis Pipeline" as AudioAnalysis
+    component "Image Analysis Pipeline" as ImageAnalysis
+    component "Document Analysis Pipeline" as DocumentAnalysis
+    component "Automation Orchestrator" as AutomationOrchestrator
+}
+
+' Video Processing
+rectangle "Video Processing" {
+    component "Video Metadata Extraction" as VideoMetadata
+    component "Frame Extraction" as FrameExtraction
+    component "Audio Track Separation" as AudioSeparation
+    component "Scene Detection" as SceneDetection
+    component "Object Detection" as ObjectDetection
+    component "OCR Text Extraction" as VideoOCR
+    component "Video Thumbnail Generation" as VideoThumbnails
+    component "Key Moments Detection" as KeyMoments
+}
+
+' Audio Processing
+rectangle "Audio Processing" {
+    component "Audio Metadata Extraction" as AudioMetadata
+    component "Speech-to-Text Transcription" as SpeechToText
+    component "Speaker Diarization" as SpeakerDiarization
+    component "Voice Print Recognition" as VoicePrint
+    component "Audio Quality Analysis" as AudioQuality
+    component "Sentiment Analysis" as SentimentAnalysis
+    component "Language Detection" as LanguageDetection
+}
+
+' Image Processing
+rectangle "Image Processing" {
+    component "Image Metadata Extraction" as ImageMetadata
+    component "Image Object Detection" as ImageObjectDetection
+    component "Image OCR Extraction" as ImageOCR
+    component "Face Detection" as FaceDetection
+    component "Image Description Generation" as ImageDescription
+    component "Image Quality Analysis" as ImageQuality
+    component "Color Analysis" as ColorAnalysis
+}
+
+' AI Services Integration
+rectangle "AI Services Integration" {
+    component "Google Cloud Vision API" as VisionAPI
+    component "Google Cloud Speech-to-Text" as SpeechAPI
+    component "OpenAI GPT Integration" as OpenAI
+    component "Google Cloud Translation" as TranslationAPI
+    component "Custom AI Models" as CustomModels
+    component "AI Usage Tracking" as AIUsageTracking
+}
+
+' Content Organization
+rectangle "Content Organization" {
+    component "Auto-Tag Generation" as AutoTagging
+    component "Content Categorization" as Categorization
+    component "Summary Generation" as SummaryGeneration
+    component "Title Generation" as TitleGeneration
+    component "Content Groups" as ContentGroups
+    component "Smart Collections" as SmartCollections
+    component "Content Relations" as ContentRelations
+}
+
+' Storage & Database
+rectangle "Storage & Database" {
+    component "Content Model" as ContentModel
+    component "File Model" as FileModel
+    component "Processing Job Model" as ProcessingJobModel
+    component "Video Analysis Model" as VideoAnalysisModel
+    component "Audio Analysis Model" as AudioAnalysisModel
+    component "Image Analysis Model" as ImageAnalysisModel
+    component "Thumbnail Model" as ThumbnailModel
+    component "Speaker Model" as SpeakerModel
+    component "Face Model" as FaceModel
+    component "OCR Caption Model" as OCRModel
+}
+
+' User Interface
+rectangle "User Interface" {
+    component "Content Submission Form" as SubmissionForm
+    component "File Upload Interface" as UploadInterface
+    component "Content List View" as ListView
+    component "Content Detail View" as DetailView
+    component "Analysis Results Display" as AnalysisDisplay
+    component "Search & Filter Interface" as SearchInterface
+    component "Content Management Dashboard" as Dashboard
+}
+
+' Content Flows
+User --> SubmissionForm : Submit Content
+User --> UploadInterface : Upload Files
+SubmissionForm --> URLSubmission : URL Content
+UploadInterface --> FileUpload : File Content
+URLSubmission --> BulkImport : Multiple URLs
+URLSubmission --> SocialLinks : Social Media
+URLSubmission --> DirectURLs : Direct Media
+
+' Content Type Detection Flow
+URLSubmission --> URLAnalysis : Analyze URL Pattern
+FileUpload --> MIMEDetection : Detect MIME Type
+FileUpload --> ExtensionAnalysis : Check Extension
+URLAnalysis --> PlatformDetection : Detect Platform
+MIMEDetection --> ContentClassifier : Classify Content
+PlatformDetection --> ContentClassifier : Final Classification
+
+' File Processing Flow
+FileUpload --> FileValidation : Validate File
+FileValidation --> SizeCheck : Check Size Limits
+SizeCheck --> SecurityScan : Security Check
+SecurityScan --> VirusDetection : Virus Scan
+VirusDetection --> CloudUpload : Upload to Storage
+CloudUpload --> MetadataExtraction : Extract Metadata
+MetadataExtraction --> ThumbnailGen : Generate Thumbnails
+
+' Content Download Flow
+URLSubmission --> ContentFetcher : Fetch Content
+ContentFetcher --> PlatformDownloaders : Platform-Specific
+PlatformDownloaders --> YouTubeDownloader : YouTube Content
+PlatformDownloaders --> SocialExtractors : Social Media
+PlatformDownloaders --> DirectDownloader : Direct Media
+DirectDownloader --> ContentValidation : Validate Content
+
+' AI Analysis Flow
+ContentValidation --> JobQueue : Queue Processing Job
+ThumbnailGen --> JobQueue : Queue Analysis
+JobQueue --> AutomationOrchestrator : Orchestrate Analysis
+AutomationOrchestrator --> ContentRouter : Route by Type
+ContentRouter --> VideoAnalysis : Video Content
+ContentRouter --> AudioAnalysis : Audio Content
+ContentRouter --> ImageAnalysis : Image Content
+ContentRouter --> DocumentAnalysis : Document Content
+
+' Video Analysis Flow
+VideoAnalysis --> VideoMetadata : Extract Metadata
+VideoAnalysis --> FrameExtraction : Extract Frames
+VideoAnalysis --> AudioSeparation : Separate Audio
+FrameExtraction --> ObjectDetection : Detect Objects
+FrameExtraction --> VideoOCR : Extract Text
+AudioSeparation --> SpeechToText : Transcribe Audio
+VideoMetadata --> VideoThumbnails : Generate Thumbnails
+ObjectDetection --> KeyMoments : Detect Key Moments
+
+' Audio Analysis Flow
+AudioAnalysis --> AudioMetadata : Extract Metadata
+AudioAnalysis --> SpeechToText : Transcribe Speech
+SpeechToText --> SpeakerDiarization : Identify Speakers
+SpeakerDiarization --> VoicePrint : Create Voice Prints
+SpeechToText --> SentimentAnalysis : Analyze Sentiment
+SpeechToText --> LanguageDetection : Detect Language
+
+' Image Analysis Flow
+ImageAnalysis --> ImageMetadata : Extract Metadata
+ImageAnalysis --> ImageObjectDetection : Detect Objects
+ImageAnalysis --> ImageOCR : Extract Text
+ImageAnalysis --> FaceDetection : Detect Faces
+ImageObjectDetection --> ImageDescription : Generate Description
+ImageMetadata --> ColorAnalysis : Analyze Colors
+
+' AI Services Integration
+ObjectDetection --> VisionAPI : Google Vision
+ImageObjectDetection --> VisionAPI : Google Vision
+SpeechToText --> SpeechAPI : Google Speech
+ImageDescription --> OpenAI : OpenAI GPT
+SummaryGeneration --> OpenAI : OpenAI GPT
+LanguageDetection --> TranslationAPI : Google Translate
+AIUsageTracking --> AI : Track Usage
+
+' Content Organization Flow
+SpeechToText --> AutoTagging : Generate Tags
+ImageDescription --> AutoTagging : Generate Tags
+AutoTagging --> Categorization : Categorize Content
+Categorization --> SummaryGeneration : Generate Summary
+SummaryGeneration --> TitleGeneration : Generate Title
+TitleGeneration --> ContentGroups : Assign to Groups
+ContentGroups --> SmartCollections : Create Collections
+
+' Database Storage
+AutoTagging --> ContentModel : Store Content
+ThumbnailGen --> FileModel : Store File Info
+JobQueue --> ProcessingJobModel : Store Job Info
+VideoAnalysis --> VideoAnalysisModel : Store Video Analysis
+AudioAnalysis --> AudioAnalysisModel : Store Audio Analysis
+ImageAnalysis --> ImageAnalysisModel : Store Image Analysis
+VideoThumbnails --> ThumbnailModel : Store Thumbnails
+SpeakerDiarization --> SpeakerModel : Store Speakers
+FaceDetection --> FaceModel : Store Faces
+VideoOCR --> OCRModel : Store OCR Results
+
+' User Interface Updates
+ContentModel --> ListView : Display Content List
+ContentModel --> DetailView : Show Content Details
+VideoAnalysisModel --> AnalysisDisplay : Show Analysis
+AudioAnalysisModel --> AnalysisDisplay : Show Analysis
+ImageAnalysisModel --> AnalysisDisplay : Show Analysis
+AutoTagging --> SearchInterface : Enable Search
+ContentGroups --> Dashboard : Update Dashboard
+
+' Cloud Storage Integration
+CloudUpload --> Storage : Store Files
+ThumbnailGen --> Storage : Store Thumbnails
+VideoThumbnails --> Storage : Store Video Thumbnails
+Storage --> DetailView : Serve Media Files
+
+note bottom : Comprehensive content management with AI-powered analysis\nSupports video, audio, image, and document processing\nMultiple input methods: URLs, file uploads, bulk import\nAdvanced AI analysis: transcription, object detection, OCR\nCloud storage integration with Google Cloud Platform\nReal-time processing with job queue management\nSmart content organization and auto-tagging\nFull-text search across all content and analysis results
+
+@enduml

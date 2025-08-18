@@ -5,10 +5,15 @@ title DaySave MVC Architecture - High Level Overview
 ' Define colors and styles
 skinparam packageStyle rectangle
 skinparam backgroundColor #F8F9FA
-skinparam package {
+skinparam component {
     BackgroundColor #E3F2FD
     BorderColor #1976D2
-    FontColor #1976D2
+    FontColor #0D47A1
+}
+skinparam package {
+    BackgroundColor #F3E5F5
+    BorderColor #7B1FA2
+    FontColor #4A148C
     FontStyle bold
 }
 skinparam rectangle {
@@ -17,59 +22,47 @@ skinparam rectangle {
     FontColor #E65100
 }
 
+' Main Application Entry Point
+component "Express Application" as App
+note right of App : app.js\nNode.js + Express\nDocker containerized
+
 ' Main Layers
 package "Presentation Layer" {
-    rectangle "Views (EJS Templates)" as Views {
-        note right : 49+ EJS templates\nBootstrap 5 UI\nCSP Compliant
-    }
+    component "Views (EJS Templates)" as Views
+    note right of Views : 49+ EJS templates\nBootstrap 5 UI\nCSP Compliant
 }
 
 package "Controller Layer" {
-    rectangle "Route Controllers" as Routes {
-        note right : 12 route handlers\nRESTful endpoints\nAPI management
-    }
+    component "Route Controllers" as Routes
+    note right of Routes : route handlers\nRESTful endpoints\nAPI management
     
-    rectangle "Business Services" as Services {
-        note right : 31 service modules\nMultimedia processing\nAI integration
-    }
+    component "Business Services" as Services
+    note right of Services : service modules\nMultimedia processing\nAI integration
 }
 
 package "Middleware Layer" {
-    rectangle "Security & Validation" as Middleware {
-        note right : Authentication\nAuthorization\nInput validation\nError handling
-    }
+    component "Security & Validation" as Middleware
+    note right of Middleware : Authentication\nAuthorization\nInput validation\nError handling
 }
 
 package "Data Layer" {
-    rectangle "Models & Database" as Models {
-        note right : 75 Sequelize models\nMySQL database\n67 migrations
-    }
+    component "Models & Database" as Models
+    note right of Models : Sequelize models\nMySQL database\n67 migrations
 }
 
 package "External Services" {
-    rectangle "AI & Cloud Services" as External {
-        note right : OpenAI API\nGoogle Cloud AI\nCloud Storage\nOAuth providers
-    }
-}
-
-' Main Application Entry Point
-rectangle "Express Application" as App {
-    note right : app.js\nNode.js + Express\nDocker containerized
+    component "AI & Cloud Services" as External
+    note right of External : OpenAI API\nGoogle Cloud AI\nCloud Storage\nOAuth providers
 }
 
 ' Define relationships
-App --> Routes
-App --> Middleware
-Routes --> Services
-Routes --> Views
-Services --> Models
-Services --> External
-Middleware --> Models
-Models --> External
-
-' Flow indicators
-Views -[hidden]-> Routes
-Routes -[hidden]-> Services
-Services -[hidden]-> Models
+App --> Routes : HTTP Requests
+App --> Middleware : Request Processing
+Routes --> Services : Business Logic
+Routes --> Views : Template Rendering
+Services --> Models : Data Access
+Services --> External : API Calls
+Middleware --> Models : Authentication Data
+Models --> External : Cloud Storage
 
 @enduml
