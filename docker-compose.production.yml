@@ -107,11 +107,12 @@ services:
       - SPEAKER_CONFIDENCE_THRESHOLD=0.7
       
     volumes:
-      # Persistent data volumes
+      # Persistent data volumes (using persistent disk mount)
       - app_uploads:/usr/src/app/uploads
       - app_logs:/usr/src/app/logs
       - app_backup:/usr/src/app/db_backup
-      - /tmp/multimedia-temp:/usr/src/app/multimedia-temp
+      # Use persistent storage for multimedia temp instead of /tmp
+      - /mnt/app-data/multimedia-temp:/usr/src/app/multimedia-temp
     
     depends_on:
       db:
