@@ -1,4 +1,4 @@
-name: 🚀 Staging Deployment (Fixed Order) - MANUAL TRIGGER ONLY
+name: Staging Deploy Fixed
 
 on:
   workflow_dispatch:
