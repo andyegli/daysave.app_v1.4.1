@@ -1,0 +1,11 @@
+name: 🧪 Test Workflow - Manual Trigger
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🧪 Test step
+        run: echo "This is a test workflow to verify GitHub Actions is working"
