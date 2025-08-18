@@ -1,0 +1,15 @@
+name: "Force Deploy"
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚀 Trigger deployment
+        run: |
+          echo "🚀 This will trigger the deployment process"
+          echo "The professional migration fixes are ready to deploy"
