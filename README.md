@@ -540,3 +540,4 @@ See `docs/google_address_completion.md` for comprehensive technical implementati
 - API keys configured ✅
 
 This commit will trigger the staging deployment to test the complete pipeline.
+# Trigger workflow refresh
