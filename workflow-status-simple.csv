@@ -1,0 +1,11 @@
+Workflow,Filename,Active,Manual_Trigger,Persistent_Storage,Database_First,SSL_Setup,Health_Checks
+Deploy,deploy.yml,1,1,1,1,1,1
+Full Staging Deploy,full-staging-deploy.yml,1,1,1,1,1,1
+Test Workflow,test-workflow.yml,1,1,0,0,0,0
+Complete Deploy,complete-deploy.yml.disabled,0,1,1,1,1,1
+Debug Deploy,debug-deploy.yml.disabled,0,1,0,0,0,0
+CI/CD Pipeline,ci-cd-pipeline.yml.disabled,0,0,1,1,1,1
+Docker CI/CD,docker-ci-cd.yml.disabled,0,0,1,1,1,1
+Minimal Deploy,minimal-deploy.yml.disabled,0,1,0,1,1,1
+Simple CI/CD,simple-ci-cd.yml.disabled,0,1,0,1,1,1
+CI,ci.yml.disabled,0,0,0,1,0,1

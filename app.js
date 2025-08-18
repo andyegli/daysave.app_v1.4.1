@@ -198,8 +198,14 @@ checkDatabaseConnection().then(async (connected) => {
     process.exit(1);
   }
 
-  // Sync database models
-  return db.sequelize.sync();
+  // Sync database models (disabled in production - use migrations only)
+  if (process.env.NODE_ENV === 'production') {
+    console.log('🔧 Production mode: Skipping auto-sync, using migrations only');
+    return Promise.resolve();
+  } else {
+    console.log('🔧 Development mode: Running auto-sync');
+    return db.sequelize.sync();
+  }
 }).then(() => {
   console.log('✅ Database synced');
 
