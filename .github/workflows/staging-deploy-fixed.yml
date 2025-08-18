@@ -61,9 +61,24 @@ jobs:
             echo "ℹ️ VM doesn't exist, nothing to delete"
           fi
 
-      - name: 🏗️ Create VM with static IP
+      - name: 🏗️ Create VM with static IP and persistent storage
         run: |
-          echo "🚀 Creating VM with reserved static IP..."
+          echo "🚀 Creating VM with reserved static IP and persistent storage..."
+          
+          # Create persistent data disk if it doesn't exist
+          if ! gcloud compute disks describe $INSTANCE_NAME-data --zone=$ZONE --project=$PROJECT_ID >/dev/null 2>&1; then
+            echo "📀 Creating persistent data disk..."
+            gcloud compute disks create $INSTANCE_NAME-data \
+              --project=$PROJECT_ID \
+              --zone=$ZONE \
+              --size=100GB \
+              --type=pd-standard \
+              --labels=environment=staging,project=daysave,purpose=persistent-data
+          else
+            echo "📀 Persistent data disk already exists"
+          fi
+          
+          # Create VM with persistent storage
           gcloud compute instances create $INSTANCE_NAME \
             --project=$PROJECT_ID \
             --zone=$ZONE \
@@ -74,12 +89,13 @@ jobs:
             --service-account=daysave-cicd@$PROJECT_ID.iam.gserviceaccount.com \
             --scopes=https://www.googleapis.com/auth/cloud-platform \
             --create-disk=auto-delete=yes,boot=yes,device-name=$INSTANCE_NAME,image=projects/ubuntu-os-cloud/global/images/ubuntu-2004-focal-v20240830,mode=rw,size=50,type=projects/$PROJECT_ID/zones/$ZONE/diskTypes/pd-standard \
+            --disk=name=$INSTANCE_NAME-data,device-name=persistent-data,mode=rw,boot=no,auto-delete=no \
             --no-shielded-secure-boot \
             --shielded-vtpm \
             --shielded-integrity-monitoring \
             --labels=environment=staging,project=daysave \
             --reservation-affinity=any
-          echo "✅ VM created successfully"
+          echo "✅ VM created successfully with persistent storage"
 
       - name: ⏳ Wait for VM to be ready
         run: |
@@ -93,7 +109,45 @@ jobs:
             sleep 10
           done
 
-      # STEP 1: INSTALL DEPENDENCIES
+      # STEP 1: SETUP PERSISTENT STORAGE
+      - name: 💾 Setup persistent storage
+        run: |
+          echo "💾 Setting up persistent storage..."
+          gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --project=$PROJECT_ID --command="
+            set -e
+            echo '📀 Checking for persistent disk...'
+            if lsblk | grep -q 'sdb'; then
+              echo '📀 Persistent disk found as /dev/sdb'
+              
+              # Check if disk is already formatted
+              if ! sudo blkid /dev/sdb >/dev/null 2>&1; then
+                echo '🔧 Formatting persistent disk...'
+                sudo mkfs.ext4 /dev/sdb
+              else
+                echo '✅ Persistent disk already formatted'
+              fi
+              
+              # Create mount point and mount
+              sudo mkdir -p /mnt/app-data
+              if ! mountpoint -q /mnt/app-data; then
+                echo '📁 Mounting persistent disk...'
+                sudo mount /dev/sdb /mnt/app-data
+                
+                # Add to fstab for automatic mounting
+                echo '/dev/sdb /mnt/app-data ext4 defaults 0 2' | sudo tee -a /etc/fstab
+              else
+                echo '✅ Persistent disk already mounted'
+              fi
+              
+              # Set permissions
+              sudo chown -R \$USER:\$USER /mnt/app-data
+              echo '✅ Persistent storage setup completed'
+            else
+              echo '⚠️ No persistent disk found, continuing without persistent storage'
+            fi
+          "
+
+      # STEP 2: INSTALL DEPENDENCIES
       - name: 🔧 Install system dependencies
         run: |
           echo "🔧 Installing Docker and system dependencies..."
@@ -122,7 +176,7 @@ jobs:
             echo '✅ Dependencies installed successfully'
           "
 
-      # STEP 2: DEPLOY CODE
+      # STEP 3: DEPLOY CODE
       - name: 📂 Deploy application code
         run: |
           echo "📂 Deploying application code..."
@@ -138,7 +192,7 @@ jobs:
             echo '✅ Code deployed successfully'
           "
 
-      # STEP 3: CONFIGURE ENVIRONMENT
+      # STEP 4: CONFIGURE ENVIRONMENT
       - name: ⚙️ Configure environment variables
         run: |
           echo "⚙️ Configuring environment variables..."
@@ -194,11 +248,22 @@ jobs:
           # Security Configuration
           RATE_LIMIT_WINDOW_MS=900000
           RATE_LIMIT_MAX_REQUESTS=100
+          
+          # Persistent Storage Configuration
+          PERSISTENT_DATA_PATH=/mnt/app-data
+          MYSQL_DATA_PATH=/mnt/app-data/mysql
+          UPLOADS_PATH=/mnt/app-data/uploads
+          LOGS_PATH=/mnt/app-data/logs
+          BACKUP_PATH=/mnt/app-data/backups
           EOF
+          
+          # Create persistent storage directories
+          mkdir -p /mnt/app-data/{mysql,uploads,logs,backups,redis,nginx-ssl,nginx-conf}
+          chown -R \$USER:\$USER /mnt/app-data
             echo '✅ Environment configured successfully'
           "
 
-      # STEP 4: BUILD CONTAINERS (but don't start app yet)
+      # STEP 5: BUILD CONTAINERS (but don't start app yet)
       - name: 🐳 Build Docker containers
         run: |
           echo "🐳 Building Docker containers..."
@@ -213,7 +278,7 @@ jobs:
             echo '✅ All containers built/pulled successfully'
           "
 
-      # STEP 5: START DATABASE AND REDIS ONLY
+      # STEP 6: START DATABASE AND REDIS ONLY
       - name: 🗄️ Start database and Redis services
         run: |
           echo "🗄️ Starting database and Redis services..."
@@ -235,7 +300,7 @@ jobs:
             echo '✅ Database and Redis services started successfully'
           "
 
-      # STEP 6: RUN DATABASE MIGRATIONS
+      # STEP 7: RUN DATABASE MIGRATIONS
       - name: 🔄 Run database migrations
         run: |
           echo "🔄 Running database migrations..."
@@ -261,7 +326,7 @@ jobs:
             echo '✅ Database migrations completed successfully'
           "
 
-      # STEP 7: VERIFY DATABASE SCHEMA
+      # STEP 8: VERIFY DATABASE SCHEMA
       - name: ✅ Verify database schema
         run: |
           echo "✅ Verifying database schema..."
@@ -276,7 +341,7 @@ jobs:
             echo '✅ Database schema verification completed'
           "
 
-      # STEP 8: SEED TEST USERS
+      # STEP 9: SEED TEST USERS
       - name: 👤 Seed test users
         run: |
           echo "👤 Seeding test users..."
@@ -298,7 +363,7 @@ jobs:
             echo '✅ Test users seeded successfully'
           "
 
-      # STEP 9: NOW START THE APPLICATION
+      # STEP 10: NOW START THE APPLICATION
       - name: 🚀 Start application service
         run: |
           echo "🚀 Starting application service..."
@@ -345,7 +410,7 @@ jobs:
             echo '✅ Reverse proxy and SSL setup completed'
           "
 
-      # STEP 11: COMPREHENSIVE HEALTH CHECKS
+      # STEP 12: COMPREHENSIVE HEALTH CHECKS
       - name: 🏥 Run comprehensive health checks
         run: |
           echo "🏥 Running comprehensive health checks..."
@@ -393,7 +458,7 @@ jobs:
             echo "❌ Auth endpoints failed"
           fi
 
-      # STEP 12: POST-DEPLOYMENT TASKS
+      # STEP 13: POST-DEPLOYMENT TASKS
       - name: 📋 Post-deployment summary
         run: |
           echo "📋 Deployment Summary"
