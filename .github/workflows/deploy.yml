@@ -221,20 +221,52 @@ jobs:
           WEBAUTHN_RP_NAME=DaySave
           WEBAUTHN_ORIGIN=https://daysave.app
           
-          # OAuth Configuration (disabled for staging)
-          GOOGLE_CLIENT_ID=
-          GOOGLE_CLIENT_SECRET=
-          MICROSOFT_CLIENT_ID=
-          MICROSOFT_CLIENT_SECRET=
+          # OAuth Configuration (ENABLED for staging)
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          MICROSOFT_CLIENT_ID=${{ secrets.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET=${{ secrets.MICROSOFT_CLIENT_SECRET }}
+          APPLE_CLIENT_ID=${{ secrets.APPLE_CLIENT_ID }}
+          APPLE_CLIENT_SECRET=${{ secrets.APPLE_CLIENT_SECRET }}
           
-          # Email Configuration (disabled for staging)
-          GMAIL_USER=
-          GMAIL_PASS=
-          GMAIL_FROM=
+          # Email Configuration (ENABLED for staging)
+          GMAIL_USER=${{ secrets.GMAIL_USER }}
+          GMAIL_PASS=${{ secrets.GMAIL_PASS }}
+          GMAIL_FROM=${{ secrets.GMAIL_FROM }}
           
-          # API Keys (disabled for staging)
-          OPENAI_API_KEY=
-          GOOGLE_MAPS_API_KEY=
+          # API Keys (ENABLED for staging)
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}
+          GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+          
+          # Google Cloud Services (ENABLED)
+          GOOGLE_CLOUD_PROJECT_ID=daysave
+          GOOGLE_CLOUD_STORAGE_BUCKET=${{ secrets.GOOGLE_CLOUD_STORAGE_BUCKET }}
+          GOOGLE_CLOUD_SPEECH_LANGUAGE=en-US
+          GOOGLE_CLOUD_VISION_LANGUAGE=en
+          
+          # JWT Configuration
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+          BCRYPT_ROUNDS=12
+          
+          # Multimedia Analysis (ENABLED)
+          ANALYZER_PORT=3001
+          MULTIMEDIA_TEMP_DIR=/usr/src/app/multimedia-temp
+          THUMBNAIL_COUNT=5
+          SPEAKER_CONFIDENCE_THRESHOLD=0.7
+          
+          # Logging (STAGING MODE - VERBOSE)
+          LOG_LEVEL=info
+          LOG_FILE_PATH=/usr/src/app/logs/app.log
+          ENABLE_SQL_LOGGING=true
+          ENABLE_MULTIMEDIA_CONSOLE_LOGGING=true
+          ENABLE_STARTUP_VALIDATION_LOGGING=true
+          ENABLE_PERFORMANCE_CONSOLE_LOGGING=true
+          ENABLE_PROCESSOR_STEP_LOGGING=true
+          ENABLE_AUTH_EVENT_LOGGING=true
+          ENABLE_ANALYSIS_REQUEST_LOGGING=true
+          ENABLE_PERFORMANCE_ALERT_LOGGING=true
           
           # Testing Configuration
           TEST_ADMIN=${{ secrets.TEST_ADMIN }}
@@ -533,6 +565,66 @@ jobs:
           else
             echo "❌ Auth endpoints failed"
           fi
+          
+          echo "🎯 Test 6: OAuth providers..."
+          if curl -f https://daysave.app/auth/google 2>/dev/null >/dev/null; then
+            echo "✅ Google OAuth endpoint accessible"
+          else
+            echo "❌ Google OAuth endpoint failed"
+          fi
+          
+          if curl -f https://daysave.app/auth/microsoft 2>/dev/null >/dev/null; then
+            echo "✅ Microsoft OAuth endpoint accessible"
+          else
+            echo "❌ Microsoft OAuth endpoint failed"
+          fi
+          
+          echo "📧 Test 7: Email functionality..."
+          gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --project=$PROJECT_ID --command="
+            cd daysave_v1.4.1
+            if sudo docker-compose -f docker-compose.production.yml --env-file .env.production exec -T app node -e 'console.log(process.env.GMAIL_USER ? \"Email configured\" : \"Email not configured\")' | grep -q 'Email configured'; then
+              echo '✅ Email configuration present'
+            else
+              echo '❌ Email configuration missing'
+            fi
+          "
+          
+          echo "🤖 Test 8: AI services..."
+          gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --project=$PROJECT_ID --command="
+            cd daysave_v1.4.1
+            if sudo docker-compose -f docker-compose.production.yml --env-file .env.production exec -T app node -e 'console.log(process.env.OPENAI_API_KEY ? \"OpenAI configured\" : \"OpenAI not configured\")' | grep -q 'OpenAI configured'; then
+              echo '✅ OpenAI API configured'
+            else
+              echo '❌ OpenAI API not configured'
+            fi
+          "
+          
+          echo "🗺️ Test 9: Google Maps..."
+          gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --project=$PROJECT_ID --command="
+            cd daysave_v1.4.1
+            if sudo docker-compose -f docker-compose.production.yml --env-file .env.production exec -T app node -e 'console.log(process.env.GOOGLE_MAPS_API_KEY ? \"Maps configured\" : \"Maps not configured\")' | grep -q 'Maps configured'; then
+              echo '✅ Google Maps API configured'
+            else
+              echo '❌ Google Maps API not configured'
+            fi
+          "
+          
+          echo "📁 Test 10: File upload functionality..."
+          if curl -f https://daysave.app/content/upload 2>/dev/null >/dev/null; then
+            echo "✅ File upload endpoint accessible"
+          else
+            echo "❌ File upload endpoint failed"
+          fi
+          
+          echo "🎵 Test 11: Multimedia analysis..."
+          gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --project=$PROJECT_ID --command="
+            cd daysave_v1.4.1
+            if sudo docker-compose -f docker-compose.production.yml --env-file .env.production exec -T app node -e 'console.log(process.env.MULTIMEDIA_TEMP_DIR ? \"Multimedia configured\" : \"Multimedia not configured\")' | grep -q 'Multimedia configured'; then
+              echo '✅ Multimedia analysis configured'
+            else
+              echo '❌ Multimedia analysis not configured'
+            fi
+          "
 
       # STEP 13: POST-DEPLOYMENT TASKS
       - name: 📋 Post-deployment summary
