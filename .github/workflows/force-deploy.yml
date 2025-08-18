@@ -1,15 +1,27 @@
-name: "Force Deploy"
+name: "Manual Deploy Trigger"
 
 on:
-  push:
-    branches: [ develop ]
   workflow_dispatch:
+    inputs:
+      deploy_type:
+        description: 'Deployment Type'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - quick
 
 jobs:
-  deploy:
+  trigger-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: 🚀 Trigger deployment
+      - name: 📋 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🚀 Manual deployment trigger
         run: |
-          echo "🚀 This will trigger the deployment process"
-          echo "The professional migration fixes are ready to deploy"
+          echo "🚀 Manual deployment trigger activated"
+          echo "Deploy type: ${{ github.event.inputs.deploy_type }}"
+          echo "This workflow confirms manual triggering is working"
+          echo "Now we need to run the actual deployment workflow"
