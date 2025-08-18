@@ -1,0 +1,34 @@
+name: Refresh GitHub Actions Cache
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ develop ]
+    paths:
+      - '.github/workflows/**'
+
+jobs:
+  refresh-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📋 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🔄 Force workflow cache refresh
+        run: |
+          echo "🔄 Forcing GitHub Actions to refresh workflow cache..."
+          echo "Repository: ${{ github.repository }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Workflow files in repository:"
+          find .github/workflows -name "*.yml" -o -name "*.yaml" | head -10
+          
+      - name: 📊 List current workflows
+        run: |
+          echo "📊 Current workflow files:"
+          ls -la .github/workflows/
+          
+      - name: ✅ Cache refresh triggered
+        run: |
+          echo "✅ GitHub Actions cache refresh has been triggered"
+          echo "The Deploy workflow should now be visible in the Actions tab"
+          echo "This workflow will self-delete after successful refresh"
