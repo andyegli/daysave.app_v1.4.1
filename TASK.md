@@ -1,3 +1,45 @@
+## 🚀 **CI/CD Pipeline Redesign & Staging Deployment** (2025-08-17) - IN PROGRESS
+
+- [ ] **Complete CI/CD Pipeline Redesign**
+  - [x] **Problem Analysis**
+    - [x] Identified fundamental order-of-operations issues in previous CI/CD attempts
+    - [x] App was starting before database migrations completed, causing restart loops
+    - [x] Environment variables were using IP addresses instead of domain names
+    - [x] SSL and reverse proxy setup was happening before app was stable
+    
+  - [x] **New Pipeline Architecture Design**
+    - [x] Created `staging-deploy-fixed.yml` with proper sequential order
+    - [x] Database-first approach: DB ready before app starts
+    - [x] Separated container building from container starting
+    - [x] Added comprehensive verification steps between each phase
+    
+  - [ ] **Implementation Steps** (Following New Order)
+    - [ ] 1. VM Setup: Create VM, install Docker, dependencies
+    - [ ] 2. Code Deployment: Clone repo, configure environment variables
+    - [ ] 3. Container Preparation: Build/pull containers (DON'T start app yet)
+    - [ ] 4. Database Services: Start MySQL and Redis only
+    - [ ] 5. Database Migration: Run all migrations while app offline
+    - [ ] 6. Schema Verification: Confirm all tables exist properly
+    - [ ] 7. User Seeding: Create test admin and test user accounts
+    - [ ] 8. Application Start: NOW start app (database is ready!)
+    - [ ] 9. Reverse Proxy & SSL: Start Nginx and setup certificates
+    - [ ] 10. Health Checks: Comprehensive testing of all services
+    - [ ] 11. Post-deployment: Summary and cleanup procedures
+    
+  - [ ] **Environment Configuration Fixes**
+    - [x] Fixed domain configuration to use `https://daysave.app` instead of IP
+    - [x] Updated WebAuthn configuration for proper domain
+    - [x] Configured OAuth callbacks for staging environment
+    - [ ] Verify all GitHub secrets are properly configured
+    
+  - [ ] **Testing & Validation**
+    - [ ] Execute new CI/CD pipeline end-to-end
+    - [ ] Verify database migrations complete successfully
+    - [ ] Confirm test users are seeded properly
+    - [ ] Test application startup without restart loops
+    - [ ] Validate SSL certificates and HTTPS functionality
+    - [ ] Run comprehensive health checks
+
 ## ✅ **OAuth Duplicate Social Accounts Fix** (2025-08-16)
 - [x] **OAuth Account Management System**
   - [x] **Database Cleanup**

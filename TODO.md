@@ -25,6 +25,33 @@
 
 ## 🚀 **CURRENT HIGH PRIORITY TASKS**
 
+### **CI/CD Pipeline Staging Deployment** (URGENT - IN PROGRESS)
+- [ ] **Execute New CI/CD Pipeline with Fixed Order**
+  - [ ] Step 1: VM Setup - Create VM, install Docker, dependencies
+  - [ ] Step 2: Code Deployment - Clone repo, configure environment variables  
+  - [ ] Step 3: Container Preparation - Build/pull containers (DON'T start app yet)
+  - [ ] Step 4: Database Services - Start MySQL and Redis only
+  - [ ] Step 5: Database Migration - Run all migrations while app offline
+  - [ ] Step 6: Schema Verification - Confirm all tables exist properly
+  - [ ] Step 7: User Seeding - Create test admin and test user accounts
+  - [ ] Step 8: Application Start - NOW start app (database is ready!)
+  - [ ] Step 9: Reverse Proxy & SSL - Start Nginx and setup certificates
+  - [ ] Step 10: Health Checks - Comprehensive testing of all services
+  - [ ] Step 11: Post-deployment - Summary and cleanup procedures
+
+- [ ] **GitHub Secrets Verification**
+  - [ ] Verify all required secrets are configured in GitHub repository
+  - [ ] Test database passwords and connection strings
+  - [ ] Confirm OAuth credentials for staging environment
+  - [ ] Validate SSL certificate configuration
+
+- [ ] **Deployment Validation**
+  - [ ] Confirm https://daysave.app loads successfully
+  - [ ] Test login functionality with test users
+  - [ ] Verify file upload and AI analysis features
+  - [ ] Validate admin panel accessibility
+  - [ ] Test OAuth authentication flows
+
 ### **Registration & Authentication Bug Fixes**
 - [ ] **Fix Registration Error Message Inconsistency**
   - [ ] Correct error message when email address is already in use
