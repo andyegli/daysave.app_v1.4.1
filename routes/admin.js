@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { User, Role, UserPasskey, UserDevice, LoginAttempt, AdminSetting, SocialAccount, Content, File, Contact, ContactGroup, 
+const { User, Role, Permission, RolePermission, UserPasskey, UserDevice, LoginAttempt, AdminSetting, SocialAccount, Content, File, Contact, ContactGroup, 
         Relationship, ContactRelation, ContentGroup, ContentRelation, ShareLog, ContactSubmission, 
         UserSubscription, Speaker, Thumbnail, OCRCaption, VideoAnalysis, AudioAnalysis, ImageAnalysis, 
         ProcessingJob, AuditLog, sequelize } = require('../models');
@@ -3570,6 +3570,345 @@ router.get('/', isAuthenticated, isAdmin, (req, res) => {
   });
   
   res.redirect('/admin/dashboard');
+});
+
+// ================================
+// ROLE AND PERMISSION MANAGEMENT
+// ================================
+
+/**
+ * Role and Permission Management Dashboard
+ */
+router.get('/roles', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    logAuthEvent('ADMIN_ROLES_ACCESS', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      ip: req.ip
+    });
+
+    // Get all roles with their permissions
+    const roles = await Role.findAll({
+      include: [{
+        model: Permission,
+        through: { attributes: [] },
+        required: false
+      }],
+      order: [['name', 'ASC']]
+    });
+
+    // Get all permissions grouped by category
+    const permissions = await Permission.findAll({
+      order: [['name', 'ASC']]
+    });
+
+    // Group permissions by category
+    const permissionsByCategory = {};
+    permissions.forEach(perm => {
+      const category = perm.name.split('.')[0];
+      if (!permissionsByCategory[category]) {
+        permissionsByCategory[category] = [];
+      }
+      permissionsByCategory[category].push(perm);
+    });
+
+    // Get user count per role
+    const userCounts = await User.findAll({
+      attributes: [
+        'role_id',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'userCount']
+      ],
+      include: [{
+        model: Role,
+        attributes: ['name']
+      }],
+      group: ['role_id', 'Role.id', 'Role.name']
+    });
+
+    const userCountMap = {};
+    userCounts.forEach(uc => {
+      if (uc.Role) {
+        userCountMap[uc.Role.name] = parseInt(uc.dataValues.userCount);
+      }
+    });
+
+    res.render('admin/roles', {
+      user: req.user,
+      title: 'Role & Permission Management - Admin Dashboard',
+      roles,
+      permissions,
+      permissionsByCategory,
+      userCountMap
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_ROLES_ERROR', error, {
+      adminId: req.user.id,
+      adminUsername: req.user.username
+    });
+    res.status(500).render('error', {
+      user: req.user,
+      title: 'Error',
+      message: 'Failed to load role management page'
+    });
+  }
+});
+
+/**
+ * Role Permission Matrix API
+ */
+router.get('/api/roles/matrix', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const roles = await Role.findAll({
+      include: [{
+        model: Permission,
+        through: { attributes: [] }
+      }],
+      order: [['name', 'ASC']]
+    });
+
+    const permissions = await Permission.findAll({
+      order: [['name', 'ASC']]
+    });
+
+    // Create matrix
+    const matrix = {};
+    roles.forEach(role => {
+      matrix[role.name] = {};
+      permissions.forEach(permission => {
+        matrix[role.name][permission.name] = role.Permissions.some(p => p.id === permission.id);
+      });
+    });
+
+    res.json({
+      success: true,
+      matrix,
+      roles: roles.map(r => ({ id: r.id, name: r.name, description: r.description })),
+      permissions: permissions.map(p => ({ id: p.id, name: p.name, description: p.description }))
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_ROLE_MATRIX_ERROR', error, {
+      adminId: req.user.id
+    });
+    res.status(500).json({ error: 'Failed to load role matrix' });
+  }
+});
+
+/**
+ * Update Role Permissions
+ */
+router.post('/api/roles/:roleId/permissions', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { roleId } = req.params;
+    const { permissionIds } = req.body;
+
+    if (!Array.isArray(permissionIds)) {
+      return res.status(400).json({ error: 'Permission IDs must be an array' });
+    }
+
+    const role = await Role.findByPk(roleId);
+    if (!role) {
+      return res.status(404).json({ error: 'Role not found' });
+    }
+
+    // Verify all permission IDs exist
+    const permissions = await Permission.findAll({
+      where: { id: permissionIds }
+    });
+
+    if (permissions.length !== permissionIds.length) {
+      return res.status(400).json({ error: 'Some permission IDs are invalid' });
+    }
+
+    // Update role permissions
+    await role.setPermissions(permissions);
+
+    logAuthEvent('ADMIN_ROLE_PERMISSIONS_UPDATED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      roleId: role.id,
+      roleName: role.name,
+      permissionCount: permissions.length,
+      permissionIds
+    });
+
+    res.json({
+      success: true,
+      message: `Updated permissions for role: ${role.name}`,
+      permissionCount: permissions.length
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_UPDATE_ROLE_PERMISSIONS_ERROR', error, {
+      adminId: req.user.id,
+      roleId: req.params.roleId
+    });
+    res.status(500).json({ error: 'Failed to update role permissions' });
+  }
+});
+
+/**
+ * Create New Role
+ */
+router.post('/api/roles', isAuthenticated, isAdmin, [
+  body('name')
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .matches(/^[a-z_]+$/)
+    .withMessage('Role name must be lowercase letters and underscores only'),
+  body('description')
+    .trim()
+    .isLength({ min: 1, max: 255 })
+    .withMessage('Description is required and must be less than 255 characters')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
+    const { name, description } = req.body;
+
+    // Check if role already exists
+    const existingRole = await Role.findOne({ where: { name } });
+    if (existingRole) {
+      return res.status(400).json({ error: 'Role name already exists' });
+    }
+
+    const role = await Role.create({ name, description });
+
+    logAuthEvent('ADMIN_ROLE_CREATED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      roleId: role.id,
+      roleName: role.name
+    });
+
+    res.json({
+      success: true,
+      message: `Role '${name}' created successfully`,
+      role: { id: role.id, name: role.name, description: role.description }
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_CREATE_ROLE_ERROR', error, {
+      adminId: req.user.id,
+      roleName: req.body.name
+    });
+    res.status(500).json({ error: 'Failed to create role' });
+  }
+});
+
+/**
+ * Delete Role
+ */
+router.delete('/api/roles/:roleId', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { roleId } = req.params;
+    
+    const role = await Role.findByPk(roleId);
+    if (!role) {
+      return res.status(404).json({ error: 'Role not found' });
+    }
+
+    // Prevent deletion of system roles
+    const systemRoles = ['admin', 'user'];
+    if (systemRoles.includes(role.name)) {
+      return res.status(400).json({ error: 'Cannot delete system roles' });
+    }
+
+    // Check if role is assigned to users
+    const userCount = await User.count({ where: { role_id: roleId } });
+    if (userCount > 0) {
+      return res.status(400).json({ 
+        error: `Cannot delete role. ${userCount} user(s) are assigned to this role.`,
+        userCount
+      });
+    }
+
+    await role.destroy();
+
+    logAuthEvent('ADMIN_ROLE_DELETED', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      roleId: role.id,
+      roleName: role.name
+    });
+
+    res.json({
+      success: true,
+      message: `Role '${role.name}' deleted successfully`
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_DELETE_ROLE_ERROR', error, {
+      adminId: req.user.id,
+      roleId: req.params.roleId
+    });
+    res.status(500).json({ error: 'Failed to delete role' });
+  }
+});
+
+/**
+ * Get Role Details with Users
+ */
+router.get('/api/roles/:roleId/details', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const { roleId } = req.params;
+    
+    const role = await Role.findByPk(roleId, {
+      include: [
+        {
+          model: Permission,
+          through: { attributes: [] }
+        },
+        {
+          model: User,
+          attributes: ['id', 'username', 'email', 'first_name', 'last_name', 'createdAt'],
+          limit: 10 // Limit to prevent large responses
+        }
+      ]
+    });
+
+    if (!role) {
+      return res.status(404).json({ error: 'Role not found' });
+    }
+
+    const totalUsers = await User.count({ where: { role_id: roleId } });
+
+    res.json({
+      success: true,
+      role: {
+        id: role.id,
+        name: role.name,
+        description: role.description,
+        permissions: role.Permissions.map(p => ({
+          id: p.id,
+          name: p.name,
+          description: p.description
+        })),
+        users: role.Users.map(u => ({
+          id: u.id,
+          username: u.username,
+          email: u.email,
+          fullName: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+          createdAt: u.createdAt
+        })),
+        totalUsers
+      }
+    });
+
+  } catch (error) {
+    logAuthError('ADMIN_ROLE_DETAILS_ERROR', error, {
+      adminId: req.user.id,
+      roleId: req.params.roleId
+    });
+    res.status(500).json({ error: 'Failed to load role details' });
+  }
 });
 
 module.exports = router; 

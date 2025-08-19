@@ -201,6 +201,9 @@
 
                     <!-- Username/Password Login Form -->
                     <form action="/auth/login" method="POST" class="mb-3">
+                        <% if (typeof csrfToken !== 'undefined') { %>
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <% } %>
                         <div class="mb-3">
                             <label for="username" class="form-label">Username or Email</label>
                             <input type="text" class="form-control" id="username" name="username" required autocomplete="username">

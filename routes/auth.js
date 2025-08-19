@@ -37,11 +37,17 @@ router.get('/login', isNotAuthenticated, (req, res) => {
     error: req.query.error
   });
   
+  // Generate CSRF token for the session
+  const crypto = require('crypto');
+  const csrfToken = crypto.randomBytes(32).toString('hex');
+  req.session.csrfToken = csrfToken;
+  
   res.render('auth/login', {
     title: 'Login - DaySave',
     error: req.query.error,
     success: req.query.success,
-    user: req.user || null
+    user: req.user || null,
+    csrfToken: csrfToken
   });
 });
 

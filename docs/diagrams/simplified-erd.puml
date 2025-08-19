@@ -1,0 +1,66 @@
+@startuml
+!theme plain
+
+title DaySave - Simplified Entity Relationship Diagram
+
+entity "User" as User {
+  * id : UUID <<PK>>
+  --
+  * email : VARCHAR
+  * password_hash : VARCHAR
+  * role_id : UUID <<FK>>
+  first_name : VARCHAR
+  last_name : VARCHAR
+  created_at : TIMESTAMP
+}
+
+entity "Role" as Role {
+  * id : UUID <<PK>>
+  --
+  * name : VARCHAR
+  description : VARCHAR
+  created_at : TIMESTAMP
+}
+
+entity "Content" as Content {
+  * id : UUID <<PK>>
+  --
+  * user_id : UUID <<FK>>
+  url : VARCHAR
+  summary : TEXT
+  generated_title : VARCHAR
+  content_type : VARCHAR
+  status : VARCHAR
+  created_at : TIMESTAMP
+}
+
+entity "File" as File {
+  * id : UUID <<PK>>
+  --
+  * user_id : UUID <<FK>>
+  content_id : UUID <<FK>>
+  * filename : VARCHAR
+  * file_path : VARCHAR
+  metadata : JSON
+  created_at : TIMESTAMP
+}
+
+entity "Contact" as Contact {
+  * id : UUID <<PK>>
+  --
+  * user_id : UUID <<FK>>
+  name : VARCHAR
+  organization : VARCHAR
+  phones : JSON
+  emails : JSON
+  created_at : TIMESTAMP
+}
+
+' Relationships
+User ||--o{ Content : "owns"
+User ||--o{ File : "uploads"
+User ||--o{ Contact : "manages"
+User }o--|| Role : "has role"
+Content ||--o{ File : "contains"
+
+@enduml
