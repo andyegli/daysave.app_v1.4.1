@@ -156,10 +156,102 @@
             </div>
         </div>
 
-        <!-- Admin Actions (if applicable) -->
-        <% if (user && user.roleName === 'admin') { %>
-        <div class="mb-4">
-            <a href="/admin/users" class="btn btn-danger">Admin User Management</a>
+        <!-- Role-based Actions -->
+        <% if (user && user.Role) { %>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-shield me-2"></i>Role-based Actions
+                    <span class="badge bg-primary ms-2"><%= user.Role.name %></span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Admin/Manager Actions -->
+                    <% if (user.Role.name === 'admin' || user.Role.name === 'manager') { %>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="d-grid">
+                            <a href="/admin/dashboard" class="btn btn-danger">
+                                <i class="fas fa-tachometer-alt me-2"></i>Admin Dashboard
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="d-grid">
+                            <a href="/admin/users" class="btn btn-outline-danger">
+                                <i class="fas fa-users me-2"></i>User Management
+                            </a>
+                        </div>
+                    </div>
+                    <% } %>
+                    
+                    <!-- Moderator Actions -->
+                    <% if (user.Role.name === 'admin' || user.Role.name === 'moderator' || user.Role.name === 'manager') { %>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="d-grid">
+                            <a href="/content?moderate=true" class="btn btn-warning">
+                                <i class="fas fa-shield-alt me-2"></i>Content Moderation
+                            </a>
+                        </div>
+                    </div>
+                    <% } %>
+                    
+                    <!-- Support Actions -->
+                    <% if (user.Role.name === 'admin' || user.Role.name === 'support' || user.Role.name === 'manager') { %>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="d-grid">
+                            <a href="/support/tickets" class="btn btn-info">
+                                <i class="fas fa-headset me-2"></i>Support Tickets
+                            </a>
+                        </div>
+                    </div>
+                    <% } %>
+                    
+                    <!-- Tester Actions -->
+                    <% if (user.Role.name === 'admin' || user.Role.name === 'tester') { %>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="d-grid">
+                            <a href="/test-multimedia" class="btn btn-secondary">
+                                <i class="fas fa-flask me-2"></i>Testing Interface
+                            </a>
+                        </div>
+                    </div>
+                    <% } %>
+                    
+                    <!-- Premium/Enterprise Features -->
+                    <% if (user.Role.name === 'premium' || user.Role.name === 'enterprise' || user.Role.name === 'admin') { %>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="d-grid">
+                            <a href="/analytics" class="btn btn-success">
+                                <i class="fas fa-chart-line me-2"></i>Analytics
+                            </a>
+                        </div>
+                    </div>
+                    <% } %>
+                </div>
+                
+                <!-- Role Description -->
+                <div class="mt-3 p-3 bg-light rounded">
+                    <small class="text-muted">
+                        <strong>Your Role:</strong> 
+                        <% 
+                        const roleDescriptions = {
+                            'admin': 'Full system access with all administrative privileges',
+                            'manager': 'Team management and reporting capabilities',
+                            'moderator': 'Content moderation and publishing permissions',
+                            'editor': 'Advanced content creation and editing tools',
+                            'support': 'Customer support and user assistance tools',
+                            'tester': 'Access to beta features and testing interfaces',
+                            'premium': 'Enhanced features and higher usage limits',
+                            'enterprise': 'Full feature access with custom integrations',
+                            'user': 'Standard user access to core features',
+                            'viewer': 'Read-only access to content and basic features'
+                        };
+                        %>
+                        <%= roleDescriptions[user.Role.name] || 'Standard user access' %>
+                    </small>
+                </div>
+            </div>
         </div>
         <% } %>
 
