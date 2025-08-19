@@ -41,7 +41,7 @@
  */
 
 const { logAuthEvent, logAuthError } = require('../config/logger');
-const { Role } = require('../models');
+const { Role, Permission, RolePermission } = require('../models');
 
 // Helper function to get client details
 const getClientDetails = (req) => ({
@@ -291,7 +291,127 @@ function requireTesterPermission(req, res, next) {
 }
 
 /**
- * Middleware to check if user is admin
+ * Middleware to check if user has specific permissions
+ * Used for fine-grained access control based on permissions
+ */
+const requirePermission = (permissions) => {
+  return async (req, res, next) => {
+    const clientDetails = getClientDetails(req);
+    const requiredPermissions = Array.isArray(permissions) ? permissions : [permissions];
+    
+    if (!req.isAuthenticated()) {
+      logAuthEvent('PERMISSION_CHECK_FAILED_NOT_AUTHENTICATED', {
+        ...clientDetails,
+        requiredPermissions
+      });
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const userRole = req.user.Role?.name;
+    
+    if (!userRole) {
+      logAuthEvent('PERMISSION_CHECK_FAILED_NO_ROLE', {
+        ...clientDetails,
+        userId: req.user.id,
+        username: req.user.username,
+        requiredPermissions
+      });
+      return res.status(403).json({ error: 'User role not found' });
+    }
+
+    try {
+      // Load user's permissions through their role
+      const roleWithPermissions = await Role.findByPk(req.user.role_id, {
+        include: [{
+          model: Permission,
+          through: { attributes: [] }
+        }]
+      });
+
+      if (!roleWithPermissions) {
+        logAuthEvent('PERMISSION_CHECK_FAILED_ROLE_NOT_FOUND', {
+          ...clientDetails,
+          userId: req.user.id,
+          username: req.user.username,
+          requiredPermissions
+        });
+        return res.status(403).json({ error: 'Role not found' });
+      }
+
+      const userPermissions = roleWithPermissions.Permissions.map(p => p.name);
+      const hasAllPermissions = requiredPermissions.every(perm => userPermissions.includes(perm));
+
+      if (hasAllPermissions) {
+        logAuthEvent('PERMISSION_CHECK_SUCCESS', {
+          ...clientDetails,
+          userId: req.user.id,
+          username: req.user.username,
+          userRole,
+          userPermissions: userPermissions.length,
+          requiredPermissions
+        });
+        return next();
+      }
+
+      const missingPermissions = requiredPermissions.filter(perm => !userPermissions.includes(perm));
+      
+      logAuthEvent('PERMISSION_CHECK_FAILED_INSUFFICIENT_PERMISSIONS', {
+        ...clientDetails,
+        userId: req.user.id,
+        username: req.user.username,
+        userRole,
+        userPermissions: userPermissions.length,
+        requiredPermissions,
+        missingPermissions
+      });
+
+      return res.status(403).json({ 
+        error: 'Insufficient permissions',
+        required: requiredPermissions,
+        missing: missingPermissions
+      });
+
+    } catch (error) {
+      logAuthError('PERMISSION_CHECK_ERROR', error, {
+        userId: req.user.id,
+        requiredPermissions
+      });
+      return res.status(500).json({ error: 'Permission check failed' });
+    }
+  };
+};
+
+/**
+ * Helper function to check if user has specific permissions (for use in routes)
+ */
+const hasPermission = async (user, permissions) => {
+  const requiredPermissions = Array.isArray(permissions) ? permissions : [permissions];
+  
+  try {
+    const roleWithPermissions = await Role.findByPk(user.role_id, {
+      include: [{
+        model: Permission,
+        through: { attributes: [] }
+      }]
+    });
+
+    if (!roleWithPermissions) {
+      return false;
+    }
+
+    const userPermissions = roleWithPermissions.Permissions.map(p => p.name);
+    return requiredPermissions.every(perm => userPermissions.includes(perm));
+  } catch (error) {
+    logAuthError('HAS_PERMISSION_CHECK_ERROR', error, {
+      userId: user.id,
+      requiredPermissions
+    });
+    return false;
+  }
+};
+
+/**
+ * Middleware to check if user is admin or has admin permissions
  * Used to restrict access to admin routes
  */
 const isAdmin = (req, res, next) => {
@@ -332,7 +452,9 @@ const isAdmin = (req, res, next) => {
     return res.status(403).json({ error: 'User role not found' });
   }
 
-  if (userRole === 'admin') {
+  // Allow admin role or manager role for admin access
+  const adminRoles = ['admin', 'manager'];
+  if (adminRoles.includes(userRole)) {
     logAuthEvent('ADMIN_CHECK_SUCCESS', {
       ...clientDetails,
       userId: req.user.id,
@@ -370,10 +492,58 @@ const isAdmin = (req, res, next) => {
   }
 };
 
+/**
+ * Middleware for subscription-based access control
+ */
+const requireSubscription = (subscriptionLevels) => {
+  return (req, res, next) => {
+    const clientDetails = getClientDetails(req);
+    const requiredLevels = Array.isArray(subscriptionLevels) ? subscriptionLevels : [subscriptionLevels];
+    
+    if (!req.isAuthenticated()) {
+      logAuthEvent('SUBSCRIPTION_CHECK_FAILED_NOT_AUTHENTICATED', {
+        ...clientDetails,
+        requiredLevels
+      });
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const userSubscription = req.user.subscription_status;
+    
+    if (requiredLevels.includes(userSubscription)) {
+      logAuthEvent('SUBSCRIPTION_CHECK_SUCCESS', {
+        ...clientDetails,
+        userId: req.user.id,
+        username: req.user.username,
+        userSubscription,
+        requiredLevels
+      });
+      return next();
+    }
+
+    logAuthEvent('SUBSCRIPTION_CHECK_FAILED_INSUFFICIENT_LEVEL', {
+      ...clientDetails,
+      userId: req.user.id,
+      username: req.user.username,
+      userSubscription,
+      requiredLevels
+    });
+
+    return res.status(403).json({ 
+      error: 'Subscription upgrade required',
+      current: userSubscription,
+      required: requiredLevels
+    });
+  };
+};
+
 module.exports = {
   isAuthenticated,
   isNotAuthenticated,
   requireRole,
+  requirePermission,
+  hasPermission,
+  requireSubscription,
   logAuthAttempt,
   getClientDetails,
   ensureRoleLoaded,
