@@ -11,19 +11,19 @@ const oauthConfig = {
   google: {
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback'
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || `${process.env.BASE_URL || 'http://localhost:3000'}/auth/google/callback`
   },
   microsoft: {
     clientID: process.env.MICROSOFT_CLIENT_ID,
     clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
-    callbackURL: process.env.MICROSOFT_CALLBACK_URL || '/auth/microsoft/callback'
+    callbackURL: process.env.MICROSOFT_CALLBACK_URL || `${process.env.BASE_URL || 'http://localhost:3000'}/auth/microsoft/callback`
   },
   apple: {
     clientID: process.env.APPLE_CLIENT_ID,
     teamID: process.env.APPLE_TEAM_ID,
     keyID: process.env.APPLE_KEY_ID,
     privateKeyLocation: process.env.APPLE_PRIVATE_KEY_PATH,
-    callbackURL: process.env.APPLE_CALLBACK_URL || '/auth/apple/callback'
+    callbackURL: process.env.APPLE_CALLBACK_URL || `${process.env.BASE_URL || 'http://localhost:3000'}/auth/apple/callback`
   }
 };
 

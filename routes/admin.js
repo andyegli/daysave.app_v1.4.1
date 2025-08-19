@@ -1,12 +1,82 @@
 const express = require('express');
 const router = express.Router();
-const { User, Role, UserPasskey, UserDevice, LoginAttempt, AdminSetting } = require('../models');
+const { User, Role, UserPasskey, UserDevice, LoginAttempt, AdminSetting, SocialAccount, Content, File, Contact, ContactGroup, 
+        Relationship, ContactRelation, ContentGroup, ContentRelation, ShareLog, ContactSubmission, 
+        UserSubscription, Speaker, Thumbnail, OCRCaption, VideoAnalysis, AudioAnalysis, ImageAnalysis, 
+        ProcessingJob, AuditLog, sequelize } = require('../models');
 const { logAuthEvent, logAuthError } = require('../config/logger');
 const { isAuthenticated, isAdmin, requireTesterPermission } = require('../middleware');
 const { body, validationResult, param } = require('express-validator');
 const { deviceFingerprinting } = require('../middleware/deviceFingerprinting');
 const { clearDevHttpAccessCache } = require('../middleware/devHttpAccess');
 const geoLocationService = require('../services/geoLocationService');
+
+/**
+ * Cascade delete user and all related data
+ * Deletes related data in correct order to avoid foreign key constraint violations
+ */
+async function deleteUserWithCascade(user) {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    // Delete in reverse dependency order to avoid foreign key violations
+    const deletionSteps = [
+      { name: 'ProcessingJob', model: ProcessingJob },
+      { name: 'ImageAnalysis', model: ImageAnalysis },
+      { name: 'AudioAnalysis', model: AudioAnalysis },
+      { name: 'VideoAnalysis', model: VideoAnalysis },
+      { name: 'OCRCaption', model: OCRCaption },
+      { name: 'Thumbnail', model: Thumbnail },
+      { name: 'Speaker', model: Speaker },
+      { name: 'UserSubscription', model: UserSubscription },
+      { name: 'AdminSetting', model: AdminSetting },
+      { name: 'ContactSubmission', model: ContactSubmission },
+      { name: 'LoginAttempt', model: LoginAttempt },
+      { name: 'ShareLog', model: ShareLog },
+      { name: 'ContentRelation', model: ContentRelation },
+      { name: 'ContentGroup', model: ContentGroup },
+      { name: 'ContactRelation', model: ContactRelation },
+      { name: 'Relationship', model: Relationship },
+      { name: 'ContactGroup', model: ContactGroup },
+      { name: 'Contact', model: Contact },
+      { name: 'File', model: File },
+      { name: 'Content', model: Content },
+      { name: 'SocialAccount', model: SocialAccount },
+      { name: 'UserDevice', model: UserDevice },
+      { name: 'AuditLog', model: AuditLog }
+    ];
+
+    let totalDeleted = 0;
+
+    // Delete related data
+    for (const step of deletionSteps) {
+      const deleted = await step.model.destroy({ 
+        where: { user_id: user.id },
+        transaction 
+      });
+      totalDeleted += deleted;
+      
+      if (deleted > 0) {
+        console.log(`🗑️  Deleted ${deleted} ${step.name} records for user ${user.username}`);
+      }
+    }
+
+    // Finally delete the user
+    await user.destroy({ transaction });
+    totalDeleted += 1;
+
+    await transaction.commit();
+    
+    console.log(`✅ Cascade deletion completed for user ${user.username}. Total records deleted: ${totalDeleted}`);
+    
+    return { success: true, deletedRecords: totalDeleted };
+    
+  } catch (error) {
+    await transaction.rollback();
+    console.error(`❌ Cascade deletion failed for user ${user.username}:`, error.message);
+    throw error;
+  }
+}
 
 // Enhanced admin error handler
 const handleAdminError = (req, res, error, context = {}) => {
@@ -711,8 +781,8 @@ router.post('/users/:id/delete', isAuthenticated, isAdmin, validateUserId, async
       role: userToDelete.Role ? userToDelete.Role.name : 'unknown'
     };
     
-    // Delete user with enhanced error handling
-    await userToDelete.destroy();
+    // Delete user with cascade handling
+    await deleteUserWithCascade(userToDelete);
     
     logAuthEvent('ADMIN_USER_DELETE_SUCCESS', {
       adminId: req.user.id,
@@ -725,24 +795,15 @@ router.post('/users/:id/delete', isAuthenticated, isAdmin, validateUserId, async
     res.redirect('/admin/users?success=User deleted successfully');
     
   } catch (err) {
-    // Handle specific database errors
-    if (err.name === 'SequelizeForeignKeyConstraintError') {
-      logAuthError('ADMIN_USER_DELETE_CONSTRAINT_ERROR', err, {
-        adminId: req.user.id,
-        targetUserId: req.params.id,
-        constraint: err.parent?.constraint || 'unknown'
-      });
-      return res.redirect('/admin/users?error=Cannot delete user due to existing related data');
-    }
-    
     logAuthError('ADMIN_USER_DELETE_ERROR', err, {
       adminId: req.user.id,
       adminUsername: req.user.username,
       targetUserId: req.params.id,
+      targetUserEmail: userToDelete.email,
       ip: req.ip
     });
     
-    res.redirect('/admin/users?error=Failed to delete user. Please try again.');
+    res.redirect('/admin/users?error=Failed to delete user and related data. Please try again.');
   }
 });
 

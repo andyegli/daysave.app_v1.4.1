@@ -521,7 +521,7 @@ checkDatabaseConnection().then(async (connected) => {
   // Basic route
   app.get('/', (req, res) => {
     const clientDetails = {
-      ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
+      ip: req.ip || req.socket?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
       userAgent: req.headers['user-agent'] || 'unknown'
     };
     
@@ -540,7 +540,7 @@ checkDatabaseConnection().then(async (connected) => {
   // Dashboard route
   app.get('/dashboard', isAuthenticated, enforceMfa, async (req, res) => {
     const clientDetails = {
-      ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
+      ip: req.ip || req.socket?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
       userAgent: req.headers['user-agent'] || 'unknown'
     };
     
@@ -569,7 +569,7 @@ checkDatabaseConnection().then(async (connected) => {
   // API Key Management route
   app.get('/api-keys', isAuthenticated, enforceMfa, (req, res) => {
     const clientDetails = {
-      ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
+      ip: req.ip || req.socket?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
       userAgent: req.headers['user-agent'] || 'unknown'
     };
     
@@ -588,7 +588,7 @@ checkDatabaseConnection().then(async (connected) => {
   // Profile route
   app.get('/profile', isAuthenticated, async (req, res) => {
     const clientDetails = {
-      ip: req.ip || (req.connection && req.connection.remoteAddress) || req.headers['x-forwarded-for'] || 'unknown',
+      ip: req.ip || req.socket?.remoteAddress || req.headers['x-forwarded-for'] || 'unknown',
       userAgent: req.headers['user-agent'] || 'unknown'
     };
     
