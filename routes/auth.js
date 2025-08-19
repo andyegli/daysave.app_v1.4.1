@@ -170,7 +170,7 @@ router.get('/microsoft', (req, res, next) => {
   logOAuthFlow('microsoft', 'INITIATE', clientDetails);
   
   passport.authenticate('microsoft', {
-    scope: ['user.read', 'email']
+    scope: ['openid', 'profile', 'email', 'User.Read']
   })(req, res, next);
 });
 

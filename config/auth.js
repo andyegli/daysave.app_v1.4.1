@@ -466,7 +466,10 @@ passport.use(new GoogleStrategy(oauthConfig.google, async (accessToken, refreshT
 
 // Microsoft OAuth Strategy - only initialize if clientID is provided
 if (oauthConfig.microsoft.clientID) {
-  passport.use(new MicrosoftStrategy(oauthConfig.microsoft, async (accessToken, refreshToken, profile, done) => {
+  passport.use(new MicrosoftStrategy({
+    ...oauthConfig.microsoft,
+    scope: ['openid', 'profile', 'email', 'User.Read']
+  }, async (accessToken, refreshToken, profile, done) => {
   const requestDetails = {
     provider: 'microsoft',
     providerUserId: profile.id,

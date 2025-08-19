@@ -105,17 +105,21 @@ On the **Overview page**, you'll see important information:
 2. **You should see "Microsoft Graph" with "User.Read" already added**
    - This is added by default and is perfect for basic user info
 
-3. **Add email permission**:
+3. **Add required permissions**:
    - Click **"+ Add a permission"**
    - Click **"Microsoft Graph"**
    - Click **"Delegated permissions"**
-   - **Search for "email"** in the search box
-   - **Check the box next to "email"**
+   - **Search for and select these permissions**:
+     - **"email"** - to get email address
+     - **"openid"** - required for OpenID Connect
+     - **"profile"** - to get profile information
    - Click **"Add permissions"**
 
 4. **Your permissions should now show**:
    - Microsoft Graph: User.Read
    - Microsoft Graph: email
+   - Microsoft Graph: openid
+   - Microsoft Graph: profile
 
 ## **Step 9: Add Production Redirect URI (Optional)**
 
