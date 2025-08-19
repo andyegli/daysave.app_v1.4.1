@@ -1,0 +1,188 @@
+@startuml Content Management System - Simplified
+!theme plain
+skinparam backgroundColor white
+skinparam classBackgroundColor lightgreen
+skinparam classBorderColor darkgreen
+
+title Content Management System - Core Functions
+
+class Content {
+  +id: Integer
+  +userId: Integer
+  +title: String
+  +description: String
+  +contentType: String
+  +url: String
+  +createdAt: DateTime
+  +updatedAt: DateTime
+  --
+  +create()
+  +update()
+  +delete()
+  +share()
+  +archive()
+  +search()
+}
+
+class File {
+  +id: Integer
+  +contentId: Integer
+  +filename: String
+  +originalName: String
+  +mimeType: String
+  +fileSize: Integer
+  +storagePath: String
+  +generatedTitle: String
+  --
+  +upload()
+  +download()
+  +delete()
+  +analyze()
+  +generateThumbnail()
+}
+
+class ContentGroup {
+  +id: Integer
+  +userId: Integer
+  +name: String
+  +description: String
+  +isPrivate: Boolean
+  --
+  +create()
+  +addContent()
+  +removeContent()
+  +share()
+  +delete()
+}
+
+class ContentGroupMember {
+  +id: Integer
+  +contentGroupId: Integer
+  +contentId: Integer
+  +addedAt: DateTime
+  --
+  +add()
+  +remove()
+}
+
+class ShareLog {
+  +id: Integer
+  +contentId: Integer
+  +sharedBy: Integer
+  +sharedWith: String
+  +shareMethod: String
+  +sharedAt: DateTime
+  --
+  +logShare()
+  +trackAccess()
+}
+
+class Thumbnail {
+  +id: Integer
+  +fileId: Integer
+  +thumbnailPath: String
+  +width: Integer
+  +height: Integer
+  --
+  +generate()
+  +serve()
+  +delete()
+}
+
+class ProcessingJob {
+  +id: Integer
+  +fileId: Integer
+  +jobType: String
+  +status: String
+  +progress: Integer
+  +result: JSON
+  --
+  +create()
+  +process()
+  +updateStatus()
+  +getResult()
+}
+
+class ImageAnalysis {
+  +id: Integer
+  +fileId: Integer
+  +labels: JSON
+  +faces: JSON
+  +text: JSON
+  +objects: JSON
+  --
+  +analyze()
+  +extractText()
+  +detectFaces()
+  +identifyObjects()
+}
+
+class VideoAnalysis {
+  +id: Integer
+  +fileId: Integer
+  +duration: Float
+  +resolution: String
+  +frameRate: Float
+  +scenes: JSON
+  --
+  +analyze()
+  +extractFrames()
+  +detectScenes()
+  +generatePreview()
+}
+
+class AudioAnalysis {
+  +id: Integer
+  +fileId: Integer
+  +duration: Float
+  +transcript: Text
+  +speakers: JSON
+  +language: String
+  --
+  +transcribe()
+  +identifySpeakers()
+  +detectLanguage()
+}
+
+' Relationships
+Content ||--o{ File : "has many"
+Content }o--o{ ContentGroup : "belongs to many"
+ContentGroup ||--o{ ContentGroupMember : "has many"
+ContentGroupMember }o--|| Content : "references"
+Content ||--o{ ShareLog : "generates"
+File ||--o| Thumbnail : "has one"
+File ||--o{ ProcessingJob : "has many"
+File ||--o| ImageAnalysis : "has one"
+File ||--o| VideoAnalysis : "has one"
+File ||--o| AudioAnalysis : "has one"
+
+' Core Content Management Flow
+note right of Content
+  Core Content Functions:
+  • Create/Edit/Delete Content
+  • File Upload & Management
+  • Content Organization
+  • Sharing & Collaboration
+  • Search & Discovery
+  • Content Analytics
+end note
+
+note right of File
+  File Processing:
+  • Multi-format Support
+  • Automatic Analysis
+  • Thumbnail Generation
+  • Metadata Extraction
+  • Cloud Storage Integration
+end note
+
+note right of ProcessingJob
+  AI Processing:
+  • Image Recognition
+  • Video Analysis
+  • Audio Transcription
+  • Text Extraction (OCR)
+  • Content Classification
+end note
+
+@enduml

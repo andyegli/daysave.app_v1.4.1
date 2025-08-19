@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { isAuthenticated, checkUsageLimit, updateUsage, requireFeature } = require('../middleware');
+const { isAuthenticated, checkUsageLimit, updateUsage, requireFeature, requirePermission } = require('../middleware');
 const { Content, ContentGroup, ContentGroupMember } = require('../models');
 const { Op } = require('sequelize');
 const { AutomationOrchestrator } = require('../services/multimedia');
@@ -246,7 +246,7 @@ async function triggerMultimediaAnalysis(content, user) {
 }
 
 // Main content management page with real data and debugging
-router.get('/', isAuthenticated, async (req, res) => {
+router.get('/', isAuthenticated, requirePermission('content.read'), async (req, res) => {
   try {
     // Initialize models
     const models = require('../models');
@@ -1155,7 +1155,8 @@ async function handleBulkUrlSubmission(req, res) {
 
 // Create new content
 router.post('/', [
-  isAuthenticated
+  isAuthenticated,
+  requirePermission('content.create')
 ], async (req, res) => {
   try {
     // Check if this is a bulk URL submission
@@ -1304,7 +1305,7 @@ router.post('/test', isAuthenticated, (req, res) => {
   res.json({ success: true, message: 'POST route is working' });
 });
 
-router.get('/manage', isAuthenticated, (req, res) => {
+router.get('/manage', isAuthenticated, requirePermission('content.read'), (req, res) => {
   const contentItems = [
     { title: 'Instagram Post', image: '/public/images/content_section.png', description: 'A recent Instagram post.' },
     { title: 'Twitter Thread', image: '/public/images/content_section.png', description: 'A thread about productivity.' },
@@ -1328,7 +1329,7 @@ router.get('/manage', isAuthenticated, (req, res) => {
  * @param {Object} req.body - Update data
  * @returns {Object} Updated content record
  */
-router.put('/:id', isAuthenticated, async (req, res) => {
+router.put('/:id', isAuthenticated, requirePermission('content.update'), async (req, res) => {
   try {
     const { title, user_comments, user_tags, summary, group_ids } = req.body;
     const content = await Content.findOne({ where: { id: req.params.id, user_id: req.user.id } });
@@ -1395,7 +1396,7 @@ router.put('/:id', isAuthenticated, async (req, res) => {
 });
 
 // Delete content
-router.delete('/:id', isAuthenticated, async (req, res) => {
+router.delete('/:id', isAuthenticated, requirePermission('content.delete'), async (req, res) => {
   const contentId = req.params.id;
   const userId = req.user.id;
   
@@ -1413,7 +1414,7 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
 });
 
 // Get multimedia analysis status for content (updated for new architecture)
-router.get('/:id/analysis', isAuthenticated, async (req, res) => {
+router.get('/:id/analysis', isAuthenticated, requirePermission('content.read'), async (req, res) => {
   try {
     const contentId = req.params.id;
     const userId = req.user.id;
@@ -1676,7 +1677,7 @@ router.get('/:id/analysis', isAuthenticated, async (req, res) => {
 });
 
 // Content Analysis Status API Endpoint
-router.get('/api/:id/status', isAuthenticated, async (req, res) => {
+router.get('/api/:id/status', isAuthenticated, requirePermission('content.read'), async (req, res) => {
   try {
     const contentId = req.params.id;
     const userId = req.user.id;
@@ -1806,7 +1807,7 @@ router.get('/api/:id/status', isAuthenticated, async (req, res) => {
 });
 
 // Retry Content Analysis API Endpoint
-router.post('/api/:id/retry', isAuthenticated, async (req, res) => {
+router.post('/api/:id/retry', isAuthenticated, requirePermission('content.update'), async (req, res) => {
   try {
     const contentId = req.params.id;
     const userId = req.user.id;
@@ -1893,7 +1894,7 @@ router.post('/api/:id/retry', isAuthenticated, async (req, res) => {
 });
 
 // Reprocess Content Analysis Endpoint
-router.post('/:id/reprocess', isAuthenticated, async (req, res) => {
+router.post('/:id/reprocess', isAuthenticated, requirePermission('content.update'), async (req, res) => {
   try {
     const contentId = req.params.id;
     const userId = req.user.id;
@@ -1972,7 +1973,7 @@ router.post('/:id/reprocess', isAuthenticated, async (req, res) => {
 });
 
 // Get content analysis results page (NEW: Dedicated analysis page)
-router.get('/:id/analysis/view', isAuthenticated, async (req, res) => {
+router.get('/:id/analysis/view', isAuthenticated, requirePermission('content.read'), async (req, res) => {
   try {
     const contentId = req.params.id;
     const userId = req.user.id;

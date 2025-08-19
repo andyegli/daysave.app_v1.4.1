@@ -1,0 +1,145 @@
+@startuml Contact Management System - Simplified
+!theme plain
+skinparam backgroundColor white
+skinparam classBackgroundColor lightyellow
+skinparam classBorderColor orange
+
+title Contact Management System - Core Functions
+
+class Contact {
+  +id: Integer
+  +userId: Integer
+  +firstName: String
+  +lastName: String
+  +email: String
+  +phone: String
+  +company: String
+  +jobTitle: String
+  +address: String
+  +city: String
+  +country: String
+  +notes: Text
+  +createdAt: DateTime
+  +updatedAt: DateTime
+  --
+  +create()
+  +update()
+  +delete()
+  +search()
+  +export()
+  +import()
+}
+
+class ContactGroup {
+  +id: Integer
+  +userId: Integer
+  +name: String
+  +description: String
+  +color: String
+  +isPrivate: Boolean
+  --
+  +create()
+  +update()
+  +delete()
+  +addContact()
+  +removeContact()
+}
+
+class ContactGroupMember {
+  +id: Integer
+  +contactGroupId: Integer
+  +contactId: Integer
+  +addedAt: DateTime
+  --
+  +add()
+  +remove()
+  +bulkAdd()
+}
+
+class Relationship {
+  +id: Integer
+  +name: String
+  +description: String
+  +isSymmetric: Boolean
+  --
+  +create()
+  +update()
+  +delete()
+}
+
+class ContactRelation {
+  +id: Integer
+  +fromContactId: Integer
+  +toContactId: Integer
+  +relationshipId: Integer
+  +notes: String
+  +createdAt: DateTime
+  --
+  +create()
+  +update()
+  +delete()
+  +getRelated()
+}
+
+class ContactSubmission {
+  +id: Integer
+  +userId: Integer
+  +submissionData: JSON
+  +status: String
+  +processedAt: DateTime
+  +errorMessage: String
+  --
+  +submit()
+  +process()
+  +approve()
+  +reject()
+}
+
+' Relationships
+Contact }o--o{ ContactGroup : "belongs to many"
+ContactGroup ||--o{ ContactGroupMember : "has many"
+ContactGroupMember }o--|| Contact : "references"
+Contact ||--o{ ContactRelation : "has many (from)"
+Contact ||--o{ ContactRelation : "has many (to)"
+ContactRelation }o--|| Relationship : "uses"
+Contact ||--o{ ContactSubmission : "generates"
+
+' Core Contact Management Flow
+note right of Contact
+  Core Contact Functions:
+  • Add/Edit/Delete Contacts
+  • Contact Information Management
+  • Search & Filter Contacts
+  • Import/Export (CSV, vCard)
+  • Contact Deduplication
+  • Contact History Tracking
+end note
+
+note right of ContactGroup
+  Contact Organization:
+  • Create Custom Groups
+  • Organize by Categories
+  • Tag-based Classification
+  • Private/Shared Groups
+  • Bulk Operations
+end note
+
+note right of ContactRelation
+  Relationship Management:
+  • Define Contact Relationships
+  • Family/Business Connections
+  • Network Mapping
+  • Relationship History
+  • Symmetric/Asymmetric Relations
+end note
+
+note right of ContactSubmission
+  Data Import/Export:
+  • Bulk Contact Import
+  • CSV/Excel Processing
+  • Data Validation
+  • Duplicate Detection
+  • Error Handling
+end note
+
+@enduml

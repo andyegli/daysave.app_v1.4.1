@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
-const { isAuthenticated, isAdmin, checkUsageLimit, updateUsage } = require('../middleware');
+const { isAuthenticated, isAdmin, checkUsageLimit, updateUsage, requirePermission } = require('../middleware');
 const { authenticateApiKey, requireAdmin } = require('../middleware/apiKey');
 const apiKeyService = require('../services/apiKeyService');
 const { logAuthEvent, logAuthError } = require('../config/logger');
@@ -58,7 +58,7 @@ const validateApiKeyCreation = [
 /**
  * GET /api/keys - Get user's API keys
  */
-router.get('/', isAuthenticated, async (req, res) => {
+router.get('/', isAuthenticated, requirePermission('api.view_usage'), async (req, res) => {
   try {
     const { enabled, includeExpired, limit, offset } = req.query;
     
@@ -97,7 +97,8 @@ router.get('/', isAuthenticated, async (req, res) => {
  * POST /api/keys - Create new API key
  */
 router.post('/', [
-  isAuthenticated, 
+  isAuthenticated,
+  requirePermission('api.create_keys'), 
   checkUsageLimit('api_keys'),
   validateApiKeyCreation,
   updateUsage('api_keys')
@@ -187,7 +188,7 @@ router.get('/:id', isAuthenticated, async (req, res) => {
 /**
  * PUT /api/keys/:id - Update API key
  */
-router.put('/:id', isAuthenticated, validateApiKeyCreation, async (req, res) => {
+router.put('/:id', isAuthenticated, requirePermission('api.manage_keys'), validateApiKeyCreation, async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -254,7 +255,7 @@ router.put('/:id', isAuthenticated, validateApiKeyCreation, async (req, res) => 
 /**
  * DELETE /api/keys/:id - Delete API key
  */
-router.delete('/:id', isAuthenticated, async (req, res) => {
+router.delete('/:id', isAuthenticated, requirePermission('api.manage_keys'), async (req, res) => {
   try {
     await apiKeyService.deleteApiKey(req.params.id, req.user.id);
     

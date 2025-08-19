@@ -23,11 +23,71 @@
     </nav>
     <div class="container mt-5">
         <div class="row justify-content-center">
-            <div class="col-md-6 text-center">
-                <i class="fas fa-exclamation-triangle fa-5x text-warning mb-4"></i>
-                <h1 class="display-4 text-muted"><%= typeof message !== 'undefined' ? message : 'An error occurred' %></h1>
-                <p class="lead mb-4">We're sorry, but something went wrong.</p>
-                <a href="/" class="btn btn-primary">Go Home</a>
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body text-center p-5">
+                        <% 
+                        // Determine icon and color based on error type
+                        let iconClass = 'fas fa-exclamation-triangle';
+                        let iconColor = 'text-warning';
+                        let cardHeaderClass = 'bg-warning';
+                        
+                        if (typeof title !== 'undefined' && title === 'Access Denied') {
+                            iconClass = 'fas fa-shield-alt';
+                            iconColor = 'text-danger';
+                            cardHeaderClass = 'bg-danger';
+                        }
+                        %>
+                        
+                        <div class="<%= cardHeaderClass %> text-white py-3 mb-4 rounded">
+                            <i class="<%= iconClass %> fa-3x mb-2"></i>
+                            <h2 class="mb-0"><%= typeof title !== 'undefined' ? title : 'Error' %></h2>
+                        </div>
+                        
+                        <h3 class="text-muted mb-3">
+                            <%= typeof message !== 'undefined' ? message : 'An error occurred' %>
+                        </h3>
+                        
+                        <% if (typeof details !== 'undefined' && details) { %>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <%= details %>
+                        </div>
+                        <% } %>
+                        
+                        <% if (typeof title !== 'undefined' && title === 'Access Denied') { %>
+                        <div class="mt-4 p-3 bg-light rounded">
+                            <h5 class="mb-3"><i class="fas fa-lightbulb text-warning me-2"></i>What can you do?</h5>
+                            <ul class="list-unstyled text-start">
+                                <li class="mb-2"><i class="fas fa-user-shield text-primary me-2"></i>Contact your administrator to request additional permissions</li>
+                                <li class="mb-2"><i class="fas fa-sign-in-alt text-success me-2"></i>Check if you're logged in with the correct account</li>
+                                <li class="mb-2"><i class="fas fa-home text-info me-2"></i>Return to the dashboard to access available features</li>
+                                <% if (typeof user !== 'undefined' && user && user.Role) { %>
+                                <li class="mb-2"><i class="fas fa-id-badge text-secondary me-2"></i>Your current role: <strong><%= user.Role.name %></strong></li>
+                                <% } %>
+                            </ul>
+                        </div>
+                        <% } %>
+                        
+                        <div class="mt-4">
+                            <% if (typeof showBackButton !== 'undefined' && showBackButton) { %>
+                            <button onclick="window.history.back()" class="btn btn-secondary me-2">
+                                <i class="fas fa-arrow-left me-1"></i>Go Back
+                            </button>
+                            <% } %>
+                            
+                            <% if (typeof user !== 'undefined' && user) { %>
+                            <a href="/dashboard" class="btn btn-primary">
+                                <i class="fas fa-home me-1"></i>Dashboard
+                            </a>
+                            <% } else { %>
+                            <a href="/" class="btn btn-primary">
+                                <i class="fas fa-home me-1"></i>Go Home
+                            </a>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

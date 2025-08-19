@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Contact, ContactGroup, ContactGroupMember, ContactRelation, Role, User } = require('../models');
-const { isAuthenticated, ensureRoleLoaded, checkUsageLimit, updateUsage } = require('../middleware');
+const { isAuthenticated, ensureRoleLoaded, checkUsageLimit, updateUsage, requirePermission } = require('../middleware');
 const { getGoogleMapsScriptUrl } = require('../config/maps');
 const { logAuthEvent, logAuthError } = require('../config/logger');
 
@@ -91,7 +91,7 @@ router.get('/test-maps', isAuthenticated, (req, res) => {
 });
 
 // Contact form (for creating new contact)
-router.get('/new', isAuthenticated, async (req, res) => {
+router.get('/new', isAuthenticated, requirePermission('contacts.create'), async (req, res) => {
   try {
     const googleMapsScriptUrl = getGoogleMapsScriptUrl();
     res.render('contacts/form', { 
@@ -120,6 +120,7 @@ router.get('/new', isAuthenticated, async (req, res) => {
 
 // Create contact (POST)
 router.post('/', [
+  requirePermission('contacts.create'),
   checkUsageLimit('contacts'),
   updateUsage('contacts')
 ], async (req, res) => {
@@ -438,6 +439,7 @@ router.get('/groups', isAuthenticated, async (req, res) => {
 // Create a new contact group
 router.post('/groups', [
   isAuthenticated,
+  requirePermission('contacts.create'),
   checkUsageLimit('contact_groups'),
   updateUsage('contact_groups')
 ], async (req, res) => {
@@ -792,7 +794,7 @@ router.get('/relationship-types', (req, res) => {
 // ================================
 
 // List contacts - moved to end for proper routing priority
-router.get('/', isAuthenticated, async (req, res) => {
+router.get('/', isAuthenticated, requirePermission('contacts.read'), async (req, res) => {
   try {
     let contacts, owners = [];
     let ownerFilter = req.query.owner_id || '';
@@ -860,7 +862,7 @@ router.get('/', isAuthenticated, async (req, res) => {
 // These routes handle individual contacts by ID and must be after all specific routes
 
 // Contact detail view (Read functionality)
-router.get('/:id', isAuthenticated, async (req, res) => {
+router.get('/:id', isAuthenticated, requirePermission('contacts.read'), async (req, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id, {
       include: [{
@@ -890,7 +892,7 @@ router.get('/:id', isAuthenticated, async (req, res) => {
 });
 
 // Edit contact (form)
-router.get('/:id/edit', isAuthenticated, async (req, res) => {
+router.get('/:id/edit', isAuthenticated, requirePermission('contacts.update'), async (req, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id);
     if (!contact) return res.redirect('/contacts?error=Contact not found');
@@ -917,7 +919,7 @@ router.get('/:id/edit', isAuthenticated, async (req, res) => {
 });
 
 // Update contact (POST)
-router.post('/:id', isAuthenticated, async (req, res) => {
+router.post('/:id', isAuthenticated, requirePermission('contacts.update'), async (req, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id);
     if (!contact) return res.redirect('/contacts?error=Contact not found');
@@ -969,7 +971,7 @@ router.post('/:id', isAuthenticated, async (req, res) => {
 });
 
 // Delete contact
-router.delete('/:id', isAuthenticated, async (req, res) => {
+router.delete('/:id', isAuthenticated, requirePermission('contacts.delete'), async (req, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id);
     if (!contact) return res.status(404).json({ success: false, error: 'Contact not found' });

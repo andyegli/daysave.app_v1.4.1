@@ -1,0 +1,211 @@
+@startuml System Administration - Simplified
+!theme plain
+skinparam backgroundColor white
+skinparam classBackgroundColor lightcoral
+skinparam classBorderColor darkred
+
+title System Administration - Core Functions
+
+class AdminSetting {
+  +id: Integer
+  +settingKey: String
+  +settingValue: String
+  +dataType: String
+  +description: String
+  +isEditable: Boolean
+  +updatedBy: Integer
+  +updatedAt: DateTime
+  --
+  +get()
+  +set()
+  +update()
+  +reset()
+  +validate()
+}
+
+class AuditLog {
+  +id: Integer
+  +userId: Integer
+  +action: String
+  +resource: String
+  +resourceId: Integer
+  +oldValues: JSON
+  +newValues: JSON
+  +ipAddress: String
+  +userAgent: String
+  +timestamp: DateTime
+  --
+  +log()
+  +search()
+  +export()
+  +archive()
+}
+
+class ApiKey {
+  +id: Integer
+  +userId: Integer
+  +keyName: String
+  +keyHash: String
+  +permissions: JSON
+  +isActive: Boolean
+  +expiresAt: DateTime
+  +lastUsedAt: DateTime
+  --
+  +generate()
+  +revoke()
+  +rotate()
+  +validate()
+  +checkPermissions()
+}
+
+class ApiKeyUsage {
+  +id: Integer
+  +apiKeyId: Integer
+  +endpoint: String
+  +method: String
+  +responseStatus: Integer
+  +requestSize: Integer
+  +responseSize: Integer
+  +processingTime: Integer
+  +timestamp: DateTime
+  --
+  +track()
+  +analyze()
+  +generateReport()
+}
+
+class TestRun {
+  +id: Integer
+  +testSuite: String
+  +version: String
+  +environment: String
+  +status: String
+  +startedAt: DateTime
+  +completedAt: DateTime
+  +totalTests: Integer
+  +passedTests: Integer
+  +failedTests: Integer
+  --
+  +start()
+  +complete()
+  +getResults()
+  +generateReport()
+}
+
+class TestResult {
+  +id: Integer
+  +testRunId: Integer
+  +testName: String
+  +testCategory: String
+  +status: String
+  +executionTime: Integer
+  +errorMessage: String
+  +stackTrace: Text
+  --
+  +record()
+  +analyze()
+  +compare()
+}
+
+class ExternalAiUsage {
+  +id: Integer
+  +userId: Integer
+  +service: String
+  +operation: String
+  +inputTokens: Integer
+  +outputTokens: Integer
+  +cost: Decimal
+  +timestamp: DateTime
+  --
+  +track()
+  +calculateCost()
+  +generateReport()
+  +setLimits()
+}
+
+class StorageUsage {
+  +id: Integer
+  +userId: Integer
+  +fileType: String
+  +fileSize: Integer
+  +storageLocation: String
+  +uploadedAt: DateTime
+  --
+  +track()
+  +calculateQuota()
+  +cleanup()
+  +generateReport()
+}
+
+class UserDevice {
+  +id: Integer
+  +userId: Integer
+  +deviceName: String
+  +deviceType: String
+  +fingerprint: String
+  +isTrusted: Boolean
+  +lastSeenAt: DateTime
+  +ipAddress: String
+  --
+  +register()
+  +trust()
+  +revoke()
+  +track()
+}
+
+' Relationships
+ApiKey ||--o{ ApiKeyUsage : "generates"
+TestRun ||--o{ TestResult : "contains"
+AuditLog }o--|| User : "tracks"
+ApiKey }o--|| User : "belongs to"
+ExternalAiUsage }o--|| User : "tracks"
+StorageUsage }o--|| User : "tracks"
+UserDevice }o--|| User : "belongs to"
+
+' Core Administration Flow
+note right of AdminSetting
+  System Configuration:
+  • Global Settings Management
+  • Feature Toggles
+  • Security Policies
+  • Performance Tuning
+  • Maintenance Mode
+end note
+
+note right of AuditLog
+  Security & Compliance:
+  • User Activity Tracking
+  • Data Change Auditing
+  • Security Event Logging
+  • Compliance Reporting
+  • Forensic Analysis
+end note
+
+note right of ApiKey
+  API Management:
+  • API Key Generation
+  • Permission Management
+  • Usage Monitoring
+  • Rate Limiting
+  • Security Controls
+end note
+
+note right of TestRun
+  Quality Assurance:
+  • Automated Testing
+  • Test Result Tracking
+  • Performance Monitoring
+  • Regression Testing
+  • Quality Metrics
+end note
+
+note right of ExternalAiUsage
+  Resource Monitoring:
+  • AI Service Usage Tracking
+  • Cost Management
+  • Usage Analytics
+  • Quota Management
+  • Performance Optimization
+end note
+
+@enduml

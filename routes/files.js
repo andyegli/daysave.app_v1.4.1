@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const FileUploadService = require('../services/fileUpload');
 const { File, User, ContentGroup, ContentGroupMember } = require('../models');
-const { isAuthenticated, isAdmin, checkUsageLimit, checkFileSizeLimit, updateUsage } = require('../middleware');
+const { isAuthenticated, isAdmin, checkUsageLimit, checkFileSizeLimit, updateUsage, requirePermission } = require('../middleware');
 const { body, param, query, validationResult } = require('express-validator');
 const logger = require('../config/logger');
 const { logging } = require('../config/config');
@@ -1014,7 +1014,7 @@ async function triggerFileAnalysis(fileRecord, user) {
 }
 
 // File Management Dashboard
-router.get('/', isAuthenticated, async (req, res) => {
+router.get('/', isAuthenticated, requirePermission('files.download'), async (req, res) => {
   try {
     // Get user's files with pagination
     const page = parseInt(req.query.page) || 1;
@@ -1119,6 +1119,7 @@ const upload = multer({
 
 router.post('/upload', [
   isAuthenticated,
+  requirePermission('files.upload'),
   checkUsageLimit('file_uploads', (req) => req.files ? req.files.length : 1),
   checkFileSizeLimit(),
   upload.array('files', 10),
@@ -1344,7 +1345,7 @@ router.post('/upload', [
 });
 
 // Get File Details
-router.get('/:id', isAuthenticated, async (req, res) => {
+router.get('/:id', isAuthenticated, requirePermission('files.download'), async (req, res) => {
   try {
     const file = await File.findOne({
       where: {
@@ -1398,7 +1399,7 @@ router.get('/:id', isAuthenticated, async (req, res) => {
 });
 
 // Update File
-router.put('/:id', isAuthenticated, async (req, res) => {
+router.put('/:id', isAuthenticated, requirePermission('files.upload'), async (req, res) => {
   try {
     const file = await File.findOne({
       where: {
@@ -1467,7 +1468,7 @@ router.put('/:id', isAuthenticated, async (req, res) => {
 });
 
 // Delete File
-router.delete('/:id', isAuthenticated, async (req, res) => {
+router.delete('/:id', isAuthenticated, requirePermission('files.delete'), async (req, res) => {
   const fileId = req.params.id;
   const userId = req.user.id;
   
@@ -1925,7 +1926,7 @@ router.post('/import-paths', isAuthenticated, async (req, res) => {
 });
 
 // Get file analysis results (updated for new architecture)
-router.get('/:id/analysis', isAuthenticated, async (req, res) => {
+router.get('/:id/analysis', isAuthenticated, requirePermission('files.analyze'), async (req, res) => {
   try {
     const fileId = req.params.id;
     const userId = req.user.id;
@@ -2368,7 +2369,7 @@ router.get('/serve/thumbnails/:filename', (req, res) => {
 });
 
 // Reprocess File Analysis Endpoint
-router.post('/:id/reprocess', isAuthenticated, async (req, res) => {
+router.post('/:id/reprocess', isAuthenticated, requirePermission('files.analyze'), async (req, res) => {
   try {
     const fileId = req.params.id;
     const userId = req.user.id;
@@ -2529,7 +2530,7 @@ router.post('/:id/reprocess', isAuthenticated, async (req, res) => {
 });
 
 // Get file analysis results page (NEW: Dedicated analysis page)
-router.get('/:id/analysis/view', isAuthenticated, async (req, res) => {
+router.get('/:id/analysis/view', isAuthenticated, requirePermission('files.analyze'), async (req, res) => {
   try {
     const fileId = req.params.id;
     const userId = req.user.id;

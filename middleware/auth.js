@@ -365,11 +365,34 @@ const requirePermission = (permissions) => {
         missingPermissions
       });
 
-      return res.status(403).json({ 
-        error: 'Insufficient permissions',
-        required: requiredPermissions,
-        missing: missingPermissions
-      });
+      // Better AJAX/API detection
+      const isAjaxRequest = 
+        req.headers['x-requested-with'] === 'XMLHttpRequest' ||
+        req.headers.accept?.includes('application/json') ||
+        req.headers['content-type']?.includes('application/json') ||
+        req.originalUrl.startsWith('/api/') ||
+        req.originalUrl.includes('/analysis') ||
+        req.originalUrl.includes('/ajax') ||
+        req.query.ajax !== undefined;
+
+      if (isAjaxRequest) {
+        return res.status(403).json({ 
+          error: 'Insufficient permissions',
+          message: `You need ${missingPermissions.join(', ')} permission${missingPermissions.length > 1 ? 's' : ''} to perform this action.`,
+          required: requiredPermissions,
+          missing: missingPermissions,
+          userRole: userRole
+        });
+      } else {
+        // For web requests, render an error page
+        return res.status(403).render('error', {
+          user: req.user,
+          title: 'Access Denied',
+          message: 'Insufficient Permissions',
+          details: `You need ${missingPermissions.join(', ')} permission${missingPermissions.length > 1 ? 's' : ''} to access this page.`,
+          showBackButton: true
+        });
+      }
 
     } catch (error) {
       logAuthError('PERMISSION_CHECK_ERROR', error, {

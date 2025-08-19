@@ -1,0 +1,121 @@
+@startuml Authentication System - Simplified
+!theme plain
+skinparam backgroundColor white
+skinparam classBackgroundColor lightblue
+skinparam classBorderColor darkblue
+
+title Authentication System - Core Functions
+
+class User {
+  +id: Integer
+  +email: String
+  +password: String (hashed)
+  +firstName: String
+  +lastName: String
+  +isEmailVerified: Boolean
+  +mfaEnabled: Boolean
+  +role: Role
+  --
+  +login()
+  +logout()
+  +register()
+  +verifyEmail()
+  +resetPassword()
+  +enableMFA()
+  +disableMFA()
+}
+
+class Role {
+  +id: Integer
+  +name: String
+  +description: String
+  --
+  +hasPermission()
+  +getPermissions()
+}
+
+class Permission {
+  +id: Integer
+  +name: String
+  +resource: String
+  +action: String
+  --
+  +checkAccess()
+}
+
+class Session {
+  +sessionId: String
+  +userId: Integer
+  +deviceFingerprint: String
+  +expiresAt: DateTime
+  +isActive: Boolean
+  --
+  +create()
+  +validate()
+  +destroy()
+  +refresh()
+}
+
+class SocialAccount {
+  +id: Integer
+  +userId: Integer
+  +provider: String
+  +providerUserId: String
+  +email: String
+  --
+  +linkAccount()
+  +unlinkAccount()
+  +authenticate()
+}
+
+class UserPasskey {
+  +id: Integer
+  +userId: Integer
+  +credentialId: String
+  +publicKey: String
+  +counter: Integer
+  --
+  +register()
+  +authenticate()
+  +remove()
+}
+
+class LoginAttempt {
+  +id: Integer
+  +email: String
+  +ipAddress: String
+  +success: Boolean
+  +attemptedAt: DateTime
+  --
+  +log()
+  +checkRateLimit()
+}
+
+' Relationships
+User ||--o{ Session : "has many"
+User ||--o{ SocialAccount : "has many"
+User ||--o{ UserPasskey : "has many"
+User }o--|| Role : "belongs to"
+Role ||--o{ Permission : "has many"
+User ||--o{ LoginAttempt : "generates"
+
+' Core Authentication Flow
+note right of User
+  Core Authentication Functions:
+  • Email/Password Login
+  • OAuth Social Login
+  • WebAuthn/Passkey Login
+  • Multi-Factor Authentication
+  • Session Management
+  • Role-Based Access Control
+end note
+
+note right of Session
+  Session Security:
+  • Device Fingerprinting
+  • Secure Cookie Storage
+  • Automatic Expiration
+  • Session Hijacking Prevention
+end note
+
+@enduml
