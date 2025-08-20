@@ -26,6 +26,34 @@ router.get('/script-url', (req, res) => {
   }
 });
 
+// Public API status check (no authentication required)
+router.get('/status', async (req, res) => {
+  try {
+    const apiKey = getApiKey();
+    
+    if (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY') {
+      return res.json({
+        status: 'unavailable',
+        error: 'API key not configured',
+        apiConfigured: false
+      });
+    }
+
+    res.json({
+      status: 'available',
+      apiConfigured: true,
+      message: 'Google Places API is configured and ready'
+    });
+  } catch (error) {
+    console.error('Error checking Places API status:', error);
+    res.status(500).json({ 
+      status: 'error',
+      error: 'Failed to check API status',
+      apiConfigured: false
+    });
+  }
+});
+
 // Test the new Places API autocomplete functionality
 router.post('/test-autocomplete', isAuthenticated, async (req, res) => {
   try {

@@ -44,7 +44,27 @@ class NewGooglePlacesAutocomplete {
 
   async testNewPlacesAPI() {
     try {
-      // Test the new Places API Autocomplete endpoint
+      // First check if API is configured (public endpoint)
+      const statusResponse = await fetch('/api/places/status', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!statusResponse.ok) {
+        console.warn('NewGooglePlacesAutocomplete: Status check failed:', statusResponse.status);
+        return { available: false, authorized: false };
+      }
+
+      const statusData = await statusResponse.json();
+      
+      if (statusData.status !== 'available') {
+        console.warn('NewGooglePlacesAutocomplete: API not available:', statusData.error);
+        return { available: false, authorized: false };
+      }
+
+      // API is configured, now test if we're authenticated
       const response = await fetch('/api/places/test-autocomplete', {
         method: 'POST',
         headers: {
@@ -63,7 +83,11 @@ class NewGooglePlacesAutocomplete {
           available: true,
           authorized: data.status === 'OK' && data.predictions && data.predictions.length > 0
         };
+      } else if (response.status === 401) {
+        console.warn('NewGooglePlacesAutocomplete: Authentication required');
+        return { available: true, authorized: false };
       } else {
+        console.warn('NewGooglePlacesAutocomplete: API test failed:', response.status);
         return { available: false, authorized: false };
       }
     } catch (error) {

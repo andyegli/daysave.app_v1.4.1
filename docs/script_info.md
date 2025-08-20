@@ -12,8 +12,8 @@ This document provides a comprehensive analysis of all JavaScript files in the D
 
 **Summary Statistics:**
 - **Total JavaScript Files**: 58
-- **Active Files**: 49 (84.5%)
-- **Archived Files**: 9 (15.5%)
+- **Active Files**: 50 (86.2%)
+- **Archived Files**: 8 (13.8%)
 
 ---
 
@@ -62,6 +62,7 @@ These files are actively referenced in EJS templates and are essential for appli
 | `contact-relationships.js` | `contacts/groups-relationships.ejs`, `contacts/detail.ejs` | Contact relationship management |
 | `groups-relationships-tabs.js` | `contacts/groups-relationships.ejs` | Tab navigation for groups/relationships |
 | `contact-links.js` | `contacts/groups-relationships.ejs`, `contacts/detail.ejs` | Contact linking functionality |
+| `contact-detail.js` | `contacts/detail.ejs` | Contact detail page interactions and delete confirmation |
 | `contact-detail-groups-relationships.js` | `contacts/detail.ejs` | Detail page group/relationship management |
 | `contacts-list-handlers.js` | `contacts/list.ejs` | Contact list event handlers |
 | `contact-map-modal-new.js` | `contacts/detail.ejs`, `contacts/list.ejs` | Map modal functionality |
@@ -137,7 +138,7 @@ public/js/archive/
 | File | Reason for Archival | Replaced By |
 |------|-------------------|-------------|
 | `admin.js` | Legacy admin functionality | Multiple specialized admin-*.js files |
-| `contact-detail.js` | Legacy contact detail system | `contact-detail-groups-relationships.js` |
+
 | `google-maps-callback.js` | Legacy Google Maps callback | Direct API integration |
 | `remote-access-fix.js` | Legacy remote access fix | Modern protocol handling |
 
