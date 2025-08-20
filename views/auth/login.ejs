@@ -72,12 +72,33 @@
             z-index: 1050;
             max-width: 400px;
         }
-        .divider {
+        .vertical-divider {
+            position: absolute;
+            left: 0;
+            top: 10%;
+            bottom: 10%;
+            width: 1px;
+            background: #dee2e6;
+        }
+        .vertical-divider::before {
+            content: 'or';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 5px 10px;
+            color: #6c757d;
+            font-size: 12px;
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+        }
+        .horizontal-divider {
             position: relative;
             text-align: center;
-            margin: 30px 0;
+            margin: 20px 0;
         }
-        .divider::before {
+        .horizontal-divider::before {
             content: '';
             position: absolute;
             top: 50%;
@@ -86,11 +107,14 @@
             height: 1px;
             background: #dee2e6;
         }
-        .divider span {
+        .horizontal-divider span {
             background: rgba(255, 255, 255, 0.95);
             padding: 0 15px;
             color: #6c757d;
             font-size: 14px;
+        }
+        .login-section {
+            min-height: 300px;
         }
         .logo {
             width: 80px;
@@ -116,7 +140,7 @@
     </nav>
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-10 col-lg-8 col-xl-6">
                 <div class="login-card p-4 p-md-5">
                     <!-- Logo -->
                     <div class="text-center mb-4">
@@ -161,62 +185,80 @@
                         </div>
                     <% } %>
 
-                    <!-- Passkey Authentication (Prominent) -->
-                    <div class="mb-4">
-                        <button type="button" class="btn oauth-btn w-100 passkey-login-btn" 
-                                style="background: linear-gradient(45deg, #667eea, #764ba2); color: white; border: 2px solid transparent;">
-                            <i class="fas fa-fingerprint me-2"></i>Sign in with Passkey
-                        </button>
-                        <div class="text-center mt-2">
-                            <small class="text-muted">Use Face ID, Touch ID, or your security key</small>
+                    <!-- Two Column Layout -->
+                    <div class="row">
+                        <!-- Left Column: Username/Password Login -->
+                        <div class="col-md-6">
+                            <div class="login-section pe-md-3">
+                                <h5 class="mb-3 text-center text-md-start">Sign in with Password</h5>
+                                
+                                <!-- Username/Password Login Form -->
+                                <form action="/auth/login" method="POST" class="mb-3">
+                                    <% if (typeof csrfToken !== 'undefined') { %>
+                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                    <% } %>
+                                    <div class="mb-3">
+                                        <label for="username" class="form-label">Username or Email</label>
+                                        <input type="text" class="form-control" id="username" name="username" required autocomplete="username">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="password" class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Vertical Divider -->
+                        <div class="col-md-6 position-relative">
+                            <div class="vertical-divider d-none d-md-block"></div>
+                            <div class="horizontal-divider d-md-none my-4">
+                                <span>or</span>
+                            </div>
+                            
+                            <!-- Right Column: Passkeys and OAuth -->
+                            <div class="login-section ps-md-3">
+                                <h5 class="mb-3 text-center text-md-start">Quick & Secure Login</h5>
+                                
+                                <!-- Passkey Authentication (Prominent) -->
+                                <div class="mb-3">
+                                    <button type="button" class="btn oauth-btn w-100 passkey-login-btn" 
+                                            style="background: linear-gradient(45deg, #667eea, #764ba2); color: white; border: 2px solid transparent;">
+                                        <i class="fas fa-fingerprint me-2"></i>Sign in with Passkey
+                                    </button>
+                                    <div class="text-center mt-2">
+                                        <small class="text-muted">Use Face ID, Touch ID, or your security key</small>
+                                    </div>
+                                </div>
+
+                                <div class="text-center my-3">
+                                    <small class="text-muted">or continue with</small>
+                                </div>
+
+                                <!-- OAuth Buttons -->
+                                <div class="d-grid gap-2">
+                                    <a href="/auth/google" class="btn oauth-btn btn-google">
+                                        <i class="fab fa-google me-2"></i>
+                                        Continue with Google
+                                    </a>
+                                    
+                                    <a href="/auth/microsoft" class="btn oauth-btn btn-microsoft">
+                                        <i class="fab fa-microsoft me-2"></i>
+                                        Continue with Microsoft
+                                    </a>
+                                    
+                                    <a href="/auth/apple" class="btn oauth-btn btn-apple">
+                                        <i class="fab fa-apple me-2"></i>
+                                        Continue with Apple
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="text-center my-3">
-                        <span class="text-muted">or continue with</span>
-                    </div>
-
-                    <!-- OAuth Buttons -->
-                    <div class="d-grid gap-3">
-                        <a href="/auth/google" class="btn oauth-btn btn-google">
-                            <i class="fab fa-google me-2"></i>
-                            Continue with Google
-                        </a>
-                        
-                        <a href="/auth/microsoft" class="btn oauth-btn btn-microsoft">
-                            <i class="fab fa-microsoft me-2"></i>
-                            Continue with Microsoft
-                        </a>
-                        
-                        <a href="/auth/apple" class="btn oauth-btn btn-apple">
-                            <i class="fab fa-apple me-2"></i>
-                            Continue with Apple
-                        </a>
-                    </div>
-
-                    <!-- Divider -->
-                    <div class="divider">
-                        <span>or</span>
-                    </div>
-
-                    <!-- Username/Password Login Form -->
-                    <form action="/auth/login" method="POST" class="mb-3">
-                        <% if (typeof csrfToken !== 'undefined') { %>
-                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                        <% } %>
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username or Email</label>
-                            <input type="text" class="form-control" id="username" name="username" required autocomplete="username">
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Login</button>
-                    </form>
 
                     <!-- Forgot Password/Passkey Links -->
-                    <div class="text-center mt-3">
+                    <div class="text-center mt-4">
                         <small class="text-muted d-block mb-2">Having trouble signing in?</small>
                         <div class="d-flex justify-content-center gap-3">
                             <a href="/auth/forgot-passkey" class="text-decoration-none small">
@@ -225,16 +267,6 @@
                             <a href="/auth/forgot-password" class="text-decoration-none small text-primary" id="forgotPasswordLink">
                                 <i class="fas fa-key me-1"></i>Forgot Password?
                             </a>
-                        </div>
-                    </div>
-
-                    <!-- Coming Soon -->
-                    <div class="text-center">
-                        <p class="text-muted mb-3">More options coming soon:</p>
-                        <div class="d-flex justify-content-center gap-2">
-                            <span class="badge bg-secondary">Email/Password</span>
-                            <span class="badge bg-secondary">2FA</span>
-                            <span class="badge bg-secondary">SSO</span>
                         </div>
                     </div>
 
