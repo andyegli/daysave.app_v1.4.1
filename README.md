@@ -5,17 +5,7 @@
   <h3>Organize, analyze, and share content from 11 social platforms</h3>
 </div>
 
-## 🎨 Brand Colors
 
-- **Primary Blue**: `#2596be` - Main brand color
-- **Light Teal**: `#a1d8c9` - Secondary brand color  
-- **Bright Yellow**: `#fbda6a` - Accent color
-- **Light Green**: `#d8e2a8` - Success color
-- **Light Yellow**: `#f0e28b` - Warning color
-- **Teal**: `#87c0a9` - Info color
-- **Gold**: `#fbce3c` - Danger/highlight color
-- **Dark Teal**: `#309b9c` - Dark variant
-- **Sage Green**: `#bfcc8d` - Light variant
 
 ## 🚀 Features
 
@@ -364,6 +354,19 @@ npx sequelize-cli db:migrate:undo:all
     --gradient-primary: linear-gradient(135deg, #2596be, #309b9c);
 }
 ```
+## 🎨 Brand Colors
+
+- **Primary Blue**: `#2596be` - Main brand color
+- **Light Teal**: `#a1d8c9` - Secondary brand color  
+- **Bright Yellow**: `#fbda6a` - Accent color
+- **Light Green**: `#d8e2a8` - Success color
+- **Light Yellow**: `#f0e28b` - Warning color
+- **Teal**: `#87c0a9` - Info color
+- **Gold**: `#fbce3c` - Danger/highlight color
+- **Dark Teal**: `#309b9c` - Dark variant
+- **Sage Green**: `#bfcc8d` - Light variantx
+
+
 
 ## 🎬 Multimedia Analysis Features
 
