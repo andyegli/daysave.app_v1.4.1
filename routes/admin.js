@@ -3616,7 +3616,7 @@ router.get('/roles', isAuthenticated, isAdmin, async (req, res) => {
     const userCounts = await User.findAll({
       attributes: [
         'role_id',
-        [sequelize.fn('COUNT', sequelize.col('id')), 'userCount']
+        [sequelize.fn('COUNT', sequelize.col('User.id')), 'userCount']
       ],
       include: [{
         model: Role,
