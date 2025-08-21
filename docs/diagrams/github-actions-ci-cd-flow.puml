@@ -28,7 +28,7 @@ alt Tests Pass
     actions -> actions : ✅ Tests successful
 else Tests Fail
     actions -> dev : ❌ Notify failure
-    stop
+    actions -> actions : ❌ Stop pipeline
 end
 
 == Docker Build & Push ==

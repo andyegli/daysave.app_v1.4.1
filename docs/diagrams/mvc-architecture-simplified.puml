@@ -1,0 +1,104 @@
+@startuml DaySave MVC Architecture - Simplified
+!theme plain
+skinparam backgroundColor #F8F9FA
+skinparam defaultFontSize 12
+skinparam defaultFontName Arial
+
+' Simplified color scheme
+skinparam package {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontColor #1976D2
+    FontStyle bold
+}
+skinparam component {
+    BackgroundColor #E8F5E8
+    BorderColor #4CAF50
+    FontColor #2E7D32
+}
+skinparam rectangle {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+    FontColor #E65100
+}
+
+title DaySave MVC Architecture - Simplified Overview
+
+' Main Application Entry Point
+rectangle "Express Server\n(app.js)" as App
+
+' MVC Layers
+package "Model Layer" {
+    component "Database Models\n(Sequelize)" as Models
+    component "MySQL Database" as DB
+}
+
+package "View Layer" {
+    component "EJS Templates\n(49+ views)" as Views
+    component "Bootstrap UI\n(CSP Compliant)" as UI
+}
+
+package "Controller Layer" {
+    component "Route Controllers\n(11 routes)" as Controllers
+    component "Business Services\n(6 services)" as Services
+}
+
+' Middleware & External
+package "Middleware Layer" {
+    component "Security &\nValidation" as MiddlewareComp
+}
+
+package "External Services" {
+    component "AI Services\n(OpenAI, Google)" as AI
+    component "Cloud Storage\n(GCS)" as Storage
+    component "OAuth Providers" as OAuth
+}
+
+' Core MVC Flow
+App --> Controllers : HTTP Requests
+Controllers --> Models : Data Access
+Controllers --> Views : Template Rendering
+Models --> DB : Database Operations
+
+' Supporting Flows
+App --> MiddlewareComp : Request Processing
+Controllers --> Services : Business Logic
+Services --> AI : AI Processing
+Services --> Storage : File Operations
+MiddlewareComp --> OAuth : Authentication
+Views --> UI : UI Rendering
+
+' Key Notes
+note right of Models
+  **Core Data Models:**
+  • Users & Authentication
+  • Content & Files
+  • AI Analysis Results
+  • System & Audit Data
+end note
+
+note right of Controllers
+  **Main Controllers:**
+  • Authentication (auth.js)
+  • Content Management (content.js)
+  • File Processing (files.js)
+  • Admin Panel (admin.js)
+  • Multimedia Analysis
+end note
+
+note right of Services
+  **Business Services:**
+  • Multimedia Analyzer
+  • File Upload Service
+  • Subscription Service
+  • API Key Service
+  • AI Usage Tracker
+end note
+
+note bottom of App
+  **DaySave v1.4.1 Architecture**
+  Node.js + Express framework with
+  modular MVC design pattern
+end note
+
+@enduml

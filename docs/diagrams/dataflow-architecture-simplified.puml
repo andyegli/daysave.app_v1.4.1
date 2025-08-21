@@ -1,0 +1,100 @@
+@startuml DaySave Data Flow Architecture - Simplified
+!theme plain
+skinparam backgroundColor #F8F9FA
+skinparam defaultFontSize 10
+skinparam defaultFontName Arial
+
+' Simplified color scheme
+skinparam actor {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+}
+skinparam boundary {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+}
+skinparam control {
+    BackgroundColor #E8F5E8
+    BorderColor #4CAF50
+}
+skinparam database {
+    BackgroundColor #E0F2F1
+    BorderColor #00695C
+}
+
+title DaySave Data Flow Architecture - Simplified (A4 Format)
+
+' Core Actors
+actor "User" as user
+actor "Admin" as admin
+
+' External Services (simplified)
+boundary "OAuth\nProviders" as oauth
+boundary "AI Services\n(OpenAI, Google)" as ai_services
+boundary "Cloud Storage\n(GCS)" as storage
+
+' Core Application Components
+package "DaySave Application" {
+    control "Web Interface" as web
+    control "Authentication\nService" as auth
+    control "Content\nProcessor" as content
+    control "AI Analysis\nEngine" as ai_engine
+    control "Admin\nPanel" as admin_panel
+}
+
+' Data Storage
+database "MySQL\nDatabase" as db
+database "File\nStorage" as files
+
+' Core Data Flow - User Authentication
+user --> web : 1. Login Request
+web --> auth : 2. Validate Credentials
+auth --> oauth : 3. OAuth (if needed)
+oauth --> auth : 4. OAuth Response
+auth --> db : 5. Store/Update User
+db --> web : 6. User Session
+
+' Core Data Flow - Content Upload & Processing
+user --> web : 7. Upload Content
+web --> content : 8. Process Upload
+content --> files : 9. Store File
+content --> db : 10. Save Metadata
+content --> ai_engine : 11. Trigger Analysis
+ai_engine --> ai_services : 12. AI Processing
+ai_services --> ai_engine : 13. Analysis Results
+ai_engine --> db : 14. Store Analysis
+db --> web : 15. Update UI
+
+' Core Data Flow - Admin Operations
+admin --> admin_panel : 16. Admin Access
+admin_panel --> db : 17. System Queries
+db --> admin_panel : 18. System Data
+admin_panel --> admin : 19. Dashboard View
+
+' Backup & Storage Flow
+db --> storage : 20. Backup Data
+files --> storage : 21. Backup Files
+
+' Key Data Entities (simplified representation)
+note right of db
+  **Core Data Tables:**
+  • Users & Authentication
+  • Content & Files
+  • AI Analysis Results
+  • System & Audit Logs
+end note
+
+note right of ai_services
+  **AI Processing:**
+  • OpenAI GPT (Text Analysis)
+  • Google Vision (Image Analysis)
+  • Google Speech (Audio Analysis)
+end note
+
+note bottom of web
+  **Security Features:**
+  All data flows include authentication,
+  input validation, and audit logging
+end note
+
+@enduml

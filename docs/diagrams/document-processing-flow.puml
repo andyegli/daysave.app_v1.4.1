@@ -1,0 +1,290 @@
+@startuml DaySave Document Processing Flow
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+
+' Define colors for different processing types
+skinparam rectangle {
+    BackgroundColor<<input>> #E3F2FD
+    BackgroundColor<<source>> #FFF3E0
+    BackgroundColor<<detection>> #E8F5E8
+    BackgroundColor<<format>> #F3E5F5
+    BackgroundColor<<storage>> #FFEBEE
+    BackgroundColor<<processing>> #E1F5FE
+    BackgroundColor<<validation>> #FFF8E1
+    BackgroundColor<<stream>> #F1F8E9
+    BackgroundColor<<extraction>> #FCE4EC
+    BackgroundColor<<structure>> #E8EAF6
+    BackgroundColor<<content>> #FFF3E0
+    BackgroundColor<<security>> #E0F2F1
+    BackgroundColor<<ai>> #FFEAA7
+    BackgroundColor<<database>> #DDD6FE
+    BackgroundColor<<ui>> #DBEAFE
+    BackgroundColor<<decision>> #FFFDE7
+}
+
+title DaySave Document Processing Flow - Complete Pipeline
+
+' Input Layer
+rectangle "Document Input" as A <<input>>
+rectangle "Content Source" as B <<decision>>
+rectangle "Document File Upload" as C <<source>>
+rectangle "Document URL Analysis" as D <<source>>
+
+' Detection Layer
+rectangle "File Type Detection" as E <<detection>>
+rectangle "URL Content Extraction" as F <<detection>>
+
+' Format Detection
+rectangle "Document Format" as G <<decision>>
+rectangle "PDF Processing" as H <<format>>
+rectangle "Text Processing" as I <<format>>
+rectangle "CSV Processing" as J <<format>>
+rectangle "Office Document Processing" as K <<format>>
+rectangle "Binary Analysis" as L <<format>>
+
+rectangle "Content Type Detection" as M <<detection>>
+rectangle "Detected Format" as N <<decision>>
+
+' Storage Layer
+rectangle "Google Cloud Storage" as O <<storage>>
+
+' Processing Pipeline
+rectangle "Document Processing Pipeline" as P <<processing>>
+
+' Validation Layer
+rectangle "Document Validation" as Q <<validation>>
+rectangle "Format Verification" as R <<validation>>
+rectangle "Size & Security Check" as S <<validation>>
+rectangle "Metadata Extraction" as T <<validation>>
+
+' Parallel Processing
+rectangle "Parallel Processing - 4 Streams" as U <<processing>>
+
+' Processing Streams
+rectangle "Text Extraction Stream" as V1 <<stream>>
+rectangle "Structure Analysis Stream" as V2 <<stream>>
+rectangle "Content Analysis Stream" as V3 <<stream>>
+rectangle "Security Scan Stream" as V4 <<stream>>
+
+' Text Extraction Stream Components
+rectangle "Text Extraction Method" as W1 <<decision>>
+rectangle "PDF Text Extraction" as X1 <<extraction>>
+rectangle "Office Text Extraction" as Y1 <<extraction>>
+rectangle "Direct Text Reading" as Z1 <<extraction>>
+rectangle "Google Vision OCR" as AA1 <<extraction>>
+rectangle "Text Cleaning" as BB1 <<extraction>>
+rectangle "Encoding Detection" as CC1 <<extraction>>
+rectangle "Language Detection" as DD1 <<extraction>>
+
+' Structure Analysis Stream Components
+rectangle "Document Structure" as W2 <<structure>>
+rectangle "Page/Section Detection" as X2 <<structure>>
+rectangle "Header/Footer Extraction" as Y2 <<structure>>
+rectangle "Table Detection" as Z2 <<structure>>
+rectangle "Image Extraction" as AA2 <<structure>>
+rectangle "Hyperlink Extraction" as BB2 <<structure>>
+
+' Content Analysis Stream Components
+rectangle "Content Classification" as W3 <<content>>
+rectangle "Topic Detection" as X3 <<content>>
+rectangle "Keyword Extraction" as Y3 <<content>>
+rectangle "Entity Recognition" as Z3 <<content>>
+rectangle "Document Type Classification" as AA3 <<content>>
+
+' Security Scan Stream Components
+rectangle "Security Scanning" as W4 <<security>>
+rectangle "Malware Detection" as X4 <<security>>
+rectangle "Privacy Information Detection" as Y4 <<security>>
+rectangle "Sensitive Data Classification" as Z4 <<security>>
+
+' AI Analysis Layer
+rectangle "AI Analysis Layer" as EE <<ai>>
+rectangle "OpenAI Document Analysis" as FF1 <<ai>>
+rectangle "Content Summarization" as FF2 <<ai>>
+rectangle "Key Point Extraction" as FF3 <<ai>>
+rectangle "Category Classification" as FF4 <<ai>>
+rectangle "Tag Generation" as FF5 <<ai>>
+rectangle "Title Generation" as FF6 <<ai>>
+
+' Database Storage Layer
+rectangle "Database Storage" as GG <<database>>
+rectangle "File Table Enhancement" as HH <<database>>
+rectangle "ProcessingJob Table" as II <<database>>
+rectangle "DocumentAnalysis Table" as JJ <<database>>
+
+' UI Layer
+rectangle "Content Management UI" as KK <<ui>>
+rectangle "Document Viewer" as LL <<ui>>
+rectangle "Summary Display" as MM <<ui>>
+rectangle "Search Integration" as NN <<ui>>
+rectangle "Content Cards" as OO <<ui>>
+rectangle "User Dashboard" as PP <<ui>>
+rectangle "Download Integration" as QQ <<ui>>
+rectangle "Sharing Features" as RR <<ui>>
+rectangle "Version Management" as SS <<ui>>
+
+' Flow connections - Input and Source Detection
+A --> B
+B --> C : File Upload
+B --> D : URL Upload
+
+' Detection Flow
+C --> E
+D --> F
+
+' Format Detection Flow
+E --> G
+G --> H : PDF
+G --> I : TXT
+G --> J : CSV
+G --> K : DOC/DOCX
+G --> L : Unknown
+
+F --> M
+M --> N
+N --> H : PDF URL
+N --> I : Text Content
+N --> J : Structured Data
+N --> K : Office Format
+
+' Storage Flow
+H --> O
+I --> O
+J --> O
+K --> O
+L --> O
+
+' Processing Pipeline Flow
+O --> P
+P --> Q
+Q --> R
+R --> S
+S --> T
+
+' Parallel Processing Flow
+T --> U
+U --> V1
+U --> V2
+U --> V3
+U --> V4
+
+' Text Extraction Stream Flow
+V1 --> W1
+W1 --> X1 : PDF
+W1 --> Y1 : Office
+W1 --> Z1 : Plain Text
+W1 --> AA1 : OCR Required
+
+X1 --> BB1
+Y1 --> BB1
+Z1 --> BB1
+AA1 --> BB1
+BB1 --> CC1
+CC1 --> DD1
+
+' Structure Analysis Stream Flow
+V2 --> W2
+W2 --> X2
+X2 --> Y2
+Y2 --> Z2
+Z2 --> AA2
+AA2 --> BB2
+
+' Content Analysis Stream Flow
+V3 --> W3
+W3 --> X3
+X3 --> Y3
+Y3 --> Z3
+Z3 --> AA3
+
+' Security Scan Stream Flow
+V4 --> W4
+W4 --> X4
+X4 --> Y4
+Y4 --> Z4
+
+' AI Analysis Layer Flow
+DD1 --> EE
+BB2 --> EE
+AA3 --> EE
+Z4 --> EE
+
+' AI Processing Distribution
+EE --> FF1
+EE --> FF2
+EE --> FF3
+EE --> FF4
+EE --> FF5
+EE --> FF6
+
+' Database Storage Flow
+FF1 --> GG
+FF2 --> GG
+FF3 --> GG
+FF4 --> GG
+FF5 --> GG
+FF6 --> GG
+
+' Database Table Distribution
+GG --> HH
+GG --> II
+GG --> JJ
+
+' UI Component Flow
+HH --> KK
+II --> KK
+JJ --> KK
+
+' UI Feature Distribution
+KK --> LL
+KK --> MM
+KK --> NN
+KK --> OO
+
+' Dashboard Integration
+LL --> PP
+MM --> PP
+NN --> PP
+OO --> PP
+
+' Advanced Features
+PP --> QQ
+PP --> RR
+PP --> SS
+
+note as N1
+  4 Parallel Processing Streams:
+  1. Text Extraction & Language Detection
+  2. Document Structure Analysis
+  3. Content Classification & Entity Recognition
+  4. Security & Privacy Scanning
+end note
+U .. N1
+
+note as N2
+  AI Analysis processes all stream
+  results to generate intelligent
+  summaries, classifications,
+  and searchable content
+end note
+EE .. N2
+
+note as N3
+  Database enhancement updates
+  existing file records with
+  comprehensive document analysis
+  results and metadata
+end note
+GG .. N3
+
+note as N4
+  Document processing supports:
+  PDF, TXT, CSV, DOC/DOCX formats
+  with OCR fallback for scanned
+  documents and images
+end note
+G .. N4
+
+@enduml

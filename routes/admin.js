@@ -2512,7 +2512,8 @@ router.get('/api/analytics/overview', isAuthenticated, isAdmin, async (req, res)
 router.get('/api/analytics/user-trends', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { User, AuditLog } = require('../models');
-    const { Op, sequelize } = require('sequelize');
+    const { Op } = require('sequelize');
+    const { sequelize } = require('../models');
     const days = parseInt(req.query.days) || 30;
     
     const startDate = new Date();
@@ -2553,7 +2554,7 @@ router.get('/api/analytics/user-trends', isAuthenticated, isAdmin, async (req, r
       ],
       include: [{
         model: require('../models').Role,
-        attributes: ['name', 'display_name']
+        attributes: ['name', 'description']
       }],
       group: ['role_id', 'Role.id'],
       order: [[sequelize.fn('COUNT', sequelize.col('User.id')), 'DESC']]
@@ -2595,7 +2596,8 @@ router.get('/api/analytics/user-trends', isAuthenticated, isAdmin, async (req, r
 router.get('/api/analytics/content-stats', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { Content, File } = require('../models');
-    const { Op, sequelize } = require('sequelize');
+    const { Op } = require('sequelize');
+    const { sequelize } = require('../models');
     
     // Content type distribution
     const contentTypes = await Content.findAll({
@@ -2607,30 +2609,28 @@ router.get('/api/analytics/content-stats', isAuthenticated, isAdmin, async (req,
       order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
     });
 
-    // File type distribution
+    // File type distribution (file_size column doesn't exist, so we'll just count files)
     const fileTypes = await File.findAll({
       attributes: [
         'content_type',
-        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
-        [sequelize.fn('SUM', sequelize.col('file_size')), 'totalSize']
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
       ],
       group: ['content_type'],
       order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
     });
 
-    // Storage usage by user
+    // File usage by user (file_size column doesn't exist, so we'll just count files)
     const storageByUser = await File.findAll({
       attributes: [
         'user_id',
-        [sequelize.fn('COUNT', sequelize.col('File.id')), 'fileCount'],
-        [sequelize.fn('SUM', sequelize.col('file_size')), 'totalSize']
+        [sequelize.fn('COUNT', sequelize.col('File.id')), 'fileCount']
       ],
       include: [{
         model: User,
         attributes: ['username', 'email']
       }],
       group: ['user_id', 'User.id'],
-      order: [[sequelize.fn('SUM', sequelize.col('file_size')), 'DESC']],
+      order: [[sequelize.fn('COUNT', sequelize.col('File.id')), 'DESC']],
       limit: 10
     });
 
@@ -2689,26 +2689,27 @@ router.get('/api/analytics/content-stats', isAuthenticated, isAdmin, async (req,
 router.get('/api/analytics/performance', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { TestMetric, ProcessingJob } = require('../models');
-    const { Op, sequelize } = require('sequelize');
+    const { Op } = require('sequelize');
+    const { sequelize } = require('../models');
     
     const hours = parseInt(req.query.hours) || 24;
     const startTime = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-    // Processing performance metrics
-    const performanceMetrics = await TestMetric.findAll({
+    // Processing performance metrics (use ProcessingJob data since TestMetric is empty)
+    const performanceMetrics = await ProcessingJob.findAll({
       attributes: [
-        'ai_job',
-        [sequelize.fn('AVG', sequelize.col('metric_value')), 'avgValue'],
-        [sequelize.fn('MIN', sequelize.col('metric_value')), 'minValue'],
-        [sequelize.fn('MAX', sequelize.col('metric_value')), 'maxValue'],
+        'job_type',
+        [sequelize.fn('AVG', sequelize.literal('TIMESTAMPDIFF(SECOND, createdAt, updatedAt)')), 'avgProcessingTime'],
+        [sequelize.fn('MIN', sequelize.literal('TIMESTAMPDIFF(SECOND, createdAt, updatedAt)')), 'minProcessingTime'],
+        [sequelize.fn('MAX', sequelize.literal('TIMESTAMPDIFF(SECOND, createdAt, updatedAt)')), 'maxProcessingTime'],
         [sequelize.fn('COUNT', sequelize.col('id')), 'count']
       ],
       where: {
-        metric_type: 'performance',
-        collected_at: { [Op.gte]: startTime }
+        status: 'completed',
+        createdAt: { [Op.gte]: startTime }
       },
-      group: ['ai_job'],
-      order: [[sequelize.fn('AVG', sequelize.col('metric_value')), 'DESC']]
+      group: ['job_type'],
+      order: [[sequelize.fn('AVG', sequelize.literal('TIMESTAMPDIFF(SECOND, createdAt, updatedAt)')), 'ASC']]
     });
 
     // Processing job status distribution
@@ -2841,6 +2842,93 @@ router.get('/fingerprinting-analytics', isAuthenticated, isAdmin, (req, res) => 
 });
 
 /**
+ * Calculate risk distribution based on login attempts and device data
+ */
+async function calculateRiskDistribution() {
+  try {
+    const { Op } = require('sequelize');
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const oneWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    
+    // Get all devices
+    const devices = await UserDevice.findAll();
+    
+    // Get login attempts grouped by device fingerprint
+    const loginAttempts = await LoginAttempt.findAll({
+      where: {
+        attempted_at: { [Op.gte]: oneWeek }
+      }
+    });
+
+    // Group attempts by device fingerprint
+    const attemptsByDevice = {};
+    loginAttempts.forEach(attempt => {
+      if (attempt.device_fingerprint) {
+        if (!attemptsByDevice[attempt.device_fingerprint]) {
+          attemptsByDevice[attempt.device_fingerprint] = [];
+        }
+        attemptsByDevice[attempt.device_fingerprint].push(attempt);
+      }
+    });
+
+    const riskCounts = { minimal: 0, low: 0, medium: 0, high: 0, critical: 0 };
+
+    devices.forEach(device => {
+      const attempts = attemptsByDevice[device.device_fingerprint] || [];
+      const failedAttempts = attempts.filter(a => !a.success).length;
+      const totalAttempts = attempts.length;
+      const failureRate = totalAttempts > 0 ? failedAttempts / totalAttempts : 0;
+      const isVpn = attempts.some(a => a.is_vpn);
+      const hasBlockedAttempts = attempts.some(a => a.failure_reason && a.failure_reason.includes('blocked'));
+      
+      // Calculate risk level based on multiple factors
+      let riskScore = 0;
+      
+      // Failure rate scoring
+      if (failureRate > 0.8) riskScore += 4;
+      else if (failureRate > 0.6) riskScore += 3;
+      else if (failureRate > 0.4) riskScore += 2;
+      else if (failureRate > 0.2) riskScore += 1;
+      
+      // VPN usage
+      if (isVpn) riskScore += 2;
+      
+      // Blocked attempts
+      if (hasBlockedAttempts) riskScore += 3;
+      
+      // Device trust status
+      if (!device.is_trusted) riskScore += 1;
+      
+      // Multiple failed attempts in short time
+      const recentFailed = attempts.filter(a => 
+        !a.success && 
+        new Date(a.attempted_at) > yesterday
+      ).length;
+      if (recentFailed > 5) riskScore += 3;
+      else if (recentFailed > 2) riskScore += 1;
+      
+      // High-risk countries (basic scoring)
+      const highRiskCountries = ['CN', 'RU', 'BR'];
+      if (highRiskCountries.includes(device.country)) riskScore += 1;
+      
+      // Assign risk level based on score
+      if (riskScore >= 8) riskCounts.critical++;
+      else if (riskScore >= 6) riskCounts.high++;
+      else if (riskScore >= 4) riskCounts.medium++;
+      else if (riskScore >= 2) riskCounts.low++;
+      else riskCounts.minimal++;
+    });
+
+    return riskCounts;
+    
+  } catch (error) {
+    console.error('Error calculating risk distribution:', error);
+    // Return default distribution on error
+    return { minimal: 0, low: 0, medium: 0, high: 0, critical: 0 };
+  }
+}
+
+/**
  * API: Get fingerprinting overview
  */
 router.get('/api/fingerprinting/overview', isAuthenticated, isAdmin, async (req, res) => {
@@ -2886,8 +2974,8 @@ router.get('/api/fingerprinting/overview', isAuthenticated, isAdmin, async (req,
       return 0;
     });
     
-    // Risk distribution (placeholder - would need actual risk score data)
-    const riskDistribution = { minimal: 45, low: 25, medium: 15, high: 10, critical: 5 };
+    // Calculate risk distribution based on available data
+    const riskDistribution = await calculateRiskDistribution();
 
     res.json({
       totalDevices,
@@ -2927,12 +3015,12 @@ router.get('/api/fingerprinting/login-attempts', isAuthenticated, isAdmin, async
       return [];
     });
 
-    // Add enhanced data for demonstration and format location
+    // Add enhanced data and format location
     const attemptsWithEnhancedData = attempts.map(attempt => {
       const attemptData = attempt.toJSON();
       
-      // Add mock risk score if not available
-      attemptData.risk_score = Math.random() * 0.8;
+      // Use actual risk score or default to 0.1 for older records
+      attemptData.risk_score = attemptData.risk_score || 0.1;
       
       // Format location for display
       if (attemptData.country || attemptData.city) {

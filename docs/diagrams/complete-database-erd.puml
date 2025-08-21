@@ -1,0 +1,650 @@
+@startuml DaySave_Complete_Database_ERD
+!define ENTITY entity
+!define WEAK_ENTITY entity
+!define RELATIONSHIP diamond
+
+' Color scheme for different categories
+skinparam entity {
+  BackgroundColor<<user>> LightBlue
+  BackgroundColor<<content>> LightGreen
+  BackgroundColor<<ai>> Orange
+  BackgroundColor<<contact>> Yellow
+  BackgroundColor<<api>> Pink
+  BackgroundColor<<subscription>> Lavender
+  BackgroundColor<<testing>> LightGray
+  BackgroundColor<<admin>> Red
+  BackgroundColor<<session>> Cyan
+}
+
+' ===== USER MANAGEMENT ENTITIES =====
+ENTITY users <<user>> {
+  * id : CHAR(36) [PK]
+  --
+  * username : VARCHAR [UNIQUE]
+  * email : VARCHAR [UNIQUE]
+  * password_hash : VARCHAR
+  * role_id : CHAR(36) [FK]
+  country : VARCHAR
+  device_fingerprint : VARCHAR
+  subscription_status : ENUM
+  language : VARCHAR
+  first_name : VARCHAR
+  last_name : VARCHAR
+  email_verified : BOOLEAN
+  mfa_enabled : BOOLEAN
+  mfa_secret : VARCHAR
+  mfa_backup_codes : JSON
+  mfa_required : BOOLEAN
+  password_changed_at : DATETIME
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY roles <<user>> {
+  * id : CHAR(36) [PK]
+  --
+  * name : VARCHAR [UNIQUE]
+  description : TEXT
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY permissions <<user>> {
+  * id : CHAR(36) [PK]
+  --
+  * name : VARCHAR [UNIQUE]
+  description : TEXT
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY role_permissions <<user>> {
+  * id : CHAR(36) [PK]
+  --
+  * role_id : CHAR(36) [FK]
+  * permission_id : CHAR(36) [FK]
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY user_devices <<user>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_id : CHAR(36) [FK]
+  device_fingerprint : VARCHAR
+  device_name : VARCHAR
+  device_type : VARCHAR
+  browser_info : JSON
+  last_used : DATETIME
+  is_trusted : BOOLEAN
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY user_passkeys <<user>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_id : CHAR(36) [FK]
+  * credential_id : VARCHAR [UNIQUE]
+  * public_key : TEXT
+  device_name : VARCHAR
+  device_type : VARCHAR
+  counter : INTEGER
+  last_used : DATETIME
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY social_accounts <<user>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_id : CHAR(36) [FK]
+  * platform : VARCHAR
+  * provider_user_id : VARCHAR
+  access_token : TEXT
+  refresh_token : TEXT
+  profile_data : JSON
+  credentials : JSON
+  token_expires_at : DATETIME
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+' ===== CONTENT MANAGEMENT ENTITIES =====
+ENTITY content <<content>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_id : CHAR(36) [FK]
+  social_account_id : CHAR(36) [FK]
+  url : VARCHAR
+  metadata : JSON
+  transcription : TEXT
+  summary : TEXT
+  sentiment : JSON
+  auto_tags : JSON
+  user_tags : JSON
+  user_comments : TEXT
+  category : VARCHAR
+  location : JSON
+  generated_title : VARCHAR
+  content_type : VARCHAR
+  latitude : DECIMAL
+  longitude : DECIMAL
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY files <<content>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_id : CHAR(36) [FK]
+  * filename : VARCHAR
+  * file_path : VARCHAR
+  metadata : JSON
+  transcription : TEXT
+  summary : TEXT
+  sentiment : JSON
+  auto_tags : JSON
+  user_tags : JSON
+  user_comments : TEXT
+  category : VARCHAR
+  location : JSON
+  generated_title : VARCHAR
+  content_type : VARCHAR
+  latitude : DECIMAL
+  longitude : DECIMAL
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY content_groups <<content>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_id : CHAR(36) [FK]
+  * name : VARCHAR
+  description : TEXT
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY content_group_members <<content>> {
+  * id : CHAR(36) [PK]
+  --
+  * content_group_id : CHAR(36) [FK]
+  * content_id : CHAR(36) [FK]
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY content_relations <<content>> {
+  * id : CHAR(36) [PK]
+  --
+  * from_content_id : CHAR(36) [FK]
+  * to_content_id : CHAR(36) [FK]
+  * relationship_id : CHAR(36) [FK]
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY share_logs <<content>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_id : CHAR(36) [FK]
+  * content_id : CHAR(36) [FK]
+  * contact_id : CHAR(36) [FK]
+  shared_with : VARCHAR
+  share_method : VARCHAR
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY processing_jobs <<content>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_id : CHAR(36) [FK]
+  content_id : CHAR(36) [FK]
+  file_id : CHAR(36) [FK]
+  * job_type : ENUM
+  * status : ENUM
+  progress : INTEGER
+  result : JSON
+  error_message : TEXT
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY external_ai_usage <<content>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_id : CHAR(36) [FK]
+  * service : VARCHAR
+  * operation : VARCHAR
+  tokens_used : INTEGER
+  cost : DECIMAL
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+' ===== AI ANALYSIS ENTITIES =====
+ENTITY video_analysis <<ai>> {
+  * id : CHAR(36) [PK]
+  --
+  * file_id : CHAR(36) [FK]
+  processing_job_id : CHAR(36) [FK]
+  duration : FLOAT
+  resolution : VARCHAR
+  frame_rate : FLOAT
+  codec : VARCHAR
+  analysis_results : JSON
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY audio_analysis <<ai>> {
+  * id : CHAR(36) [PK]
+  --
+  * file_id : CHAR(36) [FK]
+  processing_job_id : CHAR(36) [FK]
+  duration : FLOAT
+  sample_rate : INTEGER
+  channels : INTEGER
+  codec : VARCHAR
+  analysis_results : JSON
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY image_analysis <<ai>> {
+  * id : CHAR(36) [PK]
+  --
+  * file_id : CHAR(36) [FK]
+  processing_job_id : CHAR(36) [FK]
+  width : INTEGER
+  height : INTEGER
+  format : VARCHAR
+  analysis_results : JSON
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY speakers <<ai>> {
+  * id : CHAR(36) [PK]
+  --
+  audio_analysis_id : CHAR(36) [FK]
+  speaker_id : VARCHAR
+  confidence : FLOAT
+  voice_print : JSON
+  segments : JSON
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY thumbnails <<ai>> {
+  * id : CHAR(36) [PK]
+  --
+  * file_id : CHAR(36) [FK]
+  video_analysis_id : CHAR(36) [FK]
+  image_analysis_id : CHAR(36) [FK]
+  * thumbnail_path : VARCHAR
+  timestamp : FLOAT
+  width : INTEGER
+  height : INTEGER
+  is_key_frame : BOOLEAN
+  expires_at : DATETIME
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY ocr_captions <<ai>> {
+  * id : CHAR(36) [PK]
+  --
+  * file_id : CHAR(36) [FK]
+  video_analysis_id : CHAR(36) [FK]
+  * text : TEXT
+  confidence : FLOAT
+  timestamp : FLOAT
+  bounding_box : JSON
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY faces <<ai>> {
+  * id : CHAR(36) [PK]
+  --
+  * file_id : CHAR(36) [FK]
+  face_id : VARCHAR
+  confidence : FLOAT
+  bounding_box : JSON
+  landmarks : JSON
+  emotions : JSON
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY storage_usage <<ai>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_id : CHAR(36) [FK]
+  * storage_type : VARCHAR
+  bytes_used : BIGINT
+  file_count : INTEGER
+  last_calculated : DATETIME
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+' ===== CONTACT MANAGEMENT ENTITIES =====
+ENTITY contacts <<contact>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_id : CHAR(36) [FK]
+  * name : VARCHAR
+  email : VARCHAR
+  phone : VARCHAR
+  address : TEXT
+  notes : TEXT
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY contact_groups <<contact>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_id : CHAR(36) [FK]
+  * name : VARCHAR
+  description : TEXT
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY contact_group_members <<contact>> {
+  * id : CHAR(36) [PK]
+  --
+  * contact_group_id : CHAR(36) [FK]
+  * contact_id : CHAR(36) [FK]
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY contact_relations <<contact>> {
+  * id : CHAR(36) [PK]
+  --
+  * from_contact_id : CHAR(36) [FK]
+  * to_contact_id : CHAR(36) [FK]
+  * relationship_id : CHAR(36) [FK]
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY contact_submissions <<contact>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK]
+  * name : VARCHAR
+  * email : VARCHAR
+  * message : TEXT
+  status : ENUM
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY relationships <<contact>> {
+  * id : CHAR(36) [PK]
+  --
+  * name : VARCHAR [UNIQUE]
+  description : TEXT
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY login_attempts <<contact>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK]
+  * ip_address : VARCHAR
+  * user_agent : TEXT
+  * success : BOOLEAN
+  failure_reason : VARCHAR
+  device_fingerprint : VARCHAR
+  device_type : VARCHAR
+  browser_name : VARCHAR
+  os_name : VARCHAR
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+' ===== API INTEGRATION ENTITIES =====
+ENTITY api_keys <<api>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_id : CHAR(36) [FK]
+  * name : VARCHAR
+  * key_hash : VARCHAR [UNIQUE]
+  permissions : JSON
+  rate_limit : INTEGER
+  expires_at : DATETIME
+  last_used : DATETIME
+  is_active : BOOLEAN
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY api_key_usage <<api>> {
+  * id : CHAR(36) [PK]
+  --
+  * api_key_id : CHAR(36) [FK]
+  * endpoint : VARCHAR
+  * method : VARCHAR
+  requests_count : INTEGER
+  * date : DATE
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY api_key_audit_logs <<api>> {
+  * id : CHAR(36) [PK]
+  --
+  * api_key_id : CHAR(36) [FK]
+  * action : VARCHAR
+  * endpoint : VARCHAR
+  ip_address : VARCHAR
+  user_agent : TEXT
+  request_data : JSON
+  response_status : INTEGER
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+' ===== SUBSCRIPTION ENTITIES =====
+ENTITY subscription_plans <<subscription>> {
+  * id : CHAR(36) [PK]
+  --
+  * name : VARCHAR [UNIQUE]
+  * price : DECIMAL
+  * currency : VARCHAR
+  billing_interval : ENUM
+  features : JSON
+  max_content_items : INTEGER
+  max_file_size : BIGINT
+  max_api_calls : INTEGER
+  is_active : BOOLEAN
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY user_subscriptions <<subscription>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_id : CHAR(36) [FK]
+  * subscription_plan_id : CHAR(36) [FK]
+  * status : ENUM
+  current_period_start : DATETIME
+  current_period_end : DATETIME
+  cancel_at_period_end : BOOLEAN
+  stripe_subscription_id : VARCHAR
+  usage_api_keys : INTEGER
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY subscription_transactions <<subscription>> {
+  * id : CHAR(36) [PK]
+  --
+  * user_subscription_id : CHAR(36) [FK]
+  * amount : DECIMAL
+  * currency : VARCHAR
+  * status : ENUM
+  stripe_payment_intent_id : VARCHAR
+  payment_method : VARCHAR
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+' ===== TESTING ENTITIES =====
+ENTITY test_runs <<testing>> {
+  * id : CHAR(36) [PK]
+  --
+  * test_suite : VARCHAR
+  * environment : VARCHAR
+  * status : ENUM
+  start_time : DATETIME
+  end_time : DATETIME
+  total_tests : INTEGER
+  passed_tests : INTEGER
+  failed_tests : INTEGER
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY test_results <<testing>> {
+  * id : CHAR(36) [PK]
+  --
+  * test_run_id : CHAR(36) [FK]
+  * test_name : VARCHAR
+  * status : ENUM
+  execution_time : FLOAT
+  error_message : TEXT
+  stack_trace : TEXT
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY test_metrics <<testing>> {
+  * id : CHAR(36) [PK]
+  --
+  * test_run_id : CHAR(36) [FK]
+  * metric_name : VARCHAR
+  * metric_value : DECIMAL
+  unit : VARCHAR
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+' ===== ADMIN ENTITIES =====
+ENTITY admin_settings <<admin>> {
+  * id : CHAR(36) [PK]
+  --
+  * key : VARCHAR [UNIQUE]
+  * value : TEXT
+  data_type : ENUM
+  description : TEXT
+  is_public : BOOLEAN
+  dev_http_access : BOOLEAN
+  max_file_size : BIGINT
+  allowed_file_types : JSON
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+ENTITY audit_logs <<admin>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK]
+  * action : VARCHAR
+  * resource_type : VARCHAR
+  resource_id : CHAR(36)
+  * ip_address : VARCHAR
+  user_agent : TEXT
+  changes : JSON
+  * created_at : DATETIME
+  * updated_at : DATETIME
+}
+
+' ===== SESSION ENTITY =====
+ENTITY sessions <<session>> {
+  * session_id : VARCHAR [PK]
+  --
+  * expires : BIGINT
+  * data : TEXT
+}
+
+' ===== RELATIONSHIPS =====
+
+' User Management Relationships
+users ||--o{ user_devices : "has many"
+users ||--o{ user_passkeys : "has many"
+users ||--o{ social_accounts : "has many"
+users }o--|| roles : "belongs to"
+roles ||--o{ role_permissions : "has many"
+permissions ||--o{ role_permissions : "has many"
+
+' Content Management Relationships
+users ||--o{ content : "creates"
+users ||--o{ files : "uploads"
+users ||--o{ content_groups : "creates"
+social_accounts ||--o{ content : "sources"
+content_groups ||--o{ content_group_members : "contains"
+content ||--o{ content_group_members : "belongs to"
+content ||--o{ content_relations : "relates to"
+content ||--o{ share_logs : "is shared"
+users ||--o{ processing_jobs : "initiates"
+content ||--o{ processing_jobs : "processes"
+files ||--o{ processing_jobs : "processes"
+users ||--o{ external_ai_usage : "consumes"
+
+' AI Analysis Relationships
+files ||--o{ video_analysis : "analyzes"
+files ||--o{ audio_analysis : "analyzes"
+files ||--o{ image_analysis : "analyzes"
+files ||--o{ thumbnails : "generates"
+files ||--o{ ocr_captions : "extracts text"
+files ||--o{ faces : "detects"
+audio_analysis ||--o{ speakers : "identifies"
+video_analysis ||--o{ thumbnails : "generates"
+video_analysis ||--o{ ocr_captions : "extracts from"
+image_analysis ||--o{ thumbnails : "generates"
+processing_jobs ||--o{ video_analysis : "creates"
+processing_jobs ||--o{ audio_analysis : "creates"
+processing_jobs ||--o{ image_analysis : "creates"
+users ||--o{ storage_usage : "tracks"
+
+' Contact Management Relationships
+users ||--o{ contacts : "manages"
+users ||--o{ contact_groups : "creates"
+contact_groups ||--o{ contact_group_members : "contains"
+contacts ||--o{ contact_group_members : "belongs to"
+contacts ||--o{ contact_relations : "relates to"
+relationships ||--o{ contact_relations : "defines"
+relationships ||--o{ content_relations : "defines"
+contacts ||--o{ share_logs : "receives"
+users ||--o{ login_attempts : "attempts"
+users ||--o{ contact_submissions : "submits"
+
+' API Integration Relationships
+users ||--o{ api_keys : "owns"
+api_keys ||--o{ api_key_usage : "tracks"
+api_keys ||--o{ api_key_audit_logs : "logs"
+
+' Subscription Relationships
+users ||--o{ user_subscriptions : "subscribes to"
+subscription_plans ||--o{ user_subscriptions : "provides"
+user_subscriptions ||--o{ subscription_transactions : "generates"
+
+' Testing Relationships
+test_runs ||--o{ test_results : "contains"
+test_runs ||--o{ test_metrics : "measures"
+
+' Admin Relationships
+users ||--o{ audit_logs : "generates"
+
+@enduml

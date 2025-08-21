@@ -1,0 +1,163 @@
+@startuml DaySave Modular Automation Architecture
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+
+' Define colors for different component types
+skinparam rectangle {
+    BackgroundColor<<input>> #E3F2FD
+    BackgroundColor<<orchestrator>> #FFF3E0
+    BackgroundColor<<processor>> #E8F5E8
+    BackgroundColor<<plugin>> #F3E5F5
+    BackgroundColor<<results>> #FFEBEE
+    BackgroundColor<<output>> #E1F5FE
+    BackgroundColor<<config>> #FFF8E1
+    BackgroundColor<<decision>> #FFFDE7
+}
+
+title DaySave Modular Automation Architecture - Plugin-Based Processing
+
+rectangle "Content Input" as A <<input>>
+rectangle "Automation Orchestrator" as B <<orchestrator>>
+
+rectangle "Content Type\nDetection" as C <<decision>>
+rectangle "Video Processor" as D <<processor>>
+rectangle "Audio Processor" as E <<processor>>
+rectangle "Image Processor" as F <<processor>>
+
+' Plugin Registries
+rectangle "Video Plugin Registry" as G <<plugin>>
+rectangle "Audio Plugin Registry" as H <<plugin>>
+rectangle "Image Plugin Registry" as I <<plugin>>
+
+' Video Plugins
+rectangle "Transcription Plugin" as G1 <<plugin>>
+rectangle "Object Detection Plugin" as G2 <<plugin>>
+rectangle "Thumbnail Plugin" as G3 <<plugin>>
+rectangle "OCR Plugin" as G4 <<plugin>>
+rectangle "Speaker Analysis Plugin" as G5 <<plugin>>
+
+' Audio Plugins
+rectangle "Transcription Plugin" as H1 <<plugin>>
+rectangle "Speaker Analysis Plugin" as H2 <<plugin>>
+rectangle "Audio Analysis Plugin" as H3 <<plugin>>
+
+' Image Plugins
+rectangle "Object Detection Plugin" as I1 <<plugin>>
+rectangle "OCR Plugin" as I2 <<plugin>>
+rectangle "Description Plugin" as I3 <<plugin>>
+rectangle "Thumbnail Plugin" as I4 <<plugin>>
+
+' Results
+rectangle "Video Results" as J <<results>>
+rectangle "Audio Results" as K <<results>>
+rectangle "Image Results" as L <<results>>
+
+' Unified Processing
+rectangle "Result Formatter" as M <<output>>
+rectangle "Unified Content Card Format" as N <<output>>
+rectangle "Database Storage" as O <<output>>
+rectangle "User Interface" as P <<output>>
+
+' Configuration and Support
+rectangle "Configuration Manager" as Q <<config>>
+rectangle "Error Handler" as R <<config>>
+rectangle "Progress Tracker" as S <<config>>
+
+' Main flow
+A --> B
+B --> C
+
+C --> D : video/*
+C --> E : audio/*
+C --> F : image/*
+
+' Processor to Plugin Registry connections
+D --> G
+E --> H
+F --> I
+
+' Video Plugin connections
+G --> G1
+G --> G2
+G --> G3
+G --> G4
+G --> G5
+
+' Audio Plugin connections
+H --> H1
+H --> H2
+H --> H3
+
+' Image Plugin connections
+I --> I1
+I --> I2
+I --> I3
+I --> I4
+
+' Plugin to Results connections
+G1 --> J
+G2 --> J
+G3 --> J
+G4 --> J
+G5 --> J
+
+H1 --> K
+H2 --> K
+H3 --> K
+
+I1 --> L
+I2 --> L
+I3 --> L
+I4 --> L
+
+' Results to Output connections
+J --> M
+K --> M
+L --> M
+
+M --> N
+N --> O
+N --> P
+
+' Configuration connections
+Q --> D
+Q --> E
+Q --> F
+
+' Error handling connections
+R --> D
+R --> E
+R --> F
+
+' Progress tracking connections
+S --> D
+S --> E
+S --> F
+
+note right of B
+  Orchestrator coordinates
+  all processing activities
+  and manages job lifecycle
+end note
+
+note right of G
+  Plugin Registry enables
+  modular feature loading
+  and independent development
+end note
+
+note right of M
+  Result Formatter ensures
+  unified content card format
+  regardless of processor type
+end note
+
+note bottom of Q
+  Configuration Manager provides
+  processor-specific settings
+  and job-level customization
+end note
+
+@enduml

@@ -74,6 +74,11 @@ class DeviceFingerprintingAdmin {
     document.getElementById('trustedDevices').textContent = data.trustedDevices || 0;
     document.getElementById('highRiskDevices').textContent = data.highRiskDevices || 0;
     document.getElementById('blockedAttempts').textContent = data.blockedAttempts || 0;
+    
+    // Update risk distribution chart
+    if (data.riskDistribution) {
+      this.updateChart(data.riskDistribution);
+    }
   }
 
   /**
@@ -210,6 +215,13 @@ class DeviceFingerprintingAdmin {
     const container = document.getElementById('devicesContainer');
     container.innerHTML = '';
 
+    // Handle case where devices is undefined or not an array
+    if (!devices || !Array.isArray(devices)) {
+      console.warn('⚠️ Devices data is not available or not an array:', devices);
+      container.innerHTML = '<div class="col-12"><div class="alert alert-warning">No device data available</div></div>';
+      return;
+    }
+
     devices.forEach(device => {
       const deviceCard = document.createElement('div');
       deviceCard.className = 'col-lg-4 col-md-6 mb-4';
@@ -246,8 +258,8 @@ class DeviceFingerprintingAdmin {
         <div class="mb-2">
           <small class="text-muted">Fingerprint Hashes:</small><br>
           <small class="font-monospace">
-            ${device.device_details.canvas ? `<i class="fas fa-paint-brush me-1"></i>Canvas: ...${device.device_details.canvas.hash.slice(-8)}<br>` : ''}
-            ${device.device_details.audio ? `<i class="fas fa-volume-up me-1"></i>Audio: ...${device.device_details.audio.hash.slice(-8)}` : ''}
+            ${device.device_details.canvas ? `<i class="fas fa-paint-brush me-1"></i>Canvas: ...${device.device_details.canvas.slice(-8)}<br>` : ''}
+            ${device.device_details.audio ? `<i class="fas fa-volume-up me-1"></i>Audio: ...${device.device_details.audio.slice(-8)}` : ''}
           </small>
         </div>
       ` : '';

@@ -7,7 +7,7 @@ You are a AI Agent assigned to assist in the development of the `DaySave.app` pr
 
 ## Responsibilities
 - Ensure security best practices (JWT, 2FA, encryption, input sanitization).
-- Handle OAuth flows and token refresh for 11 platforms.
+- Handle OAuth flows and token refresh for platforms.
 - Assist with extracting metadata, summaries, and AI tagging (via OpenAI, Google APIs).
 - Maintain multilingual consistency in all interfaces and outputs.
 - Respect UUID usage and database integrity via Sequelize ORM.

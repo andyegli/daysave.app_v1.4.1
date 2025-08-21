@@ -153,11 +153,11 @@ legend right
     |<#FFF3E0>| Advanced (Could Have) |
 endlegend
 
-note bottom
-    **DaySave v1.4.1 Story Mapping**
-    Total Story Points: 787
-    Completion: 79.2% (623/787)
-    User Journey: Discovery → Analysis → Organization → Collaboration
+note
+**DaySave v1.4.1 Story Mapping**
+Total Story Points: 787
+Completion: 79.2% (623/787)
+User Journey: Discovery → Analysis → Organization → Collaboration
 end note
 
 @enduml

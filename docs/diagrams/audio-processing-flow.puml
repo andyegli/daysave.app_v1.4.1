@@ -1,0 +1,256 @@
+@startuml DaySave Audio Processing Flow
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+
+' Define colors for different processing types
+skinparam rectangle {
+    BackgroundColor<<input>> #E3F2FD
+    BackgroundColor<<source>> #FFF3E0
+    BackgroundColor<<platform>> #E8F5E8
+    BackgroundColor<<storage>> #F3E5F5
+    BackgroundColor<<processing>> #FFEBEE
+    BackgroundColor<<validation>> #E1F5FE
+    BackgroundColor<<stream>> #FFF8E1
+    BackgroundColor<<transcription>> #F1F8E9
+    BackgroundColor<<speaker>> #FCE4EC
+    BackgroundColor<<voiceprint>> #E8EAF6
+    BackgroundColor<<quality>> #FFF3E0
+    BackgroundColor<<enhancement>> #E0F2F1
+    BackgroundColor<<ai>> #FFEAA7
+    BackgroundColor<<database>> #DDD6FE
+    BackgroundColor<<ui>> #DBEAFE
+    BackgroundColor<<decision>> #FFFDE7
+}
+
+title DaySave Audio Processing Flow - Complete Pipeline
+
+' Input Layer
+rectangle "Audio Input" as A <<input>>
+rectangle "Content Source" as B <<decision>>
+rectangle "Audio URL Analysis" as C <<source>>
+rectangle "File Upload" as D <<source>>
+
+' Platform Detection Layer
+rectangle "Platform Detection" as E <<platform>>
+rectangle "Audio Download" as F <<platform>>
+rectangle "YouTube-DL Audio Extract" as G <<platform>>
+rectangle "Direct Download" as H <<platform>>
+
+' Storage Layer
+rectangle "Google Cloud Storage" as I <<storage>>
+
+' Processing Pipeline
+rectangle "Audio Processing Pipeline" as J <<processing>>
+
+' Validation Layer
+rectangle "Audio Validation" as K <<validation>>
+rectangle "Format Support Check" as L <<validation>>
+rectangle "Metadata Extraction" as M <<validation>>
+rectangle "FFmpeg Conversion" as N <<validation>>
+
+' Quality Assessment
+rectangle "Audio Quality Assessment" as O <<processing>>
+rectangle "Parallel Processing - 5 Streams" as P <<processing>>
+
+' Processing Streams
+rectangle "Transcription Stream" as Q1 <<stream>>
+rectangle "Speaker Analysis Stream" as Q2 <<stream>>
+rectangle "Voice Print Stream" as Q3 <<stream>>
+rectangle "Quality Analysis Stream" as Q4 <<stream>>
+rectangle "Enhancement Stream" as Q5 <<stream>>
+
+' Transcription Stream Components
+rectangle "File Duration Check" as R1 <<decision>>
+rectangle "Google Speech-to-Text" as S1 <<transcription>>
+rectangle "OpenAI Whisper" as T1 <<transcription>>
+rectangle "Speaker Diarization" as U1 <<transcription>>
+rectangle "Transcription Confidence" as V1 <<transcription>>
+rectangle "Language Detection" as W1 <<transcription>>
+
+' Speaker Analysis Stream Components
+rectangle "Speaker Segmentation" as R2 <<speaker>>
+rectangle "Speaker Count Detection" as S2 <<speaker>>
+rectangle "Speaker Timestamps" as T2 <<speaker>>
+rectangle "Speaker Confidence Scoring" as U2 <<speaker>>
+
+' Voice Print Stream Components
+rectangle "Voice Print Extraction" as R3 <<voiceprint>>
+rectangle "VoicePrintDatabase Matching" as S3 <<voiceprint>>
+rectangle "Speaker Identification" as T3 <<voiceprint>>
+rectangle "Recognition Confidence" as U3 <<voiceprint>>
+
+' Quality Analysis Stream Components
+rectangle "Sample Rate Analysis" as R4 <<quality>>
+rectangle "Bitrate Assessment" as S4 <<quality>>
+rectangle "Noise Level Detection" as T4 <<quality>>
+rectangle "Audio Clarity Scoring" as U4 <<quality>>
+
+' Enhancement Stream Components
+rectangle "Volume Normalization" as R5 <<enhancement>>
+rectangle "Noise Reduction" as S5 <<enhancement>>
+rectangle "Format Optimization" as T5 <<enhancement>>
+
+' AI Analysis Layer
+rectangle "AI Analysis Layer" as X <<ai>>
+rectangle "OpenAI GPT-4 Summary" as Y1 <<ai>>
+rectangle "Sentiment Analysis" as Y2 <<ai>>
+rectangle "Content Categorization" as Y3 <<ai>>
+rectangle "Topic Extraction" as Y4 <<ai>>
+rectangle "AI Tag Generation" as Y5 <<ai>>
+rectangle "Title Generation" as Y6 <<ai>>
+
+' Database Storage Layer
+rectangle "Database Storage" as Z <<database>>
+rectangle "AudioAnalysis Table" as AA <<database>>
+rectangle "Speaker Table" as BB <<database>>
+rectangle "ProcessingJob Table" as CC <<database>>
+
+' UI Layer
+rectangle "Content Management UI" as DD <<ui>>
+rectangle "Audio Player Integration" as EE <<ui>>
+rectangle "Transcript Display" as FF <<ui>>
+rectangle "Speaker Timeline" as GG <<ui>>
+rectangle "Content Cards" as HH <<ui>>
+rectangle "User Dashboard" as II <<ui>>
+
+' Flow connections - Input and Source Detection
+A --> B
+B --> C : URL Upload
+B --> D : File Upload
+
+' Platform Detection Flow
+C --> E
+E --> F : SoundCloud/Spotify
+E --> G : YouTube Audio
+E --> H : Direct Audio URL
+
+' Storage Flow
+D --> I
+F --> I
+G --> I
+H --> I
+
+' Processing Pipeline Flow
+I --> J
+J --> K
+K --> L
+L --> M : Supported
+L --> N : Unsupported
+N --> M
+
+' Quality and Parallel Processing
+M --> O
+O --> P
+
+' Stream Distribution
+P --> Q1
+P --> Q2
+P --> Q3
+P --> Q4
+P --> Q5
+
+' Transcription Stream Flow
+Q1 --> R1
+R1 --> S1 : < 30 seconds
+R1 --> T1 : > 30 seconds
+S1 --> U1
+T1 --> U1
+U1 --> V1
+V1 --> W1
+
+' Speaker Analysis Stream Flow
+Q2 --> R2
+R2 --> S2
+S2 --> T2
+T2 --> U2
+
+' Voice Print Stream Flow
+Q3 --> R3
+R3 --> S3
+S3 --> T3
+T3 --> U3
+
+' Quality Analysis Stream Flow
+Q4 --> R4
+R4 --> S4
+S4 --> T4
+T4 --> U4
+
+' Enhancement Stream Flow
+Q5 --> R5
+R5 --> S5
+S5 --> T5
+
+' AI Analysis Layer Flow
+W1 --> X
+U2 --> X
+U3 --> X
+U4 --> X
+T5 --> X
+
+' AI Processing Distribution
+X --> Y1
+X --> Y2
+X --> Y3
+X --> Y4
+X --> Y5
+X --> Y6
+
+' Database Storage Flow
+Y1 --> Z
+Y2 --> Z
+Y3 --> Z
+Y4 --> Z
+Y5 --> Z
+Y6 --> Z
+
+' Database Table Distribution
+Z --> AA
+Z --> BB
+Z --> CC
+
+' UI Component Flow
+AA --> DD
+BB --> DD
+CC --> DD
+
+' UI Feature Distribution
+DD --> EE
+DD --> FF
+DD --> GG
+DD --> HH
+
+' Final Dashboard Integration
+EE --> II
+FF --> II
+GG --> II
+HH --> II
+
+note as N1
+  5 Parallel Processing Streams:
+  1. Transcription & Language
+  2. Speaker Analysis & Diarization
+  3. Voice Print Recognition
+  4. Audio Quality Assessment
+  5. Enhancement & Optimization
+end note
+P .. N1
+
+note as N2
+  AI Analysis combines all
+  stream results for intelligent
+  content understanding and
+  automatic categorization
+end note
+X .. N2
+
+note as N3
+  Database stores comprehensive
+  audio analysis results across
+  multiple specialized tables
+end note
+Z .. N3
+
+@enduml

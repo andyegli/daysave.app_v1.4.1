@@ -53,9 +53,21 @@ async function loadOverviewData() {
       document.getElementById('totalActivity').textContent = overview.activity.totalEvents;
       document.getElementById('recentActivity').textContent = `${overview.activity.recent24h} in 24h`;
       
-      // System health calculation
+      // System health calculation (improved algorithm)
       const memoryPercentage = Math.round((overview.system.memoryUsage.heapUsed / overview.system.memoryUsage.heapTotal) * 100);
-      const healthScore = Math.max(0, 100 - memoryPercentage);
+      
+      // Better health scoring: 0-60% = excellent, 60-80% = good, 80-90% = fair, 90%+ = poor
+      let healthScore;
+      if (memoryPercentage <= 60) {
+        healthScore = 100; // Excellent
+      } else if (memoryPercentage <= 80) {
+        healthScore = Math.round(100 - ((memoryPercentage - 60) * 1.5)); // Good (100-70)
+      } else if (memoryPercentage <= 90) {
+        healthScore = Math.round(70 - ((memoryPercentage - 80) * 3)); // Fair (70-40)
+      } else {
+        healthScore = Math.max(10, 40 - ((memoryPercentage - 90) * 3)); // Poor (40-10)
+      }
+      
       document.getElementById('systemHealth').textContent = `${healthScore}%`;
       document.getElementById('uptime').textContent = `${Math.round(overview.system.uptime / 3600)}h uptime`;
     }

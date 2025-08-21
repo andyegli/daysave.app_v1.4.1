@@ -179,13 +179,13 @@ analysis_data -> mysql
 system_data -> mysql
 audit_data -> mysql
 
-note over user, gcs
+note as DataFlowNote
   All data flows include:
   - Security validation
-  - Input sanitization  
-  - Error handling
+  - Authentication checks
   - Audit logging
-  - Performance monitoring
 end note
+user .. DataFlowNote
+gcs .. DataFlowNote
 
 @enduml

@@ -1,0 +1,145 @@
+@startuml DaySave Automation Pipeline
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+
+' Define colors for different processing types
+skinparam rectangle {
+    BackgroundColor<<input>> #E3F2FD
+    BackgroundColor<<detection>> #FFF3E0
+    BackgroundColor<<processing>> #E8F5E8
+    BackgroundColor<<analysis>> #F3E5F5
+    BackgroundColor<<storage>> #FFEBEE
+    BackgroundColor<<decision>> #FFFDE7
+}
+
+title DaySave Automation Pipeline - Content Processing Flow
+
+rectangle "Content Input" as A <<input>>
+rectangle "Content Type\nDetection" as B <<decision>>
+rectangle "URL Analysis" as C <<detection>>
+rectangle "File Analysis" as D <<detection>>
+
+rectangle "Platform\nDetection" as E <<decision>>
+rectangle "Platform Download" as F <<processing>>
+rectangle "Direct Download" as G <<processing>>
+rectangle "Image Processing" as H <<processing>>
+
+rectangle "MIME Type\nClassification" as I <<decision>>
+rectangle "Video Processing" as J <<processing>>
+rectangle "Audio Processing" as K <<processing>>
+rectangle "Image Processing" as L <<processing>>
+
+rectangle "File Category" as M <<decision>>
+
+' Video Analysis Pipeline
+rectangle "Video Analysis Pipeline" as N <<analysis>>
+rectangle "Extract Audio Track" as Q <<analysis>>
+rectangle "Extract Video Frames" as R <<analysis>>
+rectangle "Generate Thumbnails" as S <<analysis>>
+rectangle "Video Metadata" as T <<analysis>>
+
+' Audio Analysis Pipeline  
+rectangle "Audio Analysis Pipeline" as O <<analysis>>
+rectangle "Audio Metadata" as Y <<analysis>>
+
+' Image Analysis Pipeline
+rectangle "Image Analysis Pipeline" as P <<analysis>>
+
+' Advanced Analysis Components
+rectangle "Speech-to-Text Transcription" as U <<analysis>>
+rectangle "Object Detection" as V <<analysis>>
+rectangle "OCR Text Extraction" as W <<analysis>>
+rectangle "Key Moments Detection" as X <<analysis>>
+rectangle "Image Description Generation" as Z <<analysis>>
+
+' AI Processing
+rectangle "Speaker Diarization" as AA <<analysis>>
+rectangle "Voice Print Recognition" as BB <<analysis>>
+rectangle "Sentiment Analysis" as CC <<analysis>>
+
+' Content Intelligence
+rectangle "Content Categorization" as DD <<analysis>>
+rectangle "Auto-Tag Generation" as EE <<analysis>>
+rectangle "Summary Generation" as FF <<analysis>>
+
+' Output
+rectangle "Database Storage" as GG <<storage>>
+rectangle "Real-time Updates" as HH <<storage>>
+rectangle "User Dashboard" as II <<storage>>
+
+' Flow connections
+A --> B
+B --> C : URL Detection
+B --> D : File Upload
+
+C --> E
+E --> F : YouTube/Vimeo/TikTok
+E --> G : Direct Media URL
+E --> H : Image URL
+
+D --> I
+I --> J : video/*
+I --> K : audio/*
+I --> L : image/*
+
+F --> M
+G --> M
+H --> L
+
+M --> J : Video
+M --> K : Audio
+M --> L : Image
+
+J --> N
+K --> O
+L --> P
+
+' Video processing flows
+N --> Q
+N --> R
+N --> S
+N --> T
+
+Q --> U
+R --> V
+R --> W
+S --> X
+
+' Audio processing flows
+O --> U
+O --> Y
+
+' Image processing flows
+P --> V
+P --> W
+P --> Z
+
+' Advanced analysis flows
+U --> AA
+U --> BB
+U --> CC
+
+' Content intelligence flows
+V --> DD
+W --> DD
+Z --> DD
+CC --> DD
+
+DD --> EE
+DD --> FF
+
+' Storage flows
+AA --> GG
+BB --> GG
+X --> GG
+Y --> GG
+T --> GG
+EE --> GG
+FF --> GG
+
+GG --> HH
+HH --> II
+
+@enduml

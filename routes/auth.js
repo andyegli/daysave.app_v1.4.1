@@ -5,6 +5,7 @@ const { logAuthEvent, logAuthError, logOAuthFlow, logOAuthError } = require('../
 const { User, Role, Sequelize, SocialAccount, SubscriptionPlan } = require('../models');
 const subscriptionService = require('../services/subscriptionService');
 const { trackLogin } = require('../utils/login-tracker');
+const { trackSuccessfulLogin, trackFailedLogin } = require('../utils/loginAttemptTracker');
 
 // Import middleware
 const {
@@ -147,8 +148,9 @@ router.get('/google/callback', (req, res, next) => {
           return res.redirect('/auth/login?error=session_save_failed');
         }
         
-        // Track login in UserDevice table
+        // Track successful login in both UserDevice and LoginAttempt tables
         await trackLogin(user.id, req, { loginMethod: 'oauth_google' });
+        await trackSuccessfulLogin(user.id, req, { loginMethod: 'oauth_google' });
         
         logAuthEvent('LOGIN_SUCCESS', { ...clientDetails, userId: user.id, username: user.username });
         return res.redirect('/dashboard');
@@ -222,11 +224,16 @@ router.get('/microsoft/callback', (req, res, next) => {
         return res.redirect('/auth/login?error=login_failed');
       }
       // Explicitly save the session before redirecting
-      req.session.save((saveErr) => {
+      req.session.save(async (saveErr) => {
         if (saveErr) {
           logAuthError('SESSION_SAVE_ERROR', saveErr, { ...clientDetails, userId: user.id });
           return res.redirect('/auth/login?error=session_save_failed');
         }
+        
+        // Track successful login in both UserDevice and LoginAttempt tables
+        await trackLogin(user.id, req, { loginMethod: 'oauth_microsoft' });
+        await trackSuccessfulLogin(user.id, req, { loginMethod: 'oauth_microsoft' });
+        
         logAuthEvent('LOGIN_SUCCESS', { ...clientDetails, userId: user.id, username: user.username });
         return res.redirect('/dashboard');
       });
@@ -299,11 +306,16 @@ router.get('/apple/callback', (req, res, next) => {
         return res.redirect('/auth/login?error=login_failed');
       }
       // Explicitly save the session before redirecting
-      req.session.save((saveErr) => {
+      req.session.save(async (saveErr) => {
         if (saveErr) {
           logAuthError('SESSION_SAVE_ERROR', saveErr, { ...clientDetails, userId: user.id });
           return res.redirect('/auth/login?error=session_save_failed');
         }
+        
+        // Track successful login in both UserDevice and LoginAttempt tables
+        await trackLogin(user.id, req, { loginMethod: 'oauth_apple' });
+        await trackSuccessfulLogin(user.id, req, { loginMethod: 'oauth_apple' });
+        
         logAuthEvent('LOGIN_SUCCESS', { ...clientDetails, userId: user.id, username: user.username });
         return res.redirect('/dashboard');
       });
@@ -981,6 +993,10 @@ router.post('/login', isNotAuthenticated, async (req, res, next) => {
     
     if (!user) {
       logAuthEvent('LOGIN_FAILED_USER_NOT_FOUND', { ...clientDetails, username });
+      
+      // Track failed login attempt (no user ID available)
+      await trackFailedLogin(null, req, 'USER_NOT_FOUND', { loginMethod: 'password' });
+      
       return res.render('auth/login', {
         title: 'Login - DaySave',
         error: 'Invalid username/email or password.',
@@ -990,6 +1006,10 @@ router.post('/login', isNotAuthenticated, async (req, res, next) => {
     
     if (!user.email_verified) {
       logAuthEvent('LOGIN_FAILED_EMAIL_NOT_VERIFIED', { ...clientDetails, userId: user.id, username: user.username });
+      
+      // Track failed login attempt
+      await trackFailedLogin(user.id, req, 'EMAIL_NOT_VERIFIED', { loginMethod: 'password' });
+      
       return res.render('auth/login', {
         title: 'Login - DaySave',
         error: 'Please verify your email before logging in.',
@@ -1001,6 +1021,10 @@ router.post('/login', isNotAuthenticated, async (req, res, next) => {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
       logAuthEvent('LOGIN_FAILED_INVALID_PASSWORD', { ...clientDetails, userId: user.id, username: user.username });
+      
+      // Track failed login attempt
+      await trackFailedLogin(user.id, req, 'INVALID_PASSWORD', { loginMethod: 'password' });
+      
       return res.render('auth/login', {
         title: 'Login - DaySave',
         error: 'Invalid username/email or password.',
@@ -1032,8 +1056,9 @@ router.post('/login', isNotAuthenticated, async (req, res, next) => {
         return next(err);
       }
       
-      // Track login in UserDevice table
+      // Track successful login in both UserDevice and LoginAttempt tables
       await trackLogin(user.id, req, { loginMethod: 'password' });
+      await trackSuccessfulLogin(user.id, req, { loginMethod: 'password' });
       
       logAuthEvent('LOGIN_SUCCESS', { 
         ...clientDetails, 
@@ -1126,6 +1151,9 @@ router.post('/verify-2fa', async (req, res, next) => {
     });
     
     if (!isValid) {
+      // Track failed 2FA attempt
+      await trackFailedLogin(user.id, req, 'INVALID_2FA_CODE', { loginMethod: '2fa_totp' });
+      
       return res.render('auth/verify-2fa', {
         title: 'Two-Factor Authentication - DaySave',
         error: 'Invalid verification code. Please try again.',
@@ -1140,8 +1168,9 @@ router.post('/verify-2fa', async (req, res, next) => {
         return next(err);
       }
       
-      // Track login in UserDevice table
+      // Track successful login in both UserDevice and LoginAttempt tables
       await trackLogin(user.id, req, { loginMethod: '2fa_totp' });
+      await trackSuccessfulLogin(user.id, req, { loginMethod: '2fa_totp' });
       
       // Clear pending session data
       delete req.session.pendingUserId;
@@ -1282,8 +1311,9 @@ router.post('/verify-2fa-backup', async (req, res, next) => {
         return next(err);
       }
       
-      // Track login in UserDevice table
+      // Track successful login in both UserDevice and LoginAttempt tables
       await trackLogin(user.id, req, { loginMethod: '2fa_backup' });
+      await trackSuccessfulLogin(user.id, req, { loginMethod: '2fa_backup' });
       
       // Clear pending session data
       delete req.session.pendingUserId;

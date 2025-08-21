@@ -37,6 +37,8 @@ pids/
 # Coverage directory used by tools like istanbul
 coverage/
 
+/docs/alternative/*
+
 # Dependency directories
 jspm_packages/
 

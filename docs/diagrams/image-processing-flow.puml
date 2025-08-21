@@ -1,0 +1,295 @@
+@startuml DaySave Image Processing Flow
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+
+' Define colors for different processing types
+skinparam rectangle {
+    BackgroundColor<<input>> #E3F2FD
+    BackgroundColor<<source>> #FFF3E0
+    BackgroundColor<<platform>> #E8F5E8
+    BackgroundColor<<storage>> #F3E5F5
+    BackgroundColor<<processing>> #FFEBEE
+    BackgroundColor<<validation>> #E1F5FE
+    BackgroundColor<<stream>> #FFF8E1
+    BackgroundColor<<object>> #F1F8E9
+    BackgroundColor<<ocr>> #FCE4EC
+    BackgroundColor<<description>> #E8EAF6
+    BackgroundColor<<thumbnail>> #FFF3E0
+    BackgroundColor<<quality>> #E0F2F1
+    BackgroundColor<<face>> #FFCDD2
+    BackgroundColor<<ai>> #FFEAA7
+    BackgroundColor<<database>> #DDD6FE
+    BackgroundColor<<ui>> #DBEAFE
+    BackgroundColor<<decision>> #FFFDE7
+}
+
+title DaySave Image Processing Flow - Complete Pipeline
+
+' Input Layer
+rectangle "Image Input" as A <<input>>
+rectangle "Content Source" as B <<decision>>
+rectangle "Image URL Analysis" as C <<source>>
+rectangle "File Upload" as D <<source>>
+
+' Platform Detection Layer
+rectangle "Platform Detection" as E <<platform>>
+rectangle "Image Download" as F <<platform>>
+rectangle "Direct Download" as G <<platform>>
+rectangle "Social Platform Extract" as H <<platform>>
+
+' Storage Layer
+rectangle "Google Cloud Storage" as I <<storage>>
+
+' Processing Pipeline
+rectangle "Image Processing Pipeline" as J <<processing>>
+
+' Validation Layer
+rectangle "Image Validation" as K <<validation>>
+rectangle "Format & Size Check" as L <<validation>>
+rectangle "Metadata Extraction" as M <<validation>>
+rectangle "Format Conversion" as N <<validation>>
+
+' Quality Assessment
+rectangle "Image Quality Assessment" as O <<processing>>
+rectangle "Parallel Processing - 6 Streams" as P <<processing>>
+
+' Processing Streams
+rectangle "Object Detection Stream" as Q1 <<stream>>
+rectangle "OCR Text Extraction Stream" as Q2 <<stream>>
+rectangle "AI Description Stream" as Q3 <<stream>>
+rectangle "Thumbnail Generation Stream" as Q4 <<stream>>
+rectangle "Quality Analysis Stream" as Q5 <<stream>>
+rectangle "Face Detection Stream" as Q6 <<stream>>
+
+' Object Detection Stream Components
+rectangle "Provider Selection" as R1 <<decision>>
+rectangle "Google Vision AI" as S1 <<object>>
+rectangle "OpenAI Vision API" as T1 <<object>>
+rectangle "Object Confidence Scoring" as U1 <<object>>
+rectangle "Scene Analysis" as V1 <<object>>
+rectangle "Landmark Detection" as W1 <<object>>
+
+' OCR Text Extraction Stream Components
+rectangle "Google Vision OCR" as R2 <<ocr>>
+rectangle "OpenAI Vision Fallback" as S2 <<ocr>>
+rectangle "Text Confidence Scoring" as T2 <<ocr>>
+rectangle "Language Detection" as U2 <<ocr>>
+rectangle "Handwriting Detection" as V2 <<ocr>>
+
+' AI Description Stream Components
+rectangle "OpenAI GPT-4 Vision" as R3 <<description>>
+rectangle "Comprehensive Description" as S3 <<description>>
+rectangle "Scene Context Analysis" as T3 <<description>>
+rectangle "Mood & Atmosphere" as U3 <<description>>
+rectangle "Color Analysis" as V3 <<description>>
+
+' Thumbnail Generation Stream Components
+rectangle "ThumbnailGenerator Service" as R4 <<thumbnail>>
+rectangle "Multiple Size Generation" as S4 <<thumbnail>>
+rectangle "150px, 300px, 500px, 800px" as T4 <<thumbnail>>
+rectangle "Quality Optimization" as U4 <<thumbnail>>
+rectangle "Format Conversion" as V4 <<thumbnail>>
+
+' Quality Analysis Stream Components
+rectangle "Resolution Analysis" as R5 <<quality>>
+rectangle "Aspect Ratio Check" as S5 <<quality>>
+rectangle "Color Space Analysis" as T5 <<quality>>
+rectangle "File Size Assessment" as U5 <<quality>>
+rectangle "Overall Quality Score" as V5 <<quality>>
+
+' Face Detection Stream Components
+rectangle "Face Detection API" as R6 <<face>>
+rectangle "Face Encoding" as S6 <<face>>
+rectangle "Face Recognition" as T6 <<face>>
+rectangle "Identity Confidence" as U6 <<face>>
+
+' AI Enhancement Layer
+rectangle "AI Enhancement Layer" as X <<ai>>
+rectangle "OpenAI Content Analysis" as Y1 <<ai>>
+rectangle "Sentiment from Description" as Y2 <<ai>>
+rectangle "Category Classification" as Y3 <<ai>>
+rectangle "Context-Based Tagging" as Y4 <<ai>>
+rectangle "Title Generation" as Y5 <<ai>>
+rectangle "Content Summarization" as Y6 <<ai>>
+
+' Database Storage Layer
+rectangle "Database Storage" as Z <<database>>
+rectangle "ImageAnalysis Table" as AA <<database>>
+rectangle "Thumbnail Table" as BB <<database>>
+rectangle "Face Table" as CC <<database>>
+rectangle "ProcessingJob Table" as DD <<database>>
+
+' UI Layer
+rectangle "Content Management UI" as EE <<ui>>
+rectangle "Image Gallery View" as FF <<ui>>
+rectangle "Description Display" as GG <<ui>>
+rectangle "Tag Cloud Interface" as HH <<ui>>
+rectangle "Content Cards" as II <<ui>>
+rectangle "User Dashboard" as JJ <<ui>>
+
+' Flow connections - Input and Source Detection
+A --> B
+B --> C : URL Upload
+B --> D : File Upload
+
+' Platform Detection Flow
+C --> E
+E --> F : Imgur/Flickr/Pinterest
+E --> G : Direct Image URL
+E --> H : Social Media Images
+
+' Storage Flow
+D --> I
+F --> I
+G --> I
+H --> I
+
+' Processing Pipeline Flow
+I --> J
+J --> K
+K --> L
+L --> M : Valid
+L --> N : Invalid
+N --> M
+
+' Quality and Parallel Processing
+M --> O
+O --> P
+
+' Stream Distribution
+P --> Q1
+P --> Q2
+P --> Q3
+P --> Q4
+P --> Q5
+P --> Q6
+
+' Object Detection Stream Flow
+Q1 --> R1
+R1 --> S1 : Primary
+R1 --> T1 : Fallback
+S1 --> U1
+T1 --> U1
+U1 --> V1
+V1 --> W1
+
+' OCR Text Extraction Stream Flow
+Q2 --> R2
+R2 --> S2
+S2 --> T2
+T2 --> U2
+U2 --> V2
+
+' AI Description Stream Flow
+Q3 --> R3
+R3 --> S3
+S3 --> T3
+T3 --> U3
+U3 --> V3
+
+' Thumbnail Generation Stream Flow
+Q4 --> R4
+R4 --> S4
+S4 --> T4
+T4 --> U4
+U4 --> V4
+
+' Quality Analysis Stream Flow
+Q5 --> R5
+R5 --> S5
+S5 --> T5
+T5 --> U5
+U5 --> V5
+
+' Face Detection Stream Flow
+Q6 --> R6
+R6 --> S6
+S6 --> T6
+T6 --> U6
+
+' AI Enhancement Layer Flow
+W1 --> X
+V2 --> X
+V3 --> X
+V4 --> X
+V5 --> X
+U6 --> X
+
+' AI Processing Distribution
+X --> Y1
+X --> Y2
+X --> Y3
+X --> Y4
+X --> Y5
+X --> Y6
+
+' Database Storage Flow
+Y1 --> Z
+Y2 --> Z
+Y3 --> Z
+Y4 --> Z
+Y5 --> Z
+Y6 --> Z
+
+' Database Table Distribution
+Z --> AA
+Z --> BB
+Z --> CC
+Z --> DD
+
+' UI Component Flow
+AA --> EE
+BB --> EE
+CC --> EE
+DD --> EE
+
+' UI Feature Distribution
+EE --> FF
+EE --> GG
+EE --> HH
+EE --> II
+
+' Final Dashboard Integration
+FF --> JJ
+GG --> JJ
+HH --> JJ
+II --> JJ
+
+note as N1
+  6 Parallel Processing Streams:
+  1. Object Detection & Scene Analysis
+  2. OCR Text Extraction & Language Detection
+  3. AI Description & Context Analysis
+  4. Thumbnail Generation (4 sizes)
+  5. Quality Analysis & Assessment
+  6. Face Detection & Recognition
+end note
+P .. N1
+
+note as N2
+  AI Enhancement Layer combines
+  all stream results for intelligent
+  image understanding, categorization,
+  and automatic content generation
+end note
+X .. N2
+
+note as N3
+  Database stores comprehensive
+  image analysis results across
+  specialized tables for optimal
+  performance and organization
+end note
+Z .. N3
+
+note as N4
+  Image processing supports multiple
+  input sources: direct uploads,
+  URL analysis, and social media
+  platform extraction with fallbacks
+end note
+E .. N4
+
+@enduml
