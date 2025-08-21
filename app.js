@@ -559,10 +559,31 @@ checkDatabaseConnection().then(async (connected) => {
       console.error('Error loading subscription info for dashboard:', error);
     }
     
+    // Load user permissions for conditional rendering
+    let userPermissions = [];
+    try {
+      if (req.user.role_id) {
+        const { Role, Permission } = require('./models');
+        const roleWithPermissions = await Role.findByPk(req.user.role_id, {
+          include: [{
+            model: Permission,
+            through: { attributes: [] }
+          }]
+        });
+        
+        if (roleWithPermissions && roleWithPermissions.Permissions) {
+          userPermissions = roleWithPermissions.Permissions.map(p => p.name);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user permissions for dashboard:', error);
+    }
+    
     res.render('dashboard', { 
       title: 'Dashboard - DaySave',
       user: req.user,
-      subscription: subscriptionInfo
+      subscription: subscriptionInfo,
+      userPermissions: userPermissions
     });
   });
 
