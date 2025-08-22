@@ -2314,3 +2314,10 @@ Refused to execute inline script because it violates CSP directive: "script-src 
 
 ---
 *This document tracks all development tasks and current status. Update when completing tasks or identifying new requirements.*
+
+## ✅ API Endpoints Documentation Added (2025-08-22)
+
+- [x] Created `docs/API_ENDPOINTS.md` documenting all implemented API endpoints
+  - Grouped by domain (Health, Auth, Passkeys, API Keys, Places, Contacts, Content, Files, Multimedia, Subscription, Admin)
+  - Included route, method, description, minimal request/response samples
+  - Noted auth/admin requirements and dual mount for subscription endpoints
