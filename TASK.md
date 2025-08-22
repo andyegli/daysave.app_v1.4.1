@@ -108,6 +108,11 @@
 - [x] Matched diagram style with existing flows (plain theme, Arial 10pt, white background).
 - [x] Ensured steps reflect current UX: immediate return after queuing processing, redirect to detail page.
 
+## ✅ Passkey (WebAuthn) Login Flow Diagram (2025-08-22)
+
+- [x] Created `docs/diagrams/passkey-login-flow.puml` showing the complete passkey login process: request challenge, browser WebAuthn assertion, server verification (challenge, RP ID, origin, signature, counter), session creation, and redirects.
+- [x] Used consistent styling with other flow diagrams (plain theme, Arial 10pt, white background).
+
 
 - [x] Created `docs/diagrams/core-entities-erd.puml` containing only the core entities listed in `DaySave_Core_Entities.md`.
 - [x] Matched diagram styling with existing ERD conventions (category color tags, plain theme).
@@ -1546,6 +1551,7 @@ All recent fixes have been implemented and tested. The system now properly handl
 
 ### Diagrams
 - Added `docs/diagrams/login-entities-erd.puml` showing only login-related entities (users, user_devices, login_attempts, user_passkeys, social_accounts, audit_logs) and their relationships for authentication flows.
+- Added `docs/diagrams/contact-entities-erd.puml` showing only contact-related entities (contacts, contact_groups, contact_group_members, relationships, contact_relations, contact_submissions) and their relationships.
 
 ## Environment Setup Required
 

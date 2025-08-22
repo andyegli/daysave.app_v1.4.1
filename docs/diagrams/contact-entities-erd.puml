@@ -1,0 +1,110 @@
+@startuml DaySave_Contact_Entities_ERD
+!theme plain
+
+skinparam entity {
+  BackgroundColor<<user>> LightBlue
+  BackgroundColor<<contact>> Yellow
+}
+
+title DaySave - Contact-Related Entities ERD
+
+entity users <<user>> {
+  * id : CHAR(36) [PK]
+  --
+  username : VARCHAR [UNIQUE]
+  email : VARCHAR [UNIQUE]
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity contacts <<contact>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  name : VARCHAR
+  nickname : VARCHAR
+  organization : VARCHAR
+  job_title : VARCHAR
+  phones : JSON
+  emails : JSON
+  addresses : JSON
+  social_profiles : JSON
+  instant_messages : JSON
+  urls : JSON
+  dates : JSON
+  notes : JSON
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity contact_groups <<contact>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  name : VARCHAR
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity contact_group_members <<contact>> {
+  * id : CHAR(36) [PK]
+  --
+  contact_id : CHAR(36) [FK contacts.id]
+  group_id : CHAR(36) [FK contact_groups.id]
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity relationships <<contact>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  contact_id_1 : CHAR(36) [FK contacts.id]
+  contact_id_2 : CHAR(36) [FK contacts.id]
+  relationship_type : VARCHAR
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity contact_relations <<contact>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  contact_id_1 : CHAR(36) [FK contacts.id]
+  contact_id_2 : CHAR(36) [FK contacts.id]
+  relation_type : VARCHAR
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity contact_submissions <<contact>> {
+  * id : CHAR(36) [PK]
+  --
+  name : VARCHAR
+  email : VARCHAR
+  subject : VARCHAR
+  message : TEXT
+  language : VARCHAR
+  user_id : CHAR(36) [FK users.id] (nullable)
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+' Relationships
+users ||--o{ contacts : has
+users ||--o{ contact_groups : has
+users ||--o{ relationships : has
+users ||--o{ contact_relations : has
+users ||--o{ contact_submissions : receives
+
+contacts ||--o{ contact_group_members : member_of
+contact_groups ||--o{ contact_group_members : contains
+
+contacts ||--o{ relationships : as contact_id_1
+contacts ||--o{ relationships : as contact_id_2
+
+contacts ||--o{ contact_relations : as contact_id_1
+contacts ||--o{ contact_relations : as contact_id_2
+
+@enduml
+
