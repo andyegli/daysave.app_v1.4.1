@@ -1,0 +1,54 @@
+@startuml DaySave_Role_Entities_ERD
+!theme plain
+
+skinparam entity {
+  BackgroundColor<<user>> LightBlue
+  BackgroundColor<<role>> Wheat
+}
+
+title DaySave - Role/Permission Entities ERD
+
+entity users <<user>> {
+  * id : CHAR(36) [PK]
+  --
+  username : VARCHAR [UNIQUE]
+  email : VARCHAR [UNIQUE]
+  role_id : CHAR(36) [FK roles.id]
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity roles <<role>> {
+  * id : CHAR(36) [PK]
+  --
+  name : VARCHAR [UNIQUE]
+  description : TEXT
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity permissions <<role>> {
+  * id : CHAR(36) [PK]
+  --
+  name : VARCHAR [UNIQUE]
+  description : TEXT
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity role_permissions <<role>> {
+  * id : CHAR(36) [PK]
+  --
+  role_id : CHAR(36) [FK roles.id]
+  permission_id : CHAR(36) [FK permissions.id]
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+' Relationships
+roles ||--o{ users : assigned_to
+roles ||--o{ role_permissions : maps
+permissions ||--o{ role_permissions : maps
+
+@enduml
+
