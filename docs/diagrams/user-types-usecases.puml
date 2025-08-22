@@ -1,0 +1,49 @@
+@startuml
+left to right direction
+
+skinparam actorStyle awesome
+
+actor Guest
+actor "Trial User" as Trial
+actor "Subscriber" as Subscriber
+actor "Monitor User" as Monitor
+actor "Admin" as Admin
+actor "Admin + Tester" as AdminTester
+
+rectangle "DaySave System" {
+  usecase "View Public Content" as UC_Public
+  usecase "Access Core Features (Limited)" as UC_CoreLimited
+  usecase "Upgrade to Paid Subscription" as UC_Upgrade
+  usecase "Use Core Features" as UC_Core
+  usecase "Access Premium AI Analysis" as UC_PremiumAI
+  usecase "View Content" as UC_ViewContent
+  usecase "View Analytics" as UC_ViewAnalytics
+  usecase "Manage Users" as UC_ManageUsers
+  usecase "Configure System" as UC_Configure
+  usecase "Monitor System" as UC_MonitorSystem
+  usecase "Execute Multimedia Testing Workflows" as UC_TestWorkflows
+  usecase "View Testing Results & Metrics" as UC_TestResults
+}
+
+Guest -- UC_Public
+
+Trial -- UC_CoreLimited
+Trial -- UC_Upgrade
+
+Subscriber -- UC_Core
+Subscriber -- UC_PremiumAI
+
+Monitor -- UC_ViewContent
+Monitor -- UC_ViewAnalytics
+
+Admin -- UC_ManageUsers
+Admin -- UC_Configure
+Admin -- UC_MonitorSystem
+
+AdminTester -|> Admin
+AdminTester -- UC_TestWorkflows
+AdminTester -- UC_TestResults
+
+@enduml
+
+
