@@ -1,0 +1,68 @@
+@startuml
+left to right direction
+
+skinparam actorStyle awesome
+
+actor Guest
+actor "Trial User" as Trial
+actor "Subscriber" as Subscriber
+actor "Monitor User" as Monitor
+actor Admin
+actor "Admin + Tester" as AdminTester
+
+rectangle "DaySave High-Level Use Cases" {
+  usecase "Authentication &\nUser Management" as UC_Auth
+  usecase "Social Media\nIntegration" as UC_Social
+  usecase "Content Mgmt &\nAI Analysis" as UC_Content
+  usecase "Contacts\nManagement" as UC_Contacts
+  usecase "Sharing &\nCollaboration" as UC_Sharing
+  usecase "File Mgmt &\nStorage" as UC_Files
+  usecase "Administration &\nSystem Mgmt" as UC_Admin
+  usecase "Multimedia\nTesting System" as UC_Testing
+  usecase "Multilingual &\nAccessibility" as UC_I18n
+  usecase "Security &\nCompliance" as UC_Security
+  usecase "Integration &\nAPI" as UC_API
+  usecase "Mobile &\nResponsive" as UC_Mobile
+  usecase "Analytics &\nReporting" as UC_Analytics
+}
+
+Guest -- UC_Auth
+Guest -- UC_Social
+Guest -- UC_Content
+Guest -- UC_I18n
+Guest -- UC_Mobile
+
+Trial -- UC_Auth
+Trial -- UC_Social
+Trial -- UC_Content
+Trial -- UC_Sharing
+Trial -- UC_Mobile
+
+Subscriber -- UC_Auth
+Subscriber -- UC_Social
+Subscriber -- UC_Content
+Subscriber -- UC_Contacts
+Subscriber -- UC_Sharing
+Subscriber -- UC_Files
+Subscriber -- UC_I18n
+Subscriber -- UC_Security
+Subscriber -- UC_API
+Subscriber -- UC_Mobile
+Subscriber -- UC_Analytics
+
+Monitor -- UC_Content
+Monitor -- UC_Analytics
+Monitor -- UC_Security
+
+Admin -- UC_Admin
+Admin -- UC_Security
+Admin -- UC_API
+Admin -- UC_Analytics
+
+AdminTester -|> Admin
+AdminTester -- UC_Testing
+AdminTester -- UC_Analytics
+
+@enduml
+
+
