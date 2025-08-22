@@ -52,16 +52,7 @@
             </div>
         <% } %>
 
-        <!-- Admin Role Debug Info (only show if needed) -->
-        <% if (user && (!user.Role || user.Role.name !== 'admin')) { %>
-            <div class="alert alert-warning" role="alert">
-                <strong>Debug Info:</strong> 
-                Role: <%= user.Role ? user.Role.name : 'No role loaded' %>
-                <% if (!user.Role) { %>
-                    - <button class="btn btn-sm btn-primary" id="refresh-session-btn">Refresh Session</button>
-                <% } %>
-            </div>
-        <% } %>
+
 
         <!-- Management Cards -->
         <div class="row g-4 mb-4">

@@ -99,6 +99,14 @@
     - [x] Security best practices and credential management
 
 ## ✅ **Two-Factor Authentication (2FA) Complete Implementation** (2025-08-16)
+## ✅ Core Entities ERD Added (2025-08-22)
+
+- [x] Created `docs/diagrams/core-entities-erd.puml` containing only the core entities listed in `DaySave_Core_Entities.md`.
+- [x] Matched diagram styling with existing ERD conventions (category color tags, plain theme).
+- [x] Included only high-level PK identifiers per entity to keep the diagram conceptual and uncluttered.
+- [x] Added relationships among User/Role/Permission, Content/File/Groups, Contacts/Groups/Relations, Social Accounts, Processing Jobs, AI analysis entities, Admin/API key entities, and Subscription/Usage entities.
+- [x] Excluded non-core/testing/session tables to adhere to scope.
+
 - [x] **Complete 2FA System with Admin Controls**
   - [x] **2FA Setup & Management**
     - [x] TOTP-based 2FA with QR code generation using speakeasy library

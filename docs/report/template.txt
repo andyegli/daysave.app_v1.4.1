@@ -1,0 +1,110 @@
+
+
+Capable People, Capable Communities
+
+Micro-Credentials in Software Development
+
+Certificate in Software Development 
+MCSD51
+
+Project Report
+
+Water Safety Reporting App
+
+Jane Doe
+John Doe
+
+September 2022
+
+Contents
+Executive Summary	3
+Introduction	3
+Initial Proposal	3
+Variations In User Requirements From The Initial Proposal	3
+Design Documents	3
+Developer Documentation	3
+Tools and Technologies Used (in alphabetical order)	3
+Overview of software and its source code	4
+Known bugs and limitations	4
+SDLC	4
+Project timeline	4
+Ethical and cultural impact	4
+Test Document	4
+User Documentation	4
+Configuration Guide	4
+Future Software Enhancement List	4
+Reflection	4
+Appendix: Source Code	5
+Executive Summary
+Sample: In this project, I developed a web application to promote water safety in New Zealand. I used basic HTML, CSS, Bootstrap, MYSQL, Node.JS and JavaScript to develop this app. This is a self-sponsored, individual project developed in an iterative manner. I created the Use Cases based on my personal knowledge and experience related to water safety. 
+
+Introduction
+Sample: The number of people who get into trouble, and even lose their lives, in water in Aotearoa New Zealand is quite high as a proportion of the population. We have a very long coastline and treacherous rip currents at many beaches. Not many people, especially recent migrants, are not aware of the dangers of rip currents.
+I have personally seen many rescues and even helped people get to safety. I am aware that there is a national website (https://watersafety.org.nz/) that helps promote water safety in New Zealand but not many people seem to be aware of its existence or use it to educate themselves.
+Initial Proposal
+Copy the contents of the initial proposal here.
+Variations In User Requirements From The Initial Proposal
+In this section, cover any variations in user requirements: user story, User Story Map, Use Case Diagrams, etc.
+Design Documents 
+In this section, include Database Schema  (ERD, etc)
+Software Design - various components of the software and how each  component is connected to each other
+Software screen shots
+Developer Documentation
+Tools and Technologies Used (in alphabetical order)
+Sample:
+Bootstrap
+CSS
+EJS
+Express.js
+HTML
+JavaScript
+MySQL
+Node.js
+phpMyAdmin
+XAMPP
+Notepad++ / Brackets / Atom / Visual Studio Code
+
+
+Overview of software and its source code
+In this section, provide an overview of the source code where it can be accessed (How to access the source code and/or the app)
+
+Provide the entire source code as Appendix A at the end.
+
+Known bugs and limitations
+In this section, provide a list of any known bugs and limitations.
+SDLC
+In this section, comment on the effectiveness of the SDLC used and if you would choose a different methodology if you are to do a similar project in the future.
+Project timeline
+In this section, comment on the effectiveness of your planning. 
+Ethical and cultural impact
+Did your views change as you developed and tested the app?
+Test Document
+In this section, document the test cases and the test results.
+User Documentation
+In this section, explain to end-user how to use the software to complete all the tasks in the software.
+Configuration Guide
+In this section, explain to the administrator how to set any configuration parameters.
+Future Software Enhancement List
+In this section, describe enhancements that can be done in the next version
+Reflection
+Sample:
+I started with very little knowledge in web app development. By doing this project I learned how to use basic HTML, CSS, Bootstrap, MYSQL, Node.JS and JavaScript. I am aware that there is much more to learn. I also learned about Use Cases and improved my project and time management skills. The learning environment was good and collaborative with people helping each other.   
+
+If I am to do this project or a similar project again, I will…………..
+
+References
+Future Skills Academy. August 2022. JavaScript.
+Count clicks on links with MySQL and JavaScript. (n.d.). Stack Overflow. https://stackoverflow.com/questions/50994256/count-click-on-links-with-mysql-and-javascript
+Count the number of selections in a multiple-select box. (n.d.). Stack Overflow. https://stackoverflow.com/questions/12549770/count-the-number-of-selections-in-a-multiple-select-box
+CSS Tooltip. (n.d.). W3Schools Online Web Tutorials. https://www.w3schools.com/css/css_tooltip.asp
+How to set input type date's default value to today? (n.d.). Stack Overflow. https://stackoverflow.com/questions/6982692/how-to-set-input-type-dates-default-value-to-today#:~:text=var%20today%20%3D%20moment().,way%20to%20solve%20this%20issue
+- HTML: Hypertext Markup Language | MDN. (2022, August 10). MDN Web Docs. https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/date
+The importance of cultural aspects in impact assessment and project development: Reflections from a case study of a hydroelectric dam in Brazil. (2016, 1). Taylor & Francis. https://www.tandfonline.com/doi/full/10.1080/14615517.2016.1184501
+Nurullah, M. (2021, August 30). Create registration and login form in Node.js & MySQL. CodingStatus. https://codingstatus.com/create-registration-and-login-form-in-node-js-mysql/
+Peek, S. (2013, August 26). What is Agile Scrum methodology? Business News Daily. https://www.businessnewsdaily.com/4987-what-is-agile-scrum-methodology.html
+What is this popup thing when you Hover over something? (n.d.). Stack Overflow. https://stackoverflow.com/questions/65075078/what-is-this-popup-thing-when-you-hover-over-something
+SQL - SELECT from multiple tables with MS SQL server - GeeksforGeeks. (2021, June 14). GeeksforGeeks. https://www.geeksforgeeks.org/sql-select-from-multiple-tables-with-ms-sql-server/
+
+Appendix: Source Code 
+Provide the source code here
+

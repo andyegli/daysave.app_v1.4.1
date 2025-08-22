@@ -1,0 +1,198 @@
+@startuml DaySave_Core_Entities_ERD
+!theme plain
+
+' Category colors
+skinparam entity {
+  BackgroundColor<<user>> LightBlue
+  BackgroundColor<<content>> LightGreen
+  BackgroundColor<<ai>> Orange
+  BackgroundColor<<contact>> Yellow
+  BackgroundColor<<api>> Pink
+  BackgroundColor<<subscription>> Lavender
+  BackgroundColor<<admin>> Red
+}
+
+title DaySave - Core Entities ERD (Conceptual)
+
+' ===== User Management =====
+entity users <<user>> {
+  * id : CHAR(36) [PK]
+}
+entity roles <<user>> {
+  * id : CHAR(36) [PK]
+}
+entity permissions <<user>> {
+  * id : CHAR(36) [PK]
+}
+entity role_permissions <<user>> {
+  * id : CHAR(36) [PK]
+}
+entity user_devices <<user>> {
+  * id : CHAR(36) [PK]
+}
+entity user_passkeys <<user>> {
+  * id : CHAR(36) [PK]
+}
+
+' ===== Content Management =====
+entity content <<content>> {
+  * id : CHAR(36) [PK]
+}
+entity files <<content>> {
+  * id : CHAR(36) [PK]
+}
+entity content_groups <<content>> {
+  * id : CHAR(36) [PK]
+}
+entity content_group_members <<content>> {
+  * id : CHAR(36) [PK]
+}
+entity share_logs <<content>> {
+  * id : CHAR(36) [PK]
+}
+
+' ===== Social Media Integration =====
+entity social_accounts <<user>> {
+  * id : CHAR(36) [PK]
+}
+entity processing_jobs <<content>> {
+  * id : CHAR(36) [PK]
+}
+
+' ===== Contact Management =====
+entity contacts <<contact>> {
+  * id : CHAR(36) [PK]
+}
+entity contact_groups <<contact>> {
+  * id : CHAR(36) [PK]
+}
+entity contact_group_members <<contact>> {
+  * id : CHAR(36) [PK]
+}
+entity relationships <<contact>> {
+  * id : CHAR(36) [PK]
+}
+entity contact_relations <<contact>> {
+  * id : CHAR(36) [PK]
+}
+
+' ===== AI Analysis & Processing =====
+entity video_analysis <<ai>> {
+  * id : CHAR(36) [PK]
+}
+entity audio_analysis <<ai>> {
+  * id : CHAR(36) [PK]
+}
+entity image_analysis <<ai>> {
+  * id : CHAR(36) [PK]
+}
+entity ocr_captions <<ai>> {
+  * id : CHAR(36) [PK]
+}
+entity faces <<ai>> {
+  * id : CHAR(36) [PK]
+}
+entity speakers <<ai>> {
+  * id : CHAR(36) [PK]
+}
+entity thumbnails <<ai>> {
+  * id : CHAR(36) [PK]
+}
+
+' ===== Administrative & Security =====
+entity audit_logs <<admin>> {
+  * id : CHAR(36) [PK]
+}
+entity api_keys <<api>> {
+  * id : CHAR(36) [PK]
+}
+entity api_key_usage <<api>> {
+  * id : CHAR(36) [PK]
+}
+entity api_key_audit_logs <<api>> {
+  * id : CHAR(36) [PK]
+}
+entity admin_settings <<admin>> {
+  * id : CHAR(36) [PK]
+}
+entity login_attempts <<admin>> {
+  * id : CHAR(36) [PK]
+}
+
+' ===== Subscription & Usage =====
+entity user_subscriptions <<subscription>> {
+  * id : CHAR(36) [PK]
+}
+entity subscription_plans <<subscription>> {
+  * id : CHAR(36) [PK]
+}
+entity subscription_transactions <<subscription>> {
+  * id : CHAR(36) [PK]
+}
+entity storage_usage <<subscription>> {
+  * id : CHAR(36) [PK]
+}
+entity external_ai_usage <<subscription>> {
+  * id : CHAR(36) [PK]
+}
+
+' ===== Relationships (Core only) =====
+
+' User management
+users }o--|| roles : "belongs to"
+users ||--o{ user_devices : "has many"
+users ||--o{ user_passkeys : "has many"
+roles ||--o{ role_permissions : "has many"
+permissions ||--o{ role_permissions : "has many"
+
+' Content management
+users ||--o{ content : "creates"
+users ||--o{ files : "uploads"
+users ||--o{ content_groups : "creates"
+content_groups ||--o{ content_group_members : "contains"
+content ||--o{ content_group_members : "belongs to"
+users ||--o{ share_logs : "generates"
+content ||--o{ share_logs : "is shared"
+
+' Social accounts & processing
+users ||--o{ social_accounts : "connects"
+social_accounts ||--o{ content : "sources"
+users ||--o{ processing_jobs : "initiates"
+content ||--o{ processing_jobs : "processes"
+files ||--o{ processing_jobs : "processes"
+
+' AI analysis
+files ||--o{ video_analysis : "analyzes"
+files ||--o{ audio_analysis : "analyzes"
+files ||--o{ image_analysis : "analyzes"
+audio_analysis ||--o{ speakers : "identifies"
+files ||--o{ thumbnails : "generates"
+files ||--o{ ocr_captions : "extracts"
+video_analysis ||--o{ thumbnails : "generates"
+video_analysis ||--o{ ocr_captions : "extracts from"
+image_analysis ||--o{ thumbnails : "generates"
+
+' Contacts
+users ||--o{ contacts : "manages"
+users ||--o{ contact_groups : "creates"
+contact_groups ||--o{ contact_group_members : "contains"
+contacts ||--o{ contact_group_members : "belongs to"
+contacts ||--o{ contact_relations : "relates to"
+relationships ||--o{ contact_relations : "defines"
+
+' Admin & Security
+users ||--o{ audit_logs : "generates"
+users ||--o{ login_attempts : "attempts"
+users ||--o{ api_keys : "owns"
+api_keys ||--o{ api_key_usage : "tracks"
+api_keys ||--o{ api_key_audit_logs : "logs"
+
+' Subscription & Usage
+users ||--o{ user_subscriptions : "subscribes"
+subscription_plans ||--o{ user_subscriptions : "offers"
+user_subscriptions ||--o{ subscription_transactions : "charges"
+users ||--o{ storage_usage : "tracks"
+users ||--o{ external_ai_usage : "consumes"
+
+@enduml
+

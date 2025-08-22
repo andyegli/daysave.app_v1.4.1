@@ -1,0 +1,289 @@
+Capable People, Capable Communities
+
+Micro-Credentials in Software Development
+
+Certificate in Software Development 
+MCSD51
+
+Project Report
+
+DaySave.app - AI-Powered Content Management Platform
+
+Andy Egli
+Future Skills Academy
+
+August 2025
+
+Contents
+Executive Summary	3
+Introduction	3
+Initial Proposal	3
+Variations In User Requirements From The Initial Proposal	3
+Design Documents	3
+Developer Documentation	3
+Tools and Technologies Used (in alphabetical order)	3
+Overview of software and its source code	4
+Known bugs and limitations	4
+SDLC	4
+Project timeline	4
+Ethical and cultural impact	4
+Test Document	4
+User Documentation	4
+Configuration Guide	4
+Future Software Enhancement List	4
+Reflection	4
+Appendix: Source Code	5
+Executive Summary
+DaySave.app is an AI-powered content management platform that helps users save, organize, and analyze digital content from social media platforms, file uploads, and web URLs. The project significantly exceeds baseline academic requirements by integrating advanced features including OAuth (Google, Microsoft, Apple), Two-Factor Authentication (TOTP), WebAuthn/Passkeys, device fingerprinting, and a robust multimedia analysis pipeline (transcription, speaker identification, sentiment analysis, OCR, thumbnails, and summarization). The architecture is containerized, adheres to security best practices (CSP compliance, secure session management), and follows a migration-first database strategy with 26+ normalized tables.
+
+[Insert Image: public/images/daysave-logo.png]
+
+[Insert Diagram: docs/diagrams/mvc-architecture.puml]
+[Insert Diagram: docs/diagrams/dataflow-architecture.puml]
+
+Executive Summary (continued)
+
+
+Core achievements:
+- Modern authentication: OAuth (Google, Microsoft, Apple), TOTP 2FA, and WebAuthn/Passkeys
+- Security by design: strict CSP, no inline JS, rate limiting, input validation, audit logging
+- Scalable ops: containerization, health checks, structured logging, migration-first schema
+- AI enrichment: transcription, speaker diarization, OCR, sentiment, keyword/entity extraction, summaries, thumbnails
+
+End-user value:
+- Centralized capture across 11+ platforms and files
+- Searchable metadata and summaries for faster retrieval
+- Cross-device access secured by modern auth
+
+Stakeholder value:
+- Clean MVC/service architecture with middleware boundaries
+- Clear SDLC, testing artifacts, and deployment playbooks
+
+Introduction
+Problem Statement and Motivation
+Individuals increasingly encounter high volumes of valuable content across multiple platforms, leading to fragmented bookmarking, weak organization, and poor retrieval. Traditional tools lack intelligent categorization and context-aware search. DaySave.app addresses this by combining content capture with AI-powered analysis, automated tagging, and secure access across devices.
+
+Academic Context
+Developed as the capstone for MCSD51 at Future Skills Academy, the project demonstrates full-stack development, database design, security, DevOps, and UX. The scope intentionally surpasses minimum requirements to explore AI integration and modern authentication (WebAuthn/Passkeys).
+
+Introduction (continued)
+User personas and goals:
+- Researcher/Student: fast capture, accurate transcripts, precise search
+- Content creator: batch uploads, thumbnail/key moment generation, sentiment insights
+- Admin: device monitoring, rate limits, audit trails, subscription governance
+
+Scope and constraints:
+- Alpha-stage web experience prioritized; mobile planned
+- Public content focus with OAuth for identity; provider ToS respected
+- Strong CSP and dev HTTPS rules in development (no force-HTTPS in dev)
+
+Initial Proposal
+The initial academic project description defined DaySave as an intelligent content curation platform with: full-stack web app, normalized relational schema, OAuth login, and basic AI-assisted tagging and transcription.
+
+Sources:
+- docs/alternative/pr/DaySave.app 2 - Academic Project Description
+- docs/alternative/pr/Excellent description on the project background, s
+
+Variations In User Requirements From The Initial Proposal
+During development, requirements expanded to include:
+- Enterprise-grade security: TOTP 2FA, WebAuthn/Passkeys, device fingerprinting, audit logging
+- Expanded AI: sentiment analysis, OCR, speaker diarization, content summarization, keyword/entity extraction
+- DevOps: Docker-based environments, CI/CD readiness, health checks
+- Admin features: user/device management, security settings, analytics
+- Contacts & Maps: contact groups, relationships, Google Maps autocomplete with geolocation
+
+These changes reflect both stakeholder needs (assessors and end-users) and opportunities discovered during iterative prototyping.
+
+Design Documents 
+Database Schema
+- Normalized schema across 26+ tables with UUID PKs and enforced FKs
+- Migration-first approach using Sequelize CLI
+[Insert Diagram (ERD): docs/diagrams/complete-database-erd.puml]
+[Insert Diagram (Simplified ERD): docs/diagrams/simplified-erd.puml]
+
+Software Architecture
+- MVC structure with modular services and middleware
+- Containerized (Docker Compose), reverse proxy ready (nginx), cloud deployable
+[Insert Diagram (MVC Overview): docs/diagrams/mvc-architecture.puml]
+[Insert Diagram (Layered Models): docs/diagrams/02-models-layer.puml]
+[Insert Diagram (Controllers & Services): docs/diagrams/03-controllers-services.puml]
+[Insert Diagram (Views): docs/diagrams/04-views-layer.puml]
+[Insert Diagram (Security/Middleware): docs/diagrams/05-middleware-security.puml]
+[Insert Diagram (External Integrations): docs/diagrams/06-external-integrations.puml]
+[Insert Diagram (System Dataflow): docs/diagrams/dataflow-architecture.puml]
+
+Security and Privacy Architecture
+- CSP-compliant frontend: all scripts externalized, data-* attributes for behavior
+- Input validation and sanitization at routes; centralized error handling middleware
+- Session cookie flags: httpOnly; secure only in production; HSTS disabled in dev
+- Upload endpoints return JSON; CSRF skipped for multipart/form-data per policy
+- Device fingerprinting and audit logging for access transparency
+
+Multimedia Pipelines
+[Insert Diagram (Video Analysis Flow): docs/diagrams/video-processing-flow.mmd]
+[Insert Diagram (Audio Analysis Flow): docs/diagrams/audio-processing-flow.mmd]
+[Insert Diagram (Image/OCR Flow): docs/diagrams/image-processing-flow.mmd]
+[Insert Diagram (Unified Orchestration): docs/diagrams/unified-orchestration-flow.mmd]
+
+Software screen shots
+[Placeholder for UI screenshots: dashboard, analysis modal, uploads, admin panel]
+
+Developer Documentation
+- See docs/DEVELOPMENT_PROCESS.md for full workflow, rules, and checklists
+- Critical rules: test before deploy, migration scripts for all model changes, strict CSP compliance, no inline JS
+- Health checks and targeted test scripts to validate content detection, uploads, and multimedia analysis
+
+Tools and Technologies Used (in alphabetical order)
+- Bootstrap 5
+- Docker, Docker Compose
+- EJS
+- Express.js (Node.js)
+- Google Cloud (Speech-to-Text, Vision, Maps)
+- JavaScript (ES modules on client, Node.js on server)
+- MySQL 8 (with Sequelize ORM and migrations)
+- OAuth 2.0 (Google, Microsoft, Apple)
+- OpenAI APIs (AI analysis)
+- Passport.js (auth strategies)
+- Winston (structured logging)
+
+Overview of software and its source code
+- Repository: local at /Users/aeg/Documents/Projects/daysave_v1.4.1
+- Quick start (development): see README.md “Setup Instructions”
+- Core modules: routes/, models/, services/, middleware/, views/
+- Documentation: docs/ (test plans, security, deployment, diagrams)
+
+Access and run instructions (summary):
+- Clone repository and install dependencies (see README.md)
+- Start with Docker: docker-compose up -d
+- Run database migrations via Sequelize CLI
+- Verify health: open /health and test OAuth callbacks in development
+- Inspect logs in logs/ for application and error outputs
+
+Code structure highlights:
+- routes/: Express route modules per domain (auth, content, files, admin)
+- services/: Adapters for AI providers and business logic orchestration
+- middleware/: Security, validation, and error handling
+- models/ + migrations/: Sequelize models and versioned schema changes
+- views/: EJS templates (CSP-safe; no inline JS)
+- public/js/: All frontend behavior in external files per CSP rules
+
+Known bugs and limitations
+- Alpha UI polish: Some edge cases may leave stale UI state after long AI jobs; refresh restores correct status
+- AI queue latency: Concurrent long videos or large batches increase processing time; jobs are asynchronous with eventual consistency
+- Provider constraints: Imports are subject to provider ToS, visibility, and rate limits; private content requires user authorization
+- File constraints: Rare media/container formats may need conversion prior to upload
+- Mobile roadmap: Native iOS/Android apps are planned; current focus is web experience
+
+Mitigations and workarounds:
+- Clear progress and status indicators; retry and reprocess options
+- Backoff and retries for external APIs; structured error messages
+- Documentation for supported formats and size limits; guidance for conversions
+- Admin controls for rate limiting and upload policy
+
+SDLC
+Approach: Iterative Agile with tight feedback loops, feature flags, and explicit pre/post-change testing. Core stages:
+- Plan: define user stories, acceptance criteria, risks
+- Build: small, reviewable edits; add/modify migrations; keep JS external and CSP-safe
+- Test: run health/regression tests; validate uploads and AI pipelines
+- Document: update README, testing and security docs alongside code changes
+- Deploy: staging via Docker/GitHub Actions; verify 11+ health checks
+- Observe: monitor logs, metrics; capture improvement items
+See docs/DEVELOPMENT_PROCESS.md for rules, health checks, regression testing, and deployment checklist.
+
+Project timeline
+[Insert Diagram (Gantt Timeline): docs/diagrams/project-gantt-chart.puml]
+[Insert Diagram (Epic Timeline): docs/diagrams/epic-timeline.puml]
+[Insert Diagram (Simple Gantt): docs/diagrams/simple-gantt-chart.puml]
+
+Ethical and cultural impact
+The platform emphasizes user privacy, explicit consent, and transparent AI use. Data is processed securely, with options for export and deletion. Guidance follows GDPR-style principles: data minimization, purpose limitation, and user control. Cultural considerations include inclusive UX, multilingual support, and careful handling of potentially sensitive content during AI analysis.
+
+Test Document
+Testing emphasizes correctness, security, and resilience:
+- Authentication & Security: OAuth registration/login (Google/Microsoft/Apple), 2FA setup/backup/disable, WebAuthn flows, rate limiting, CSRF and input validation
+- Database & Models: migration status, schema integrity (26+ tables), FK relationships, cascade behavior, query performance on content listing/search
+- Uploads & Storage: client/server validation, size/type enforcement, JSON responses for uploads, storage correctness, error messaging
+- AI Processing: transcription accuracy for clear audio, speaker diarization segmentation, OCR extraction quality, sentiment/math ranges, thumbnail generation
+- Admin & Monitoring: user management actions, device fingerprint visibility, audit log completeness, security configuration changes
+- Performance & Load: concurrent uploads, AI throughput, pagination response times, memory usage within bounds
+
+Execution approach:
+- Manual end-to-end scenarios and targeted scripts for regressions
+- Success criteria defined per case; bug template and tracking in test results
+- Environments: development with OAuth/AI keys configured; staging checks via CI
+See docs/COMPREHENSIVE_TEST_PLAN.md for detailed cases, priorities, and expected results.
+
+[Insert Diagram: docs/diagrams/github-actions-ci-cd-flow.puml]
+
+User Documentation
+Essentials covered in the guide:
+- Getting Started: account creation via OAuth/email, first login, dashboard orientation
+- Core Flows: file upload, URL ingestion, viewing AI results, adding tags/notes, organizing into groups
+- Search: keyword, transcription, OCR, metadata filters, saved searches
+- Security: 2FA setup and backup codes, Passkeys/WebAuthn, device and session management
+- Admin: user/device management, security policy, subscription management
+- Troubleshooting: uploads, analysis delays, login/2FA issues, performance tips
+
+Screenshot placeholders:
+[Insert Screenshot: Dashboard overview]
+[Insert Screenshot: AI Analysis modal]
+[Insert Screenshot: Upload dialog]
+[Insert Screenshot: Admin security settings]
+
+See docs/USER_GUIDE.md for the full guide.
+
+Configuration Guide
+- Runtime: see README.md “Setup Instructions” for environment variables and scripts
+- Environments: development (no forced HTTPS, secure cookies off), staging/production (secure cookies, HSTS enabled via proxy)
+- Environment variables: App/Port, DB (host, name, user/password), OAuth provider keys, Email provider, AI service credentials, file size/type limits, session and JWT secrets
+- Database: run migrations on startup when schema changes; verify with migrate:status
+- Deployment: see docs/DEPLOYMENT_INSTRUCTIONS.md for staging workflow; README for Docker and App Engine notes
+- Health checks: /health endpoint; verify OAuth callbacks and AI credentials post-deploy
+- Logs: tail logs/app.log and logs/error.log; adjust log levels via config/logger
+
+Future Software Enhancement List
+- Mobile apps (iOS/Android)
+- Real-time collaboration and sharing
+- Advanced analytics and custom dashboards
+- Additional platform integrations
+- Enterprise SSO and RBAC refinements
+- GraphQL/Realtime APIs and enhanced webhooks
+
+Prioritization and risks
+- P1: Mobile apps and collaboration (highest user impact; requires push notifications and offline sync)
+- P1: Enterprise SSO and RBAC (critical for org adoption; requires policy editor and audit guarantees)
+- P2: Analytics dashboards and exports (enhances insight; moderate complexity)
+- P2: Expanded integrations (platform-specific constraints; rate-limit management)
+- Risks: API deprecations, AI service costs/latency, privacy regulations, CSP regressions
+
+Reflection
+This project substantially exceeded the initial academic scope. I strengthened full-stack skills, database design, and especially modern security (2FA, WebAuthn, device management). Integrating AI pipelines for transcription, OCR, sentiment, and summarization provided practical exposure to ML services and orchestration complexity.
+
+Lessons learned:
+- Design for CSP from day one: externalize all JS, use data-* attributes, avoid inline handlers
+- Migration-first mindset reduces risk: every model change accompanied by explicit up/down migrations
+- Asynchronous pipelines require UX investment: user feedback, retries, and clear error reporting
+- Provider limits and ToS shape product scope: plan fallbacks and user guidance
+
+Next time, I would formalize performance budgets and SLAs for AI tasks earlier, expand automated integration tests for long-running workflows, and invest in dashboards/alerts for observability from the outset.
+
+References
+- Internal: docs/DEVELOPMENT_PROCESS.md; docs/COMPREHENSIVE_TEST_PLAN.md; docs/USER_GUIDE.md; docs/SECURITY_GUIDELINES.md; docs/DEPLOYMENT_INSTRUCTIONS.md
+- Architecture: docs/diagrams/* (PlantUML/Mermaid diagrams for ERD, MVC, dataflows, pipelines, timelines)
+- Security: OWASP ASVS; MDN Content Security Policy reference
+- Providers: Google Cloud Speech-to-Text, Vision, Maps docs; OAuth docs for Google/Microsoft/Apple
+- Node/Express: official guides on security headers and best practices
+
+Appendix: Source Code 
+- Full source is present in the repository under the following key directories:
+  - app.js (entrypoint), routes/, models/, services/, middleware/, views/, public/
+  - migrations/ (Sequelize CLI, migration-first strategy)
+  - docs/ (diagrams, test plans, deployment, security, guides)
+  - scripts/ (automation, utilities)
+  - tests/ (unit, integration, and health checks)
+  - config/ (auth, logger, maps, performance, environment)
+
+[Insert Diagram (System Overview - simplified): docs/diagrams/mvc-architecture-simplified.puml]
+[Insert Diagram (Story Mapping Flow): docs/diagrams/story-mapping-flow.puml]
+[Insert Image (Brand/Logo): public/images/daysave-logo.png]
+

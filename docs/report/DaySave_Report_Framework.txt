@@ -1,0 +1,173 @@
+Capable People, Capable Communities
+
+Micro-Credentials in Software Development
+
+Certificate in Software Development 
+MCSD51
+
+Project Report
+
+DaySave.app - AI-Powered Content Management Platform
+
+Andy Egli
+Future Skills Academy
+
+August 2025
+
+Contents
+Executive Summary	3
+Introduction	3
+Initial Proposal	3
+Variations In User Requirements From The Initial Proposal	3
+Design Documents	3
+Developer Documentation	3
+Tools and Technologies Used (in alphabetical order)	3
+Overview of software and its source code	4
+Known bugs and limitations	4
+SDLC	4
+Project timeline	4
+Ethical and cultural impact	4
+Test Document	4
+User Documentation	4
+Configuration Guide	4
+Future Software Enhancement List	4
+Reflection	4
+Appendix: Source Code	5
+Executive Summary
+DaySave.app is an AI-powered content management platform that helps users save, organize, and analyze digital content from social media platforms, file uploads, and web URLs. The project significantly exceeds baseline academic requirements by integrating advanced features including OAuth (Google, Microsoft, Apple), Two-Factor Authentication (TOTP), WebAuthn/Passkeys, device fingerprinting, and a robust multimedia analysis pipeline (transcription, speaker identification, sentiment analysis, OCR, thumbnails, and summarization). The architecture is containerized, adheres to security best practices (CSP compliance, secure session management), and follows a migration-first database strategy with 26+ normalized tables.
+
+[Insert Image: public/images/daysave-logo.png]
+
+[Insert Diagram: docs/diagrams/mvc-architecture.puml]
+[Insert Diagram: docs/diagrams/dataflow-architecture.puml]
+
+Introduction
+Problem Statement and Motivation
+Individuals increasingly encounter high volumes of valuable content across multiple platforms, leading to fragmented bookmarking, weak organization, and poor retrieval. Traditional tools lack intelligent categorization and context-aware search. DaySave.app addresses this by combining content capture with AI-powered analysis, automated tagging, and secure access across devices.
+
+Academic Context
+Developed as the capstone for MCSD51 at Future Skills Academy, the project demonstrates full-stack development, database design, security, DevOps, and UX. The scope intentionally surpasses minimum requirements to explore AI integration and modern authentication (WebAuthn/Passkeys).
+
+Initial Proposal
+The initial academic project description defined DaySave as an intelligent content curation platform with: full-stack web app, normalized relational schema, OAuth login, and basic AI-assisted tagging and transcription.
+
+Sources:
+- docs/alternative/pr/DaySave.app 2 - Academic Project Description
+- docs/alternative/pr/Excellent description on the project background, s
+
+Variations In User Requirements From The Initial Proposal
+During development, requirements expanded to include:
+- Enterprise-grade security: TOTP 2FA, WebAuthn/Passkeys, device fingerprinting, audit logging
+- Expanded AI: sentiment analysis, OCR, speaker diarization, content summarization, keyword/entity extraction
+- DevOps: Docker-based environments, CI/CD readiness, health checks
+- Admin features: user/device management, security settings, analytics
+- Contacts & Maps: contact groups, relationships, Google Maps autocomplete with geolocation
+
+These changes reflect both stakeholder needs (assessors and end-users) and opportunities discovered during iterative prototyping.
+
+Design Documents 
+Database Schema
+- Normalized schema across 26+ tables with UUID PKs and enforced FKs
+- Migration-first approach using Sequelize CLI
+[Insert Diagram (ERD): docs/diagrams/complete-database-erd.puml]
+[Insert Diagram (Simplified ERD): docs/diagrams/simplified-erd.puml]
+
+Software Architecture
+- MVC structure with modular services and middleware
+- Containerized (Docker Compose), reverse proxy ready (nginx), cloud deployable
+[Insert Diagram (MVC Overview): docs/diagrams/mvc-architecture.puml]
+[Insert Diagram (Layered Models): docs/diagrams/02-models-layer.puml]
+[Insert Diagram (Controllers & Services): docs/diagrams/03-controllers-services.puml]
+[Insert Diagram (Views): docs/diagrams/04-views-layer.puml]
+[Insert Diagram (Security/Middleware): docs/diagrams/05-middleware-security.puml]
+[Insert Diagram (External Integrations): docs/diagrams/06-external-integrations.puml]
+[Insert Diagram (System Dataflow): docs/diagrams/dataflow-architecture.puml]
+
+Multimedia Pipelines
+[Insert Diagram (Video Analysis Flow): docs/diagrams/video-processing-flow.mmd]
+[Insert Diagram (Audio Analysis Flow): docs/diagrams/audio-processing-flow.mmd]
+[Insert Diagram (Image/OCR Flow): docs/diagrams/image-processing-flow.mmd]
+[Insert Diagram (Unified Orchestration): docs/diagrams/unified-orchestration-flow.mmd]
+
+Software screen shots
+[Placeholder for UI screenshots: dashboard, analysis modal, uploads, admin panel]
+
+Developer Documentation
+- See docs/DEVELOPMENT_PROCESS.md for full workflow, rules, and checklists
+- Critical rules: test before deploy, migration scripts for all model changes, strict CSP compliance, no inline JS
+- Health checks and targeted test scripts to validate content detection, uploads, and multimedia analysis
+
+Tools and Technologies Used (in alphabetical order)
+- Bootstrap 5
+- Docker, Docker Compose
+- EJS
+- Express.js (Node.js)
+- Google Cloud (Speech-to-Text, Vision, Maps)
+- JavaScript (ES modules on client, Node.js on server)
+- MySQL 8 (with Sequelize ORM and migrations)
+- OAuth 2.0 (Google, Microsoft, Apple)
+- OpenAI APIs (AI analysis)
+- Passport.js (auth strategies)
+- Winston (structured logging)
+
+Overview of software and its source code
+- Repository: local at /Users/aeg/Documents/Projects/daysave_v1.4.1
+- Quick start (development): see README.md “Setup Instructions”
+- Core modules: routes/, models/, services/, middleware/, views/
+- Documentation: docs/ (test plans, security, deployment, diagrams)
+
+Known bugs and limitations
+- Alpha-phase UI: occasional edge-case UI states may require refresh
+- Long-running AI jobs can queue under heavy load; progress is best-effort
+- Some platform integrations limited to public content and rate limits
+- Mobile apps not yet released (web-first)
+
+SDLC
+Approach: Iterative Agile with tight feedback loops, feature flags, and explicit pre/post-change testing. See docs/DEVELOPMENT_PROCESS.md for rules, health checks, regression testing, and deployment checklist.
+
+Project timeline
+[Insert Diagram (Gantt Timeline): docs/diagrams/project-gantt-chart.puml]
+[Insert Diagram (Epic Timeline): docs/diagrams/epic-timeline.puml]
+[Insert Diagram (Simple Gantt): docs/diagrams/simple-gantt-chart.puml]
+
+Ethical and cultural impact
+The platform emphasizes user privacy, explicit consent, and transparent AI use. Data is processed securely, with options for export and deletion. Guidance follows GDPR-style principles: data minimization, purpose limitation, and user control. Cultural considerations include inclusive UX, multilingual support, and careful handling of potentially sensitive content during AI analysis.
+
+Test Document
+See docs/COMPREHENSIVE_TEST_PLAN.md for end-to-end scenarios across authentication, database, uploads, AI analysis, admin, contacts, performance, and logging. Automated and manual checks ensure quality, with clear success criteria and reporting templates.
+
+User Documentation
+See docs/USER_GUIDE.md for onboarding, account/security setup (2FA, OAuth, Passkeys), uploads, AI analysis features, search, organization, admin operations, troubleshooting, and support.
+
+Configuration Guide
+- Runtime configuration: README.md “Setup Instructions”
+- Environment variables: README.md (App, DB, OAuth, Email, AI, Security)
+- Deployment: docs/DEPLOYMENT_INSTRUCTIONS.md and README sections (Docker, GCP)
+
+Future Software Enhancement List
+- Mobile apps (iOS/Android)
+- Real-time collaboration and sharing
+- Advanced analytics and custom dashboards
+- Additional platform integrations
+- Enterprise SSO and RBAC refinements
+- GraphQL/Realtime APIs and enhanced webhooks
+
+Reflection
+This project substantially exceeded the initial academic scope. I strengthened full-stack skills, database design, and especially modern security (2FA, WebAuthn, device management). Integrating AI pipelines for transcription, OCR, sentiment, and summarization provided practical exposure to ML services and orchestration complexity. If starting again, I would formalize early performance budgets for AI jobs, invest in even more extensive automated tests around multimedia edge cases, and prioritize end-to-end observability from the outset.
+
+References
+- Internal project documentation across docs/*.md (Development Process, Security Guidelines, User Guide, Deployment Instructions)
+- Google Cloud Speech-to-Text and Vision API references
+- OWASP security guidelines and CSP (MDN)
+
+Appendix: Source Code 
+- Full source is present in the repository under the following key directories:
+  - app.js (entrypoint), routes/, models/, services/, middleware/, views/, public/
+  - migrations/ (Sequelize CLI, migration-first strategy)
+  - docs/ (diagrams, test plans, deployment, security, guides)
+  - scripts/ (automation, utilities)
+
+[Insert Diagram (System Overview - simplified): docs/diagrams/mvc-architecture-simplified.puml]
+[Insert Diagram (Story Mapping Flow): docs/diagrams/story-mapping-flow.puml]
+[Insert Image (Brand/Logo): public/images/daysave-logo.png]
+
