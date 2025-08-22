@@ -1,0 +1,133 @@
+@startuml DaySave_Login_Entities_ERD
+!theme plain
+
+skinparam entity {
+  BackgroundColor<<user>> LightBlue
+  BackgroundColor<<security>> LightGray
+  BackgroundColor<<session>> Cyan
+  BackgroundColor<<oauth>> Pink
+}
+
+title DaySave - Login-Related Entities ERD
+
+entity users <<user>> {
+  * id : CHAR(36) [PK]
+  --
+  username : VARCHAR [UNIQUE]
+  email : VARCHAR [UNIQUE]
+  password_hash : VARCHAR
+  email_verified : BOOLEAN
+  totp_enabled : BOOLEAN
+  totp_secret : VARCHAR
+  totp_backup_codes : TEXT
+  last_password_change : DATETIME
+  mfa_required : BOOLEAN
+  mfa_enforced_by : CHAR(36) [FK users.id]
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity user_devices <<security>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  device_fingerprint : VARCHAR
+  is_trusted : BOOLEAN
+  last_login_at : DATETIME
+  country : CHAR(2)
+  region : VARCHAR(3)
+  city : VARCHAR(100)
+  timezone : VARCHAR(50)
+  device_details : JSON
+  browser_name : VARCHAR
+  browser_version : VARCHAR
+  os_name : VARCHAR
+  os_version : VARCHAR
+  device_type : VARCHAR
+  screen_resolution : VARCHAR
+  user_agent : TEXT
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity login_attempts <<security>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  device_fingerprint : VARCHAR
+  ip_address : VARCHAR(45)
+  attempt_count : INTEGER
+  last_attempt_at : DATETIME
+  attempted_at : DATETIME
+  success : BOOLEAN
+  failure_reason : TEXT
+  country : CHAR(2)
+  region : VARCHAR(3)
+  city : VARCHAR(100)
+  latitude : DECIMAL(10,8)
+  longitude : DECIMAL(11,8)
+  timezone : VARCHAR(50)
+  isp : VARCHAR(100)
+  is_vpn : BOOLEAN
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity user_passkeys <<security>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  credential_id : VARCHAR [UNIQUE]
+  credential_public_key : TEXT
+  credential_counter : BIGINT
+  device_name : VARCHAR
+  device_type : ENUM
+  browser_info : TEXT
+  last_used_at : DATETIME
+  is_active : BOOLEAN
+  created_at : DATETIME
+  updated_at : DATETIME
+}
+
+entity social_accounts <<oauth>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  platform : VARCHAR
+  auth_type : ENUM('oauth','credentials','hybrid')
+  handle : VARCHAR
+  provider_user_id : VARCHAR
+  profile_data : TEXT
+  access_token : TEXT
+  refresh_token : TEXT
+  username : VARCHAR
+  encrypted_password : TEXT
+  credential_metadata : JSON
+  last_used_at : DATETIME
+  status : ENUM('active','inactive','expired','invalid')
+  usage_count : INTEGER
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity audit_logs <<security>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  action : VARCHAR
+  target_type : VARCHAR
+  target_id : CHAR(36)
+  details : JSON
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+' Relationships (only login-related)
+users ||--o{ user_devices : has
+users ||--o{ login_attempts : has
+users ||--o{ user_passkeys : has
+users ||--o{ social_accounts : has
+users ||--o{ audit_logs : generates
+
+@enduml
+

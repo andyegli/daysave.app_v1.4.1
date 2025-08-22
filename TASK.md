@@ -1544,6 +1544,9 @@ All recent fixes have been implemented and tested. The system now properly handl
 ### Completed Tasks
 - Enhanced startupValidation.js with session secret generation instructions
 
+### Diagrams
+- Added `docs/diagrams/login-entities-erd.puml` showing only login-related entities (users, user_devices, login_attempts, user_passkeys, social_accounts, audit_logs) and their relationships for authentication flows.
+
 ## Environment Setup Required
 
 ```bash

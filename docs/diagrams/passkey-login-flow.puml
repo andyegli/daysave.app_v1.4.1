@@ -1,0 +1,51 @@
+@startuml DaySave_Passkey_Login_Flow
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+
+title DaySave - Passkey (WebAuthn) Login Flow
+
+start
+
+:Open DaySave Login Page;
+:User selects "Login with Passkey";
+
+:POST /auth/passkey/challenge;
+:Server generates WebAuthn assertion options
+(RP ID, challenge, allowCredentials);
+:Return options to browser;
+
+:Call navigator.credentials.get(options);
+if (Platform authenticator available?) then (yes)
+  :User verifies with biometrics/PIN;
+  :Browser returns assertion
+  (credentialId, clientDataJSON,
+   authenticatorData, signature, userHandle);
+else (no)
+  :Show error and fallback guidance
+  (password or OAuth);
+  stop
+endif
+
+:POST /auth/passkey/verify with assertion;
+:Server validates:
+- challenge matches & not expired
+- RP ID hash matches
+- origin allowed
+- signature verified with stored public key
+- counter increment (replay protection);
+
+if (Verification successful?) then (yes)
+  :Create session + set cookie;
+  :Log login attempt (success);
+  :Redirect to Dashboard;
+  stop
+else (no)
+  :Log login attempt (failure);
+  :Show authentication error;
+  stop
+endif
+
+@enduml
+
