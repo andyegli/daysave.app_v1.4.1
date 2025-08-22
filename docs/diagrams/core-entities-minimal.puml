@@ -1,0 +1,139 @@
+@startuml DaySave_Core_Entities_Minimal
+!theme plain
+
+skinparam entity {
+  BackgroundColor<<user>> LightBlue
+  BackgroundColor<<content>> LightGreen
+  BackgroundColor<<ai>> Orange
+  BackgroundColor<<contact>> Yellow
+  BackgroundColor<<api>> Pink
+  BackgroundColor<<subscription>> Lavender
+  BackgroundColor<<admin>> Red
+}
+
+title DaySave - Core Entities (Minimal List, No Relationships)
+
+' ===== User Management =====
+entity users <<user>> {
+  * id : CHAR(36) [PK]
+}
+entity roles <<user>> {
+  * id : CHAR(36) [PK]
+}
+entity permissions <<user>> {
+  * id : CHAR(36) [PK]
+}
+entity role_permissions <<user>> {
+  * id : CHAR(36) [PK]
+}
+entity user_devices <<user>> {
+  * id : CHAR(36) [PK]
+}
+entity user_passkeys <<user>> {
+  * id : CHAR(36) [PK]
+}
+
+' ===== Content Management =====
+entity content <<content>> {
+  * id : CHAR(36) [PK]
+}
+entity files <<content>> {
+  * id : CHAR(36) [PK]
+}
+entity content_groups <<content>> {
+  * id : CHAR(36) [PK]
+}
+entity content_group_members <<content>> {
+  * id : CHAR(36) [PK]
+}
+entity share_logs <<content>> {
+  * id : CHAR(36) [PK]
+}
+
+' ===== Social Media Integration =====
+entity social_accounts <<user>> {
+  * id : CHAR(36) [PK]
+}
+entity processing_jobs <<content>> {
+  * id : CHAR(36) [PK]
+}
+
+' ===== Contact Management =====
+entity contacts <<contact>> {
+  * id : CHAR(36) [PK]
+}
+entity contact_groups <<contact>> {
+  * id : CHAR(36) [PK]
+}
+entity contact_group_members <<contact>> {
+  * id : CHAR(36) [PK]
+}
+entity relationships <<contact>> {
+  * id : CHAR(36) [PK]
+}
+entity contact_relations <<contact>> {
+  * id : CHAR(36) [PK]
+}
+
+' ===== AI Analysis & Processing =====
+entity video_analysis <<ai>> {
+  * id : CHAR(36) [PK]
+}
+entity audio_analysis <<ai>> {
+  * id : CHAR(36) [PK]
+}
+entity image_analysis <<ai>> {
+  * id : CHAR(36) [PK]
+}
+entity ocr_captions <<ai>> {
+  * id : CHAR(36) [PK]
+}
+entity faces <<ai>> {
+  * id : CHAR(36) [PK]
+}
+entity speakers <<ai>> {
+  * id : CHAR(36) [PK]
+}
+entity thumbnails <<ai>> {
+  * id : CHAR(36) [PK]
+}
+
+' ===== Administrative & Security =====
+entity audit_logs <<admin>> {
+  * id : CHAR(36) [PK]
+}
+entity api_keys <<api>> {
+  * id : CHAR(36) [PK]
+}
+entity api_key_usage <<api>> {
+  * id : CHAR(36) [PK]
+}
+entity api_key_audit_logs <<api>> {
+  * id : CHAR(36) [PK]
+}
+entity admin_settings <<admin>> {
+  * id : CHAR(36) [PK]
+}
+entity login_attempts <<admin>> {
+  * id : CHAR(36) [PK]
+}
+
+' ===== Subscription & Usage =====
+entity user_subscriptions <<subscription>> {
+  * id : CHAR(36) [PK]
+}
+entity subscription_plans <<subscription>> {
+  * id : CHAR(36) [PK]
+}
+entity subscription_transactions <<subscription>> {
+  * id : CHAR(36) [PK]
+}
+entity storage_usage <<subscription>> {
+  * id : CHAR(36) [PK]
+}
+entity external_ai_usage <<subscription>> {
+  * id : CHAR(36) [PK]
+}
+
+@enduml
+

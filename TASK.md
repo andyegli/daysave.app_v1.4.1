@@ -100,6 +100,8 @@
 
 ## ✅ **Two-Factor Authentication (2FA) Complete Implementation** (2025-08-16)
 ## ✅ Core Entities ERD Added (2025-08-22)
+- [x] Added `docs/diagrams/core-entities-minimal.puml` listing only the core entities without relationships for ultra-simplified views.
+
 
 - [x] Created `docs/diagrams/core-entities-erd.puml` containing only the core entities listed in `DaySave_Core_Entities.md`.
 - [x] Matched diagram styling with existing ERD conventions (category color tags, plain theme).
