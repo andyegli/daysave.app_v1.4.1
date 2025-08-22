@@ -102,6 +102,12 @@
 ## ✅ Core Entities ERD Added (2025-08-22)
 - [x] Added `docs/diagrams/core-entities-minimal.puml` listing only the core entities without relationships for ultra-simplified views.
 
+## ✅ Content Creation Flow Diagram (2025-08-22)
+
+- [x] Created `docs/diagrams/content-creation-flow.puml` illustrating the end-to-end user flow to create content (login/2FA, choose URL or file, validation, submission, record creation, async processing job queue, and success redirect).
+- [x] Matched diagram style with existing flows (plain theme, Arial 10pt, white background).
+- [x] Ensured steps reflect current UX: immediate return after queuing processing, redirect to detail page.
+
 
 - [x] Created `docs/diagrams/core-entities-erd.puml` containing only the core entities listed in `DaySave_Core_Entities.md`.
 - [x] Matched diagram styling with existing ERD conventions (category color tags, plain theme).

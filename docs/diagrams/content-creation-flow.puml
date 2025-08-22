@@ -1,0 +1,57 @@
+@startuml DaySave_Content_Creation_Flow
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+
+title DaySave - User Content Creation Flow
+
+start
+
+:Open DaySave;
+if (Authenticated?) then (yes)
+  :Proceed to Dashboard;
+else (no)
+  :Go to Login;
+  :Enter credentials;
+  :Complete 2FA if required;
+  :Authenticated session;
+endif
+
+:Navigate to Content > Add New;
+if (Choose input type) then (URL)
+  :Enter URL;
+  :Validate URL format;
+  if (URL valid?) then (yes)
+    :Fetch metadata (OG/Twitter tags);
+  else (no)
+    :Show validation error;
+    back
+  endif
+elseif (File)
+  :Choose file from device;
+  :Validate type & size;
+  if (File valid?) then (yes)
+    :Upload to storage;
+  else (no)
+    :Show validation error;
+    back
+  endif
+endif
+
+:Fill optional fields (title, notes, tags);
+:Submit form;
+
+:Create Content record;
+fork
+  :Queue ProcessingJob for AI analysis;
+  :Return to user immediately;
+fork again
+  :Redirect to Content Detail page;
+  :Show success notification;
+end fork
+
+stop
+
+@enduml
+
