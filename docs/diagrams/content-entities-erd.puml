@@ -1,0 +1,225 @@
+@startuml DaySave_Content_Entities_ERD
+!theme plain
+
+skinparam entity {
+  BackgroundColor<<user>> LightBlue
+  BackgroundColor<<content>> LightGreen
+  BackgroundColor<<ai>> Orange
+  BackgroundColor<<oauth>> Pink
+}
+
+title DaySave - Content-Related Entities ERD
+
+entity users <<user>> {
+  * id : CHAR(36) [PK]
+  --
+  username : VARCHAR [UNIQUE]
+  email : VARCHAR [UNIQUE]
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity social_accounts <<oauth>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  platform : VARCHAR
+  auth_type : ENUM
+  handle : VARCHAR
+  provider_user_id : VARCHAR
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity content <<content>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  social_account_id : CHAR(36) [FK social_accounts.id]
+  url : VARCHAR
+  metadata : JSON
+  transcription : TEXT
+  summary : TEXT
+  sentiment : JSON
+  auto_tags : JSON
+  user_tags : JSON
+  user_comments : TEXT
+  category : VARCHAR
+  generated_title : VARCHAR
+  content_type : ENUM('video','audio','image','document','unknown')
+  location : JSON
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity files <<content>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  filename : VARCHAR
+  file_path : VARCHAR
+  metadata : JSON
+  transcription : TEXT
+  summary : TEXT
+  sentiment : JSON
+  auto_tags : JSON
+  user_tags : JSON
+  user_comments : TEXT
+  category : VARCHAR
+  generated_title : VARCHAR
+  content_type : ENUM('video','audio','image','document','unknown')
+  location : JSON
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity content_groups <<content>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  name : VARCHAR
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity content_group_members <<content>> {
+  * id : CHAR(36) [PK]
+  --
+  content_id : CHAR(36) [FK content.id]
+  group_id : CHAR(36) [FK content_groups.id]
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity content_relations <<content>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  content_id_1 : CHAR(36) [FK content.id]
+  content_id_2 : CHAR(36) [FK content.id]
+  relation_type : VARCHAR
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity thumbnails <<content>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  content_id : CHAR(36) [FK content.id] (nullable)
+  file_id : CHAR(36) [FK files.id] (nullable)
+  video_analysis_id : CHAR(36) [FK video_analysis.id] (nullable)
+  image_analysis_id : CHAR(36) [FK image_analysis.id] (nullable)
+  thumbnail_type : ENUM('main','key_moment','preview','grid','custom')
+  file_path : VARCHAR
+  file_name : VARCHAR
+  mime_type : VARCHAR
+  status : ENUM('generating','ready','failed','expired')
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity ocr_captions <<ai>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  content_id : CHAR(36) [FK content.id] (nullable)
+  file_id : CHAR(36) [FK files.id] (nullable)
+  timestamp : VARCHAR
+  timestamp_seconds : DECIMAL
+  text : TEXT
+  confidence : DECIMAL
+  status : ENUM('processing','ready','failed','filtered','verified')
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity video_analysis <<ai>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  content_id : CHAR(36) [FK content.id] (nullable)
+  file_id : CHAR(36) [FK files.id] (nullable)
+  processing_job_id : CHAR(36) [FK processing_jobs.id] (nullable)
+  duration : DECIMAL
+  status : ENUM('processing','ready','failed','partial','cancelled')
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity audio_analysis <<ai>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  content_id : CHAR(36) [FK content.id] (nullable)
+  file_id : CHAR(36) [FK files.id] (nullable)
+  processing_job_id : CHAR(36) [FK processing_jobs.id] (nullable)
+  duration : DECIMAL
+  status : ENUM('pending','processing','ready','failed','cancelled')
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity image_analysis <<ai>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  content_id : CHAR(36) [FK content.id] (nullable)
+  file_id : CHAR(36) [FK files.id] (nullable)
+  processing_job_id : CHAR(36) [FK processing_jobs.id] (nullable)
+  status : ENUM('pending','processing','ready','failed','cancelled')
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+entity processing_jobs <<ai>> {
+  * id : CHAR(36) [PK]
+  --
+  user_id : CHAR(36) [FK users.id]
+  content_id : CHAR(36) [FK content.id] (nullable)
+  file_id : CHAR(36) [FK files.id] (nullable)
+  job_type : ENUM
+  media_type : ENUM
+  status : ENUM('pending','processing','completed','failed','cancelled','retrying')
+  progress : INTEGER
+  createdAt : DATETIME
+  updatedAt : DATETIME
+}
+
+' Relationships (content-focused)
+users ||--o{ content : has
+users ||--o{ files : has
+users ||--o{ content_groups : has
+users ||--o{ thumbnails : has
+users ||--o{ ocr_captions : has
+users ||--o{ video_analysis : has
+users ||--o{ audio_analysis : has
+users ||--o{ image_analysis : has
+users ||--o{ processing_jobs : has
+
+social_accounts ||--o{ content : provides
+
+content ||--o{ content_group_members : member_of
+content_groups ||--o{ content_group_members : contains
+
+content ||--o{ thumbnails : has
+files ||--o{ thumbnails : has
+
+content ||--o{ ocr_captions : has
+files ||--o{ ocr_captions : has
+
+content ||--o{ content_relations : as content_id_1
+content ||--o{ content_relations : as content_id_2
+
+content ||--o{ processing_jobs : has
+files ||--o{ processing_jobs : has
+
+processing_jobs ||--|| video_analysis : may_produce
+processing_jobs ||--|| audio_analysis : may_produce
+processing_jobs ||--|| image_analysis : may_produce
+
+video_analysis ||--o{ thumbnails : generates
+image_analysis ||--o{ thumbnails : generates
+
+@enduml
+

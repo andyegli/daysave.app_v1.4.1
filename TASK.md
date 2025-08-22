@@ -1552,6 +1552,7 @@ All recent fixes have been implemented and tested. The system now properly handl
 ### Diagrams
 - Added `docs/diagrams/login-entities-erd.puml` showing only login-related entities (users, user_devices, login_attempts, user_passkeys, social_accounts, audit_logs) and their relationships for authentication flows.
 - Added `docs/diagrams/contact-entities-erd.puml` showing only contact-related entities (contacts, contact_groups, contact_group_members, relationships, contact_relations, contact_submissions) and their relationships.
+- Added `docs/diagrams/content-entities-erd.puml` showing only content-related entities (content, files, content_groups, content_group_members, content_relations, thumbnails, ocr_captions, video_analysis, audio_analysis, image_analysis, processing_jobs) and their relationships.
 
 ## Environment Setup Required
 
