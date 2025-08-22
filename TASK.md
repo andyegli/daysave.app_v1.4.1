@@ -2331,3 +2331,7 @@ Refused to execute inline script because it violates CSP directive: "script-src 
   - Stripe validation hook in startup
   - Email via Gmail SMTP and optional SendGrid
   - Social platform URL patterns used for content detection
+
+## ✅ API_ENDPOINTS2.md (Two-Row Format) Added (2025-08-22)
+
+- [x] Created `docs/API_ENDPOINTS2.md` with response samples shown on a new row beneath each request sample to improve readability for printing/Word export.
