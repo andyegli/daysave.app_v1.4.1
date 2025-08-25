@@ -395,6 +395,122 @@ class ImageProcessor {
 }
 ```
 
+#### Advanced Google Vision Examples
+
+**Object Detection with Confidence Filtering:**
+```javascript
+// File: services/multimedia/ImageProcessor.js, Lines: 500-520
+// File: services/multimedia/MultimediaAnalyzer.js, Lines: 1750-1760
+async detectObjects(imagePath, options = {}) {
+  try {
+    if (this.enableLogging) {
+      this.log('Detecting objects using Google Vision API');
+    }
+
+    const [result] = await this.visionClient.objectLocalization(imagePath);
+    const objects = result.localizedObjectAnnotations || [];
+
+    const filteredObjects = objects
+      .filter(object => object.score >= (options.confidenceThreshold || 0.5))
+      .slice(0, options.maxObjects || 10)
+      .map(object => ({
+        name: object.name,
+        confidence: object.score,
+        boundingBox: object.boundingPoly.normalizedVertices,
+        provider: 'google'
+      }));
+
+    return filteredObjects;
+  } catch (error) {
+    console.error('Object detection failed:', error);
+    return [];
+  }
+}
+```
+
+**Enhanced OCR with Multiple Detection Types:**
+```javascript
+// File: services/multimedia/MultimediaAnalyzer.js, Lines: 4494-4506
+async performEnhancedDetection(imagePath, objectConfidenceThreshold = 0.3, labelConfidenceThreshold = 0.6) {
+  if (this.enableLogging) {
+    console.log(`🔍 Running enhanced detection with thresholds: objects=${objectConfidenceThreshold}, labels=${labelConfidenceThreshold}`);
+  }
+
+  const [objectResult, labelResult, textResult] = await Promise.all([
+    this.visionClient.objectLocalization(imagePath),
+    this.visionClient.labelDetection(imagePath),
+    this.visionClient.textDetection(imagePath)
+  ]);
+
+  const rawObjects = objectResult[0].localizedObjectAnnotations || [];
+  const rawLabels = labelResult[0].labelAnnotations || [];
+  const textAnnotations = textResult[0].textAnnotations || [];
+
+  // Filter and map objects with confidence thresholds
+  const objects = rawObjects
+    .filter(obj => obj.score >= objectConfidenceThreshold)
+    .map(obj => ({
+      name: obj.name,
+      confidence: obj.score,
+      boundingBox: obj.boundingPoly.normalizedVertices
+    }));
+
+  const labels = rawLabels
+    .filter(label => label.score >= labelConfidenceThreshold)
+    .map(label => ({
+      description: label.description,
+      confidence: label.score
+    }));
+
+  const extractedText = textAnnotations.length > 0 ? textAnnotations[0].description : '';
+
+  return { objects, labels, extractedText };
+}
+```
+
+**OpenAI Vision API Integration:**
+```javascript
+// File: services/multimedia/MultimediaAnalyzer.js, Lines: 1818-1840
+async analyzeImageWithOpenAI(imagePath) {
+  const fs = require('fs');
+  const imageBuffer = fs.readFileSync(imagePath);
+  const base64Image = imageBuffer.toString('base64');
+  const mimeType = this.getMimeTypeFromPath(imagePath);
+  
+  const response = await this.openai.chat.completions.create({
+    model: "gpt-4o-mini", // Vision-enabled model
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: `Analyze this image and identify all objects, people, animals, and things you can see. 
+            
+For each object, provide:
+- Name/description
+- Confidence level (0-1)
+- Location description
+- Any relevant details
+
+Return as JSON array with objects containing: name, confidence, location, details`
+          },
+          {
+            type: "image_url",
+            image_url: {
+              url: `data:${mimeType};base64,${base64Image}`
+            }
+          }
+        ]
+      }
+    ],
+    max_tokens: 1000
+  });
+
+  return JSON.parse(response.choices[0].message.content);
+}
+```
+
 ### @google-cloud/speech
 Speech-to-text transcription.
 
@@ -425,6 +541,103 @@ class AudioProcessor {
     return response.results.map(result => 
       result.alternatives[0].transcript
     ).join(' ');
+  }
+}
+```
+
+#### Advanced Google Speech-to-Text Examples
+
+**Enhanced Transcription with Speaker Diarization:**
+```javascript
+// File: services/multimedia/AudioProcessor.js, Lines: 533-553
+// File: services/multimedia/MultimediaAnalyzer.js, Lines: 1635-1650
+async transcribeWithSpeakerDetection(audioPath, options = {}) {
+  const fs = require('fs');
+  const audioBuffer = fs.readFileSync(audioPath);
+  
+  const request = {
+    audio: { content: audioBuffer.toString('base64') },
+    config: {
+      encoding: 'LINEAR16',
+      sampleRateHertz: options.sampleRate || 16000,
+      languageCode: options.language || 'en-US',
+      enableSpeakerDiarization: true,
+      diarizationSpeakerCount: options.speakerCount || 2,
+      enableAutomaticPunctuation: true,
+      enableWordTimeOffsets: true,
+      model: 'latest_long',
+      useEnhanced: true,
+      ...options
+    },
+  };
+
+  // Perform transcription
+  const [response] = await this.speechClient.recognize(request);
+  
+  if (!response.results || response.results.length === 0) {
+    if (this.enableLogging) {
+      console.log('⚠️ No transcription results found');
+    }
+    return '';
+  }
+
+  // Extract transcription with speaker information
+  const transcription = response.results
+    .map(result => {
+      const alternative = result.alternatives[0];
+      const speakerTag = result.speakerTag || 0;
+      return `Speaker ${speakerTag}: ${alternative.transcript}`;
+    })
+    .join('\n');
+
+  if (this.enableLogging) {
+    console.log('✅ Audio transcription completed:', {
+      totalResults: response.results.length,
+      transcriptionLength: transcription.length,
+      wordCount: transcription.split(' ').length
+    });
+  }
+
+  return transcription;
+}
+```
+
+**Long Audio Processing with Chunking:**
+```javascript
+// File: services/multimedia/MultimediaAnalyzer.js, Lines: 3987-4002
+async transcribeLongAudio(audioPath) {
+  if (this.speechClient) {
+    try {
+      const fs = require('fs');
+      const audioBuffer = fs.readFileSync(audioPath);
+      
+      const [response] = await this.speechClient.recognize({
+        audio: { content: audioBuffer.toString('base64') },
+        config: {
+          encoding: 'LINEAR16',
+          sampleRateHertz: 16000,
+          languageCode: 'en-US',
+          enableSpeakerDiarization: true,
+          diarizationSpeakerCount: 3,
+          enableAutomaticPunctuation: true,
+          model: 'latest_long'
+        },
+      });
+      
+      const transcription = response.results
+        .map(result => result.alternatives[0].transcript)
+        .join('\n');
+      
+      return {
+        text: transcription || '',
+        confidence: 0.8,
+        wordCount: transcription.split(' ').length,
+        processingTime: Date.now() - startTime
+      };
+    } catch (error) {
+      console.error('Speech transcription failed:', error);
+      return { text: '', confidence: 0, error: error.message };
+    }
   }
 }
 ```
@@ -661,4 +874,215 @@ describe('Authentication Routes', () => {
 });
 ```
 
-This document provides practical examples of how each major module is implemented in the DaySave codebase, showing real-world usage patterns and configurations.
+## Advanced AI Integration Examples
+
+### AI-Powered Tag Generation
+Intelligent content analysis and tag generation using OpenAI.
+
+```javascript
+// File: services/multimedia/MultimediaAnalyzer.js, Lines: 2356-2380
+async generateTags(results) {
+  console.log('🏷️ Starting AI-powered tag generation with results:', {
+    hasSummary: !!results.summary,
+    hasTranscription: !!results.transcription,
+    summaryLength: results.summary ? results.summary.length : 0,
+    transcriptionLength: results.transcription ? results.transcription.length : 0,
+    platform: results.platform
+  });
+
+  // Start with AI-powered tags first (prioritize intelligent content analysis)
+  let aiTags = [];
+  let fallbackTags = [];
+  
+  // Try AI-powered tag generation first - this should be the primary source
+  if (this.openai && (results.summary || results.transcription)) {
+    try {
+      aiTags = await this.generateAITags(results);
+      if (aiTags && aiTags.length > 0) {
+        console.log(`🤖 Generated ${aiTags.length} AI tags:`, aiTags);
+      }
+    } catch (error) {
+      console.error('❌ AI tag generation failed, falling back to basic tags:', error);
+    }
+  }
+  
+  // Only add basic fallback tags if AI failed or no meaningful content available
+  if (aiTags.length === 0) {
+    console.log('⚠️ No AI tags generated, using fallback content analysis');
+    
+    // Enhanced content analysis fallback
+    if (results.transcription && results.transcription.length > 50) {
+      const text = results.transcription.toLowerCase();
+      // Extract keywords using natural language processing
+      fallbackTags = this.extractKeywordsFromText(text);
+    }
+  }
+
+  return [...aiTags, ...fallbackTags].slice(0, 20); // Limit to 20 tags
+}
+```
+
+### Content Summarization API
+Generate intelligent summaries using OpenAI's chat completion API.
+
+```javascript
+// File: services/multimedia/MultimediaAnalyzer.js, Lines: 2222-2240
+async generateContentSummary(results) {
+  const prompt = `Analyze this multimedia content and create a comprehensive summary:
+
+${results.transcription ? `Transcription: ${results.transcription.substring(0, 2000)}` : ''}
+${results.ocrText ? `Text from images: ${results.ocrText.substring(0, 500)}` : ''}
+${results.objects ? `Detected objects: ${results.objects.map(o => o.name).join(', ')}` : ''}
+
+Instructions:
+• Focus on main topics, key points, and important information
+• Be specific about activities, settings, objects, and context
+• Keep summary concise but informative (max 250 words)
+
+Create a summary that accurately describes what this content contains:`;
+
+  const response = await this.openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'system',
+        content: 'You are an expert at analyzing multimedia content using both visual and audio information. Create accurate, descriptive summaries that capture the essence of what the content is about by combining all available data sources.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ],
+    max_tokens: 300,
+    temperature: 0.3
+  });
+
+  return response.choices[0].message.content.trim();
+}
+```
+
+### Sentiment Analysis API
+Analyze emotional tone and sentiment using AI.
+
+```javascript
+// File: services/multimedia/MultimediaAnalyzer.js, Lines: 2327-2340
+async analyzeSentiment(text) {
+  try {
+    if (!this.openai || !text) return null;
+
+    const response = await this.openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a sentiment analysis expert. Analyze the sentiment and return a JSON object with sentiment (positive/negative/neutral), confidence (0-1), and emotions array.'
+        },
+        {
+          role: 'user',
+          content: `Analyze the sentiment of this content:\n\n${text}`
+        }
+      ],
+      max_tokens: 200,
+      temperature: 0.1
+    });
+
+    return JSON.parse(response.choices[0].message.content);
+  } catch (error) {
+    console.error('Sentiment analysis failed:', error);
+    return { sentiment: 'neutral', confidence: 0.5, emotions: [] };
+  }
+}
+```
+
+### Intelligent Title Generation
+Generate descriptive titles for uploaded content.
+
+```javascript
+// File: routes/files.js, Lines: 228-240
+async generateIntelligentTitle(content, analysisResults) {
+  const prompt = `Based on this content analysis, generate a professional, descriptive title:
+
+Content Summary: ${analysisResults.summary || 'No summary available'}
+Detected Objects: ${analysisResults.objects?.map(o => o.name).join(', ') || 'None'}
+Platform: ${content.platform || 'Unknown'}
+Content Type: ${content.content_type || 'Mixed media'}
+
+Requirements:
+- Create a compelling, descriptive title (not a list of keywords)
+- Use proper grammar and sentence structure
+- Focus on the main subject or theme
+- Maximum 80 characters
+- Professional tone suitable for business content
+
+Example format: "Company name, product type, equipment list" (tag structure)
+
+Respond with only the title, no quotes or additional text.`;
+
+  const startTime = Date.now();
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4',
+    messages: [
+      {
+        role: 'system',
+        content: 'You are an expert content creator who specializes in writing professional, descriptive titles for visual content that match the quality and structure of video titles. Create compelling titles that follow proper narrative structure with complete sentences, not keyword lists or bullet points.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ],
+    max_tokens: 100,
+    temperature: 0.7
+  });
+
+  const generatedTitle = response.choices[0].message.content.trim();
+  const processingTime = Date.now() - startTime;
+  
+  console.log(`🏷️ Generated title in ${processingTime}ms: "${generatedTitle}"`);
+  return generatedTitle;
+}
+```
+
+### Multi-Modal Content Analysis
+Combine multiple AI services for comprehensive content understanding.
+
+```javascript
+// File: services/multimedia/MultimediaAnalyzer.js, Lines: 1483-1493
+async analyzeImageContent(imagePath) {
+  try {
+    // Parallel processing of multiple AI services
+    const [objects, ocrText, aiDescription] = await Promise.all([
+      this.detectObjects(imagePath),
+      this.extractTextFromImage(imagePath),
+      this.analyzeImageWithOpenAI(imagePath)
+    ]);
+
+    // Generate tags based on all available information
+    if (this.openai) {
+      const tags = await this.generateTags({
+        objects: objects,
+        description: aiDescription,
+        ocrText: ocrText,
+        type: 'image'
+      });
+      
+      if (this.enableLogging) {
+        console.log(`🏷️ Generated ${tags?.length || 0} tags from multi-modal analysis`);
+      }
+
+      return {
+        objects,
+        ocrText,
+        description: aiDescription,
+        tags,
+        processingTime: Date.now() - startTime
+      };
+    }
+  } catch (error) {
+    console.error('Multi-modal analysis failed:', error);
+    return { error: error.message };
+  }
+}
+```
+
+This document provides practical examples of how each major module is implemented in the DaySave codebase, showing real-world usage patterns and configurations with advanced AI integration capabilities.
