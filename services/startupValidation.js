@@ -489,45 +489,72 @@ class StartupValidator {
       };
     }
 
-    // Validate Cloud Storage API using REST API with API key
+    // Validate Cloud Storage API using Service Account (more reliable than API key)
     try {
-      if (!apiKey) {
-        throw new Error('GOOGLE_API_KEY not configured');
-      }
-
       const startTime = Date.now();
       
-      // Test Storage API by listing buckets
-      const storageResponse = await fetch(
-        `https://storage.googleapis.com/storage/v1/b?project=${projectId}&key=${apiKey}`,
-        {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
+      // Try service account authentication first
+      try {
+        const { Storage } = require('@google-cloud/storage');
+        const storage = new Storage({
+          keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+          projectId: projectId
+        });
+        
+        const [buckets] = await storage.getBuckets();
+        const responseTime = Date.now() - startTime;
+        
+        this.validationResults.googleCloud.storage = {
+          status: 'success',
+          message: 'Google Cloud Storage API accessible via service account',
+          critical: false,
+          details: {
+            authMethod: 'service account',
+            projectId: projectId,
+            bucketsAccessible: buckets.length,
+            responseTime: `${responseTime}ms`,
+            credentialsFile: process.env.GOOGLE_APPLICATION_CREDENTIALS
           }
+        };
+        return;
+      } catch (serviceAccountError) {
+        // Fallback to API key method if service account fails
+        if (!apiKey) {
+          throw new Error(`Service account failed: ${serviceAccountError.message}. API key also not configured.`);
         }
-      );
 
-      const responseTime = Date.now() - startTime;
+        // Test Storage API by listing buckets with API key
+        const storageResponse = await fetch(
+          `https://storage.googleapis.com/storage/v1/b?project=${projectId}&key=${apiKey}`,
+          {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+            }
+          }
+        );
 
-      if (!storageResponse.ok) {
-        const errorData = await storageResponse.text();
-        throw new Error(`Storage API HTTP ${storageResponse.status}: ${errorData}`);
+        const responseTime = Date.now() - startTime;
+
+        if (!storageResponse.ok) {
+          const errorData = await storageResponse.text();
+          throw new Error(`Storage API HTTP ${storageResponse.status}: ${errorData}`);
+        }
+
+        const storageData = await storageResponse.json();
+        
+        this.validationResults.googleCloud.storage = {
+          status: 'success',
+          message: 'Google Cloud Storage API accessible via API key (fallback)',
+          critical: false,
+          details: {
+            authMethod: 'api key (fallback)',
+            projectId: projectId,
+            bucketsAccessible: storageData.items ? storageData.items.length : 0,
+            responseTime: `${responseTime}ms`
+          }
+        };
       }
-
-      const storageData = await storageResponse.json();
-      
-      this.validationResults.googleCloud.storage = {
-        status: 'success',
-        message: 'Google Cloud Storage API accessible via API key',
-        critical: false,
-        details: {
-          authMethod: 'api key',
-          projectId: projectId,
-          bucketsAccessible: storageData.items ? storageData.items.length : 0,
-          responseTime: `${responseTime}ms`
-        }
-      };
     } catch (error) {
       this.validationResults.googleCloud.storage = {
         status: 'error',
@@ -536,8 +563,9 @@ class StartupValidator {
         details: {
           error: error.message,
           hasApiKey: !!apiKey,
+          hasServiceAccount: !!process.env.GOOGLE_APPLICATION_CREDENTIALS,
           projectId: projectId || 'not set',
-          authMethod: 'api key (preferred)'
+          authMethod: 'service account + api key fallback'
         }
       };
     }
@@ -589,9 +617,28 @@ class StartupValidator {
         throw new Error(`Missing variables: ${missingVars.join(', ')}`);
       }
 
-      // Test Microsoft OAuth discovery endpoint
-      const response = await fetch('https://login.microsoftonline.com/common/v2.0/.well-known/openid_configuration');
-      const discovery = await response.json();
+      // Test Microsoft OAuth by validating configuration and testing auth endpoint
+      const startTime = Date.now();
+      
+      // Test the actual OAuth authorize endpoint that Microsoft uses
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+      
+      const testResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/authorize', {
+        method: 'HEAD', // Just check if endpoint is accessible
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'DaySave-Startup-Validation/1.0'
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      const responseTime = Date.now() - startTime;
+      
+      if (!testResponse.ok && testResponse.status !== 400) {
+        // 400 is expected for HEAD request without parameters
+        throw new Error(`OAuth endpoint unreachable: HTTP ${testResponse.status}`);
+      }
 
       this.validationResults.oauth.microsoft = {
         status: 'success',
@@ -600,7 +647,9 @@ class StartupValidator {
         details: {
           clientId: process.env.MICROSOFT_CLIENT_ID.substring(0, 20) + '...',
           hasSecret: !!process.env.MICROSOFT_CLIENT_SECRET,
-          authEndpoint: discovery.authorization_endpoint
+          authEndpoint: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+          responseTime: `${responseTime}ms`,
+          endpointStatus: testResponse.status
         }
       };
     } catch (error) {
@@ -608,7 +657,12 @@ class StartupValidator {
         status: 'error',
         message: `Microsoft OAuth validation failed: ${error.message}`,
         critical: false,
-        details: { error: error.message }
+        details: { 
+          error: error.message,
+          hasClientId: !!process.env.MICROSOFT_CLIENT_ID,
+          hasClientSecret: !!process.env.MICROSOFT_CLIENT_SECRET,
+          troubleshooting: 'Check network connectivity to login.microsoftonline.com'
+        }
       };
     }
 
