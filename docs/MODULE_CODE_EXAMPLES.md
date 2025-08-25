@@ -8,7 +8,7 @@ This document provides typical code examples for each module used in DaySave, sh
 Web framework for routing, middleware, and HTTP handling.
 
 ```javascript
-// app.js - Basic Express setup
+// File: app.js, Lines: 62-67, 95-98, 782-786
 const express = require('express');
 const app = express();
 
@@ -32,7 +32,7 @@ app.listen(PORT, () => {
 Server-side templating for views.
 
 ```javascript
-// app.js - EJS configuration
+// File: app.js, Lines: 89-90, 150-160 (dashboard route pattern)
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -53,7 +53,7 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
 Secure HTTP headers; aligns with CSP rules.
 
 ```javascript
-// middleware/security.js
+// File: middleware/security.js, Lines: 49-80
 const helmet = require('helmet');
 
 const securityHeaders = helmet({
@@ -79,7 +79,7 @@ const securityHeaders = helmet({
 Server-side session management.
 
 ```javascript
-// app.js - Session configuration
+// File: app.js, Lines: 64-65, 100-118
 const session = require('express-session');
 const SequelizeStore = require('connect-session-sequelize')(session.Store);
 
@@ -107,7 +107,8 @@ app.use(session({
 ORM for models, migrations, and queries.
 
 ```javascript
-// models/user.js - Model definition
+// File: models/user.js, Lines: 1-25 (model definition)
+// Usage example from routes/admin.js, Lines: 200-210
 const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
@@ -155,7 +156,7 @@ const user = await User.findByPk(userId, {
 Auth framework integrating strategies.
 
 ```javascript
-// config/auth.js - Passport configuration
+// File: config/auth.js, Lines: 1-2, 15-45
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
@@ -188,7 +189,7 @@ passport.use(new GoogleStrategy({
 Token issuance/verification for stateless flows.
 
 ```javascript
-// services/apiKeyService.js - JWT usage
+// File: services/apiKeyService.js, Lines: 1, 25-45, 60-70
 const jwt = require('jsonwebtoken');
 
 class ApiKeyService {
@@ -222,7 +223,8 @@ class ApiKeyService {
 JS fallback hashing for portability.
 
 ```javascript
-// routes/auth.js - Password hashing
+// File: routes/admin.js, Lines: 391-393 (hashing)
+// File: routes/auth.js, Lines: 666-670 (verification pattern)
 const bcrypt = require('bcryptjs');
 
 // Hash password during registration
@@ -246,7 +248,8 @@ if (!isValidPassword) {
 TOTP/HOTP for 2FA.
 
 ```javascript
-// routes/profile.js - 2FA setup and verification
+// File: routes/profile.js, Lines: 3, 50-65 (secret generation)
+// File: routes/auth.js, Lines: 1135-1141 (verification)
 const speakeasy = require('speakeasy');
 
 // Generate 2FA secret
@@ -269,7 +272,7 @@ const isValid = speakeasy.totp.verify({
 Generate QR codes for TOTP enrollment.
 
 ```javascript
-// routes/profile.js - QR code generation
+// File: routes/profile.js, Lines: 4, 70-85
 const qrcode = require('qrcode');
 
 const qrCodeUrl = await qrcode.toDataURL(secret.otpauth_url, {
@@ -290,7 +293,8 @@ const qrCodeUrl = await qrcode.toDataURL(secret.otpauth_url, {
 Multipart parsing and secure uploads.
 
 ```javascript
-// services/fileUpload.js - Multer configuration
+// File: services/fileUpload.js, Lines: 2, 50-80
+// File: routes/files.js, Lines: 3, 25-35 (usage pattern)
 const multer = require('multer');
 
 const storage = multer.memoryStorage();
@@ -326,7 +330,7 @@ router.post('/upload', upload.array('files', 10), async (req, res) => {
 Enforce and detect MIME types.
 
 ```javascript
-// services/fileUpload.js - MIME type detection
+// File: services/fileUpload.js, Lines: 116, 200-215
 const mime = require('mime-types');
 
 validateFileType(filename, buffer) {
@@ -347,7 +351,8 @@ validateFileType(filename, buffer) {
 OpenAI API client for AI features and health checks.
 
 ```javascript
-// services/startupValidation.js - OpenAI integration
+// File: services/startupValidation.js, Lines: 2, 243-254
+// File: app.js, Lines: 370 (OpenAI require pattern)
 const { OpenAI } = require('openai');
 
 const openai = new OpenAI({
@@ -369,7 +374,7 @@ const summary = chatResponse.choices[0].message.content;
 OCR/vision analysis.
 
 ```javascript
-// services/multimedia/ImageProcessor.js - Vision API
+// File: services/multimedia/ImageProcessor.js, Lines: 20, 35-50
 const vision = require('@google-cloud/vision');
 
 class ImageProcessor {
@@ -394,7 +399,7 @@ class ImageProcessor {
 Speech-to-text transcription.
 
 ```javascript
-// services/multimedia/AudioProcessor.js - Speech API
+// File: services/multimedia/AudioProcessor.js, Lines: 20, 40-70
 const speech = require('@google-cloud/speech');
 
 class AudioProcessor {
@@ -430,7 +435,7 @@ class AudioProcessor {
 Audio/video processing and probing.
 
 ```javascript
-// services/multimedia/VideoProcessor.js - FFmpeg usage
+// File: services/multimedia/VideoProcessor.js, Lines: 21, 80-110
 const ffmpeg = require('fluent-ffmpeg');
 
 class VideoProcessor {
@@ -463,7 +468,7 @@ class VideoProcessor {
 Text/metadata extraction from PDF files.
 
 ```javascript
-// services/multimedia/DocumentProcessor.js - PDF parsing
+// File: services/multimedia/DocumentProcessor.js, Lines: 157, 160-175
 const pdfParse = require('pdf-parse');
 
 async extractPdfText(buffer) {
@@ -486,7 +491,7 @@ async extractPdfText(buffer) {
 Structured application logging.
 
 ```javascript
-// config/logger.js - Winston configuration
+// File: config/logger.js, Lines: 54, 90-110, 420-450 (usage functions)
 const winston = require('winston');
 
 const logger = winston.createLogger({
@@ -528,7 +533,7 @@ logAuthError('LOGIN_FAILED', error, {
 Generate unique identifiers.
 
 ```javascript
-// services/fileUpload.js - UUID generation
+// File: services/fileUpload.js, Lines: 4, 150-160 (filename generation)
 const { v4: uuidv4 } = require('uuid');
 
 // Generate unique filename
@@ -542,7 +547,8 @@ const recordId = uuidv4();
 Load environment variables from `.env`.
 
 ```javascript
-// app.js - Environment configuration
+// File: app.js, Line: 61 (dotenv config)
+// Environment variables used throughout codebase
 require('dotenv').config();
 
 // Access environment variables
@@ -557,7 +563,8 @@ const sessionSecret = process.env.SESSION_SECRET;
 Request validation and sanitization.
 
 ```javascript
-// routes/auth.js - Input validation
+// File: routes/files.js, Lines: 7 (import)
+// File: routes/auth.js, Lines: 200-230 (validation pattern)
 const { body, validationResult } = require('express-validator');
 
 router.post('/register', [
@@ -589,7 +596,7 @@ router.post('/register', [
 Payment processing and account checks.
 
 ```javascript
-// services/startupValidation.js - Stripe integration
+// File: services/startupValidation.js, Lines: 659, 664-670
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Test Stripe API connection
@@ -607,7 +614,7 @@ const paymentIntent = await stripe.paymentIntents.create({
 SMTP email (Gmail in startup validation).
 
 ```javascript
-// services/startupValidation.js - Email sending
+// File: services/startupValidation.js, Lines: 1, 178-200
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransporter({
@@ -634,7 +641,7 @@ await transporter.sendMail(mailOptions);
 HTTP integration testing.
 
 ```javascript
-// tests/routes.test.js - API testing
+// File: tests/routes.test.js, Lines: 1-25 (example pattern)
 const request = require('supertest');
 const app = require('../app');
 
